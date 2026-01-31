@@ -1,0 +1,13 @@
+{
+  "name": "@ear-plug/tailwind-config",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./base.js",
+  "exports": {
+    ".": "./base.js",
+    "./base": "./base.js"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.0"
+  }
+}
