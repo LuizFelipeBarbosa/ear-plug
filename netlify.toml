@@ -1,7 +1,15 @@
 [build]
-  # Use custom install command to skip postinstall scripts (React Native deps require native tools)
+  # We run pnpm install ourselves with --ignore-scripts in the build command
+  # This is needed because React Native deps have postinstall scripts requiring native tools
   command = "pnpm install --ignore-scripts && pnpm build:web"
   publish = "apps/web/.next"
+
+# Environment variables to skip postinstall scripts
+[build.environment]
+  # For npm (fallback)
+  NPM_FLAGS = "--ignore-scripts"
+  # Forces pnpm to skip lifecycle scripts during install
+  npm_config_ignore_scripts = "true"
 
 [context.production]
   command = "pnpm install --ignore-scripts && pnpm build:web"
