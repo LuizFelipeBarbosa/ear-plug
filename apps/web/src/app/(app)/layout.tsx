@@ -53,8 +53,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           }
         } catch (error) {
           console.error("Failed to create user:", error);
+        } finally {
+          // Reset flag so the real-time query can take over
+          setIsCreatingUser(false);
         }
-        // Note: Don't set isCreatingUser to false - let the query refetch
       }
     }
 
