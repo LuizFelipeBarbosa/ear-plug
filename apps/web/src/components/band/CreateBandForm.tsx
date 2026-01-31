@@ -23,7 +23,7 @@ type Step = "basics" | "genre" | "details" | "social";
 interface FormData {
   name: string;
   location: string;
-  genre: Genre | null;
+  genres: Genre[];
   bio: string;
   memberCount: number;
   socialLinks: {
@@ -54,7 +54,7 @@ export function CreateBandForm() {
   const [formData, setFormData] = useState<FormData>({
     name: "",
     location: "",
-    genre: null,
+    genres: [],
     bio: "",
     memberCount: 1,
     socialLinks: {},
@@ -67,7 +67,7 @@ export function CreateBandForm() {
       case "basics":
         return formData.name.trim().length > 0 && formData.location.trim().length > 0;
       case "genre":
-        return formData.genre !== null;
+        return formData.genres.length > 0;
       case "details":
         return true; // Optional step
       case "social":
@@ -92,7 +92,7 @@ export function CreateBandForm() {
   };
 
   const handleSubmit = async () => {
-    if (!formData.genre) return;
+    if (formData.genres.length === 0) return;
 
     setIsSubmitting(true);
     setError(null);
@@ -101,7 +101,7 @@ export function CreateBandForm() {
       await createBand({
         name: formData.name.trim(),
         location: formData.location.trim(),
-        genre: formData.genre,
+        genres: formData.genres,
         bio: formData.bio.trim() || undefined,
         memberCount: formData.memberCount || undefined,
         socialLinks: Object.keys(formData.socialLinks).length > 0
@@ -203,26 +203,50 @@ export function CreateBandForm() {
 
         {currentStep === "genre" && (
           <div className="space-y-6 animate-fade-in">
-            <p className="text-gray-600 dark:text-gray-400">
-              Select your primary genre
-            </p>
+            <div>
+              <p className="text-gray-600 dark:text-gray-400">
+                Select your genres (up to 5)
+              </p>
+              <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
+                {formData.genres.length}/5 selected
+              </p>
+            </div>
             <div className="grid grid-cols-2 gap-3">
-              {GENRES.map((genre) => (
-                <button
-                  key={genre.value}
-                  onClick={() => setFormData({ ...formData, genre: genre.value })}
-                  className={cn(
-                    "p-4 rounded-xl border-2 text-left transition-all",
-                    formData.genre === genre.value
-                      ? "border-accent-500 bg-accent-50 dark:bg-accent-900/20"
-                      : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
-                  )}
-                >
-                  <span className="font-medium text-gray-900 dark:text-white">
-                    {genre.label}
-                  </span>
-                </button>
-              ))}
+              {GENRES.map((genre) => {
+                const isSelected = formData.genres.includes(genre.value);
+                const isDisabled = !isSelected && formData.genres.length >= 5;
+                return (
+                  <button
+                    key={genre.value}
+                    onClick={() => {
+                      if (isSelected) {
+                        setFormData({
+                          ...formData,
+                          genres: formData.genres.filter((g) => g !== genre.value),
+                        });
+                      } else if (!isDisabled) {
+                        setFormData({
+                          ...formData,
+                          genres: [...formData.genres, genre.value],
+                        });
+                      }
+                    }}
+                    disabled={isDisabled}
+                    className={cn(
+                      "p-4 rounded-xl border-2 text-left transition-all",
+                      isSelected
+                        ? "border-accent-500 bg-accent-50 dark:bg-accent-900/20"
+                        : isDisabled
+                          ? "border-gray-100 dark:border-gray-800 opacity-50 cursor-not-allowed"
+                          : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                    )}
+                  >
+                    <span className="font-medium text-gray-900 dark:text-white">
+                      {genre.label}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}

@@ -161,7 +161,7 @@ export function FanMapView() {
         {apiKey ? (
           <APIProvider apiKey={apiKey}>
             <Map
-              center={mapCenter}
+              defaultCenter={mapCenter}
               defaultZoom={DEFAULT_MAP_ZOOM}
               mapId="ear-plug-map"
               gestureHandling="greedy"

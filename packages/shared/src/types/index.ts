@@ -68,7 +68,7 @@ export interface User extends BaseEntity {
 export interface Band extends BaseEntity {
   userId: string;
   name: string;
-  genre: Genre;
+  genres: Genre[];
   location: string;
   image?: string;
   bio?: string;

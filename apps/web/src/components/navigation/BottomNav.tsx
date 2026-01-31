@@ -101,11 +101,11 @@ export function BottomNav() {
             >
               <div className="relative">
                 {item.icon}
-                {item.badge && item.badge > 0 && (
+                {item.badge !== undefined && item.badge > 0 ? (
                   <span className="absolute -top-1 -right-1 w-4 h-4 bg-accent-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
                     {item.badge > 9 ? "9+" : item.badge}
                   </span>
-                )}
+                ) : null}
               </div>
               <span
                 className={cn(

@@ -83,7 +83,8 @@ export default defineSchema({
   bands: defineTable({
     userId: v.id("users"), // The musician user who owns this band
     name: v.string(),
-    genre: genreValidator,
+    genres: v.optional(v.array(genreValidator)), // Multiple genres supported (optional for migration)
+    genre: v.optional(genreValidator), // Legacy single genre field - kept for backward compatibility
     location: v.string(),
     image: v.optional(v.string()),
     bio: v.optional(v.string()),
@@ -92,7 +93,6 @@ export default defineSchema({
     createdAt: v.number(),
   })
     .index("by_user", ["userId"])
-    .index("by_genre", ["genre"])
     .index("by_name", ["name"]),
 
   // ==================== VENUES ====================

@@ -9,25 +9,41 @@ import {
   Music,
   Settings,
   LogOut,
-  ExternalLink,
   BarChart2,
   Edit,
   Instagram,
   Youtube,
+  ExternalLink,
+  Calendar,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+} from "recharts";
 import { useCurrentBand, useBandAnalytics } from "@/hooks/useBand";
-import { AnalyticsReport } from "@/components/band/AnalyticsReport";
 import { EditBandProfileModal } from "@/components/band/EditBandProfileModal";
 import { DemoMediaGallery } from "@/components/band/MediaGallery";
-import { GENRE_COLORS } from "@ear-plug/shared/constants";
+import { GENRE_COLORS, formatFullDate } from "@ear-plug/shared/constants";
 import { getInitials } from "@ear-plug/shared/utils";
 import { cn } from "@/lib/utils";
 import type { Genre } from "@ear-plug/shared/types";
 
+const CHART_COLORS = ["#7c3aed", "#ec4899"];
+
 export function BandProfileView() {
   const { band, bandWithStats, isLoading } = useCurrentBand();
-  const [showAnalytics, setShowAnalytics] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [analyticsExpanded, setAnalyticsExpanded] = useState(false);
+  const { analytics, isLoading: analyticsLoading } = useBandAnalytics(band?._id);
 
   if (isLoading) {
     return (
@@ -45,15 +61,6 @@ export function BandProfileView() {
       <div className="min-h-screen flex items-center justify-center">
         <p className="text-gray-500">No band profile found</p>
       </div>
-    );
-  }
-
-  if (showAnalytics) {
-    return (
-      <AnalyticsReport
-        bandId={band._id}
-        onBack={() => setShowAnalytics(false)}
-      />
     );
   }
 
@@ -88,12 +95,17 @@ export function BandProfileView() {
             </div>
             <div className="flex-1 min-w-0">
               <h2 className="text-xl font-bold truncate">{band.name}</h2>
-              <div
-                className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium mt-1"
-                style={{ backgroundColor: `${GENRE_COLORS[band.genre]}40` }}
-              >
-                <Music className="w-3 h-3" />
-                {band.genre.charAt(0).toUpperCase() + band.genre.slice(1)}
+              <div className="flex flex-wrap gap-1 mt-1">
+                {(band.genres || []).map((g) => (
+                  <div
+                    key={g}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
+                    style={{ backgroundColor: `${GENRE_COLORS[g as Genre]}40` }}
+                  >
+                    <Music className="w-3 h-3" />
+                    {g.charAt(0).toUpperCase() + g.slice(1)}
+                  </div>
+                ))}
               </div>
               <div className="flex items-center gap-3 mt-2 text-sm text-white/80">
                 <span className="flex items-center gap-1">
@@ -108,7 +120,7 @@ export function BandProfileView() {
                 )}
               </div>
             </div>
-            <button 
+            <button
               onClick={() => setShowEditModal(true)}
               className="p-2 hover:bg-white/10 rounded-full transition-colors"
             >
@@ -191,10 +203,10 @@ export function BandProfileView() {
         <DemoMediaGallery />
       </section>
 
-      {/* Analytics Button */}
+      {/* Analytics Report Section (Inline) */}
       <section className="p-4">
         <button
-          onClick={() => setShowAnalytics(true)}
+          onClick={() => setAnalyticsExpanded(!analyticsExpanded)}
           className="w-full flex items-center justify-between p-4 bg-white dark:bg-surface-dark-secondary rounded-xl shadow-sm hover:shadow-md transition-shadow"
         >
           <div className="flex items-center gap-3">
@@ -206,12 +218,183 @@ export function BandProfileView() {
                 Analytics Report
               </h3>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                View your performance metrics
+                {analyticsExpanded ? "Hide" : "View"} your performance metrics
               </p>
             </div>
           </div>
-          <ExternalLink className="w-5 h-5 text-gray-400" />
+          {analyticsExpanded ? (
+            <ChevronUp className="w-5 h-5 text-gray-400" />
+          ) : (
+            <ChevronDown className="w-5 h-5 text-gray-400" />
+          )}
         </button>
+
+        {/* Expanded Analytics Content */}
+        {analyticsExpanded && (
+          <div className="mt-4 space-y-4">
+            {analyticsLoading || !analytics ? (
+              <div className="animate-pulse space-y-4">
+                <div className="h-24 bg-gray-200 dark:bg-gray-800 rounded-xl" />
+                <div className="h-48 bg-gray-200 dark:bg-gray-800 rounded-xl" />
+              </div>
+            ) : (
+              <>
+                {/* Summary Stats */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-white dark:bg-surface-dark-secondary rounded-xl p-4 shadow-sm">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Users className="w-5 h-5 text-primary-500" />
+                      <span className="text-sm text-gray-500 dark:text-gray-400">Total RSVPs</span>
+                    </div>
+                    <div className="text-3xl font-bold text-gray-900 dark:text-white">
+                      {analytics.totalRsvps}
+                    </div>
+                  </div>
+                  <div className="bg-white dark:bg-surface-dark-secondary rounded-xl p-4 shadow-sm">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Calendar className="w-5 h-5 text-accent-500" />
+                      <span className="text-sm text-gray-500 dark:text-gray-400">Total Shows</span>
+                    </div>
+                    <div className="text-3xl font-bold text-gray-900 dark:text-white">
+                      {analytics.eventCount}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bar Chart - Past Event Comparison */}
+                <div className="bg-white dark:bg-surface-dark-secondary rounded-xl p-4 shadow-sm">
+                  <h4 className="text-base font-semibold text-gray-900 dark:text-white mb-4">
+                    Past Event Comparison
+                  </h4>
+                  {analytics.eventComparison.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={180}>
+                      <BarChart data={analytics.eventComparison}>
+                        <XAxis
+                          dataKey="name"
+                          tick={{ fontSize: 11, fill: "#9ca3af" }}
+                          axisLine={false}
+                          tickLine={false}
+                        />
+                        <YAxis
+                          tick={{ fontSize: 11, fill: "#9ca3af" }}
+                          axisLine={false}
+                          tickLine={false}
+                        />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: "white",
+                            border: "none",
+                            borderRadius: "8px",
+                            boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+                          }}
+                          labelStyle={{ fontWeight: "bold" }}
+                        />
+                        <Bar
+                          dataKey="rsvps"
+                          fill="#7c3aed"
+                          radius={[4, 4, 0, 0]}
+                          name="RSVPs"
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <p className="text-center text-gray-500 py-6">
+                      No past events to compare
+                    </p>
+                  )}
+                </div>
+
+                {/* Pie Chart - Traffic Rate */}
+                <div className="bg-white dark:bg-surface-dark-secondary rounded-xl p-4 shadow-sm">
+                  <h4 className="text-base font-semibold text-gray-900 dark:text-white mb-4">
+                    Audience Breakdown
+                  </h4>
+                  {analytics.trafficData.some((d) => d.value > 0) ? (
+                    <div className="flex items-center justify-center">
+                      <ResponsiveContainer width={160} height={160}>
+                        <PieChart>
+                          <Pie
+                            data={analytics.trafficData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={50}
+                            outerRadius={70}
+                            paddingAngle={5}
+                            dataKey="value"
+                          >
+                            {analytics.trafficData.map((entry, index) => (
+                              <Cell
+                                key={`cell-${index}`}
+                                fill={CHART_COLORS[index % CHART_COLORS.length]}
+                              />
+                            ))}
+                          </Pie>
+                          <Tooltip />
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <div className="space-y-3 ml-4">
+                        {analytics.trafficData.map((item, index) => (
+                          <div key={item.name} className="flex items-center gap-2">
+                            <div
+                              className="w-3 h-3 rounded-full"
+                              style={{
+                                backgroundColor: CHART_COLORS[index % CHART_COLORS.length],
+                              }}
+                            />
+                            <span className="text-sm text-gray-600 dark:text-gray-400">
+                              {item.name}
+                            </span>
+                            <span className="font-semibold text-gray-900 dark:text-white">
+                              {item.value}%
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-center text-gray-500 py-6">
+                      Not enough data for audience breakdown
+                    </p>
+                  )}
+                </div>
+
+                {/* Venue Performance */}
+                {analytics.eventComparison.length > 0 && (
+                  <div className="space-y-3">
+                    <h4 className="text-base font-semibold text-gray-900 dark:text-white">
+                      Venue Performance
+                    </h4>
+                    {analytics.eventComparison.map((event, index) => (
+                      <div
+                        key={index}
+                        className="bg-white dark:bg-surface-dark-secondary rounded-xl p-4 flex items-center justify-between"
+                      >
+                        <div>
+                          <h5 className="font-medium text-gray-900 dark:text-white">
+                            {event.venueName}
+                          </h5>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            {event.name}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-lg font-bold text-primary-600">
+                            {event.rsvps}
+                          </div>
+                          <div className="text-xs text-gray-500">RSVPs</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                  Generated {formatFullDate(Date.now())}
+                </p>
+              </>
+            )}
+          </div>
+        )}
       </section>
 
       {/* Stats Summary */}
@@ -248,7 +431,7 @@ export function BandProfileView() {
         band={{
           _id: band._id,
           name: band.name,
-          genre: band.genre as Genre,
+          genres: band.genres || [],
           location: band.location,
           bio: band.bio,
           memberCount: band.memberCount,

@@ -15,7 +15,7 @@ interface EditBandProfileModalProps {
   band: {
     _id: Id<"bands">;
     name: string;
-    genre: Genre;
+    genres: Genre[];
     location: string;
     bio?: string;
     memberCount?: number;
@@ -37,14 +37,14 @@ export function EditBandProfileModal({
   band,
 }: EditBandProfileModalProps) {
   const updateBand = useMutation(api.bands.update);
-  
+
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"info" | "social">("info");
-  
+
   const [formData, setFormData] = useState({
     name: band.name,
-    genre: band.genre,
+    genres: band.genres,
     location: band.location,
     bio: band.bio || "",
     memberCount: band.memberCount || 1,
@@ -62,7 +62,7 @@ export function EditBandProfileModal({
     if (isOpen) {
       setFormData({
         name: band.name,
-        genre: band.genre,
+        genres: band.genres,
         location: band.location,
         bio: band.bio || "",
         memberCount: band.memberCount || 1,
@@ -92,7 +92,7 @@ export function EditBandProfileModal({
     setIsSaving(true);
     try {
       // Clean up social links (remove empty strings)
-      const cleanedSocialLinks: typeof formData.socialLinks = {};
+      const cleanedSocialLinks: Partial<typeof formData.socialLinks> = {};
       Object.entries(formData.socialLinks).forEach(([key, value]) => {
         if (value.trim()) {
           cleanedSocialLinks[key as keyof typeof formData.socialLinks] = value.trim();
@@ -102,7 +102,7 @@ export function EditBandProfileModal({
       await updateBand({
         bandId: band._id,
         name: formData.name.trim(),
-        genre: formData.genre,
+        genres: formData.genres,
         location: formData.location.trim(),
         bio: formData.bio.trim() || undefined,
         memberCount: formData.memberCount || undefined,
@@ -184,19 +184,44 @@ export function EditBandProfileModal({
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Genre
+                  Genres ({formData.genres.length}/5)
                 </label>
-                <select
-                  value={formData.genre}
-                  onChange={(e) => setFormData({ ...formData, genre: e.target.value as Genre })}
-                  className="w-full px-4 py-3 bg-gray-100 dark:bg-gray-800 rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-accent-500"
-                >
-                  {GENRES.map((genre) => (
-                    <option key={genre} value={genre}>
-                      {genre.charAt(0).toUpperCase() + genre.slice(1)}
-                    </option>
-                  ))}
-                </select>
+                <div className="grid grid-cols-2 gap-2">
+                  {GENRES.map(({ value, label }) => {
+                    const isSelected = formData.genres.includes(value);
+                    const isDisabled = !isSelected && formData.genres.length >= 5;
+                    return (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => {
+                          if (isSelected) {
+                            setFormData({
+                              ...formData,
+                              genres: formData.genres.filter((g) => g !== value),
+                            });
+                          } else if (!isDisabled) {
+                            setFormData({
+                              ...formData,
+                              genres: [...formData.genres, value],
+                            });
+                          }
+                        }}
+                        disabled={isDisabled}
+                        className={cn(
+                          "px-3 py-2 rounded-lg text-sm font-medium transition-all",
+                          isSelected
+                            ? "bg-accent-500 text-white"
+                            : isDisabled
+                              ? "bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed"
+                              : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+                        )}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               <div>

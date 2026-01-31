@@ -122,7 +122,7 @@ export const getBandWithStats = query({
 export const create = mutation({
   args: {
     name: v.string(),
-    genre: genreValidator,
+    genres: v.array(genreValidator),
     location: v.string(),
     image: v.optional(v.string()),
     bio: v.optional(v.string()),
@@ -169,7 +169,7 @@ export const update = mutation({
   args: {
     bandId: v.id("bands"),
     name: v.optional(v.string()),
-    genre: v.optional(genreValidator),
+    genres: v.optional(v.array(genreValidator)),
     location: v.optional(v.string()),
     image: v.optional(v.string()),
     bio: v.optional(v.string()),
@@ -217,10 +217,11 @@ export const list = query({
     const limit = args.limit || 50;
 
     if (args.genre) {
-      return await ctx.db
-        .query("bands")
-        .withIndex("by_genre", (q) => q.eq("genre", args.genre!))
-        .take(limit);
+      // Filter bands that include the requested genre in their genres array
+      const allBands = await ctx.db.query("bands").take(limit * 2);
+      return allBands
+        .filter((band) => band.genres.includes(args.genre!))
+        .slice(0, limit);
     }
 
     return await ctx.db.query("bands").take(limit);

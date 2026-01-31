@@ -64,7 +64,7 @@ export const userProfileUpdateSchema = z.object({
 // Band creation schema
 export const bandCreateSchema = z.object({
   name: z.string().min(1).max(100),
-  genre: genreSchema,
+  genres: z.array(genreSchema).min(1).max(5),
   location: z.string().min(1).max(200),
   image: z.string().url().optional(),
   bio: z.string().max(1000).optional(),

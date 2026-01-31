@@ -21,10 +21,10 @@ import { cn } from "@/lib/utils";
 export function BandDashboard() {
   const { bandWithStats, isLoading } = useCurrentBand();
   const { venues: suggestedVenues, isLoading: venuesLoading } = useSuggestedVenues(
-    bandWithStats?.genre
+    bandWithStats?.genres?.[0] // Use first genre for venue suggestions
   );
   const { openDates, isLoading: datesLoading, applyToOpenDate } = useOpenDates({
-    genre: bandWithStats?.genre,
+    genre: bandWithStats?.genres?.[0], // Use first genre for open dates
     limit: 5,
   });
 
@@ -86,7 +86,7 @@ export function BandDashboard() {
           <div>
             <h1 className="text-xl font-bold">{bandWithStats.name}</h1>
             <p className="text-white/80 text-sm">
-              {bandWithStats.genre.charAt(0).toUpperCase() + bandWithStats.genre.slice(1)} •{" "}
+              {bandWithStats.genres?.map((g) => g.charAt(0).toUpperCase() + g.slice(1)).join(" • ") || "No genre"} •{" "}
               {bandWithStats.location}
             </p>
           </div>
@@ -126,14 +126,14 @@ export function BandDashboard() {
         <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2">
           {venuesLoading
             ? [1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  className="w-48 h-32 bg-gray-100 dark:bg-surface-dark-secondary rounded-xl animate-pulse flex-shrink-0"
-                />
-              ))
+              <div
+                key={i}
+                className="w-48 h-32 bg-gray-100 dark:bg-surface-dark-secondary rounded-xl animate-pulse flex-shrink-0"
+              />
+            ))
             : suggestedVenues.map((venue) => (
-                <VenueCard key={venue._id} venue={venue} />
-              ))}
+              <VenueCard key={venue._id} venue={venue} />
+            ))}
         </div>
       </section>
 
