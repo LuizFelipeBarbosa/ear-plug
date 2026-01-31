@@ -16,8 +16,10 @@ export function Providers({ children }: { children: ReactNode }) {
       publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY!}
       appearance={{
         variables: {
-          colorPrimary: "#7c3aed",
-          colorTextOnPrimaryBackground: "#ffffff",
+          colorPrimary: "#C2FF00", // Electric Lime
+          colorTextOnPrimaryBackground: "#0F0F0F", // Night
+          colorBackground: "#0F0F0F",
+          colorText: "#FFFFFF",
         },
       }}
     >

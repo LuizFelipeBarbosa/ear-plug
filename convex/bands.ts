@@ -218,9 +218,10 @@ export const list = query({
 
     if (args.genre) {
       // Filter bands that include the requested genre in their genres array
-      const allBands = await ctx.db.query("bands").take(limit * 2);
+      // Note: We need to filter in memory because genres is an array
+      const allBands = await ctx.db.query("bands").collect();
       return allBands
-        .filter((band) => band.genres.includes(args.genre!))
+        .filter((band) => band.genres && band.genres.includes(args.genre!))
         .slice(0, limit);
     }
 

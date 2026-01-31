@@ -2,8 +2,9 @@
 
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { APIProvider, Map, AdvancedMarker, InfoWindow } from "@vis.gl/react-google-maps";
+import { APIProvider, Map, AdvancedMarker } from "@vis.gl/react-google-maps";
 import { Search, SlidersHorizontal, X } from "lucide-react";
+import { MapInfoWindow } from "@/components/maps/MapInfoWindow";
 import { useEvents, useSearchEvents, useNearbyEvents } from "@/hooks/useEvents";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { EventCard } from "@/components/events/EventCard";
@@ -15,6 +16,30 @@ import { cn } from "@/lib/utils";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 
 const VALID_GENRES: Genre[] = ["indie", "rock", "jazz", "electronic", "folk", "pop", "alternative"];
+
+// Dark theme map styles for Google Maps
+const DARK_MAP_STYLES = [
+  { elementType: "geometry", stylers: [{ color: "#0F0F0F" }] },
+  { elementType: "labels.icon", stylers: [{ visibility: "off" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#A1A1AA" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#0F0F0F" }] },
+  { featureType: "administrative", elementType: "geometry", stylers: [{ color: "#252525" }] },
+  { featureType: "administrative.country", elementType: "labels.text.fill", stylers: [{ color: "#71717A" }] },
+  { featureType: "administrative.locality", elementType: "labels.text.fill", stylers: [{ color: "#A1A1AA" }] },
+  { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#71717A" }] },
+  { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#1A1A1A" }] },
+  { featureType: "poi.park", elementType: "labels.text.fill", stylers: [{ color: "#52525B" }] },
+  { featureType: "road", elementType: "geometry", stylers: [{ color: "#252525" }] },
+  { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#1A1A1A" }] },
+  { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#71717A" }] },
+  { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#333333" }] },
+  { featureType: "road.highway", elementType: "geometry.stroke", stylers: [{ color: "#0F0F0F" }] },
+  { featureType: "road.highway", elementType: "labels.text.fill", stylers: [{ color: "#A1A1AA" }] },
+  { featureType: "transit", elementType: "geometry", stylers: [{ color: "#1A1A1A" }] },
+  { featureType: "transit", elementType: "labels.text.fill", stylers: [{ color: "#71717A" }] },
+  { featureType: "water", elementType: "geometry", stylers: [{ color: "#1A1A1A" }] },
+  { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#52525B" }] },
+];
 
 export function FanMapView() {
   const searchParams = useSearchParams();
@@ -94,47 +119,47 @@ export function FanMapView() {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
   return (
-    <div className="h-screen flex flex-col">
-      {/* Search Bar */}
-      <div className="relative z-10 p-4 bg-white dark:bg-surface-dark shadow-sm">
-        <div className="flex items-center gap-2">
+    <div className="h-screen flex flex-col bg-night">
+      {/* Search Bar - Brutalist Style */}
+      <div className="relative z-10 p-4 bg-night-secondary border-b-2 border-lime/20">
+        <div className="flex items-center gap-3">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
             <input
               type="text"
               placeholder="Search events, bands, or venues..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 bg-gray-100 dark:bg-surface-dark-secondary rounded-xl text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full pl-12 pr-10 py-3.5 bg-night-tertiary border-2 border-zinc-800 rounded-none text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime transition-colors"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full"
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 flex items-center justify-center hover:bg-zinc-800 rounded-full touch-target"
               >
-                <X className="w-4 h-4 text-gray-400" />
+                <X className="w-4 h-4 text-zinc-500" />
               </button>
             )}
           </div>
           <button
             onClick={() => setShowFilters(!showFilters)}
             className={cn(
-              "p-3 rounded-xl transition-colors",
+              "p-3.5 border-2 flex items-center justify-center transition-all touch-target",
               showFilters
-                ? "bg-primary-500 text-white"
-                : "bg-gray-100 dark:bg-surface-dark-secondary text-gray-600 dark:text-gray-400"
+                ? "bg-lime border-lime text-night"
+                : "bg-night-tertiary border-zinc-800 text-zinc-400 hover:border-zinc-600"
             )}
           >
             <SlidersHorizontal className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Filters */}
+        {/* Filters - Glassmorphism */}
         {showFilters && (
-          <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800 space-y-4">
+          <div className="mt-4 pt-4 border-t-2 border-zinc-800 space-y-4">
             {/* Genre Filter */}
             <div>
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+              <span className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-3 block">
                 Genre
               </span>
               <GenreFilter
@@ -163,25 +188,30 @@ export function FanMapView() {
             <Map
               defaultCenter={mapCenter}
               defaultZoom={DEFAULT_MAP_ZOOM}
-              mapId="ear-plug-map"
+              mapId="ear-plug-map-dark"
               gestureHandling="greedy"
               disableDefaultUI
               className="w-full h-full"
+              styles={DARK_MAP_STYLES}
             >
-              {/* User location marker */}
+              {/* User location marker - Vivid Violet with pulse */}
               {hasLocation && latitude && longitude && (
                 <AdvancedMarker
                   position={{ lat: latitude, lng: longitude }}
                   zIndex={1000}
                 >
                   <div className="relative">
-                    <div className="w-4 h-4 bg-blue-500 rounded-full border-2 border-white shadow-lg" />
-                    <div className="absolute inset-0 bg-blue-500 rounded-full animate-ping opacity-30" />
+                    <div className="w-5 h-5 bg-violet border-2 border-white rounded-full shadow-lg animate-pulse-violet" />
+                    <div className="absolute inset-0 bg-violet rounded-full animate-ping opacity-40" />
                   </div>
                 </AdvancedMarker>
               )}
+              
+              {/* Event markers - Electric Lime with black border */}
               {displayEvents?.map((event) => {
                 if (!event.venue?.coordinates) return null;
+
+                const isSelected = selectedEventId === event._id;
 
                 return (
                   <AdvancedMarker
@@ -194,10 +224,10 @@ export function FanMapView() {
                   >
                     <div
                       className={cn(
-                        "w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-lg cursor-pointer transition-transform hover:scale-110",
-                        selectedEventId === event._id
-                          ? "bg-accent-500 scale-125"
-                          : "bg-primary-500"
+                        "w-11 h-11 rounded-full flex items-center justify-center text-night text-sm font-bold border-2 border-night cursor-pointer transition-all duration-200",
+                        isSelected
+                          ? "bg-violet text-white border-lime scale-125 shadow-glow-violet"
+                          : "bg-lime shadow-lg hover:scale-110 hover:shadow-glow-lime"
                       )}
                     >
                       {event.rsvpCount}
@@ -206,47 +236,48 @@ export function FanMapView() {
                 );
               })}
 
-              {/* Info Window */}
+              {/* Info Window - Custom Brutalist */}
               {selectedEvent && selectedEvent.venue?.coordinates && (
-                <InfoWindow
+                <MapInfoWindow
                   position={{
                     lat: selectedEvent.venue.coordinates.lat,
                     lng: selectedEvent.venue.coordinates.lng,
                   }}
-                  onCloseClick={() => setSelectedEventId(null)}
+                  onClose={() => setSelectedEventId(null)}
                 >
-                  <div className="p-2 max-w-[250px]">
+                  <div className="w-[280px]">
                     <EventCard event={selectedEvent} variant="compact" showLikeButton={false} />
                   </div>
-                </InfoWindow>
+                </MapInfoWindow>
               )}
             </Map>
           </APIProvider>
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-surface-dark-secondary">
-            <p className="text-gray-500">Map requires Google Maps API key</p>
+          <div className="w-full h-full flex items-center justify-center bg-night-secondary">
+            <p className="text-zinc-500">Map requires Google Maps API key</p>
           </div>
         )}
       </div>
 
-      {/* Near You List */}
-      <div className="bg-white dark:bg-surface-dark border-t border-gray-200 dark:border-gray-800">
+      {/* Near You List - Brutalist Style */}
+      <div className="bg-night-secondary border-t-2 border-lime/20 max-h-[35vh] overflow-hidden">
         <div className="p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold uppercase tracking-tight text-white">
               {useDistanceFilter && hasLocation ? `Within ${distanceRadius} miles` : "Near You"}
             </h2>
             {displayEvents && displayEvents.length > 0 && (
-              <span className="text-sm text-gray-500 dark:text-gray-400">
+              <span className="text-xs font-bold uppercase tracking-wider text-lime">
                 {displayEvents.length} event{displayEvents.length !== 1 ? 's' : ''}
               </span>
             )}
           </div>
-          <div className="space-y-3 max-h-48 overflow-y-auto no-scrollbar">
+          
+          <div className="space-y-3 overflow-y-auto max-h-[25vh] no-scrollbar pb-2">
             {isLoading ? (
               <div className="space-y-3">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="h-20 bg-gray-100 dark:bg-surface-dark-secondary rounded-xl animate-pulse" />
+                  <div key={i} className="h-20 bg-night-tertiary border-2 border-zinc-800 animate-shimmer" />
                 ))}
               </div>
             ) : displayEvents && displayEvents.length > 0 ? (
@@ -254,18 +285,20 @@ export function FanMapView() {
                 <div key={event._id} className="relative">
                   <EventCard event={event} variant="compact" />
                   {event.distance !== undefined && (
-                    <span className="absolute top-2 right-2 text-xs bg-gray-900/70 text-white px-2 py-0.5 rounded-full">
+                    <span className="absolute top-2 right-2 text-xs bg-lime text-night px-2 py-0.5 font-bold uppercase">
                       {event.distance} mi
                     </span>
                   )}
                 </div>
               ))
             ) : (
-              <p className="text-gray-500 text-center py-4">
-                {useDistanceFilter && hasLocation
-                  ? `No events within ${distanceRadius} miles`
-                  : "No events found"}
-              </p>
+              <div className="text-center py-8">
+                <p className="text-zinc-500 font-medium">
+                  {useDistanceFilter && hasLocation
+                    ? `No events within ${distanceRadius} miles`
+                    : "No events found"}
+                </p>
+              </div>
             )}
           </div>
         </div>

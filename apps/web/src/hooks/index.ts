@@ -6,3 +6,5 @@ export * from "./useMessages";
 export * from "./useNotifications";
 export * from "./useLocalStorage";
 export * from "./useGeolocation";
+export * from "./useSharedEvents";
+export { useBandEvents } from "./useSharedEvents";

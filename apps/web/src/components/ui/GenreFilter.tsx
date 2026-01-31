@@ -23,10 +23,10 @@ export function GenreFilter({
         <button
           onClick={() => onSelect(undefined)}
           className={cn(
-            "px-4 py-2 rounded-full text-sm font-medium transition-all",
+            "px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all border-2 touch-target",
             !selected
-              ? "bg-primary-500 text-white"
-              : "bg-gray-100 dark:bg-surface-dark-secondary text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+              ? "bg-lime text-night border-lime"
+              : "bg-night-tertiary border-zinc-800 text-zinc-400 hover:border-lime/30"
           )}
         >
           All
@@ -37,14 +37,14 @@ export function GenreFilter({
           key={value}
           onClick={() => onSelect(value === selected ? undefined : value)}
           className={cn(
-            "px-4 py-2 rounded-full text-sm font-medium transition-all",
+            "px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all border-2 touch-target",
             selected === value
-              ? "text-white"
-              : "bg-gray-100 dark:bg-surface-dark-secondary text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+              ? "text-night border-transparent"
+              : "bg-night-tertiary border-zinc-800 text-zinc-400 hover:border-lime/30"
           )}
           style={
             selected === value
-              ? { backgroundColor: GENRE_COLORS[value] }
+              ? { backgroundColor: GENRE_COLORS[value], borderColor: GENRE_COLORS[value] }
               : undefined
           }
         >

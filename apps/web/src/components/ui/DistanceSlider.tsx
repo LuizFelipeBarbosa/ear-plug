@@ -35,7 +35,7 @@ export function DistanceSlider({
     return (
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">
             Distance Filter
           </span>
         </div>
@@ -43,15 +43,16 @@ export function DistanceSlider({
           onClick={onRequestLocation}
           disabled={loading}
           className={cn(
-            "w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl",
-            "bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400",
-            "hover:bg-primary-100 dark:hover:bg-primary-900/30 transition-colors",
-            "disabled:opacity-50 disabled:cursor-not-allowed"
+            "w-full flex items-center justify-center gap-2 py-3 px-4",
+            "bg-night-tertiary border-2 border-lime/30 text-lime",
+            "hover:bg-lime/10 transition-colors",
+            "disabled:opacity-50 disabled:cursor-not-allowed",
+            "font-bold uppercase text-xs tracking-wider touch-target"
           )}
         >
           {loading ? (
             <>
-              <div className="w-4 h-4 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+              <div className="w-4 h-4 border-2 border-lime border-t-transparent animate-spin" />
               <span>Getting location...</span>
             </>
           ) : (
@@ -68,15 +69,15 @@ export function DistanceSlider({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+        <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">
           Distance
         </span>
-        <span className="text-sm font-semibold text-primary-600 dark:text-primary-400">
+        <span className="text-sm font-bold text-lime">
           {value} {value === 1 ? "mile" : "miles"}
         </span>
       </div>
 
-      {/* Slider */}
+      {/* Slider - Brutalist Style */}
       <div className="relative">
         <input
           type="range"
@@ -91,26 +92,22 @@ export function DistanceSlider({
           onTouchEnd={() => setIsDragging(false)}
           disabled={disabled}
           className={cn(
-            "w-full h-2 rounded-full appearance-none cursor-pointer",
-            "bg-gray-200 dark:bg-gray-700",
+            "w-full h-2 appearance-none cursor-pointer bg-zinc-800",
             "[&::-webkit-slider-thumb]:appearance-none",
             "[&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5",
-            "[&::-webkit-slider-thumb]:rounded-full",
-            "[&::-webkit-slider-thumb]:bg-primary-500",
-            "[&::-webkit-slider-thumb]:shadow-lg",
+            "[&::-webkit-slider-thumb]:bg-lime",
+            "[&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-night",
             "[&::-webkit-slider-thumb]:cursor-pointer",
             "[&::-webkit-slider-thumb]:transition-transform",
-            isDragging && "[&::-webkit-slider-thumb]:scale-110",
+            isDragging && "[&::-webkit-slider-thumb]:scale-125",
             "[&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5",
-            "[&::-moz-range-thumb]:rounded-full",
-            "[&::-moz-range-thumb]:bg-primary-500",
-            "[&::-moz-range-thumb]:border-0",
-            "[&::-moz-range-thumb]:shadow-lg",
+            "[&::-moz-range-thumb]:bg-lime",
+            "[&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-night",
             "[&::-moz-range-thumb]:cursor-pointer",
             "disabled:opacity-50 disabled:cursor-not-allowed"
           )}
           style={{
-            background: `linear-gradient(to right, rgb(124, 58, 237) ${((value - min) / (max - min)) * 100}%, rgb(229, 231, 235) ${((value - min) / (max - min)) * 100}%)`,
+            background: `linear-gradient(to right, #C2FF00 ${((value - min) / (max - min)) * 100}%, #27272a ${((value - min) / (max - min)) * 100}%)`,
           }}
         />
       </div>
@@ -123,10 +120,10 @@ export function DistanceSlider({
             onClick={() => onChange(preset)}
             disabled={disabled}
             className={cn(
-              "flex-1 py-1.5 px-2 rounded-lg text-xs font-medium transition-colors",
+              "flex-1 py-2 px-2 text-xs font-bold uppercase tracking-wider transition-all border-2 touch-target",
               value === preset
-                ? "bg-primary-500 text-white"
-                : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700",
+                ? "bg-lime text-night border-lime"
+                : "bg-night-tertiary border-zinc-800 text-zinc-400 hover:border-lime/30",
               "disabled:opacity-50 disabled:cursor-not-allowed"
             )}
           >
@@ -136,8 +133,8 @@ export function DistanceSlider({
       </div>
 
       {/* Location indicator */}
-      <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
-        <MapPin className="w-3 h-3" />
+      <div className="flex items-center gap-1.5 text-xs text-zinc-500">
+        <MapPin className="w-3 h-3 text-violet" />
         <span>Showing events within {value} miles of your location</span>
       </div>
     </div>

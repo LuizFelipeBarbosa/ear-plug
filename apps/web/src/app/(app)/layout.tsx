@@ -21,9 +21,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   // Show loading state
   if (!isLoaded || isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-surface-dark">
+      <div className="min-h-screen flex items-center justify-center bg-night">
         <div className="animate-pulse">
-          <div className="w-12 h-12 rounded-full bg-primary-500" />
+          <div className="w-12 h-12 bg-lime animate-pulse-lime" />
         </div>
       </div>
     );
@@ -35,7 +35,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-surface-dark pb-20">
+    <div className="min-h-screen bg-night pb-20">
       {children}
       <BottomNav />
     </div>

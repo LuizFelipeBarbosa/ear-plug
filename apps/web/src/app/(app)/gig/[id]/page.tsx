@@ -22,7 +22,7 @@ import {
   formatPrice,
 } from "@ear-plug/shared/constants";
 import { cn } from "@/lib/utils";
-import type { Id } from "../../../../../../convex/_generated/dataModel";
+import type { Id } from "../../../../../../../convex/_generated/dataModel";
 
 interface PageProps {
   params: { id: string };
@@ -56,12 +56,12 @@ export default function EventDetailsPage({ params }: PageProps) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-white dark:bg-surface-dark">
-        <div className="animate-pulse">
-          <div className="h-64 bg-gray-200 dark:bg-gray-800" />
+      <div className="min-h-screen bg-night">
+        <div className="animate-shimmer">
+          <div className="h-64 bg-night-tertiary" />
           <div className="p-6 space-y-4">
-            <div className="h-8 bg-gray-200 dark:bg-gray-800 rounded w-3/4" />
-            <div className="h-4 bg-gray-200 dark:bg-gray-800 rounded w-1/2" />
+            <div className="h-8 bg-night-tertiary w-3/4" />
+            <div className="h-4 bg-night-tertiary w-1/2" />
           </div>
         </div>
       </div>
@@ -70,14 +70,14 @@ export default function EventDetailsPage({ params }: PageProps) {
 
   if (!event) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-night">
         <div className="text-center">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+          <h2 className="text-xl font-bold text-white uppercase tracking-tight mb-2">
             Event not found
           </h2>
           <button
             onClick={() => router.back()}
-            className="text-primary-600 hover:text-primary-700"
+            className="text-lime hover:text-lime-dark uppercase text-xs font-bold tracking-wider"
           >
             Go back
           </button>
@@ -90,7 +90,7 @@ export default function EventDetailsPage({ params }: PageProps) {
   const fillPercentage = Math.min((event.rsvpCount / event.capacity) * 100, 100);
 
   return (
-    <div className="min-h-screen bg-white dark:bg-surface-dark pb-24">
+    <div className="min-h-screen bg-night pb-28">
       {/* Header Image */}
       <div className="relative h-72">
         {event.image ? (
@@ -101,66 +101,66 @@ export default function EventDetailsPage({ params }: PageProps) {
             className="object-cover"
           />
         ) : (
-          <div className="w-full h-full bg-gradient-to-br from-primary-500 to-accent-500" />
+          <div className="w-full h-full bg-gradient-to-br from-violet/30 to-lime/30" />
         )}
 
         {/* Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-night via-night/50 to-transparent" />
 
         {/* Actions */}
         <div className="absolute top-4 left-4 right-4 flex items-center justify-between">
           <button
             onClick={() => router.back()}
-            className="p-2 rounded-full bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 transition-colors"
+            className="p-3 flex items-center justify-center bg-night-secondary/80 backdrop-blur-sm border border-zinc-800 text-white hover:border-lime/30 transition-colors touch-target"
           >
-            <ArrowLeft className="w-6 h-6" />
+            <ArrowLeft className="w-5 h-5" />
           </button>
 
           <div className="flex items-center gap-2">
             <button
               onClick={handleShare}
-              className="p-2 rounded-full bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 transition-colors"
+              className="p-3 flex items-center justify-center bg-night-secondary/80 backdrop-blur-sm border border-zinc-800 text-white hover:border-lime/30 transition-colors touch-target"
             >
-              <Share2 className="w-6 h-6" />
+              <Share2 className="w-5 h-5" />
             </button>
             <button
               onClick={() => toggleLike()}
               className={cn(
-                "p-2 rounded-full transition-colors",
+                "p-3 flex items-center justify-center transition-colors border touch-target",
                 hasLiked
-                  ? "bg-accent-500 text-white"
-                  : "bg-white/20 backdrop-blur-sm text-white hover:bg-white/30"
+                  ? "bg-lime border-lime text-night"
+                  : "bg-night-secondary/80 backdrop-blur-sm border-zinc-800 text-white hover:border-lime/30"
               )}
             >
-              <Heart className={cn("w-6 h-6", hasLiked && "fill-current")} />
+              <Heart className={cn("w-5 h-5", hasLiked && "fill-current")} />
             </button>
           </div>
         </div>
       </div>
 
       {/* Content */}
-      <div className="p-6">
+      <div className="p-6 -mt-8 relative z-10">
         {/* Band Info */}
         {event.band && (
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-200">
+            <div className="w-14 h-14 overflow-hidden bg-night-tertiary border-2 border-lime/30">
               {event.band.image ? (
                 <Image
                   src={event.band.image}
                   alt={event.band.name}
-                  width={48}
-                  height={48}
+                  width={56}
+                  height={56}
                   className="object-cover"
                 />
               ) : (
-                <div className="w-full h-full bg-gradient-to-br from-primary-400 to-accent-400" />
+                <div className="w-full h-full bg-gradient-to-br from-violet/30 to-lime/30" />
               )}
             </div>
             <div>
-              <h3 className="font-semibold text-gray-900 dark:text-white">
+              <h3 className="font-bold text-white uppercase tracking-wide">
                 {event.band.name}
               </h3>
-              <p className="text-sm text-primary-600 dark:text-primary-400">
+              <p className="text-xs text-lime font-bold uppercase tracking-wider">
                 {event.genre.charAt(0).toUpperCase() + event.genre.slice(1)}
               </p>
             </div>
@@ -168,78 +168,96 @@ export default function EventDetailsPage({ params }: PageProps) {
         )}
 
         {/* Title */}
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+        <h1 className="text-2xl font-bold text-white uppercase tracking-tight mb-4">
           {event.title}
         </h1>
 
         {/* Band Bio */}
         {event.band?.bio && (
-          <div className="mb-6 p-4 bg-gradient-to-r from-primary-50 to-accent-50 dark:from-primary-900/20 dark:to-accent-900/20 rounded-xl">
-            <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+          <div className="mb-6 p-4 bg-night-tertiary border-l-2 border-lime">
+            <p className="text-sm text-zinc-400 leading-relaxed">
               {event.band.bio}
             </p>
           </div>
         )}
 
         {/* Details Grid */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className="grid grid-cols-2 gap-3 mb-6">
           <DetailCard
-            icon={<Calendar className="w-5 h-5 text-primary-500" />}
+            icon={<Calendar className="w-5 h-5 text-lime" />}
             label="Date"
             value={formatFullDate(event.dateTime)}
           />
           <DetailCard
-            icon={<Clock className="w-5 h-5 text-primary-500" />}
+            icon={<Clock className="w-5 h-5 text-lime" />}
             label="Time"
             value={formatEventTime(event.dateTime)}
           />
           <DetailCard
-            icon={<Users className="w-5 h-5 text-primary-500" />}
+            icon={<Users className="w-5 h-5 text-violet" />}
             label="RSVPs"
             value={`${event.rsvpCount} / ${event.capacity}`}
           />
           <DetailCard
-            icon={<DollarSign className="w-5 h-5 text-primary-500" />}
+            icon={<DollarSign className="w-5 h-5 text-violet" />}
             label="Ticket"
             value={event.price ? formatPrice(event.price) : "Free"}
           />
         </div>
 
         {/* RSVP Progress */}
-        <div className="mb-6 p-4 bg-gray-50 dark:bg-surface-dark-secondary rounded-xl">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+        <div className="mb-6 p-4 bg-night-tertiary border-2 border-zinc-800">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">
               {spotsLeft} spots remaining
             </span>
-            <span className="text-sm text-gray-500">
+            <span className="text-xs font-bold text-lime">
               {Math.round(fillPercentage)}% full
             </span>
           </div>
-          <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+          <div className="w-full h-2 bg-zinc-800 overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-primary-500 to-accent-500 rounded-full transition-all duration-500"
+              className="h-full bg-gradient-to-r from-lime to-violet transition-all duration-500"
               style={{ width: `${fillPercentage}%` }}
             />
           </div>
         </div>
 
+        {/* RSVP Button - Fixed Bottom */}
+        <div className="mb-6 p-4 bg-night-secondary border-2 border-zinc-800">
+          <button
+            onClick={() => rsvp()}
+            disabled={spotsLeft <= 0 && !hasRsvp}
+            className={cn(
+              "w-full py-4 font-bold text-lg uppercase tracking-wider transition-all border-2 touch-target",
+              hasRsvp
+                ? "bg-lime text-night border-lime"
+                : spotsLeft <= 0
+                  ? "bg-zinc-800 text-zinc-500 border-zinc-800 cursor-not-allowed"
+                  : "bg-lime text-night border-lime hover:bg-transparent hover:text-lime"
+            )}
+          >
+            {hasRsvp ? "You're Going! ✓" : spotsLeft <= 0 ? "Sold Out" : "RSVP to Event"}
+          </button>
+        </div>
+
         {/* Venue Info */}
         {event.venue && (
           <div className="mb-6">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+            <h2 className="text-sm font-bold text-zinc-400 uppercase tracking-wider mb-3">
               Venue
             </h2>
-            <div className="p-4 bg-gray-50 dark:bg-surface-dark-secondary rounded-xl">
+            <div className="p-4 bg-night-tertiary border-2 border-zinc-800">
               <div className="flex items-start gap-3">
-                <MapPin className="w-5 h-5 text-primary-500 mt-0.5" />
+                <MapPin className="w-5 h-5 text-lime mt-0.5" />
                 <div>
-                  <h3 className="font-medium text-gray-900 dark:text-white">
+                  <h3 className="font-bold text-white uppercase tracking-wide">
                     {event.venue.name}
                   </h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <p className="text-sm text-zinc-400">
                     {event.venue.address}
                   </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <p className="text-xs text-zinc-500 mt-1">
                     {event.venue.city} • Capacity: {event.venue.capacity}
                   </p>
                 </div>
@@ -251,33 +269,16 @@ export default function EventDetailsPage({ params }: PageProps) {
         {/* Description */}
         {event.description && (
           <div className="mb-6">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+            <h2 className="text-sm font-bold text-zinc-400 uppercase tracking-wider mb-3">
               About
             </h2>
-            <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
+            <p className="text-zinc-400 leading-relaxed">
               {event.description}
             </p>
           </div>
         )}
       </div>
 
-      {/* RSVP Button - Fixed Bottom */}
-      <div className="fixed bottom-20 left-0 right-0 p-4 bg-white dark:bg-surface-dark border-t border-gray-200 dark:border-gray-800">
-        <button
-          onClick={() => rsvp()}
-          disabled={spotsLeft <= 0 && !hasRsvp}
-          className={cn(
-            "w-full py-4 rounded-xl font-semibold text-lg transition-all",
-            hasRsvp
-              ? "bg-success-500 text-white"
-              : spotsLeft <= 0
-                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                : "bg-primary-600 text-white hover:bg-primary-700 active:scale-[0.98]"
-          )}
-        >
-          {hasRsvp ? "You're Going! ✓" : spotsLeft <= 0 ? "Sold Out" : "RSVP to Event"}
-        </button>
-      </div>
     </div>
   );
 }
@@ -292,12 +293,12 @@ function DetailCard({
   value: string;
 }) {
   return (
-    <div className="p-4 bg-gray-50 dark:bg-surface-dark-secondary rounded-xl">
+    <div className="p-4 bg-night-tertiary border-2 border-zinc-800">
       <div className="flex items-center gap-2 mb-1">
         {icon}
-        <span className="text-sm text-gray-500 dark:text-gray-400">{label}</span>
+        <span className="text-xs text-zinc-500 uppercase tracking-wider">{label}</span>
       </div>
-      <p className="font-semibold text-gray-900 dark:text-white">{value}</p>
+      <p className="font-bold text-white text-sm">{value}</p>
     </div>
   );
 }

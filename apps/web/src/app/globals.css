@@ -2,50 +2,62 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================
+   ELECTRIC INDIE-BRUTALIST THEME
+   Ear-Plug - Listen Local
+   ============================================ */
+
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 263 70% 50%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 330 81% 60%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 263 70% 50%;
+    /* Core Palette - Hard-coded Dark Mode */
+    --night: #0F0F0F;
+    --night-secondary: #1A1A1A;
+    --night-tertiary: #252525;
+    
+    /* Electric Accents */
+    --electric-lime: #C2FF00;
+    --electric-lime-dark: #9FD900;
+    --electric-lime-glow: rgba(194, 255, 0, 0.4);
+    
+    --vivid-violet: #8B5CF6;
+    --vivid-violet-dark: #7C3AED;
+    --vivid-violet-glow: rgba(139, 92, 246, 0.4);
+    
+    /* Semantic Colors */
+    --success: #22C55E;
+    --warning: #F59E0B;
+    --error: #EF4444;
+    
+    /* Text Colors */
+    --text-primary: #FFFFFF;
+    --text-secondary: #A1A1AA;
+    --text-muted: #71717A;
+    
+    /* Brutalist Borders */
+    --border-brutal: 2px solid var(--electric-lime);
+    --border-subtle: 1px solid #333333;
+    
+    /* shadcn/ui Theme Variables - Mapped to Brutalist Palette */
+    --background: 0 0% 6%; /* #0F0F0F */
+    --foreground: 0 0% 100%;
+    --card: 0 0% 10%; /* #1A1A1A */
+    --card-foreground: 0 0% 100%;
+    --popover: 0 0% 10%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 75 100% 50%; /* Electric Lime */
+    --primary-foreground: 0 0% 0%;
+    --secondary: 258 90% 66%; /* Vivid Violet */
+    --secondary-foreground: 0 0% 100%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 45%;
+    --accent: 75 100% 50%;
+    --accent-foreground: 0 0% 0%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 75 100% 50%;
     --radius: 0.5rem;
-  }
-
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 263 70% 50%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 330 81% 60%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 263 70% 50%;
   }
 }
 
@@ -54,39 +66,172 @@
     @apply border-border;
   }
   
+  html {
+    scroll-behavior: smooth;
+    background-color: var(--night);
+  }
+  
   body {
-    @apply bg-background text-foreground;
+    @apply antialiased;
+    background-color: var(--night);
+    color: var(--text-primary);
     font-feature-settings: "rlig" 1, "calt" 1;
+    overscroll-behavior: none;
+  }
+  
+  /* Force dark mode always */
+  html, body {
+    color-scheme: dark;
   }
 }
 
-/* Mobile-first responsive utilities */
-@layer utilities {
-  .safe-area-inset-bottom {
-    padding-bottom: env(safe-area-inset-bottom);
+/* ============================================
+   TYPOGRAPHY - Electric Indie-Brutalist
+   ============================================ */
+
+/* Display Font - Bold Condensed (Street Poster Style) */
+.font-display {
+  font-family: var(--font-oswald), var(--font-geist), system-ui, sans-serif;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+}
+
+/* Body Font - Clean & Legible */
+.font-body {
+  font-family: var(--font-geist), system-ui, sans-serif;
+  font-weight: 400;
+}
+
+/* Brutalist Headlines */
+.brutalist-title {
+  font-family: var(--font-oswald), var(--font-geist), sans-serif;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: -0.03em;
+  line-height: 0.95;
+}
+
+/* ============================================
+   BRUTALIST COMPONENTS
+   ============================================ */
+
+@layer components {
+  /* Brutalist Button - High Priority CTA */
+  .btn-brutalist {
+    @apply relative inline-flex items-center justify-center;
+    @apply px-6 py-3;
+    @apply font-bold uppercase tracking-wider text-sm;
+    background-color: var(--electric-lime);
+    color: #000000;
+    border: 2px solid var(--electric-lime);
+    transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
   }
   
-  .safe-area-inset-top {
-    padding-top: env(safe-area-inset-top);
+  .btn-brutalist:hover {
+    background-color: transparent;
+    color: var(--electric-lime);
+    box-shadow: 0 0 20px var(--electric-lime-glow);
   }
   
-  /* Hide scrollbar for Chrome, Safari and Opera */
-  .no-scrollbar::-webkit-scrollbar {
-    display: none;
+  .btn-brutalist:active {
+    transform: scale(0.98);
   }
   
-  /* Hide scrollbar for IE, Edge and Firefox */
-  .no-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+  /* Secondary Brutalist Button - Violet */
+  .btn-brutalist-secondary {
+    @apply relative inline-flex items-center justify-center;
+    @apply px-6 py-3;
+    @apply font-bold uppercase tracking-wider text-sm;
+    background-color: var(--vivid-violet);
+    color: #FFFFFF;
+    border: 2px solid var(--vivid-violet);
+    transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .btn-brutalist-secondary:hover {
+    background-color: transparent;
+    color: var(--vivid-violet);
+    box-shadow: 0 0 20px var(--vivid-violet-glow);
+  }
+  
+  /* Brutalist Card - 2px Border Style */
+  .card-brutalist {
+    background-color: var(--night-secondary);
+    border: 2px solid var(--electric-lime);
+    transition: all 200ms ease;
+  }
+  
+  .card-brutalist:hover {
+    box-shadow: 4px 4px 0px var(--electric-lime);
+    transform: translate(-2px, -2px);
+  }
+  
+  /* Glassmorphism Card - For Overlays */
+  .card-glass {
+    background: rgba(26, 26, 26, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(194, 255, 0, 0.2);
+  }
+  
+  /* Glassmorphism Violet Variant */
+  .card-glass-violet {
+    background: rgba(26, 26, 26, 0.8);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(139, 92, 246, 0.3);
   }
 }
 
-/* Custom animations */
+/* ============================================
+   MAP STYLES - Dark Theme with Electric Lime
+   ============================================ */
+
+.map-pin {
+  @apply flex items-center justify-center;
+  width: 44px;
+  height: 44px;
+  background-color: var(--electric-lime);
+  border: 2px solid #000000;
+  border-radius: 50%;
+  color: #000000;
+  font-weight: 700;
+  font-size: 14px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  transition: all 200ms ease;
+}
+
+.map-pin:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 20px var(--electric-lime-glow);
+}
+
+.map-pin-active {
+  background-color: var(--vivid-violet);
+  color: #FFFFFF;
+  border-color: var(--electric-lime);
+  transform: scale(1.15);
+}
+
+/* User Location Marker */
+.map-pin-user {
+  width: 20px;
+  height: 20px;
+  background-color: var(--vivid-violet);
+  border: 3px solid #FFFFFF;
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.3);
+}
+
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+
 @keyframes slide-up {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(20px);
   }
   to {
     opacity: 1;
@@ -95,23 +240,28 @@
 }
 
 @keyframes fade-in {
-  from {
-    opacity: 0;
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes pulse-lime {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(194, 255, 0, 0.4);
   }
-  to {
-    opacity: 1;
+  50% {
+    box-shadow: 0 0 0 12px rgba(194, 255, 0, 0);
   }
 }
 
-.animate-slide-up {
-  animation: slide-up 0.3s ease-out;
+@keyframes pulse-violet {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 12px rgba(139, 92, 246, 0);
+  }
 }
 
-.animate-fade-in {
-  animation: fade-in 0.2s ease-out;
-}
-
-/* Floating animation for background effects */
 @keyframes float {
   0%, 100% {
     transform: translateY(0) scale(1);
@@ -123,18 +273,51 @@
   }
 }
 
+.animate-slide-up {
+  animation: slide-up 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out forwards;
+}
+
+.animate-pulse-lime {
+  animation: pulse-lime 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-pulse-violet {
+  animation: pulse-violet 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
 .animate-float {
   animation: float 4s ease-in-out infinite;
 }
 
-/* Glow effect for buttons */
-.shadow-glow {
-  box-shadow: 0 0 20px rgba(124, 58, 237, 0.4), 0 0 40px rgba(124, 58, 237, 0.2);
-}
+/* ============================================
+   UTILITIES
+   ============================================ */
 
-/* Touch target utilities */
 @layer utilities {
-  /* Minimum 44x44px touch target as per WCAG guidelines */
+  /* Safe Area Insets */
+  .safe-area-inset-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  .safe-area-inset-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  /* Hide Scrollbar */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  /* Touch Targets - WCAG 44px minimum */
   .touch-target {
     min-width: 44px;
     min-height: 44px;
@@ -149,26 +332,43 @@
     min-width: 48px;
     min-height: 48px;
   }
-}
-
-/* Mobile tap highlight */
-@media (hover: none) {
-  button, a, [role="button"] {
-    -webkit-tap-highlight-color: rgba(124, 58, 237, 0.1);
+  
+  /* Electric Glow Effects */
+  .glow-lime {
+    box-shadow: 0 0 20px var(--electric-lime-glow);
+  }
+  
+  .glow-violet {
+    box-shadow: 0 0 20px var(--vivid-violet-glow);
+  }
+  
+  /* Text Glow */
+  .text-glow-lime {
+    text-shadow: 0 0 20px var(--electric-lime-glow);
+  }
+  
+  .text-glow-violet {
+    text-shadow: 0 0 20px var(--vivid-violet-glow);
+  }
+  
+  /* Brutalist Offset Shadow */
+  .shadow-brutal {
+    box-shadow: 4px 4px 0px var(--electric-lime);
+  }
+  
+  .shadow-brutal-violet {
+    box-shadow: 4px 4px 0px var(--vivid-violet);
   }
 }
 
-/* Smooth scrolling */
-html {
-  scroll-behavior: smooth;
+/* Mobile Tap Highlight */
+@media (hover: none) {
+  button, a, [role="button"] {
+    -webkit-tap-highlight-color: rgba(194, 255, 0, 0.1);
+  }
 }
 
-/* Prevent overscroll bounce on iOS */
-body {
-  overscroll-behavior: none;
-}
-
-/* Fix for iOS input zoom */
+/* iOS Input Zoom Fix */
 @media screen and (max-width: 768px) {
   input[type="text"],
   input[type="email"],
@@ -182,31 +382,27 @@ body {
   }
 }
 
-/* Better mobile selection */
+/* Selection Styling */
 ::selection {
-  background-color: rgba(124, 58, 237, 0.2);
-  color: inherit;
+  background-color: rgba(194, 255, 0, 0.3);
+  color: #FFFFFF;
 }
 
-/* Focus visible for keyboard navigation */
+/* Focus Visible for Keyboard Navigation */
 :focus-visible {
-  outline: 2px solid rgb(124, 58, 237);
+  outline: 2px solid var(--electric-lime);
   outline-offset: 2px;
 }
 
-/* Remove focus outline for mouse users */
+/* Remove Focus Outline for Mouse Users */
 :focus:not(:focus-visible) {
   outline: none;
 }
 
-/* Print styles */
-@media print {
-  .no-print {
-    display: none !important;
-  }
-}
+/* ============================================
+   SHIMMER LOADING ANIMATION
+   ============================================ */
 
-/* Shimmer animation for skeleton loading */
 @keyframes shimmer {
   0% {
     background-position: -200% 0;
@@ -219,20 +415,32 @@ body {
 .animate-shimmer {
   background: linear-gradient(
     90deg,
-    rgb(229, 231, 235) 0%,
-    rgb(243, 244, 246) 50%,
-    rgb(229, 231, 235) 100%
+    rgba(26, 26, 26, 1) 0%,
+    rgba(37, 37, 37, 1) 50%,
+    rgba(26, 26, 26, 1) 100%
   );
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
 
-.dark .animate-shimmer {
-  background: linear-gradient(
-    90deg,
-    rgb(31, 41, 55) 0%,
-    rgb(55, 65, 81) 50%,
-    rgb(31, 41, 55) 100%
-  );
-  background-size: 200% 100%;
+/* ============================================
+   PROGRESS BARS & METERS
+   ============================================ */
+
+.progress-lime {
+  background: linear-gradient(90deg, var(--electric-lime) 0%, var(--electric-lime-dark) 100%);
+}
+
+.progress-violet {
+  background: linear-gradient(90deg, var(--vivid-violet) 0%, var(--vivid-violet-dark) 100%);
+}
+
+/* ============================================
+   PRINT STYLES
+   ============================================ */
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
 }

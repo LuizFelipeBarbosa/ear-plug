@@ -1,9 +1,22 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Oswald, Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
+// Oswald - Bold Condensed for headers (Street Poster Aesthetic)
+const oswald = Oswald({
+  subsets: ["latin"],
+  variable: "--font-oswald",
+  weight: ["500", "600", "700"],
+  display: "swap",
+});
+
+// Inter - Clean & Legible for body text
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-geist",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Ear-Plug | Listen Local",
@@ -24,10 +37,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#111827" },
-  ],
+  themeColor: "#0F0F0F",
 };
 
 export default function RootLayout({
@@ -36,8 +46,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} font-sans antialiased`}>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className="dark"
+      style={{ colorScheme: "dark" }}
+    >
+      <body
+        className={`${oswald.variable} ${inter.variable} font-sans antialiased bg-night text-white`}
+      >
         <Providers>{children}</Providers>
       </body>
     </html>

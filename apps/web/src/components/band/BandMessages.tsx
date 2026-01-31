@@ -32,23 +32,23 @@ function ConversationsList({
   const { conversations, isLoading } = useBandConversations();
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-night">
       {/* Header */}
-      <header className="bg-white dark:bg-surface-dark border-b border-gray-200 dark:border-gray-800 p-4">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+      <header className="bg-night-secondary border-b-2 border-lime/20 p-4">
+        <h1 className="text-2xl font-bold text-white uppercase tracking-tight">
           Messages
         </h1>
       </header>
 
       {/* Conversations List */}
-      <div className="divide-y divide-gray-100 dark:divide-gray-800">
+      <div className="divide-y-2 divide-zinc-800">
         {isLoading ? (
           [1, 2, 3].map((i) => (
             <div key={i} className="p-4 flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-800 animate-pulse" />
+              <div className="w-12 h-12 bg-night-tertiary border-2 border-zinc-800 animate-shimmer" />
               <div className="flex-1 space-y-2">
-                <div className="h-4 bg-gray-200 dark:bg-gray-800 rounded w-1/3 animate-pulse" />
-                <div className="h-3 bg-gray-200 dark:bg-gray-800 rounded w-2/3 animate-pulse" />
+                <div className="h-4 bg-night-tertiary w-1/3 animate-shimmer" />
+                <div className="h-3 bg-night-tertiary w-2/3 animate-shimmer" />
               </div>
             </div>
           ))
@@ -58,12 +58,12 @@ function ConversationsList({
               key={conv._id}
               onClick={() => onSelect(conv._id)}
               className={cn(
-                "w-full p-4 flex items-center gap-3 text-left hover:bg-gray-50 dark:hover:bg-surface-dark-secondary transition-colors",
-                conv.unreadCount > 0 && "border-l-4 border-primary-500"
+                "w-full p-4 flex items-center gap-3 text-left bg-night-tertiary border-x-2 border-transparent hover:border-lime/30 transition-all",
+                conv.unreadCount > 0 && "border-l-2 border-l-lime"
               )}
             >
               {/* Venue Avatar */}
-              <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
+              <div className="w-12 h-12 overflow-hidden bg-night-secondary border-2 border-zinc-800 flex-shrink-0">
                 {conv.venue?.images?.[0] ? (
                   <Image
                     src={conv.venue.images[0]}
@@ -73,7 +73,7 @@ function ConversationsList({
                     className="object-cover"
                   />
                 ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-primary-400 to-accent-400" />
+                  <div className="w-full h-full bg-gradient-to-br from-violet/30 to-lime/30" />
                 )}
               </div>
 
@@ -82,13 +82,13 @@ function ConversationsList({
                 <div className="flex items-center justify-between">
                   <h3
                     className={cn(
-                      "font-medium text-gray-900 dark:text-white truncate",
-                      conv.unreadCount > 0 && "font-semibold"
+                      "font-bold text-white uppercase tracking-wide text-sm truncate",
+                      conv.unreadCount > 0 && "text-lime"
                     )}
                   >
                     {conv.venue?.name || "Unknown Venue"}
                   </h3>
-                  <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">
+                  <span className="text-xs text-zinc-500 uppercase tracking-wider flex-shrink-0">
                     {getRelativeTime(conv.lastMessageAt)}
                   </span>
                 </div>
@@ -96,8 +96,8 @@ function ConversationsList({
                   className={cn(
                     "text-sm truncate mt-0.5",
                     conv.unreadCount > 0
-                      ? "text-gray-900 dark:text-white font-medium"
-                      : "text-gray-500 dark:text-gray-400"
+                      ? "text-white font-medium"
+                      : "text-zinc-500"
                   )}
                 >
                   {conv.lastMessagePreview || "No messages yet"}
@@ -106,7 +106,7 @@ function ConversationsList({
 
               {/* Unread Badge */}
               {conv.unreadCount > 0 && (
-                <span className="w-6 h-6 rounded-full bg-primary-500 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">
+                <span className="min-w-[24px] h-6 bg-lime text-night text-xs font-bold flex items-center justify-center px-1">
                   {conv.unreadCount}
                 </span>
               )}
@@ -151,16 +151,16 @@ function ConversationView({
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-night">
       {/* Header */}
-      <header className="bg-white dark:bg-surface-dark border-b border-gray-200 dark:border-gray-800 p-4 flex items-center gap-3">
+      <header className="bg-night-secondary border-b-2 border-lime/20 p-4 flex items-center gap-3">
         <button
           onClick={onBack}
-          className="p-2 -ml-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
+          className="p-2 -ml-2 flex items-center justify-center hover:bg-night-tertiary border border-zinc-800 hover:border-lime/30 transition-colors touch-target"
         >
-          <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+          <ArrowLeft className="w-5 h-5 text-zinc-400" />
         </button>
-        <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
+        <h1 className="text-lg font-bold text-white uppercase tracking-wide">
           Conversation
         </h1>
       </header>
@@ -173,11 +173,11 @@ function ConversationView({
               <div
                 key={i}
                 className={cn(
-                  "max-w-[70%] p-3 rounded-2xl animate-pulse",
-                  i % 2 === 0 ? "ml-auto bg-primary-100" : "bg-gray-100"
+                  "max-w-[70%] p-3 animate-shimmer",
+                  i % 2 === 0 ? "ml-auto bg-lime/20" : "bg-night-tertiary"
                 )}
               >
-                <div className="h-4 bg-gray-300 rounded w-full" />
+                <div className="h-4 bg-zinc-800 w-full" />
               </div>
             ))}
           </div>
@@ -186,14 +186,14 @@ function ConversationView({
             <MessageBubble key={msg._id} message={msg} />
           ))
         ) : (
-          <p className="text-center text-gray-500 py-8">
+          <p className="text-center text-zinc-500 py-8 uppercase text-xs tracking-wider">
             No messages yet. Start the conversation!
           </p>
         )}
       </div>
 
       {/* Input */}
-      <div className="bg-white dark:bg-surface-dark border-t border-gray-200 dark:border-gray-800 p-4 pb-24">
+      <div className="bg-night-secondary border-t-2 border-lime/20 p-4 pb-24">
         <div className="flex items-end gap-2">
           <textarea
             value={newMessage}
@@ -201,16 +201,16 @@ function ConversationView({
             onKeyDown={handleKeyDown}
             placeholder="Type a message..."
             rows={1}
-            className="flex-1 px-4 py-3 bg-gray-100 dark:bg-surface-dark-secondary rounded-xl text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+            className="flex-1 px-4 py-3 bg-night-tertiary border-2 border-zinc-800 text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime transition-colors resize-none"
           />
           <button
             onClick={handleSend}
             disabled={!newMessage.trim()}
             className={cn(
-              "p-3 rounded-xl transition-colors",
+              "p-3 flex items-center justify-center transition-all border-2 touch-target",
               newMessage.trim()
-                ? "bg-primary-500 text-white hover:bg-primary-600"
-                : "bg-gray-100 dark:bg-surface-dark-secondary text-gray-400"
+                ? "bg-lime text-night border-lime hover:bg-transparent hover:text-lime"
+                : "bg-night-tertiary border-zinc-800 text-zinc-600"
             )}
           >
             <Send className="w-5 h-5" />
@@ -229,17 +229,17 @@ function MessageBubble({ message }: { message: any }) {
     <div className={cn("flex", isOwn ? "justify-end" : "justify-start")}>
       <div
         className={cn(
-          "max-w-[70%] px-4 py-3 rounded-2xl",
+          "max-w-[70%] px-4 py-3",
           isOwn
-            ? "bg-primary-500 text-white rounded-br-sm"
-            : "bg-gray-100 dark:bg-surface-dark-secondary text-gray-900 dark:text-white rounded-bl-sm"
+            ? "bg-lime text-night"
+            : "bg-night-tertiary border-2 border-zinc-800 text-white"
         )}
       >
         <p className="text-sm">{message.content}</p>
         <p
           className={cn(
-            "text-xs mt-1",
-            isOwn ? "text-white/70" : "text-gray-400"
+            "text-xs mt-1 uppercase tracking-wider",
+            isOwn ? "text-night/70" : "text-zinc-500"
           )}
         >
           {getRelativeTime(message.timestamp)}
@@ -251,14 +251,14 @@ function MessageBubble({ message }: { message: any }) {
 
 function EmptyState() {
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-center px-4">
-      <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-surface-dark-secondary flex items-center justify-center mb-4">
-        <MessageCircle className="w-8 h-8 text-gray-400" />
+    <div className="flex flex-col items-center justify-center py-16 text-center px-4 border-2 border-dashed border-zinc-800">
+      <div className="w-16 h-16 bg-night-tertiary border-2 border-zinc-800 flex items-center justify-center mb-4">
+        <MessageCircle className="w-8 h-8 text-zinc-600" />
       </div>
-      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+      <h3 className="text-lg font-bold text-white uppercase tracking-wide mb-2">
         No conversations yet
       </h3>
-      <p className="text-gray-500 dark:text-gray-400 max-w-[250px]">
+      <p className="text-zinc-500 max-w-[250px]">
         Apply to open dates to start conversations with venues
       </p>
     </div>

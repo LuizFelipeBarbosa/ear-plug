@@ -21,9 +21,9 @@ export default function HomePage() {
   // Show loading state while checking auth
   if (!isLoaded || (isSignedIn && isLoading)) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-surface-dark">
+      <div className="min-h-screen flex items-center justify-center bg-night">
         <div className="animate-pulse">
-          <div className="w-16 h-16 rounded-full bg-primary-600" />
+          <div className="w-16 h-16 bg-lime animate-pulse-lime" />
         </div>
       </div>
     );

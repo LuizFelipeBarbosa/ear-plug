@@ -1,173 +1,142 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { Heart, Ticket } from "lucide-react";
-import { useUserEvents } from "@/hooks/useEvents";
-import { useMutation, useQuery } from "convex/react";
+import { Calendar, MapPin, Ticket, Music } from "lucide-react";
+import { useQuery } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
-import { EventImage } from "@/components/ui/OptimizedImage";
+import { EventCard } from "@/components/events/EventCard";
+import { formatEventDate } from "@ear-plug/shared/constants";
 import { cn } from "@/lib/utils";
-import type { Id } from "../../../../../convex/_generated/dataModel";
 
-interface CalendarEventCardProps {
-  event: {
-    _id: Id<"events">;
-    title: string;
-    dateTime: number;
-    image?: string;
-    venue?: { name: string; city: string; address: string } | null;
-  };
-}
-
-function CalendarEventCard({ event }: CalendarEventCardProps) {
-  const eventStatus = useQuery(api.events.getUserEventStatus, {
-    eventId: event._id,
-  });
-  const toggleLike = useMutation(api.events.toggleLike);
-
-  const handleLikeClick = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    await toggleLike({ eventId: event._id });
-  };
-
-  const isLiked = eventStatus?.hasLiked ?? false;
-
-  // Format date as "Jan 14"
-  const formatShortDate = (timestamp: number) => {
-    const date = new Date(timestamp);
-    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  };
-
-  return (
-    <Link href={`/gig/${event._id}`} className="block">
-      <div className="flex items-center gap-3 p-3 bg-white dark:bg-surface-dark-secondary rounded-xl hover:shadow-md transition-shadow">
-        {/* Square Event Image */}
-        <EventImage
-          src={event.image}
-          alt={event.title}
-          className="w-16 h-16 rounded-lg flex-shrink-0 object-cover"
-        />
-
-        {/* Event Info */}
-        <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-gray-900 dark:text-white truncate text-sm">
-            {event.title}
-          </h3>
-          {event.venue && (
-            <>
-              <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
-                {event.venue.name}
-              </p>
-              <p className="text-xs text-gray-500 dark:text-gray-500 truncate">
-                {event.venue.address}
-              </p>
-            </>
-          )}
-          <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">
-            {formatShortDate(event.dateTime)}
-          </p>
-        </div>
-
-        {/* Like Button */}
-        <button
-          onClick={handleLikeClick}
-          className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex-shrink-0"
-        >
-          <Heart
-            className={cn(
-              "w-5 h-5 transition-colors",
-              isLiked
-                ? "fill-accent-500 text-accent-500"
-                : "text-gray-400"
-            )}
-          />
-        </button>
-      </div>
-    </Link>
-  );
-}
-
-function EventListSection({
-  title,
-  events,
-  isLoading,
-  emptyTitle,
-  emptySubtitle,
-}: {
-  title: string;
-  events: CalendarEventCardProps["event"][] | undefined;
-  isLoading: boolean;
-  emptyTitle: string;
-  emptySubtitle: string;
-}) {
-  return (
-    <div className="bg-gray-50 dark:bg-surface-dark rounded-2xl p-4 mb-4">
-      <h2 className="text-base font-bold text-gray-900 dark:text-white mb-3">
-        {title}
-      </h2>
-
-      {isLoading ? (
-        <div className="space-y-3">
-          {[1, 2].map((i) => (
-            <div
-              key={i}
-              className="h-20 bg-gray-100 dark:bg-surface-dark-secondary rounded-xl animate-pulse"
-            />
-          ))}
-        </div>
-      ) : events && events.length > 0 ? (
-        <div className="space-y-3">
-          {events.map((event) => (
-            <CalendarEventCard key={event._id} event={event} />
-          ))}
-        </div>
-      ) : (
-        <div className="flex flex-col items-center justify-center py-8 text-center">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            {emptyTitle}
-          </p>
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-            {emptySubtitle}
-          </p>
-        </div>
-      )}
-    </div>
-  );
-}
+type EventTab = "rsvps" | "liked";
 
 export function FanCalendarView() {
-  const { rsvps, likes, isLoading } = useUserEvents();
+  const [activeTab, setActiveTab] = useState<EventTab>("rsvps");
+
+  const rsvps = useQuery(api.events.getUserRsvps);
+  const likedEvents = useQuery(api.events.getUserLikes);
+
+  const isLoading = rsvps === undefined || likedEvents === undefined;
+
+  const events = activeTab === "rsvps" ? rsvps : likedEvents;
+
+  // Group events by month
+  const groupedEvents: Record<string, typeof events> = {};
+  events?.forEach((event: any) => {
+    const date = new Date(event.dateTime);
+    const monthKey = date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+    if (!groupedEvents[monthKey]) {
+      groupedEvents[monthKey] = [];
+    }
+    groupedEvents[monthKey].push(event);
+  });
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-night pb-6">
       {/* Header */}
-      <header className="bg-white dark:bg-surface-dark border-b border-gray-200 dark:border-gray-800 p-4">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+      <header className="bg-night-secondary border-b-2 border-lime/20 p-4">
+        <h1 className="text-2xl font-bold text-white uppercase tracking-tight">
           My Events
         </h1>
       </header>
 
-      {/* Content */}
-      <div className="p-4">
-        {/* RSVPs Section */}
-        <EventListSection
-          title="RSVPs"
-          events={rsvps}
-          isLoading={isLoading}
-          emptyTitle="No RSVPs yet"
-          emptySubtitle="RSVP to events to see them here"
-        />
-
-        {/* Liked Events Section */}
-        <EventListSection
-          title="Liked Events"
-          events={likes}
-          isLoading={isLoading}
-          emptyTitle="No liked events yet"
-          emptySubtitle="Like events to see them here"
-        />
+      {/* Tabs */}
+      <div className="flex border-b-2 border-zinc-800">
+        <button
+          onClick={() => setActiveTab("rsvps")}
+          className={cn(
+            "flex-1 py-4 text-sm font-bold uppercase tracking-wider transition-colors relative",
+            activeTab === "rsvps"
+              ? "text-lime"
+              : "text-zinc-500 hover:text-zinc-300"
+          )}
+        >
+          <div className="flex items-center justify-center gap-2">
+            <Ticket className="w-4 h-4" />
+            RSVPs
+          </div>
+          {activeTab === "rsvps" && (
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-lime" />
+          )}
+        </button>
+        <button
+          onClick={() => setActiveTab("liked")}
+          className={cn(
+            "flex-1 py-4 text-sm font-bold uppercase tracking-wider transition-colors relative",
+            activeTab === "liked"
+              ? "text-lime"
+              : "text-zinc-500 hover:text-zinc-300"
+          )}
+        >
+          <div className="flex items-center justify-center gap-2">
+            <Music className="w-4 h-4" />
+            Liked
+          </div>
+          {activeTab === "liked" && (
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-lime" />
+          )}
+        </button>
       </div>
+
+      {/* Events List */}
+      <div className="p-4">
+        {isLoading ? (
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="h-32 bg-night-tertiary border-2 border-zinc-800 animate-shimmer"
+              />
+            ))}
+          </div>
+        ) : events && events.length > 0 ? (
+          <div className="space-y-6">
+            {Object.entries(groupedEvents).map(([month, monthEvents]) => (
+              <div key={month}>
+                <h2 className="text-xs font-bold uppercase tracking-widest text-lime mb-3 sticky top-0 bg-night py-2 z-10">
+                  {month}
+                </h2>
+                <div className="space-y-3">
+                  {monthEvents?.map((event) => (
+                    <EventCard key={event._id} event={event} />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <EmptyState activeTab={activeTab} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function EmptyState({ activeTab }: { activeTab: EventTab }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 text-center border-2 border-dashed border-zinc-800">
+      <div className="w-16 h-16 bg-night-tertiary border-2 border-zinc-800 flex items-center justify-center mb-4">
+        {activeTab === "rsvps" ? (
+          <Ticket className="w-8 h-8 text-zinc-600" />
+        ) : (
+          <Music className="w-8 h-8 text-zinc-600" />
+        )}
+      </div>
+      <h3 className="text-lg font-bold text-white uppercase tracking-wide mb-2">
+        No {activeTab === "rsvps" ? "RSVPs" : "liked events"}
+      </h3>
+      <p className="text-zinc-500 max-w-[250px] text-sm">
+        {activeTab === "rsvps"
+          ? "Browse events and RSVP to see them here"
+          : "Like events to save them for later"}
+      </p>
+      <Link
+        href="/home"
+        className="mt-6 inline-block px-6 py-3 bg-lime text-night font-bold uppercase tracking-wider text-xs border-2 border-lime hover:bg-transparent hover:text-lime transition-all"
+      >
+        Discover Events
+      </Link>
     </div>
   );
 }

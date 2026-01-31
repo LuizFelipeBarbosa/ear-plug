@@ -9,9 +9,9 @@ export default function MessagesPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-night">
         <div className="animate-pulse">
-          <div className="w-12 h-12 rounded-full bg-primary-500" />
+          <div className="w-12 h-12 bg-lime animate-pulse-lime" />
         </div>
       </div>
     );

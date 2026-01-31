@@ -73,30 +73,30 @@ export function FanNotificationsView() {
   const getIconBg = (type: NotificationType) => {
     switch (type) {
       case "event_reminder":
-        return "bg-yellow-100 text-yellow-600";
+        return "bg-lime/10 text-lime border-lime/30";
       case "new_event_followed_artist":
-        return "bg-purple-100 text-purple-600";
+        return "bg-violet/10 text-violet border-violet/30";
       case "new_event_nearby":
-        return "bg-blue-100 text-blue-600";
+        return "bg-lime/10 text-lime border-lime/30";
       case "lineup_change":
-        return "bg-orange-100 text-orange-600";
+        return "bg-violet/10 text-violet border-violet/30";
       default:
-        return "bg-gray-100 text-gray-600";
+        return "bg-zinc-800 text-zinc-400 border-zinc-700";
     }
   };
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-night">
       {/* Header */}
-      <header className="bg-white dark:bg-surface-dark border-b border-gray-200 dark:border-gray-800">
+      <header className="bg-night-secondary border-b-2 border-lime/20">
         <div className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              <h1 className="text-2xl font-bold text-white uppercase tracking-tight">
                 Notifications
               </h1>
               {unreadCount > 0 && (
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+                <p className="text-xs text-lime font-bold uppercase tracking-wider mt-1">
                   {unreadCount} unread
                 </p>
               )}
@@ -104,7 +104,7 @@ export function FanNotificationsView() {
             {unreadCount > 0 && (
               <button
                 onClick={() => markAllAsRead()}
-                className="flex items-center gap-1 text-primary-600 text-sm font-medium hover:text-primary-700"
+                className="flex items-center gap-1 text-lime text-xs font-bold uppercase tracking-wider hover:text-lime-dark transition-colors touch-target"
               >
                 <Check className="w-4 h-4" />
                 Mark all read
@@ -121,15 +121,15 @@ export function FanNotificationsView() {
                 key={option.value}
                 onClick={() => setActiveFilter(option.value)}
                 className={cn(
-                  "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors",
+                  "px-4 py-2 text-xs font-bold uppercase whitespace-nowrap transition-all border-2 touch-target",
                   activeFilter === option.value
-                    ? "bg-primary-500 text-white"
-                    : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+                    ? "bg-lime text-night border-lime"
+                    : "bg-night-tertiary border-zinc-800 text-zinc-400 hover:border-lime/30"
                 )}
               >
                 {option.label}
                 {option.value === "unread" && unreadCount > 0 && (
-                  <span className="ml-1.5 px-1.5 py-0.5 text-xs bg-white/20 rounded-full">
+                  <span className="ml-1.5 px-1.5 py-0.5 text-xs bg-lime text-night">
                     {unreadCount}
                   </span>
                 )}
@@ -146,7 +146,7 @@ export function FanNotificationsView() {
             {[1, 2, 3].map((i) => (
               <div
                 key={i}
-                className="h-20 bg-gray-100 dark:bg-surface-dark-secondary rounded-xl animate-pulse"
+                className="h-20 bg-night-tertiary border-2 border-zinc-800 animate-shimmer"
               />
             ))}
           </div>
@@ -156,16 +156,16 @@ export function FanNotificationsView() {
               <div
                 key={notification._id}
                 className={cn(
-                  "relative flex gap-3 p-4 rounded-xl transition-colors",
+                  "relative flex gap-3 p-4 border-2 transition-colors",
                   notification.read
-                    ? "bg-white dark:bg-surface-dark-secondary"
-                    : "bg-primary-50 dark:bg-primary-900/20 border-l-4 border-primary-500"
+                    ? "bg-night-tertiary border-zinc-800"
+                    : "bg-night-tertiary border-lime/50"
                 )}
               >
                 {/* Icon */}
                 <div
                   className={cn(
-                    "w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0",
+                    "w-10 h-10 flex items-center justify-center flex-shrink-0 border",
                     getIconBg(notification.type)
                   )}
                 >
@@ -174,13 +174,13 @@ export function FanNotificationsView() {
 
                 {/* Content */}
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-medium text-gray-900 dark:text-white">
+                  <h3 className="font-bold text-white text-sm uppercase tracking-wide">
                     {notification.title}
                   </h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5 line-clamp-2">
+                  <p className="text-sm text-zinc-400 mt-0.5 line-clamp-2">
                     {notification.content}
                   </p>
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                  <p className="text-xs text-zinc-600 mt-1 uppercase tracking-wider">
                     {getRelativeTime(notification.timestamp)}
                   </p>
                 </div>
@@ -190,7 +190,7 @@ export function FanNotificationsView() {
                   {!notification.read && (
                     <button
                       onClick={() => markAsRead(notification._id)}
-                      className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
+                      className="p-1.5 flex items-center justify-center text-zinc-400 hover:text-lime hover:bg-lime/10 transition-colors touch-target"
                       title="Mark as read"
                     >
                       <Check className="w-4 h-4" />
@@ -198,7 +198,7 @@ export function FanNotificationsView() {
                   )}
                   <button
                     onClick={() => removeNotification(notification._id)}
-                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
+                    className="p-1.5 flex items-center justify-center text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors touch-target"
                     title="Delete"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -278,14 +278,14 @@ function EmptyState({
   const { title, description } = getMessage();
 
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-center">
-      <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-surface-dark-secondary flex items-center justify-center mb-4">
-        <Bell className="w-8 h-8 text-gray-400" />
+    <div className="flex flex-col items-center justify-center py-16 text-center border-2 border-dashed border-zinc-800">
+      <div className="w-16 h-16 bg-night-tertiary border-2 border-zinc-800 flex items-center justify-center mb-4">
+        <Bell className="w-8 h-8 text-zinc-600" />
       </div>
-      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+      <h3 className="text-lg font-bold text-white uppercase tracking-wide mb-2">
         {title}
       </h3>
-      <p className="text-gray-500 dark:text-gray-400 max-w-[250px]">
+      <p className="text-zinc-500 max-w-[250px]">
         {description}
       </p>
     </div>

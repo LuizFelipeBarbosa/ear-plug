@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
+import { Id } from "./_generated/dataModel";
 
 const genreValidator = v.union(
   v.literal("indie"),
@@ -342,5 +343,87 @@ export const getBandApplications = query({
     );
 
     return applicationsWithDetails;
+  },
+});
+
+// Create or find a venue from Google Places data
+export const createFromPlace = mutation({
+  args: {
+    name: v.string(),
+    address: v.string(),
+    city: v.string(),
+    coordinates: v.object({
+      lat: v.number(),
+      lng: v.number(),
+    }),
+    placeId: v.optional(v.string()),
+    capacity: v.optional(v.number()),
+    description: v.optional(v.string()),
+    genres: v.optional(v.array(genreValidator)),
+  },
+  handler: async (ctx, args): Promise<Id<"venues">> => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    // Check if venue already exists by coordinates (within small tolerance)
+    // or by placeId if provided
+    const existingVenues = await ctx.db.query("venues").collect();
+    
+    // Try to find by placeId first
+    if (args.placeId) {
+      const byPlaceId = existingVenues.find(v => 
+        v.name === args.name && v.address === args.address
+      );
+      if (byPlaceId) {
+        return byPlaceId._id;
+      }
+    }
+
+    // Try to find by coordinates (within ~10 meters tolerance)
+    const byCoordinates = existingVenues.find(v => {
+      const latDiff = Math.abs(v.coordinates.lat - args.coordinates.lat);
+      const lngDiff = Math.abs(v.coordinates.lng - args.coordinates.lng);
+      return latDiff < 0.0001 && lngDiff < 0.0001;
+    });
+
+    if (byCoordinates) {
+      return byCoordinates._id;
+    }
+
+    // Create new venue
+    const venueId = await ctx.db.insert("venues", {
+      name: args.name,
+      address: args.address,
+      city: args.city,
+      coordinates: args.coordinates,
+      capacity: args.capacity || 100,
+      description: args.description,
+      genres: args.genres,
+    });
+
+    return venueId;
+  },
+});
+
+// Find venue by coordinates (for deduplication)
+export const findByCoordinates = query({
+  args: {
+    lat: v.number(),
+    lng: v.number(),
+    tolerance: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const tolerance = args.tolerance || 0.0001; // ~10 meters
+    const venues = await ctx.db.query("venues").collect();
+
+    const match = venues.find(v => {
+      const latDiff = Math.abs(v.coordinates.lat - args.lat);
+      const lngDiff = Math.abs(v.coordinates.lng - args.lng);
+      return latDiff < tolerance && lngDiff < tolerance;
+    });
+
+    return match || null;
   },
 });

@@ -66,7 +66,7 @@ export function OnboardingFlow() {
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
+    <div className="min-h-screen relative overflow-hidden bg-night">
       {/* Video Background */}
       <VideoBackground />
 
@@ -74,11 +74,15 @@ export function OnboardingFlow() {
       <div className="relative z-20 min-h-screen flex flex-col">
         {/* Header */}
         <header className="p-6">
-          <div className="flex items-center gap-2">
-            <Headphones className="w-8 h-8 text-primary-400" />
-            <span className="text-2xl font-bold text-white">Ear-Plug</span>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-lime flex items-center justify-center">
+              <Headphones className="w-6 h-6 text-night" />
+            </div>
+            <div>
+              <span className="text-2xl font-bold text-white uppercase tracking-tight">Ear-Plug</span>
+              <p className="text-lime text-xs uppercase tracking-widest font-medium">Listen Local</p>
+            </div>
           </div>
-          <p className="text-primary-200 mt-1 ml-10">Listen Local</p>
         </header>
 
         {/* Main Content */}
@@ -96,8 +100,10 @@ export function OnboardingFlow() {
         </main>
 
         {/* Footer */}
-        <footer className="p-6 text-center text-white/50 text-sm">
-          <p>Discover live music in the Bay Area</p>
+        <footer className="p-6 text-center">
+          <p className="text-zinc-500 text-xs uppercase tracking-widest">
+            Discover live music in the Bay Area
+          </p>
         </footer>
       </div>
     </div>
@@ -121,8 +127,16 @@ function VideoBackground() {
 
   return (
     <div className="absolute inset-0 z-0">
-      {/* Overlay gradient */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/80 z-10" />
+      {/* Dark overlay for readability */}
+      <div className="absolute inset-0 bg-night/80 z-10" />
+      
+      {/* Subtle noise texture overlay */}
+      <div 
+        className="absolute inset-0 z-[11] opacity-[0.03] pointer-events-none"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
+        }}
+      />
 
       {/* Video element */}
       {!videoError && (
@@ -140,12 +154,10 @@ function VideoBackground() {
           onError={() => setVideoError(true)}
           poster="/images/concert-poster.jpg"
         >
-          {/* Add your video sources here - using a free stock video as placeholder */}
           <source
             src="https://assets.mixkit.co/videos/preview/mixkit-people-at-a-concert-seen-from-behind-4684-large.mp4"
             type="video/mp4"
           />
-          {/* Fallback for WebM */}
           <source
             src="https://assets.mixkit.co/videos/preview/mixkit-people-at-a-concert-seen-from-behind-4684-large.webm"
             type="video/webm"
@@ -153,22 +165,19 @@ function VideoBackground() {
         </video>
       )}
 
-      {/* Animated gradient fallback (shows while video loads or if video fails) */}
+      {/* Animated gradient fallback */}
       <div
         className={cn(
           "absolute inset-0 transition-opacity duration-1000",
           videoLoaded && !videoError ? "opacity-0" : "opacity-100"
         )}
       >
-        <div className="absolute inset-0 bg-gradient-to-br from-primary-900 via-primary-800 to-accent-900" />
-        {/* Animated overlay for visual interest */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-primary-500/20 via-transparent to-transparent animate-pulse" />
-        {/* Floating music notes effect */}
+        <div className="absolute inset-0 bg-gradient-to-br from-violet/20 via-night to-lime/10" />
+        {/* Animated orbs */}
         <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-1/4 left-1/4 w-4 h-4 bg-primary-400/30 rounded-full animate-float" style={{ animationDelay: '0s' }} />
-          <div className="absolute top-1/3 right-1/3 w-3 h-3 bg-accent-400/30 rounded-full animate-float" style={{ animationDelay: '1s' }} />
-          <div className="absolute bottom-1/3 left-1/2 w-5 h-5 bg-primary-300/20 rounded-full animate-float" style={{ animationDelay: '2s' }} />
-          <div className="absolute top-1/2 right-1/4 w-4 h-4 bg-accent-300/25 rounded-full animate-float" style={{ animationDelay: '0.5s' }} />
+          <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-lime/10 rounded-full blur-3xl animate-float" style={{ animationDelay: '0s' }} />
+          <div className="absolute top-1/3 right-1/3 w-24 h-24 bg-violet/10 rounded-full blur-3xl animate-float" style={{ animationDelay: '1s' }} />
+          <div className="absolute bottom-1/3 left-1/2 w-40 h-40 bg-lime/5 rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }} />
         </div>
       </div>
     </div>
@@ -184,10 +193,10 @@ function RoleSelection({ onSelect }: RoleSelectionProps) {
 
   return (
     <div className="w-full max-w-lg animate-fade-in">
-      <h1 className="text-3xl md:text-4xl font-bold text-white text-center mb-4">
-        How will you use Ear-Plug?
+      <h1 className="text-3xl md:text-4xl font-bold text-white text-center mb-3 uppercase tracking-tight">
+        How will you use<br />Ear-Plug?
       </h1>
-      <p className="text-white/70 text-center mb-8">
+      <p className="text-zinc-400 text-center mb-10 uppercase text-xs tracking-widest">
         Choose your experience to get started
       </p>
 
@@ -198,30 +207,35 @@ function RoleSelection({ onSelect }: RoleSelectionProps) {
           onMouseEnter={() => setHoveredRole("fan")}
           onMouseLeave={() => setHoveredRole(null)}
           className={cn(
-            "w-full p-6 rounded-2xl border-2 transition-all duration-300",
-            "bg-white/10 backdrop-blur-sm",
-            "hover:bg-white/20 hover:border-primary-400 hover:scale-[1.02]",
+            "w-full p-6 border-2 transition-all duration-300 group relative overflow-hidden",
+            "bg-night-tertiary/60 backdrop-blur-md",
             hoveredRole === "fan"
-              ? "border-primary-400 shadow-glow"
-              : "border-white/20"
+              ? "border-lime shadow-glow-lime"
+              : "border-zinc-800 hover:border-lime/50"
           )}
         >
-          <div className="flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-primary-500/20">
-              <Users className="w-8 h-8 text-primary-400" />
+          {/* Hover gradient */}
+          <div className={cn(
+            "absolute inset-0 bg-gradient-to-r from-lime/10 to-transparent transition-opacity duration-300",
+            hoveredRole === "fan" ? "opacity-100" : "opacity-0"
+          )} />
+          
+          <div className="relative flex items-center gap-4">
+            <div className="p-3 bg-lime/10 border border-lime/30">
+              <Users className="w-8 h-8 text-lime" />
             </div>
             <div className="flex-1 text-left">
-              <h3 className="text-xl font-semibold text-white">
+              <h3 className="text-xl font-bold text-white uppercase tracking-wide">
                 I&apos;m a Fan
               </h3>
-              <p className="text-white/60 mt-1">
+              <p className="text-zinc-400 text-sm mt-1">
                 Discover shows, follow bands, and never miss a gig
               </p>
             </div>
             <ArrowRight
               className={cn(
-                "w-6 h-6 text-white/40 transition-all",
-                hoveredRole === "fan" && "text-primary-400 translate-x-1"
+                "w-6 h-6 text-zinc-600 transition-all duration-300",
+                hoveredRole === "fan" && "text-lime translate-x-1"
               )}
             />
           </div>
@@ -233,30 +247,35 @@ function RoleSelection({ onSelect }: RoleSelectionProps) {
           onMouseEnter={() => setHoveredRole("musician")}
           onMouseLeave={() => setHoveredRole(null)}
           className={cn(
-            "w-full p-6 rounded-2xl border-2 transition-all duration-300",
-            "bg-white/10 backdrop-blur-sm",
-            "hover:bg-white/20 hover:border-accent-400 hover:scale-[1.02]",
+            "w-full p-6 border-2 transition-all duration-300 group relative overflow-hidden",
+            "bg-night-tertiary/60 backdrop-blur-md",
             hoveredRole === "musician"
-              ? "border-accent-400 shadow-glow"
-              : "border-white/20"
+              ? "border-violet shadow-glow-violet"
+              : "border-zinc-800 hover:border-violet/50"
           )}
         >
-          <div className="flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-accent-500/20">
-              <Mic2 className="w-8 h-8 text-accent-400" />
+          {/* Hover gradient */}
+          <div className={cn(
+            "absolute inset-0 bg-gradient-to-r from-violet/10 to-transparent transition-opacity duration-300",
+            hoveredRole === "musician" ? "opacity-100" : "opacity-0"
+          )} />
+          
+          <div className="relative flex items-center gap-4">
+            <div className="p-3 bg-violet/10 border border-violet/30">
+              <Mic2 className="w-8 h-8 text-violet" />
             </div>
             <div className="flex-1 text-left">
-              <h3 className="text-xl font-semibold text-white">
+              <h3 className="text-xl font-bold text-white uppercase tracking-wide">
                 I&apos;m a Musician
               </h3>
-              <p className="text-white/60 mt-1">
+              <p className="text-zinc-400 text-sm mt-1">
                 Promote shows, find gigs, and grow your fanbase
               </p>
             </div>
             <ArrowRight
               className={cn(
-                "w-6 h-6 text-white/40 transition-all",
-                hoveredRole === "musician" && "text-accent-400 translate-x-1"
+                "w-6 h-6 text-zinc-600 transition-all duration-300",
+                hoveredRole === "musician" && "text-violet translate-x-1"
               )}
             />
           </div>
@@ -279,20 +298,20 @@ function AuthStep({ role, mode, onModeChange, onBack }: AuthStepProps) {
       {/* Back Button */}
       <button
         onClick={onBack}
-        className="mb-6 text-white/60 hover:text-white flex items-center gap-2 transition-colors"
+        className="mb-6 text-zinc-400 hover:text-lime flex items-center gap-2 transition-colors text-sm uppercase tracking-wider"
       >
         <ArrowRight className="w-4 h-4 rotate-180" />
-        <span>Back to role selection</span>
+        <span>Back</span>
       </button>
 
       {/* Role Badge */}
       <div className="text-center mb-6">
         <span
           className={cn(
-            "inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium",
+            "inline-flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-widest border",
             role === "fan"
-              ? "bg-primary-500/20 text-primary-300"
-              : "bg-accent-500/20 text-accent-300"
+              ? "bg-lime/10 border-lime/30 text-lime"
+              : "bg-violet/10 border-violet/30 text-violet"
           )}
         >
           {role === "fan" ? (
@@ -304,15 +323,31 @@ function AuthStep({ role, mode, onModeChange, onBack }: AuthStepProps) {
         </span>
       </div>
 
-      {/* Auth Component */}
-      <div className="bg-white rounded-2xl p-2 shadow-xl">
+      {/* Auth Component - Glassmorphism Card */}
+      <div className="bg-night-tertiary/80 backdrop-blur-xl border-2 border-zinc-800 p-1 shadow-2xl">
         {mode === "sign-up" ? (
           <SignUp
             routing="hash"
             appearance={{
               elements: {
                 rootBox: "w-full",
-                card: "shadow-none",
+                card: "shadow-none bg-transparent",
+                headerTitle: "text-white uppercase tracking-tight",
+                headerSubtitle: "text-zinc-400",
+                socialButtonsBlockButton: "bg-night-secondary border-zinc-700 text-white hover:bg-night-tertiary",
+                formFieldLabel: "text-zinc-400 uppercase text-xs tracking-wider",
+                formFieldInput: "bg-night-secondary border-zinc-700 text-white focus:border-lime",
+                formButtonPrimary: "bg-lime text-night font-bold uppercase tracking-wider hover:bg-lime-dark",
+                footerActionLink: "text-lime hover:text-lime-dark",
+                dividerLine: "bg-zinc-700",
+                dividerText: "text-zinc-500",
+                identityPreview: "bg-night-secondary border-zinc-700",
+                identityPreviewText: "text-white",
+                identityPreviewEditButton: "text-lime",
+                formFieldSuccessText: "text-lime",
+                formFieldErrorText: "text-red-500",
+                alert: "bg-red-500/10 border-red-500/30 text-red-400",
+                alertText: "text-red-400",
               },
             }}
             afterSignUpUrl="/home"
@@ -323,7 +358,23 @@ function AuthStep({ role, mode, onModeChange, onBack }: AuthStepProps) {
             appearance={{
               elements: {
                 rootBox: "w-full",
-                card: "shadow-none",
+                card: "shadow-none bg-transparent",
+                headerTitle: "text-white uppercase tracking-tight",
+                headerSubtitle: "text-zinc-400",
+                socialButtonsBlockButton: "bg-night-secondary border-zinc-700 text-white hover:bg-night-tertiary",
+                formFieldLabel: "text-zinc-400 uppercase text-xs tracking-wider",
+                formFieldInput: "bg-night-secondary border-zinc-700 text-white focus:border-lime",
+                formButtonPrimary: "bg-lime text-night font-bold uppercase tracking-wider hover:bg-lime-dark",
+                footerActionLink: "text-lime hover:text-lime-dark",
+                dividerLine: "bg-zinc-700",
+                dividerText: "text-zinc-500",
+                identityPreview: "bg-night-secondary border-zinc-700",
+                identityPreviewText: "text-white",
+                identityPreviewEditButton: "text-lime",
+                formFieldSuccessText: "text-lime",
+                formFieldErrorText: "text-red-500",
+                alert: "bg-red-500/10 border-red-500/30 text-red-400",
+                alertText: "text-red-400",
               },
             }}
             afterSignInUrl="/home"
@@ -332,10 +383,10 @@ function AuthStep({ role, mode, onModeChange, onBack }: AuthStepProps) {
       </div>
 
       {/* Toggle Auth Mode */}
-      <div className="text-center mt-4">
+      <div className="text-center mt-6">
         <button
           onClick={() => onModeChange(mode === "sign-up" ? "sign-in" : "sign-up")}
-          className="text-white/60 hover:text-white transition-colors"
+          className="text-zinc-400 hover:text-lime transition-colors text-sm"
         >
           {mode === "sign-up"
             ? "Already have an account? Sign in"

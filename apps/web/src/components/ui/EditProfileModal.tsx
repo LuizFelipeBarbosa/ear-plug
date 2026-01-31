@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { X, Camera, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { GENRES } from "@ear-plug/shared/constants";
+import { GENRES, GENRE_COLORS } from "@ear-plug/shared/constants";
 import type { Genre } from "@ear-plug/shared/types";
 
 interface EditProfileModalProps {
@@ -87,22 +87,22 @@ export function EditProfileModal({
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-night/80 backdrop-blur-sm"
         onClick={onClose}
       />
 
-      {/* Modal */}
-      <div className="relative w-full max-w-lg bg-white dark:bg-surface-dark rounded-t-3xl sm:rounded-2xl max-h-[90vh] overflow-y-auto animate-slide-up">
+      {/* Modal - Brutalist Style */}
+      <div className="relative w-full max-w-lg bg-night-secondary border-2 border-zinc-800 sm:rounded-none max-h-[90vh] overflow-y-auto animate-slide-up">
         {/* Header */}
-        <div className="sticky top-0 bg-white dark:bg-surface-dark z-10 flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+        <div className="sticky top-0 bg-night-secondary z-10 flex items-center justify-between p-4 border-b-2 border-zinc-800">
+          <h2 className="text-lg font-bold text-white uppercase tracking-tight">
             Edit Profile
           </h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
+            className="p-2 flex items-center justify-center hover:bg-night-tertiary border border-zinc-800 hover:border-lime/30 transition-colors touch-target"
           >
-            <X className="w-5 h-5 text-gray-500" />
+            <X className="w-5 h-5 text-zinc-400" />
           </button>
         </div>
 
@@ -111,7 +111,7 @@ export function EditProfileModal({
           {/* Avatar */}
           <div className="flex flex-col items-center">
             <div className="relative">
-              <div className="w-24 h-24 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700">
+              <div className="w-24 h-24 overflow-hidden bg-night-tertiary border-2 border-lime/30">
                 {formData.avatar ? (
                   <img
                     src={formData.avatar}
@@ -119,26 +119,26 @@ export function EditProfileModal({
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-3xl font-bold text-gray-400">
+                  <div className="w-full h-full flex items-center justify-center text-3xl font-bold text-lime">
                     {formData.name?.charAt(0).toUpperCase() || "?"}
                   </div>
                 )}
               </div>
               <button
                 type="button"
-                className="absolute bottom-0 right-0 p-2 bg-primary-500 text-white rounded-full shadow-lg hover:bg-primary-600 transition-colors"
+                className="absolute bottom-0 right-0 p-2 flex items-center justify-center bg-lime text-night border-2 border-night hover:bg-lime-dark transition-colors touch-target"
               >
                 <Camera className="w-4 h-4" />
               </button>
             </div>
-            <p className="text-xs text-gray-500 mt-2">
+            <p className="text-xs text-zinc-500 mt-2 uppercase tracking-wider">
               Avatar is synced from your account
             </p>
           </div>
 
           {/* Name */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">
               Name
             </label>
             <input
@@ -148,13 +148,13 @@ export function EditProfileModal({
                 setFormData({ ...formData, name: e.target.value })
               }
               placeholder="Your name"
-              className="w-full px-4 py-3 bg-gray-100 dark:bg-gray-800 rounded-xl text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full px-4 py-3 bg-night-tertiary border-2 border-zinc-800 text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime transition-colors"
             />
           </div>
 
           {/* Location */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">
               Location
             </label>
             <input
@@ -164,32 +164,40 @@ export function EditProfileModal({
                 setFormData({ ...formData, location: e.target.value })
               }
               placeholder="e.g., San Francisco, CA"
-              className="w-full px-4 py-3 bg-gray-100 dark:bg-gray-800 rounded-xl text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full px-4 py-3 bg-night-tertiary border-2 border-zinc-800 text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime transition-colors"
             />
           </div>
 
           {/* Top Genres */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-3">
               Top Genres (select up to 5)
             </label>
             <div className="flex flex-wrap gap-2">
               {GENRES.map((genre) => {
-                const isSelected = formData.topGenres?.includes(genre);
+                const isSelected = formData.topGenres?.includes(genre.value);
                 return (
                   <button
-                    key={genre}
+                    key={genre.value}
                     type="button"
-                    onClick={() => toggleGenre(genre)}
+                    onClick={() => toggleGenre(genre.value)}
                     className={cn(
-                      "px-4 py-2 rounded-full text-sm font-medium transition-all",
+                      "px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all border-2 touch-target",
                       isSelected
-                        ? "bg-primary-500 text-white"
-                        : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+                        ? "text-night border-transparent"
+                        : "bg-night-tertiary border-zinc-800 text-zinc-400 hover:border-lime/30"
                     )}
+                    style={
+                      isSelected
+                        ? { 
+                            backgroundColor: GENRE_COLORS[genre.value],
+                            borderColor: GENRE_COLORS[genre.value]
+                          }
+                        : undefined
+                    }
                   >
                     {isSelected && <Check className="w-3 h-3 inline mr-1" />}
-                    {genre.charAt(0).toUpperCase() + genre.slice(1)}
+                    {genre.label}
                   </button>
                 );
               })}
@@ -198,7 +206,9 @@ export function EditProfileModal({
 
           {/* Error */}
           {error && (
-            <p className="text-red-500 text-sm text-center">{error}</p>
+            <p className="text-red-400 text-sm text-center border-2 border-red-500/30 bg-red-500/10 p-2">
+              {error}
+            </p>
           )}
 
           {/* Actions */}
@@ -206,7 +216,7 @@ export function EditProfileModal({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-3 px-4 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-medium rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              className="flex-1 py-3 px-4 bg-night-tertiary border-2 border-zinc-800 text-zinc-300 font-bold uppercase text-xs tracking-wider hover:border-zinc-600 transition-colors touch-target"
             >
               Cancel
             </button>
@@ -214,10 +224,10 @@ export function EditProfileModal({
               type="submit"
               disabled={isSaving}
               className={cn(
-                "flex-1 py-3 px-4 bg-primary-500 text-white font-medium rounded-xl transition-colors",
+                "flex-1 py-3 px-4 bg-lime text-night font-bold uppercase text-xs tracking-wider border-2 border-lime transition-all touch-target",
                 isSaving
                   ? "opacity-50 cursor-not-allowed"
-                  : "hover:bg-primary-600"
+                  : "hover:bg-transparent hover:text-lime"
               )}
             >
               {isSaving ? "Saving..." : "Save Changes"}

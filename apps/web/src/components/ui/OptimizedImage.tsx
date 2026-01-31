@@ -21,12 +21,12 @@ export function OptimizedImage({
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
 
-  const aspectRatioClass = {
+  const aspectRatioClass = aspectRatio ? {
     square: "aspect-square",
     video: "aspect-video",
     portrait: "aspect-[3/4]",
     wide: "aspect-[16/9]",
-  }[aspectRatio || ""] || "";
+  }[aspectRatio] || "" : "";
 
   if (hasError && fallback) {
     return <>{fallback}</>;
@@ -36,7 +36,7 @@ export function OptimizedImage({
     <div className={cn("relative overflow-hidden", aspectRatioClass, className)}>
       {/* Loading skeleton */}
       {showLoadingState && isLoading && (
-        <div className="absolute inset-0 bg-gray-200 dark:bg-gray-800 animate-pulse" />
+        <div className="absolute inset-0 bg-night-tertiary animate-shimmer" />
       )}
 
       <Image
@@ -102,7 +102,7 @@ export function AvatarImage({
       ) : (
         <>
           {isLoading && (
-            <div className="absolute inset-0 bg-gray-200 dark:bg-gray-800 animate-pulse" />
+            <div className="absolute inset-0 bg-night-tertiary animate-shimmer" />
           )}
           <Image
             src={src}
@@ -146,12 +146,12 @@ export function EventImage({
     <div className={cn("relative overflow-hidden", className)}>
       {/* Fallback gradient */}
       {(!src || hasError) && (
-        <div className="absolute inset-0 bg-gradient-to-br from-primary-500 to-accent-500" />
+        <div className="absolute inset-0 bg-gradient-to-br from-violet/30 to-lime/30" />
       )}
 
       {/* Loading state */}
       {src && !hasError && isLoading && (
-        <div className="absolute inset-0 bg-gray-200 dark:bg-gray-800 animate-pulse" />
+        <div className="absolute inset-0 bg-night-tertiary animate-shimmer" />
       )}
 
       {/* Actual image */}

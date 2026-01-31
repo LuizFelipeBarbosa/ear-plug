@@ -157,7 +157,7 @@ export function MediaGallery({
                   e.stopPropagation();
                   handleDelete(item.id);
                 }}
-                className="absolute top-1 right-1 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                className="absolute top-1 right-1 p-1.5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
               >
                 <X className="w-3 h-3" />
               </button>
@@ -191,7 +191,7 @@ export function MediaGallery({
           {/* Close Button */}
           <button
             onClick={closeLightbox}
-            className="absolute top-4 right-4 p-2 text-white/80 hover:text-white transition-colors"
+            className="absolute top-4 right-4 p-2 flex items-center justify-center text-white/80 hover:text-white transition-colors"
           >
             <X className="w-8 h-8" />
           </button>
@@ -203,7 +203,7 @@ export function MediaGallery({
                 e.stopPropagation();
                 prevImage();
               }}
-              className="absolute left-4 p-2 text-white/80 hover:text-white transition-colors"
+              className="absolute left-4 p-2 flex items-center justify-center text-white/80 hover:text-white transition-colors"
             >
               <ChevronLeft className="w-8 h-8" />
             </button>
@@ -214,7 +214,7 @@ export function MediaGallery({
                 e.stopPropagation();
                 nextImage();
               }}
-              className="absolute right-4 p-2 text-white/80 hover:text-white transition-colors"
+              className="absolute right-4 p-2 flex items-center justify-center text-white/80 hover:text-white transition-colors"
             >
               <ChevronRight className="w-8 h-8" />
             </button>

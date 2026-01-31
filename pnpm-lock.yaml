@@ -154,6 +154,9 @@ importers:
       tailwind-merge:
         specifier: ^2.2.0
         version: 2.6.1
+      use-places-autocomplete:
+        specifier: ^4.0.1
+        version: 4.0.1(react@18.2.0)
       zod:
         specifier: ^3.23.0
         version: 3.25.76
@@ -161,6 +164,9 @@ importers:
       '@ear-plug/tailwind-config':
         specifier: workspace:*
         version: link:../../packages/tailwind-config
+      '@types/google.maps':
+        specifier: ^3.58.1
+        version: 3.58.1
       '@types/node':
         specifier: ^20.0.0
         version: 20.19.30
@@ -6348,6 +6354,11 @@ packages:
     resolution: {integrity: sha512-FvRG9i1HSo0wagmX63Vrm8SnlUU3LMM3WyZkQ76RnslpBrX694AdG4A0zQBx2B3ZifFA0yv/BaEHGBnEax5rZg==}
     peerDependencies:
       react: '>=16.8'
+
+  use-places-autocomplete@4.0.1:
+    resolution: {integrity: sha512-AybOR/qzXcdaMCGSFveycfL3kztwseAOdagbYoJD8c3amll+gEiPmUkSNhYNUEBqbR+JmJG6/oBTRgihNbE+1A==}
+    peerDependencies:
+      react: '>= 16.8.0'
 
   use-sync-external-store@1.6.0:
     resolution: {integrity: sha512-Pp6GSwGP/NrPIrxVFAIkOQeyw8lFenOHijQWkUTrDvrF4ALqylP2C/KCkeS9dpUM3KvYRQhna5vt7IL95+ZQ9w==}
@@ -14162,6 +14173,10 @@ snapshots:
   url-join@4.0.0: {}
 
   use-latest-callback@0.2.6(react@18.2.0):
+    dependencies:
+      react: 18.2.0
+
+  use-places-autocomplete@4.0.1(react@18.2.0):
     dependencies:
       react: 18.2.0
 

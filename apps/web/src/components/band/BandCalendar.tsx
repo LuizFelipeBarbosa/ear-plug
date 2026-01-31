@@ -8,22 +8,29 @@ import {
   MapPin,
   ChevronLeft,
   ChevronRight,
+  Plus,
+  Music,
+  Users,
 } from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import { useCurrentBand } from "@/hooks/useBand";
+import { CreateGigModal } from "./CreateGigModal";
 import {
   formatEventDate,
   formatEventTime,
   EVENT_STATUS_CONFIG,
+  GENRE_COLORS,
 } from "@ear-plug/shared/constants";
 import { cn } from "@/lib/utils";
-import type { EventStatus } from "@ear-plug/shared/types";
+import type { EventStatus, Genre } from "@ear-plug/shared/types";
 
 export function BandCalendarView() {
   const { band, isLoading: bandLoading } = useCurrentBand();
   const [viewMonth, setViewMonth] = useState(new Date());
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // Get events from Convex database
   const events = useQuery(
     api.events.listByBand,
     band ? { bandId: band._id, includesPast: false } : "skip"
@@ -59,29 +66,40 @@ export function BandCalendarView() {
   });
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-night">
       {/* Header */}
-      <header className="bg-white dark:bg-surface-dark border-b border-gray-200 dark:border-gray-800 p-4">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-          Shows & Availability
-        </h1>
+      <header className="bg-night-secondary border-b-2 border-lime/20 p-4">
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-2xl font-bold text-white uppercase tracking-tight">
+            Shows & Availability
+          </h1>
+          {band && (
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2.5 bg-lime text-night font-bold uppercase tracking-wider text-xs border-2 border-lime hover:bg-transparent hover:text-lime transition-all touch-target"
+            >
+              <Plus className="w-4 h-4" />
+              Create Gig
+            </button>
+          )}
+        </div>
 
         {/* Month Navigation */}
         <div className="flex items-center justify-between">
           <button
             onClick={prevMonth}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+            className="p-2 hover:bg-night-tertiary border border-zinc-800 hover:border-lime/30 transition-colors touch-target"
           >
-            <ChevronLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+            <ChevronLeft className="w-5 h-5 text-zinc-400" />
           </button>
-          <span className="text-lg font-semibold text-gray-900 dark:text-white">
+          <span className="text-lg font-bold text-white uppercase tracking-wide">
             {monthName}
           </span>
           <button
             onClick={nextMonth}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+            className="p-2 hover:bg-night-tertiary border border-zinc-800 hover:border-lime/30 transition-colors touch-target"
           >
-            <ChevronRight className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+            <ChevronRight className="w-5 h-5 text-zinc-400" />
           </button>
         </div>
       </header>
@@ -93,15 +111,15 @@ export function BandCalendarView() {
             {[1, 2, 3].map((i) => (
               <div
                 key={i}
-                className="h-24 bg-gray-100 dark:bg-surface-dark-secondary rounded-xl animate-pulse"
+                className="h-24 bg-night-tertiary border-2 border-zinc-800 animate-shimmer"
               />
             ))}
           </div>
         ) : events && events.length > 0 ? (
-          <div className="space-y-4">
+          <div className="space-y-6">
             {Object.entries(groupedEvents).map(([date, dateEvents]) => (
               <div key={date}>
-                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-lime mb-3">
                   {new Date(date).toLocaleDateString("en-US", {
                     weekday: "long",
                     month: "short",
@@ -117,73 +135,149 @@ export function BandCalendarView() {
             ))}
           </div>
         ) : (
-          <EmptyState />
+          <EmptyState onCreateClick={() => setIsModalOpen(true)} band={band} />
         )}
       </div>
+
+      {/* Create Gig Modal */}
+      {band && (
+        <CreateGigModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          bandId={band._id}
+          bandName={band.name}
+          onSuccess={() => {
+            // Event will appear automatically via Convex real-time sync
+          }}
+        />
+      )}
     </div>
   );
 }
 
-function EventItem({ event }: { event: any }) {
+interface EventItemProps {
+  event: any;
+}
+
+function EventItem({ event }: EventItemProps) {
   const statusConfig = EVENT_STATUS_CONFIG[event.status as EventStatus];
+  const genreColor = GENRE_COLORS[event.genre as keyof typeof GENRE_COLORS] || "#71717A";
 
   return (
     <Link
       href={`/gig/${event._id}`}
-      className="block bg-white dark:bg-surface-dark-secondary rounded-xl p-4 hover:shadow-md transition-shadow"
+      className="block bg-night-tertiary border-2 border-zinc-800 p-4 hover:border-lime/30 transition-all group"
     >
       <div className="flex items-start justify-between">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-2 mb-2">
+            {/* Status Badge */}
             <span
               className={cn(
-                "px-2 py-0.5 rounded-full text-xs font-medium",
-                statusConfig.bgColor,
-                statusConfig.color
+                "px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border",
+                event.status === "confirmed" &&
+                  "bg-lime/10 border-lime/30 text-lime",
+                event.status === "hold" &&
+                  "bg-violet/10 border-violet/30 text-violet",
+                event.status === "available" &&
+                  "bg-zinc-800 border-zinc-700 text-zinc-400"
               )}
             >
               {statusConfig.label}
             </span>
+            {/* Genre Badge */}
+            <span
+              className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border"
+              style={{
+                color: genreColor,
+                borderColor: `${genreColor}40`,
+                backgroundColor: `${genreColor}10`,
+              }}
+            >
+              {event.genre}
+            </span>
           </div>
-          <h3 className="font-semibold text-gray-900 dark:text-white truncate">
+          <h3 className="font-bold text-white uppercase tracking-wide text-sm group-hover:text-lime transition-colors">
             {event.title}
           </h3>
-          <div className="flex items-center gap-4 mt-2 text-sm text-gray-500 dark:text-gray-400">
+          <div className="flex items-center gap-4 mt-2 text-xs text-zinc-400">
             <span className="flex items-center gap-1">
-              <Clock className="w-4 h-4" />
+              <Clock className="w-3.5 h-3.5 text-lime" />
               {formatEventTime(event.dateTime)}
             </span>
             {event.venue && (
               <span className="flex items-center gap-1 truncate">
-                <MapPin className="w-4 h-4 flex-shrink-0" />
+                <MapPin className="w-3.5 h-3.5 text-violet flex-shrink-0" />
                 {event.venue.name}
               </span>
             )}
           </div>
         </div>
         <div className="text-right flex-shrink-0 ml-4">
-          <div className="text-lg font-bold text-primary-600">
-            {event.rsvpCount}
+          <div className="text-xl font-bold text-lime">{event.rsvpCount}</div>
+          <div className="text-[10px] text-zinc-500 uppercase tracking-wider">
+            RSVPs
           </div>
-          <div className="text-xs text-gray-500">RSVPs</div>
         </div>
       </div>
+      {/* Capacity indicator if available */}
+      {event.capacity && (
+        <div className="mt-3 pt-3 border-t border-zinc-800/50 flex items-center gap-2">
+          <Users className="w-3.5 h-3.5 text-zinc-600" />
+          <div className="flex-1 h-1.5 bg-night-secondary rounded-full overflow-hidden">
+            <div
+              className="h-full bg-violet rounded-full"
+              style={{
+                width: `${Math.min(
+                  (event.rsvpCount / event.capacity) * 100,
+                  100
+                )}%`,
+              }}
+            />
+          </div>
+          <span className="text-[10px] text-zinc-500">
+            {event.rsvpCount}/{event.capacity}
+          </span>
+        </div>
+      )}
     </Link>
   );
 }
 
-function EmptyState() {
+function EmptyState({
+  onCreateClick,
+  band,
+}: {
+  onCreateClick: () => void;
+  band: any;
+}) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-center">
-      <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-surface-dark-secondary flex items-center justify-center mb-4">
-        <Calendar className="w-8 h-8 text-gray-400" />
+    <div className="flex flex-col items-center justify-center py-16 text-center border-2 border-dashed border-zinc-800">
+      <div className="w-16 h-16 bg-night-tertiary border-2 border-zinc-800 flex items-center justify-center mb-4">
+        <Calendar className="w-8 h-8 text-zinc-600" />
       </div>
-      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+      <h3 className="text-lg font-bold text-white uppercase tracking-wide mb-2">
         No upcoming shows
       </h3>
-      <p className="text-gray-500 dark:text-gray-400 max-w-[250px]">
-        Apply to open dates or create new events to fill your calendar
+      <p className="text-zinc-500 max-w-[250px] text-sm mb-6">
+        {band
+          ? "Create your first gig to get started building your calendar"
+          : "Create your band profile to start managing shows"}
       </p>
+      {band ? (
+        <button
+          onClick={onCreateClick}
+          className="flex items-center gap-2 px-6 py-3 bg-lime text-night font-bold uppercase tracking-wider text-sm border-2 border-lime hover:bg-transparent hover:text-lime transition-all"
+        >
+          <Plus className="w-4 h-4" />
+          Create First Gig
+        </button>
+      ) : (
+        <div className="flex items-center gap-2 text-zinc-600">
+          <Music className="w-5 h-5" />
+          <span className="text-sm">Create your band profile first</span>
+        </div>
+      )}
     </div>
   );
 }

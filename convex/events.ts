@@ -556,3 +556,92 @@ export const create = mutation({
     return eventId;
   },
 });
+
+// Create a new event with venue from Google Places
+export const createWithVenue = mutation({
+  args: {
+    title: v.string(),
+    bandId: v.id("bands"),
+    dateTime: v.number(),
+    genre: genreValidator,
+    venueName: v.string(),
+    venueAddress: v.string(),
+    venueCity: v.string(),
+    venueCoordinates: v.object({
+      lat: v.number(),
+      lng: v.number(),
+    }),
+    venuePlaceId: v.optional(v.string()),
+    image: v.optional(v.string()),
+    capacity: v.optional(v.number()),
+    price: v.optional(v.number()),
+    description: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    // Verify the band belongs to this user
+    const band = await ctx.db.get(args.bandId);
+    if (!band) {
+      throw new Error("Band not found");
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+      .unique();
+
+    if (!user || band.userId !== user._id) {
+      throw new Error("Not authorized to create events for this band");
+    }
+
+    // Check if venue already exists by coordinates
+    const existingVenues = await ctx.db.query("venues").collect();
+    const existingVenue = existingVenues.find(v => {
+      const latDiff = Math.abs(v.coordinates.lat - args.venueCoordinates.lat);
+      const lngDiff = Math.abs(v.coordinates.lng - args.venueCoordinates.lng);
+      return latDiff < 0.0001 && lngDiff < 0.0001;
+    });
+
+    let venueId;
+    if (existingVenue) {
+      venueId = existingVenue._id;
+    } else {
+      // Create new venue
+      venueId = await ctx.db.insert("venues", {
+        name: args.venueName,
+        address: args.venueAddress,
+        city: args.venueCity,
+        coordinates: args.venueCoordinates,
+        capacity: args.capacity || 100,
+      });
+    }
+
+    // Create the event
+    const eventId = await ctx.db.insert("events", {
+      title: args.title,
+      bandId: args.bandId,
+      venueId,
+      dateTime: args.dateTime,
+      image: args.image,
+      capacity: args.capacity || 100,
+      price: args.price,
+      description: args.description,
+      genre: args.genre,
+      rsvpCount: 0,
+      status: "confirmed",
+    });
+
+    // Schedule notifications for fans who saved this venue or band
+    await ctx.scheduler.runAfter(0, internal.notifications.createNearbyEventNotifications, {
+      eventId,
+      venueId,
+      bandId: args.bandId,
+    });
+
+    return { eventId, venueId };
+  },
+});
