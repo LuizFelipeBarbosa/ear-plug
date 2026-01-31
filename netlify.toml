@@ -1,13 +1,10 @@
 [build]
-  command = "pnpm build:web"
+  # Use custom install command to skip postinstall scripts (React Native deps require native tools)
+  command = "pnpm install --ignore-scripts && pnpm build:web"
   publish = "apps/web/.next"
 
-[build.environment]
-  # Skip postinstall scripts to avoid React Native build tools requirement
-  NPM_FLAGS = "--ignore-scripts"
-
 [context.production]
-  command = "pnpm build:web"
+  command = "pnpm install --ignore-scripts && pnpm build:web"
 
 [context.deploy-preview]
-  command = "pnpm build:web"
+  command = "pnpm install --ignore-scripts && pnpm build:web"
