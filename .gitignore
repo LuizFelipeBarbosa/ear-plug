@@ -2,45 +2,67 @@
 node_modules
 .pnpm-store
 
-# Build outputs
-dist
-.next
-.expo
-out
-build
+# Next.js
+.next/
+out/
+build/
+dist/
+.vercel/
 
 # Turbo
-.turbo
+.turbo/
 
-# Environment
+# Convex
+.convex/
+convex-local-backend.sqlite
+convex-local-backend.sqlite-journal
+
+# Environment Variables
 .env
 .env.local
-.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
 .env*.local
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Testing
+coverage/
+.nyc_output/
 
 # IDE
 .idea
-.vscode
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
 *.swp
 *.swo
 
 # OS
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
 
-# Logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
 
-# Testing
-coverage
-
-# Convex
-.convex
-
-# Expo
+# Expo / React Native
+.expo/
 *.jks
 *.p8
 *.p12
@@ -48,16 +70,9 @@ coverage
 *.mobileprovision
 *.orig.*
 web-build/
-
-# Metro
 .metro-health-check*
 
-# TypeScript
-*.tsbuildinfo
-next-env.d.ts
-
-# Vercel
-.vercel
-
-# Misc
+# Security
 *.pem
+*.cer
+*.crt
