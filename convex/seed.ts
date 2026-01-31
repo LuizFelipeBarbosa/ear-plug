@@ -235,136 +235,147 @@ export const seedDatabase = mutation({
     const now = Date.now();
     const day = 24 * 60 * 60 * 1000;
 
-    const events = [
+    const events: Array<{
+      title: string;
+      bandId: any;
+      venueId: any;
+      dateTime: number;
+      genres: ("indie" | "rock" | "jazz" | "electronic" | "folk" | "pop" | "alternative")[];
+      capacity: number;
+      rsvpCount: number;
+      price: number;
+      description: string;
+      status: "confirmed" | "hold" | "available";
+    }> = [
       {
         title: "Indie Night: The Midnight Waves + The Echo Chamber",
         bandId: bandIds["The Midnight Waves"],
         venueId: venueIds["The Chapel"],
         dateTime: now + 3 * day + 20 * 60 * 60 * 1000,
-        genre: "indie" as const,
+        genres: ["indie", "alternative"],
         capacity: 300,
         rsvpCount: 127,
         price: 1500,
         description:
           "Two of the Bay's best indie bands team up for an unforgettable night of dreamy soundscapes and angular guitars.",
-        status: "confirmed" as const,
+        status: "confirmed",
       },
       {
         title: "Jazz Under the Stars",
         bandId: bandIds["Brass Monkey Collective"],
         venueId: venueIds["Yoshi's Oakland"],
         dateTime: now + 5 * day + 19 * 60 * 60 * 1000,
-        genre: "jazz" as const,
+        genres: ["jazz", "electronic"],
         capacity: 200,
         rsvpCount: 89,
         price: 2500,
         description:
           "An evening of modern jazz with the acclaimed Brass Monkey Collective.",
-        status: "confirmed" as const,
+        status: "confirmed",
       },
       {
         title: "Electronic Dance Party",
         bandId: bandIds["Voltage Kids"],
         venueId: venueIds["The New Parish"],
         dateTime: now + 7 * day + 22 * 60 * 60 * 1000,
-        genre: "electronic" as const,
+        genres: ["electronic", "pop"],
         capacity: 400,
         rsvpCount: 234,
         price: 2000,
         description:
           "Get ready to dance! Voltage Kids bring their synth-heavy bangers to Oakland.",
-        status: "confirmed" as const,
+        status: "confirmed",
       },
       {
         title: "Folk & Ale: The Rustic Hearts",
         bandId: bandIds["The Rustic Hearts"],
         venueId: venueIds["Freight & Salvage"],
         dateTime: now + 10 * day + 19 * 60 * 60 * 1000,
-        genre: "folk" as const,
+        genres: ["folk", "indie"],
         capacity: 200,
         rsvpCount: 78,
         price: 1800,
         description:
           "Warm harmonies and heartfelt storytelling in Berkeley's finest folk venue.",
-        status: "confirmed" as const,
+        status: "confirmed",
       },
       {
         title: "Garage Rock Revival",
         bandId: bandIds["Neon Vandals"],
         venueId: venueIds["924 Gilman"],
         dateTime: now + 2 * day + 20 * 60 * 60 * 1000,
-        genre: "rock" as const,
+        genres: ["rock", "alternative"],
         capacity: 250,
         rsvpCount: 156,
         price: 1000,
         description:
           "Raw, loud, and unforgettable. Neon Vandals tear up the legendary Gilman stage.",
-        status: "confirmed" as const,
+        status: "confirmed",
       },
       {
         title: "Art Rock Experiment",
         bandId: bandIds["Crystal Method Theory"],
         venueId: venueIds["The Independent"],
         dateTime: now + 14 * day + 21 * 60 * 60 * 1000,
-        genre: "alternative" as const,
+        genres: ["alternative", "rock"],
         capacity: 400,
         rsvpCount: 112,
         price: 2200,
         description:
           "Prepare for a journey through sonic landscapes with Crystal Method Theory.",
-        status: "confirmed" as const,
+        status: "confirmed",
       },
       {
         title: "Pop Goes the Night",
         bandId: bandIds["Sugar Rush"],
         venueId: venueIds["Bottom of the Hill"],
         dateTime: now + 4 * day + 20 * 60 * 60 * 1000,
-        genre: "pop" as const,
+        genres: ["pop", "electronic"],
         capacity: 300,
         rsvpCount: 201,
         price: 1500,
         description:
           "Sugar Rush delivers the hooks and the good vibes. Come ready to sing along!",
-        status: "confirmed" as const,
+        status: "confirmed",
       },
       {
         title: "Bebop Tribute Night",
         bandId: bandIds["Blue Note Society"],
         venueId: venueIds["Great American Music Hall"],
         dateTime: now + 8 * day + 19 * 60 * 60 * 1000,
-        genre: "jazz" as const,
+        genres: ["jazz"],
         capacity: 500,
         rsvpCount: 145,
         price: 3000,
         description:
           "Honoring the masters of bebop in one of SF's most beautiful venues.",
-        status: "confirmed" as const,
+        status: "confirmed",
       },
       {
         title: "Punk's Not Dead",
         bandId: bandIds["Feral Youth"],
         venueId: venueIds["924 Gilman"],
         dateTime: now + 9 * day + 19 * 60 * 60 * 1000,
-        genre: "rock" as const,
+        genres: ["rock", "alternative"],
         capacity: 300,
         rsvpCount: 223,
         price: 800,
         description:
           "Feral Youth proves punk is alive and kicking. All ages, no attitude.",
-        status: "confirmed" as const,
+        status: "confirmed",
       },
       {
         title: "Sunday Sessions: The Echo Chamber",
         bandId: bandIds["The Echo Chamber"],
         venueId: venueIds["Cornerstone Berkeley"],
         dateTime: now + 6 * day + 17 * 60 * 60 * 1000,
-        genre: "indie" as const,
+        genres: ["indie", "rock"],
         capacity: 200,
         rsvpCount: 67,
         price: 0,
         description:
           "Free show! Catch The Echo Chamber in an intimate afternoon set.",
-        status: "confirmed" as const,
+        status: "confirmed",
       },
     ];
 

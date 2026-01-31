@@ -120,13 +120,13 @@ export default defineSchema({
     capacity: v.number(),
     price: v.optional(v.number()), // Ticket price in cents
     description: v.optional(v.string()),
-    genre: genreValidator,
+    genres: v.optional(v.array(genreValidator)), // Multiple genres supported (optional for migration)
+    genre: v.optional(genreValidator), // Legacy single genre field - kept for backward compatibility
     status: eventStatusValidator,
   })
     .index("by_band", ["bandId"])
     .index("by_venue", ["venueId"])
     .index("by_date", ["dateTime"])
-    .index("by_genre", ["genre"])
     .index("by_status", ["status"]),
 
   // ==================== RSVPs ====================

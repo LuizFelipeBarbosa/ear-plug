@@ -111,7 +111,11 @@ export default function EventDetailsScreen() {
                   {event.band.name}
                 </Text>
                 <Text className="text-sm text-primary-600">
-                  {event.genre.charAt(0).toUpperCase() + event.genre.slice(1)}
+                  {/* Display genres (handle both new and legacy format) */}
+                  {(event.genres && event.genres.length > 0
+                    ? event.genres
+                    : event.genre ? [event.genre] : []
+                  ).map((g: string) => g.charAt(0).toUpperCase() + g.slice(1)).join(" • ")}
                 </Text>
               </View>
             </View>

@@ -30,7 +30,7 @@ export interface CreateEventInput {
   endTime?: string; // HH:MM format
   venue: VenueLocationData;
   image?: string;
-  genre: Genre;
+  genres: Genre[]; // Multiple genres supported
   capacity?: number;
   description?: string;
   price?: number;
@@ -58,7 +58,7 @@ export function useSharedEvents() {
         title: input.title,
         bandId: input.bandId as Id<"bands">,
         dateTime,
-        genre: input.genre,
+        genres: input.genres,
         venueName: input.venue.name,
         venueAddress: input.venue.address,
         venueCity: input.venue.city,

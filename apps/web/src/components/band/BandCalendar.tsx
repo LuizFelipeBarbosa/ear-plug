@@ -159,9 +159,20 @@ interface EventItemProps {
   event: any;
 }
 
+// Helper function to get genres from event (handles both new and legacy format)
+function getEventGenres(event: any): string[] {
+  if (event.genres && event.genres.length > 0) {
+    return event.genres;
+  }
+  if (event.genre) {
+    return [event.genre];
+  }
+  return [];
+}
+
 function EventItem({ event }: EventItemProps) {
   const statusConfig = EVENT_STATUS_CONFIG[event.status as EventStatus];
-  const genreColor = GENRE_COLORS[event.genre as keyof typeof GENRE_COLORS] || "#71717A";
+  const genres = getEventGenres(event);
 
   return (
     <Link
@@ -170,7 +181,7 @@ function EventItem({ event }: EventItemProps) {
     >
       <div className="flex items-start justify-between">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
             {/* Status Badge */}
             <span
               className={cn(
@@ -185,17 +196,23 @@ function EventItem({ event }: EventItemProps) {
             >
               {statusConfig.label}
             </span>
-            {/* Genre Badge */}
-            <span
-              className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border"
-              style={{
-                color: genreColor,
-                borderColor: `${genreColor}40`,
-                backgroundColor: `${genreColor}10`,
-              }}
-            >
-              {event.genre}
-            </span>
+            {/* Genre Badges */}
+            {genres.map((genre) => {
+              const genreColor = GENRE_COLORS[genre as keyof typeof GENRE_COLORS] || "#71717A";
+              return (
+                <span
+                  key={genre}
+                  className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border"
+                  style={{
+                    color: genreColor,
+                    borderColor: `${genreColor}40`,
+                    backgroundColor: `${genreColor}10`,
+                  }}
+                >
+                  {genre}
+                </span>
+              );
+            })}
           </div>
           <h3 className="font-bold text-white uppercase tracking-wide text-sm group-hover:text-lime transition-colors">
             {event.title}

@@ -88,6 +88,7 @@ export default function EventDetailsPage({ params }: PageProps) {
 
   const spotsLeft = event.capacity - event.rsvpCount;
   const fillPercentage = Math.min((event.rsvpCount / event.capacity) * 100, 100);
+  const isPast = event.dateTime < Date.now();
 
   return (
     <div className="min-h-screen bg-night pb-28">
@@ -123,17 +124,19 @@ export default function EventDetailsPage({ params }: PageProps) {
             >
               <Share2 className="w-5 h-5" />
             </button>
-            <button
-              onClick={() => toggleLike()}
-              className={cn(
-                "p-3 flex items-center justify-center transition-colors border touch-target",
-                hasLiked
-                  ? "bg-lime border-lime text-night"
-                  : "bg-night-secondary/80 backdrop-blur-sm border-zinc-800 text-white hover:border-lime/30"
-              )}
-            >
-              <Heart className={cn("w-5 h-5", hasLiked && "fill-current")} />
-            </button>
+            {!isPast && (
+              <button
+                onClick={() => toggleLike()}
+                className={cn(
+                  "p-3 flex items-center justify-center transition-colors border touch-target",
+                  hasLiked
+                    ? "bg-lime border-lime text-night"
+                    : "bg-night-secondary/80 backdrop-blur-sm border-zinc-800 text-white hover:border-lime/30"
+                )}
+              >
+                <Heart className={cn("w-5 h-5", hasLiked && "fill-current")} />
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -161,7 +164,11 @@ export default function EventDetailsPage({ params }: PageProps) {
                 {event.band.name}
               </h3>
               <p className="text-xs text-lime font-bold uppercase tracking-wider">
-                {event.genre.charAt(0).toUpperCase() + event.genre.slice(1)}
+                {/* Display genres (handle both new and legacy format) */}
+                {(event.genres && event.genres.length > 0
+                  ? event.genres
+                  : event.genre ? [event.genre] : []
+                ).map((g: string) => g.charAt(0).toUpperCase() + g.slice(1)).join(" • ")}
               </p>
             </div>
           </div>
@@ -209,15 +216,18 @@ export default function EventDetailsPage({ params }: PageProps) {
         <div className="mb-6 p-4 bg-night-tertiary border-2 border-zinc-800">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">
-              {spotsLeft} spots remaining
+              {isPast ? `${event.rsvpCount} attended` : `${spotsLeft} spots remaining`}
             </span>
-            <span className="text-xs font-bold text-lime">
-              {Math.round(fillPercentage)}% full
+            <span className={cn("text-xs font-bold", isPast ? "text-zinc-400" : "text-lime")}>
+              {Math.round(fillPercentage)}% {isPast ? "capacity" : "full"}
             </span>
           </div>
           <div className="w-full h-2 bg-zinc-800 overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-lime to-violet transition-all duration-500"
+              className={cn(
+                "h-full transition-all duration-500",
+                isPast ? "bg-zinc-600" : "bg-gradient-to-r from-lime to-violet"
+              )}
               style={{ width: `${fillPercentage}%` }}
             />
           </div>
@@ -225,20 +235,26 @@ export default function EventDetailsPage({ params }: PageProps) {
 
         {/* RSVP Button - Fixed Bottom */}
         <div className="mb-6 p-4 bg-night-secondary border-2 border-zinc-800">
-          <button
-            onClick={() => rsvp()}
-            disabled={spotsLeft <= 0 && !hasRsvp}
-            className={cn(
-              "w-full py-4 font-bold text-lg uppercase tracking-wider transition-all border-2 touch-target",
-              hasRsvp
-                ? "bg-lime text-night border-lime"
-                : spotsLeft <= 0
-                  ? "bg-zinc-800 text-zinc-500 border-zinc-800 cursor-not-allowed"
-                  : "bg-lime text-night border-lime hover:bg-transparent hover:text-lime"
-            )}
-          >
-            {hasRsvp ? "You're Going! ✓" : spotsLeft <= 0 ? "Sold Out" : "RSVP to Event"}
-          </button>
+          {isPast ? (
+            <div className="w-full py-4 font-bold text-lg uppercase tracking-wider border-2 border-zinc-700 bg-zinc-800 text-zinc-400 text-center">
+              Event Completed
+            </div>
+          ) : (
+            <button
+              onClick={() => rsvp()}
+              disabled={spotsLeft <= 0 && !hasRsvp}
+              className={cn(
+                "w-full py-4 font-bold text-lg uppercase tracking-wider transition-all border-2 touch-target",
+                hasRsvp
+                  ? "bg-lime text-night border-lime"
+                  : spotsLeft <= 0
+                    ? "bg-zinc-800 text-zinc-500 border-zinc-800 cursor-not-allowed"
+                    : "bg-lime text-night border-lime hover:bg-transparent hover:text-lime"
+              )}
+            >
+              {hasRsvp ? "You're Going! ✓" : spotsLeft <= 0 ? "Sold Out" : "RSVP to Event"}
+            </button>
+          )}
         </div>
 
         {/* Venue Info */}

@@ -100,7 +100,8 @@ export interface Event extends BaseEntity {
   capacity: number;
   price?: number;
   description?: string;
-  genre: Genre;
+  genres: Genre[]; // Multiple genres supported
+  genre?: Genre; // Legacy single genre field - kept for backward compatibility
   status: EventStatus;
 }
 

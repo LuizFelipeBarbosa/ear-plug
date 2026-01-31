@@ -45,7 +45,7 @@ export const listUpcoming = query({
   },
 });
 
-// Get events by genre
+// Get events by genre (supports both single genre and genres array)
 export const listByGenre = query({
   args: {
     genre: genreValidator,
@@ -55,14 +55,25 @@ export const listByGenre = query({
     const now = Date.now();
     const limit = args.limit || 50;
 
+    // Get all upcoming events and filter by genre
     const events = await ctx.db
       .query("events")
-      .withIndex("by_genre", (q) => q.eq("genre", args.genre))
+      .withIndex("by_date")
       .filter((q) => q.gte(q.field("dateTime"), now))
-      .take(limit);
+      .take(200);
+
+    // Filter events that include the selected genre (check both genres array and legacy genre field)
+    const filteredEvents = events.filter((event) => {
+      // Check genres array first
+      if (event.genres && event.genres.length > 0) {
+        return event.genres.includes(args.genre);
+      }
+      // Fall back to legacy genre field
+      return event.genre === args.genre;
+    }).slice(0, limit);
 
     const eventsWithDetails = await Promise.all(
-      events.map(async (event) => {
+      filteredEvents.map(async (event) => {
         const band = await ctx.db.get(event.bandId);
         const venue = await ctx.db.get(event.venueId);
         return { ...event, band, venue };
@@ -283,7 +294,7 @@ export const toggleLike = mutation({
   },
 });
 
-// Get user's RSVP'd events
+// Get user's RSVP'd events (upcoming only)
 export const getUserRsvps = query({
   args: {},
   handler: async (ctx) => {
@@ -301,6 +312,7 @@ export const getUserRsvps = query({
       return [];
     }
 
+    const now = Date.now();
     const rsvps = await ctx.db
       .query("rsvps")
       .withIndex("by_user", (q) => q.eq("userId", user._id))
@@ -310,6 +322,8 @@ export const getUserRsvps = query({
       rsvps.map(async (rsvp) => {
         const event = await ctx.db.get(rsvp.eventId);
         if (!event) return null;
+        // Only include upcoming events
+        if (event.dateTime < now) return null;
 
         const band = await ctx.db.get(event.bandId);
         const venue = await ctx.db.get(event.venueId);
@@ -320,6 +334,49 @@ export const getUserRsvps = query({
     return eventsWithDetails
       .filter((e) => e !== null)
       .sort((a, b) => a!.dateTime - b!.dateTime);
+  },
+});
+
+// Get user's past RSVP'd events
+export const getUserPastRsvps = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      return [];
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+      .unique();
+
+    if (!user) {
+      return [];
+    }
+
+    const now = Date.now();
+    const rsvps = await ctx.db
+      .query("rsvps")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .collect();
+
+    const eventsWithDetails = await Promise.all(
+      rsvps.map(async (rsvp) => {
+        const event = await ctx.db.get(rsvp.eventId);
+        if (!event) return null;
+        // Only include past events
+        if (event.dateTime >= now) return null;
+
+        const band = await ctx.db.get(event.bandId);
+        const venue = await ctx.db.get(event.venueId);
+        return { ...event, band, venue, rsvpedAt: rsvp.createdAt };
+      })
+    );
+
+    return eventsWithDetails
+      .filter((e) => e !== null)
+      .sort((a, b) => b!.dateTime - a!.dateTime); // Most recent first
   },
 });
 
@@ -425,19 +482,20 @@ export const listNearby = query({
     const limit = args.limit || 50;
 
     // Get all upcoming events
-    let events;
+    let events = await ctx.db
+      .query("events")
+      .withIndex("by_date")
+      .filter((q) => q.gte(q.field("dateTime"), now))
+      .take(200);
+
+    // Filter by genre if specified (check both genres array and legacy genre field)
     if (args.genre) {
-      events = await ctx.db
-        .query("events")
-        .withIndex("by_genre", (q) => q.eq("genre", args.genre!))
-        .filter((q) => q.gte(q.field("dateTime"), now))
-        .take(100);
-    } else {
-      events = await ctx.db
-        .query("events")
-        .withIndex("by_date")
-        .filter((q) => q.gte(q.field("dateTime"), now))
-        .take(100);
+      events = events.filter((event) => {
+        if (event.genres && event.genres.length > 0) {
+          return event.genres.includes(args.genre!);
+        }
+        return event.genre === args.genre;
+      });
     }
 
     // Fetch venue data and calculate distances
@@ -517,7 +575,8 @@ export const create = mutation({
     capacity: v.number(),
     price: v.optional(v.number()),
     description: v.optional(v.string()),
-    genre: genreValidator,
+    genres: v.array(genreValidator), // Multiple genres
+    genre: v.optional(genreValidator), // Legacy field for backward compatibility
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -540,8 +599,9 @@ export const create = mutation({
       throw new Error("Not authorized to create events for this band");
     }
 
+    const { genre, ...restArgs } = args;
     const eventId = await ctx.db.insert("events", {
-      ...args,
+      ...restArgs,
       rsvpCount: 0,
       status: "confirmed",
     });
@@ -563,7 +623,8 @@ export const createWithVenue = mutation({
     title: v.string(),
     bandId: v.id("bands"),
     dateTime: v.number(),
-    genre: genreValidator,
+    genres: v.array(genreValidator), // Multiple genres
+    genre: v.optional(genreValidator), // Legacy field for backward compatibility
     venueName: v.string(),
     venueAddress: v.string(),
     venueCity: v.string(),
@@ -630,7 +691,7 @@ export const createWithVenue = mutation({
       capacity: args.capacity || 100,
       price: args.price,
       description: args.description,
-      genre: args.genre,
+      genres: args.genres,
       rsvpCount: 0,
       status: "confirmed",
     });

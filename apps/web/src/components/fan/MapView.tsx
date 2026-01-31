@@ -3,7 +3,7 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { APIProvider, Map, AdvancedMarker } from "@vis.gl/react-google-maps";
-import { Search, SlidersHorizontal, X } from "lucide-react";
+import { Search, SlidersHorizontal, X, ChevronUp, ChevronDown } from "lucide-react";
 import { MapInfoWindow } from "@/components/maps/MapInfoWindow";
 import { useEvents, useSearchEvents, useNearbyEvents } from "@/hooks/useEvents";
 import { useGeolocation } from "@/hooks/useGeolocation";
@@ -54,6 +54,7 @@ export function FanMapView() {
   const [selectedEventId, setSelectedEventId] = useState<Id<"events"> | null>(null);
   const [distanceRadius, setDistanceRadius] = useState(25); // Default 25 miles
   const [useDistanceFilter, setUseDistanceFilter] = useState(false);
+  const [isEventsExpanded, setIsEventsExpanded] = useState(false);
 
   // Geolocation
   const {
@@ -119,7 +120,7 @@ export function FanMapView() {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
   return (
-    <div className="h-screen flex flex-col bg-night">
+    <div className="h-screen flex flex-col bg-night overflow-hidden">
       {/* Search Bar - Brutalist Style */}
       <div className="relative z-10 p-4 bg-night-secondary border-b-2 border-lime/20">
         <div className="flex items-center gap-3">
@@ -182,7 +183,10 @@ export function FanMapView() {
       </div>
 
       {/* Map */}
-      <div className="flex-1 relative">
+      <div
+        className="relative overflow-hidden transition-all duration-500 ease-in-out"
+        style={{ height: isEventsExpanded ? 0 : 'calc(65vh - 80px)' }}
+      >
         {apiKey ? (
           <APIProvider apiKey={apiKey}>
             <Map
@@ -206,7 +210,7 @@ export function FanMapView() {
                   </div>
                 </AdvancedMarker>
               )}
-              
+
               {/* Event markers - Electric Lime with black border */}
               {displayEvents?.map((event) => {
                 if (!event.venue?.coordinates) return null;
@@ -260,8 +264,23 @@ export function FanMapView() {
       </div>
 
       {/* Near You List - Brutalist Style */}
-      <div className="bg-night-secondary border-t-2 border-lime/20 max-h-[35vh] overflow-hidden">
-        <div className="p-4">
+      <div
+        className="bg-night-secondary border-t-2 border-lime/20 flex flex-col transition-all duration-500 ease-in-out overflow-hidden"
+        style={{ height: isEventsExpanded ? 'calc(100vh - 80px)' : '35vh' }}
+      >
+        {/* Expand/Collapse Toggle */}
+        <button
+          onClick={() => setIsEventsExpanded(!isEventsExpanded)}
+          className="w-full py-2 flex items-center justify-center hover:bg-night-tertiary transition-colors border-b border-zinc-800/50"
+        >
+          {isEventsExpanded ? (
+            <ChevronDown className="w-6 h-6 text-lime" />
+          ) : (
+            <ChevronUp className="w-6 h-6 text-lime" />
+          )}
+        </button>
+
+        <div className="p-4 flex-1 flex flex-col overflow-hidden">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold uppercase tracking-tight text-white">
               {useDistanceFilter && hasLocation ? `Within ${distanceRadius} miles` : "Near You"}
@@ -272,8 +291,8 @@ export function FanMapView() {
               </span>
             )}
           </div>
-          
-          <div className="space-y-3 overflow-y-auto max-h-[25vh] no-scrollbar pb-2">
+
+          <div className="space-y-3 overflow-y-auto no-scrollbar pb-2 flex-1">
             {isLoading ? (
               <div className="space-y-3">
                 {[1, 2, 3].map((i) => (
@@ -281,7 +300,7 @@ export function FanMapView() {
                 ))}
               </div>
             ) : displayEvents && displayEvents.length > 0 ? (
-              displayEvents.slice(0, 5).map((event: any) => (
+              (isEventsExpanded ? displayEvents : displayEvents.slice(0, 5)).map((event: any) => (
                 <div key={event._id} className="relative">
                   <EventCard event={event} variant="compact" />
                   {event.distance !== undefined && (

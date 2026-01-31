@@ -14,7 +14,6 @@ import {
   Check,
   AlertCircle,
   Loader2,
-  ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PlaceAutocomplete, VenueLocationData } from "@/components/maps/PlaceAutocomplete";
@@ -66,7 +65,7 @@ export function CreateGigModal({
     date: "",
     startTime: "",
     endTime: "",
-    genre: "" as Genre | "",
+    genres: [] as Genre[],
     capacity: "",
     description: "",
   });
@@ -97,7 +96,7 @@ export function CreateGigModal({
       date: "",
       startTime: "",
       endTime: "",
-      genre: "",
+      genres: [],
       capacity: "",
       description: "",
     });
@@ -202,8 +201,8 @@ export function CreateGigModal({
       newErrors.venue = "Please select a venue location";
     }
 
-    if (!formData.genre) {
-      newErrors.genre = "Genre is required";
+    if (formData.genres.length === 0) {
+      newErrors.genres = "At least one genre is required";
     }
 
     setErrors(newErrors);
@@ -234,7 +233,7 @@ export function CreateGigModal({
           placeId: venue.placeId,
         },
         image: coverImage || undefined,
-        genre: formData.genre as Genre,
+        genres: formData.genres,
         capacity: formData.capacity ? parseInt(formData.capacity, 10) : undefined,
         description: formData.description.trim() || undefined,
       });
@@ -471,39 +470,50 @@ export function CreateGigModal({
               />
             </div>
 
-            {/* Genre Selection */}
+            {/* Genre Selection - Multi-select */}
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">
-                Genre <span className="text-lime">*</span>
+                Genres <span className="text-lime">*</span>
+                <span className="text-zinc-600 font-normal ml-2">(select all that apply)</span>
               </label>
-              <div className="relative">
-                <select
-                  value={formData.genre}
-                  onChange={(e) => updateField("genre", e.target.value)}
-                  className={cn(
-                    "w-full px-4 py-3.5 bg-night-tertiary border-2 rounded-none text-white focus:outline-none transition-colors appearance-none cursor-pointer",
-                    errors.genre
-                      ? "border-red-500 focus:border-red-400"
-                      : "border-zinc-800 focus:border-lime",
-                    !formData.genre && "text-zinc-600"
-                  )}
-                >
-                  <option value="" disabled>
-                    Select a genre
-                  </option>
-                  {GENRES.map((g) => (
-                    <option key={g.value} value={g.value} className="text-white">
+              <div className={cn(
+                "grid grid-cols-2 gap-2 p-3 bg-night-tertiary border-2 rounded-none",
+                errors.genres ? "border-red-500" : "border-zinc-800"
+              )}>
+                {GENRES.map((g) => {
+                  const isSelected = formData.genres.includes(g.value);
+                  return (
+                    <button
+                      key={g.value}
+                      type="button"
+                      onClick={() => {
+                        const newGenres = isSelected
+                          ? formData.genres.filter((genre) => genre !== g.value)
+                          : [...formData.genres, g.value];
+                        setFormData((prev) => ({ ...prev, genres: newGenres }));
+                        if (errors.genres) {
+                          setErrors((prev) => {
+                            const newErrors = { ...prev };
+                            delete newErrors.genres;
+                            return newErrors;
+                          });
+                        }
+                      }}
+                      className={cn(
+                        "px-3 py-2 text-sm font-medium uppercase tracking-wider border-2 transition-all",
+                        isSelected
+                          ? "bg-lime text-night border-lime"
+                          : "bg-night border-zinc-700 text-zinc-400 hover:border-zinc-600"
+                      )}
+                    >
                       {g.label}
-                    </option>
-                  ))}
-                </select>
-                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                  <ChevronDown className="w-5 h-5 text-zinc-600" />
-                </div>
+                    </button>
+                  );
+                })}
               </div>
-              {errors.genre && (
+              {errors.genres && (
                 <p className="text-xs text-red-500 mt-1.5 flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" /> {errors.genre}
+                  <AlertCircle className="w-3 h-3" /> {errors.genres}
                 </p>
               )}
             </div>

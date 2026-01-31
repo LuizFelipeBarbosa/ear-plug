@@ -48,11 +48,13 @@ export function useEvent(eventId: Id<"events"> | undefined) {
 export function useUserEvents() {
   const rsvps = useQuery(api.events.getUserRsvps);
   const likes = useQuery(api.events.getUserLikes);
+  const pastRsvps = useQuery(api.events.getUserPastRsvps);
 
   return {
     rsvps: rsvps ?? [],
     likes: likes ?? [],
-    isLoading: rsvps === undefined || likes === undefined,
+    pastRsvps: pastRsvps ?? [],
+    isLoading: rsvps === undefined || likes === undefined || pastRsvps === undefined,
   };
 }
 

@@ -1,0 +1,9 @@
+[build]
+  command = "pnpm build:web"
+  publish = "apps/web/.next"
+
+[context.production]
+  command = "pnpm build:web"
+
+[context.deploy-preview]
+  command = "pnpm build:web"
