@@ -319,23 +319,35 @@ function CreateBandPrompt() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-night">
-      <div className="text-center max-w-md">
-        <div className="w-20 h-20 border-2 border-lime flex items-center justify-center mx-auto mb-6">
-          <Music className="w-10 h-10 text-lime" />
+    <div className="min-h-screen flex items-center justify-center p-6 bg-night relative overflow-hidden">
+      {/* Background accent */}
+      <div className="absolute top-0 left-0 w-96 h-96 bg-violet/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
+      <div className="absolute bottom-0 right-0 w-96 h-96 bg-lime/5 rounded-full blur-3xl translate-x-1/2 translate-y-1/2" />
+      
+      <div className="text-center max-w-md relative z-10">
+        {/* Icon with glow effect */}
+        <div className="w-24 h-24 border-2 border-lime flex items-center justify-center mx-auto mb-6 relative">
+          <div className="absolute inset-0 bg-lime/5 animate-pulse-lime" />
+          <Music className="w-12 h-12 text-lime relative z-10" />
         </div>
-        <h2 className="text-2xl font-bold text-white uppercase tracking-tight mb-3">
+        
+        <h2 className="text-3xl font-bold text-white uppercase tracking-tight mb-3">
           Create Your Band Profile
         </h2>
-        <p className="text-zinc-400 mb-8">
+        <p className="text-zinc-400 mb-8 text-sm leading-relaxed">
           Set up your band to start finding gigs, managing shows, and growing your fanbase.
         </p>
+        
         <button
           onClick={() => setShowForm(true)}
-          className="inline-block px-8 py-4 bg-lime text-night font-bold uppercase tracking-wider text-sm border-2 border-lime hover:bg-transparent hover:text-lime transition-all"
+          className="inline-block px-10 py-4 bg-lime text-night font-bold uppercase tracking-wider text-sm border-2 border-lime hover:bg-transparent hover:text-lime transition-all shadow-brutal hover:shadow-none hover:translate-x-1 hover:translate-y-1"
         >
           Get Started
         </button>
+        
+        <p className="mt-8 text-zinc-600 text-xs uppercase tracking-widest">
+          Takes less than 2 minutes
+        </p>
       </div>
     </div>
   );
