@@ -7,6 +7,7 @@ dist
 .next
 .expo
 out
+build
 
 # Turbo
 .turbo
@@ -15,6 +16,7 @@ out
 .env
 .env.local
 .env.*.local
+.env*.local
 
 # IDE
 .idea
@@ -52,3 +54,10 @@ web-build/
 
 # TypeScript
 *.tsbuildinfo
+next-env.d.ts
+
+# Vercel
+.vercel
+
+# Misc
+*.pem
