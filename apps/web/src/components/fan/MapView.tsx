@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { APIProvider, Map, AdvancedMarker, InfoWindow } from "@vis.gl/react-google-maps";
 import { Search, SlidersHorizontal, X } from "lucide-react";
 import { useEvents, useSearchEvents, useNearbyEvents } from "@/hooks/useEvents";
@@ -13,26 +14,34 @@ import type { Genre } from "@ear-plug/shared/types";
 import { cn } from "@/lib/utils";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 
+const VALID_GENRES: Genre[] = ["indie", "rock", "jazz", "electronic", "folk", "pop", "alternative"];
+
 export function FanMapView() {
+  const searchParams = useSearchParams();
+  const genreParam = searchParams.get("genre") as Genre | null;
+
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedGenre, setSelectedGenre] = useState<Genre | undefined>();
+  // Initialize from URL param if valid, otherwise undefined
+  const [selectedGenre, setSelectedGenre] = useState<Genre | undefined>(
+    genreParam && VALID_GENRES.includes(genreParam) ? genreParam : undefined
+  );
   const [showFilters, setShowFilters] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<Id<"events"> | null>(null);
   const [distanceRadius, setDistanceRadius] = useState(25); // Default 25 miles
   const [useDistanceFilter, setUseDistanceFilter] = useState(false);
 
   // Geolocation
-  const { 
-    latitude, 
-    longitude, 
-    loading: locationLoading, 
-    requestPosition, 
-    hasLocation 
+  const {
+    latitude,
+    longitude,
+    loading: locationLoading,
+    requestPosition,
+    hasLocation
   } = useGeolocation();
 
   // Regular events (no distance filter)
   const { events: regularEvents, isLoading: regularLoading } = useEvents({ genre: selectedGenre });
-  
+
   // Nearby events (with distance filter)
   const { events: nearbyEvents, isLoading: nearbyLoading } = useNearbyEvents({
     latitude,
@@ -47,7 +56,7 @@ export function FanMapView() {
   // Determine which events to display
   const events = useDistanceFilter && hasLocation ? nearbyEvents : regularEvents;
   const isLoading = useDistanceFilter && hasLocation ? nearbyLoading : regularLoading;
-  
+
   const displayEvents = searchQuery.length >= 2 ? searchResults : events;
 
   // Enable distance filter when location becomes available
@@ -56,6 +65,14 @@ export function FanMapView() {
       setUseDistanceFilter(true);
     }
   }, [hasLocation, useDistanceFilter]);
+
+  // Sync genre from URL param and show filters if genre is set
+  useEffect(() => {
+    if (genreParam && VALID_GENRES.includes(genreParam)) {
+      setSelectedGenre(genreParam);
+      setShowFilters(true); // Show filters so user can see/clear the active filter
+    }
+  }, [genreParam]);
 
   // Map center - use user location if available
   const mapCenter = useMemo(() => {
@@ -126,7 +143,7 @@ export function FanMapView() {
                 showAll
               />
             </div>
-            
+
             {/* Distance Filter */}
             <DistanceSlider
               value={distanceRadius}
@@ -245,8 +262,8 @@ export function FanMapView() {
               ))
             ) : (
               <p className="text-gray-500 text-center py-4">
-                {useDistanceFilter && hasLocation 
-                  ? `No events within ${distanceRadius} miles` 
+                {useDistanceFilter && hasLocation
+                  ? `No events within ${distanceRadius} miles`
                   : "No events found"}
               </p>
             )}

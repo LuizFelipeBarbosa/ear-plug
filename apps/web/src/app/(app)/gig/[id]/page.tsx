@@ -1,6 +1,5 @@
 "use client";
 
-import { use } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -26,11 +25,11 @@ import { cn } from "@/lib/utils";
 import type { Id } from "../../../../../../convex/_generated/dataModel";
 
 interface PageProps {
-  params: Promise<{ id: string }>;
+  params: { id: string };
 }
 
 export default function EventDetailsPage({ params }: PageProps) {
-  const { id } = use(params);
+  const { id } = params;
   const router = useRouter();
   const eventId = id as Id<"events">;
 
@@ -172,6 +171,15 @@ export default function EventDetailsPage({ params }: PageProps) {
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
           {event.title}
         </h1>
+
+        {/* Band Bio */}
+        {event.band?.bio && (
+          <div className="mb-6 p-4 bg-gradient-to-r from-primary-50 to-accent-50 dark:from-primary-900/20 dark:to-accent-900/20 rounded-xl">
+            <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+              {event.band.bio}
+            </p>
+          </div>
+        )}
 
         {/* Details Grid */}
         <div className="grid grid-cols-2 gap-4 mb-6">

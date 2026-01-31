@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
+import { internal } from "./_generated/api";
 
 const genreValidator = v.union(
   v.literal("indie"),
@@ -494,9 +495,9 @@ function haversineDistance(
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos(toRad(lat1)) *
-      Math.cos(toRad(lat2)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
+    Math.cos(toRad(lat2)) *
+    Math.sin(dLon / 2) *
+    Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
@@ -543,6 +544,13 @@ export const create = mutation({
       ...args,
       rsvpCount: 0,
       status: "confirmed",
+    });
+
+    // Schedule notifications for fans who saved this venue or band
+    await ctx.scheduler.runAfter(0, internal.notifications.createNearbyEventNotifications, {
+      eventId,
+      venueId: args.venueId,
+      bandId: args.bandId,
     });
 
     return eventId;

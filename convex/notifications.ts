@@ -228,3 +228,58 @@ export const createEventReminder = mutation({
     return { notifiedCount: rsvps.length };
   },
 });
+
+// Notify fans who have saved a venue when a new event is created there
+export const createNearbyEventNotifications = internalMutation({
+  args: {
+    eventId: v.id("events"),
+    venueId: v.id("venues"),
+    bandId: v.id("bands"),
+  },
+  handler: async (ctx, args) => {
+    const event = await ctx.db.get(args.eventId);
+    const venue = await ctx.db.get(args.venueId);
+    const band = await ctx.db.get(args.bandId);
+
+    if (!event || !venue || !band) {
+      return { notifiedCount: 0 };
+    }
+
+    // Get all users who have saved this venue
+    const savedVenues = await ctx.db
+      .query("savedVenues")
+      .withIndex("by_venue", (q) => q.eq("venueId", args.venueId))
+      .collect();
+
+    // Also check if any users have saved this band
+    const savedBands = await ctx.db
+      .query("savedArtists")
+      .withIndex("by_band", (q) => q.eq("bandId", args.bandId))
+      .collect();
+
+    // Combine user IDs (remove duplicates)
+    const userIds = new Set([
+      ...savedVenues.map((sv) => sv.userId),
+      ...savedBands.map((sb) => sb.userId),
+    ]);
+
+    // Create notifications for each user
+    const notifications = await Promise.all(
+      Array.from(userIds).map((userId) =>
+        ctx.db.insert("notifications", {
+          userId,
+          type: "new_event_nearby",
+          title: "New Event at a Saved Venue",
+          content: `${band.name} is playing at ${venue.name}!`,
+          timestamp: Date.now(),
+          read: false,
+          eventId: args.eventId,
+          bandId: args.bandId,
+          venueId: args.venueId,
+        })
+      )
+    );
+
+    return { notifiedCount: notifications.length };
+  },
+});

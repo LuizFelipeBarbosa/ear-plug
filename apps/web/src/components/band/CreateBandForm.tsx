@@ -50,7 +50,7 @@ export function CreateBandForm() {
   const [currentStep, setCurrentStep] = useState<Step>("basics");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   const [formData, setFormData] = useState<FormData>({
     name: "",
     location: "",
@@ -104,8 +104,8 @@ export function CreateBandForm() {
         genre: formData.genre,
         bio: formData.bio.trim() || undefined,
         memberCount: formData.memberCount || undefined,
-        socialLinks: Object.keys(formData.socialLinks).length > 0 
-          ? formData.socialLinks 
+        socialLinks: Object.keys(formData.socialLinks).length > 0
+          ? formData.socialLinks
           : undefined,
       });
 
@@ -209,17 +209,17 @@ export function CreateBandForm() {
             <div className="grid grid-cols-2 gap-3">
               {GENRES.map((genre) => (
                 <button
-                  key={genre}
-                  onClick={() => setFormData({ ...formData, genre })}
+                  key={genre.value}
+                  onClick={() => setFormData({ ...formData, genre: genre.value })}
                   className={cn(
                     "p-4 rounded-xl border-2 text-left transition-all",
-                    formData.genre === genre
+                    formData.genre === genre.value
                       ? "border-accent-500 bg-accent-50 dark:bg-accent-900/20"
                       : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
                   )}
                 >
                   <span className="font-medium text-gray-900 dark:text-white">
-                    {genre.charAt(0).toUpperCase() + genre.slice(1)}
+                    {genre.label}
                   </span>
                 </button>
               ))}
@@ -320,7 +320,7 @@ export function CreateBandForm() {
               Back
             </button>
           )}
-          
+
           {currentStepIndex < STEPS.length - 1 ? (
             <button
               onClick={handleNext}

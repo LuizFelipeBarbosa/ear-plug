@@ -30,7 +30,7 @@ export function OnboardingFlow() {
     setSelectedRole(role);
     // Persist role to localStorage immediately
     persistRole(role);
-    
+
     if (isSignedIn) {
       // User is already signed in, update their role
       handleCompleteOnboarding(role);
@@ -53,7 +53,7 @@ export function OnboardingFlow() {
 
         // Update role in Convex (synced with localStorage)
         await updateRole({ role });
-        
+
         // Ensure localStorage is synced
         persistRole(role);
       }
@@ -123,7 +123,7 @@ function VideoBackground() {
     <div className="absolute inset-0 z-0">
       {/* Overlay gradient */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/80 z-10" />
-      
+
       {/* Video element */}
       {!videoError && (
         <video
@@ -152,7 +152,7 @@ function VideoBackground() {
           />
         </video>
       )}
-      
+
       {/* Animated gradient fallback (shows while video loads or if video fails) */}
       <div
         className={cn(
@@ -308,23 +308,25 @@ function AuthStep({ role, mode, onModeChange, onBack }: AuthStepProps) {
       <div className="bg-white rounded-2xl p-2 shadow-xl">
         {mode === "sign-up" ? (
           <SignUp
+            routing="hash"
             appearance={{
               elements: {
                 rootBox: "w-full",
                 card: "shadow-none",
               },
             }}
-            redirectUrl="/home"
+            afterSignUpUrl="/home"
           />
         ) : (
           <SignIn
+            routing="hash"
             appearance={{
               elements: {
                 rootBox: "w-full",
                 card: "shadow-none",
               },
             }}
-            redirectUrl="/home"
+            afterSignInUrl="/home"
           />
         )}
       </div>

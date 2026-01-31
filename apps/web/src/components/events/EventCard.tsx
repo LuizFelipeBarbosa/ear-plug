@@ -149,11 +149,16 @@ export function EventCard({
 
           {/* Venue */}
           {event.venue && (
-            <div className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 mb-2">
-              <MapPin className="w-4 h-4 flex-shrink-0" />
-              <span className="truncate">
-                {event.venue.name}, {event.venue.city}
-              </span>
+            <div className="flex items-start gap-1.5 text-sm text-gray-500 dark:text-gray-400 mb-2">
+              <MapPin className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <div className="min-w-0">
+                <span className="block truncate font-medium text-gray-600 dark:text-gray-300">
+                  {event.venue.name}
+                </span>
+                <span className="block truncate text-xs">
+                  {event.venue.address}
+                </span>
+              </div>
             </div>
           )}
 
