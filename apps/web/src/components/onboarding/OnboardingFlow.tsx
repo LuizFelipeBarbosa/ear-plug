@@ -129,9 +129,9 @@ function VideoBackground() {
     <div className="absolute inset-0 z-0">
       {/* Dark overlay for readability */}
       <div className="absolute inset-0 bg-night/80 z-10" />
-      
+
       {/* Subtle noise texture overlay */}
-      <div 
+      <div
         className="absolute inset-0 z-[11] opacity-[0.03] pointer-events-none"
         style={{
           backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
@@ -219,7 +219,7 @@ function RoleSelection({ onSelect }: RoleSelectionProps) {
             "absolute inset-0 bg-gradient-to-r from-lime/10 to-transparent transition-opacity duration-300",
             hoveredRole === "fan" ? "opacity-100" : "opacity-0"
           )} />
-          
+
           <div className="relative flex items-center gap-4">
             <div className="p-3 bg-lime/10 border border-lime/30">
               <Users className="w-8 h-8 text-lime" />
@@ -259,7 +259,7 @@ function RoleSelection({ onSelect }: RoleSelectionProps) {
             "absolute inset-0 bg-gradient-to-r from-violet/10 to-transparent transition-opacity duration-300",
             hoveredRole === "musician" ? "opacity-100" : "opacity-0"
           )} />
-          
+
           <div className="relative flex items-center gap-4">
             <div className="p-3 bg-violet/10 border border-violet/30">
               <Mic2 className="w-8 h-8 text-violet" />

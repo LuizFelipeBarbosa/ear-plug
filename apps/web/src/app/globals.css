@@ -13,40 +13,44 @@
     --night: #0F0F0F;
     --night-secondary: #1A1A1A;
     --night-tertiary: #252525;
-    
+
     /* Electric Accents */
     --electric-lime: #C2FF00;
     --electric-lime-dark: #9FD900;
     --electric-lime-glow: rgba(194, 255, 0, 0.4);
-    
+
     --vivid-violet: #8B5CF6;
     --vivid-violet-dark: #7C3AED;
     --vivid-violet-glow: rgba(139, 92, 246, 0.4);
-    
+
     /* Semantic Colors */
     --success: #22C55E;
     --warning: #F59E0B;
     --error: #EF4444;
-    
+
     /* Text Colors */
     --text-primary: #FFFFFF;
     --text-secondary: #A1A1AA;
     --text-muted: #71717A;
-    
+
     /* Brutalist Borders */
     --border-brutal: 2px solid var(--electric-lime);
     --border-subtle: 1px solid #333333;
-    
+
     /* shadcn/ui Theme Variables - Mapped to Brutalist Palette */
-    --background: 0 0% 6%; /* #0F0F0F */
+    --background: 0 0% 6%;
+    /* #0F0F0F */
     --foreground: 0 0% 100%;
-    --card: 0 0% 10%; /* #1A1A1A */
+    --card: 0 0% 10%;
+    /* #1A1A1A */
     --card-foreground: 0 0% 100%;
     --popover: 0 0% 10%;
     --popover-foreground: 0 0% 100%;
-    --primary: 75 100% 50%; /* Electric Lime */
+    --primary: 75 100% 50%;
+    /* Electric Lime */
     --primary-foreground: 0 0% 0%;
-    --secondary: 258 90% 66%; /* Vivid Violet */
+    --secondary: 258 90% 66%;
+    /* Vivid Violet */
     --secondary-foreground: 0 0% 100%;
     --muted: 0 0% 15%;
     --muted-foreground: 0 0% 45%;
@@ -65,12 +69,12 @@
   * {
     @apply border-border;
   }
-  
+
   html {
     scroll-behavior: smooth;
     background-color: var(--night);
   }
-  
+
   body {
     @apply antialiased;
     background-color: var(--night);
@@ -78,9 +82,10 @@
     font-feature-settings: "rlig" 1, "calt" 1;
     overscroll-behavior: none;
   }
-  
+
   /* Force dark mode always */
-  html, body {
+  html,
+  body {
     color-scheme: dark;
   }
 }
@@ -117,6 +122,7 @@
    ============================================ */
 
 @layer components {
+
   /* Brutalist Button - High Priority CTA */
   .btn-brutalist {
     @apply relative inline-flex items-center justify-center;
@@ -127,17 +133,17 @@
     border: 2px solid var(--electric-lime);
     transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
   }
-  
+
   .btn-brutalist:hover {
     background-color: transparent;
     color: var(--electric-lime);
     box-shadow: 0 0 20px var(--electric-lime-glow);
   }
-  
+
   .btn-brutalist:active {
     transform: scale(0.98);
   }
-  
+
   /* Secondary Brutalist Button - Violet */
   .btn-brutalist-secondary {
     @apply relative inline-flex items-center justify-center;
@@ -148,25 +154,25 @@
     border: 2px solid var(--vivid-violet);
     transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
   }
-  
+
   .btn-brutalist-secondary:hover {
     background-color: transparent;
     color: var(--vivid-violet);
     box-shadow: 0 0 20px var(--vivid-violet-glow);
   }
-  
+
   /* Brutalist Card - 2px Border Style */
   .card-brutalist {
     background-color: var(--night-secondary);
     border: 2px solid var(--electric-lime);
     transition: all 200ms ease;
   }
-  
+
   .card-brutalist:hover {
     box-shadow: 4px 4px 0px var(--electric-lime);
     transform: translate(-2px, -2px);
   }
-  
+
   /* Glassmorphism Card - For Overlays */
   .card-glass {
     background: rgba(26, 26, 26, 0.7);
@@ -174,7 +180,7 @@
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgba(194, 255, 0, 0.2);
   }
-  
+
   /* Glassmorphism Violet Variant */
   .card-glass-violet {
     background: rgba(26, 26, 26, 0.8);
@@ -233,6 +239,7 @@
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -240,33 +247,47 @@
 }
 
 @keyframes fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes pulse-lime {
-  0%, 100% {
+
+  0%,
+  100% {
     box-shadow: 0 0 0 0 rgba(194, 255, 0, 0.4);
   }
+
   50% {
     box-shadow: 0 0 0 12px rgba(194, 255, 0, 0);
   }
 }
 
 @keyframes pulse-violet {
-  0%, 100% {
+
+  0%,
+  100% {
     box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.4);
   }
+
   50% {
     box-shadow: 0 0 0 12px rgba(139, 92, 246, 0);
   }
 }
 
 @keyframes float {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateY(0) scale(1);
     opacity: 0.3;
   }
+
   50% {
     transform: translateY(-20px) scale(1.1);
     opacity: 0.6;
@@ -298,64 +319,65 @@
    ============================================ */
 
 @layer utilities {
+
   /* Safe Area Insets */
   .safe-area-inset-bottom {
     padding-bottom: env(safe-area-inset-bottom);
   }
-  
+
   .safe-area-inset-top {
     padding-top: env(safe-area-inset-top);
   }
-  
+
   /* Hide Scrollbar */
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
-  
+
   .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
-  
+
   /* Touch Targets - WCAG 44px minimum */
   .touch-target {
     min-width: 44px;
     min-height: 44px;
   }
-  
+
   .touch-target-sm {
     min-width: 36px;
     min-height: 36px;
   }
-  
+
   .touch-target-lg {
     min-width: 48px;
     min-height: 48px;
   }
-  
+
   /* Electric Glow Effects */
   .glow-lime {
     box-shadow: 0 0 20px var(--electric-lime-glow);
   }
-  
+
   .glow-violet {
     box-shadow: 0 0 20px var(--vivid-violet-glow);
   }
-  
+
   /* Text Glow */
   .text-glow-lime {
     text-shadow: 0 0 20px var(--electric-lime-glow);
   }
-  
+
   .text-glow-violet {
     text-shadow: 0 0 20px var(--vivid-violet-glow);
   }
-  
+
   /* Brutalist Offset Shadow */
   .shadow-brutal {
     box-shadow: 4px 4px 0px var(--electric-lime);
   }
-  
+
   .shadow-brutal-violet {
     box-shadow: 4px 4px 0px var(--vivid-violet);
   }
@@ -363,13 +385,17 @@
 
 /* Mobile Tap Highlight */
 @media (hover: none) {
-  button, a, [role="button"] {
+
+  button,
+  a,
+  [role="button"] {
     -webkit-tap-highlight-color: rgba(194, 255, 0, 0.1);
   }
 }
 
 /* iOS Input Zoom Fix */
 @media screen and (max-width: 768px) {
+
   input[type="text"],
   input[type="email"],
   input[type="password"],
@@ -407,18 +433,17 @@
   0% {
     background-position: -200% 0;
   }
+
   100% {
     background-position: 200% 0;
   }
 }
 
 .animate-shimmer {
-  background: linear-gradient(
-    90deg,
-    rgba(26, 26, 26, 1) 0%,
-    rgba(37, 37, 37, 1) 50%,
-    rgba(26, 26, 26, 1) 100%
-  );
+  background: linear-gradient(90deg,
+      rgba(26, 26, 26, 1) 0%,
+      rgba(37, 37, 37, 1) 50%,
+      rgba(26, 26, 26, 1) 100%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
@@ -433,6 +458,16 @@
 
 .progress-violet {
   background: linear-gradient(90deg, var(--vivid-violet) 0%, var(--vivid-violet-dark) 100%);
+}
+
+/* ============================================
+   CLERK COMPONENT OVERRIDES
+   ============================================ */
+
+/* Remove internal margin from Clerk SignUp/SignIn components */
+.cl-internal-5gc1x9 {
+  margin-right: 0 !important;
+  width: 100% !important;
 }
 
 /* ============================================
