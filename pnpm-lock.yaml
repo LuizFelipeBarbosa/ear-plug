@@ -124,18 +124,12 @@ importers:
       '@vis.gl/react-google-maps':
         specifier: ^1.0.0
         version: 1.7.1(react-dom@18.3.1(react@18.2.0))(react@18.2.0)
-      class-variance-authority:
-        specifier: ^0.7.0
-        version: 0.7.1
       clsx:
         specifier: ^2.1.0
         version: 2.1.1
       convex:
         specifier: ^1.16.0
         version: 1.31.7(@clerk/clerk-react@5.60.0(react-dom@18.3.1(react@18.2.0))(react@18.2.0))(react@18.2.0)
-      convex-helpers:
-        specifier: ^0.1.0
-        version: 0.1.111(convex@1.31.7(@clerk/clerk-react@5.60.0(react-dom@18.3.1(react@18.2.0))(react@18.2.0))(react@18.2.0))(react@18.2.0)(typescript@5.9.3)(zod@3.25.76)
       lucide-react:
         specifier: ^0.400.0
         version: 0.400.0(react@18.2.0)
@@ -1275,7 +1269,7 @@ packages:
 
   '@expo/bunyan@4.0.1':
     resolution: {integrity: sha512-+Lla7nYSiHZirgK+U/uYzsLv/X+HaJienbD5AKX1UQZHYfWaP+9uuQluRB4GrEVWF0GZ7vEVp/jzaOT9k/SQlg==}
-    engines: {node: '>=0.10.0'}
+    engines: {'0': node >=0.10.0}
 
   '@expo/cli@0.18.31':
     resolution: {integrity: sha512-v9llw9fT3Uv+TCM6Xllo54t672CuYtinEQZ2LPJ2EJsCwuTc4Cd2gXQaouuIVD21VoeGQnr5JtJuWbF97sBKzQ==}
@@ -2791,9 +2785,6 @@ packages:
     resolution: {integrity: sha512-NIxF55hv4nSqQswkAeiOi1r83xy8JldOFDTWiug55KBu9Jnblncd2U6ViHmYgHf01TPZS77NJBhBMKdWj9HQMQ==}
     engines: {node: '>=8'}
 
-  class-variance-authority@0.7.1:
-    resolution: {integrity: sha512-Ka+9Trutv7G8M6WT6SeiRWz792K5qEqIGEGzXKhAE6xOWAY6pPH8U+9IY3oCMv6kqTmLsv7Xh/2w2RigkePMsg==}
-
   clean-stack@2.2.0:
     resolution: {integrity: sha512-4diC9HaTE+KRAMWhDhrGOECgWZxoevMc5TlkObMqNSsVU62PYzXZ/SMTjzyGAFF1YusgxGcSWTEXBhp0CPwQ1A==}
     engines: {node: '>=6'}
@@ -2927,28 +2918,6 @@ packages:
 
   convert-source-map@2.0.0:
     resolution: {integrity: sha512-Kvp459HrV2FEJ1CAsi1Ku+MY3kasH19TFykTz2xWmMeq6bk2NU3XXvfJ+Q61m0xktWwt+1HSYf3JZsTms3aRJg==}
-
-  convex-helpers@0.1.111:
-    resolution: {integrity: sha512-0O59Ohi8HVc3+KULxSC6JHsw8cQJyc8gZ7OAfNRVX7T5Wy6LhPx3l8veYN9avKg7UiPlO7m1eBiQMHKclIyXyQ==}
-    hasBin: true
-    peerDependencies:
-      '@standard-schema/spec': ^1.0.0
-      convex: ^1.25.4
-      hono: ^4.0.5
-      react: ^17.0.2 || ^18.0.0 || ^19.0.0
-      typescript: ^5.5
-      zod: ^3.25.0 || ^4.0.0
-    peerDependenciesMeta:
-      '@standard-schema/spec':
-        optional: true
-      hono:
-        optional: true
-      react:
-        optional: true
-      typescript:
-        optional: true
-      zod:
-        optional: true
 
   convex@1.31.7:
     resolution: {integrity: sha512-PtNMe1mAIOvA8Yz100QTOaIdgt2rIuWqencVXrb4McdhxBHZ8IJ1eXTnrgCC9HydyilGT1pOn+KNqT14mqn9fQ==}
@@ -10130,10 +10099,6 @@ snapshots:
 
   ci-info@3.9.0: {}
 
-  class-variance-authority@0.7.1:
-    dependencies:
-      clsx: 2.1.1
-
   clean-stack@2.2.0: {}
 
   cli-cursor@2.1.0:
@@ -10258,14 +10223,6 @@ snapshots:
   convert-source-map@1.9.0: {}
 
   convert-source-map@2.0.0: {}
-
-  convex-helpers@0.1.111(convex@1.31.7(@clerk/clerk-react@5.60.0(react-dom@18.3.1(react@18.2.0))(react@18.2.0))(react@18.2.0))(react@18.2.0)(typescript@5.9.3)(zod@3.25.76):
-    dependencies:
-      convex: 1.31.7(@clerk/clerk-react@5.60.0(react-dom@18.3.1(react@18.2.0))(react@18.2.0))(react@18.2.0)
-    optionalDependencies:
-      react: 18.2.0
-      typescript: 5.9.3
-      zod: 3.25.76
 
   convex@1.31.7(@clerk/clerk-react@5.60.0(react-dom@18.3.1(react@18.2.0))(react@18.2.0))(react@18.2.0):
     dependencies:
