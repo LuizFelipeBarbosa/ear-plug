@@ -1,8 +1,26 @@
+/**
+ * @fileoverview Convex queries and mutations for user management.
+ * Handles user authentication, profile updates, and role management.
+ * @module convex/users
+ */
+
 import { v } from "convex/values";
 import { query, mutation, internalMutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 
-// Get current user by Clerk ID
+/**
+ * Gets the currently authenticated user from the database.
+ * Uses Clerk authentication identity to look up the user by their Clerk ID.
+ *
+ * @returns The user document if authenticated and found, null otherwise
+ *
+ * @example
+ * // In a React component
+ * const user = useQuery(api.users.getCurrentUser);
+ * if (user) {
+ *   console.log(`Welcome, ${user.name}!`);
+ * }
+ */
 export const getCurrentUser = query({
   args: {},
   handler: async (ctx) => {
@@ -20,7 +38,15 @@ export const getCurrentUser = query({
   },
 });
 
-// Get user by ID
+/**
+ * Gets a user by their Convex document ID.
+ *
+ * @param userId - The Convex ID of the user to retrieve
+ * @returns The user document if found, null otherwise
+ *
+ * @example
+ * const user = useQuery(api.users.getById, { userId: "k9x..." });
+ */
 export const getById = query({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
@@ -28,7 +54,16 @@ export const getById = query({
   },
 });
 
-// Get user by Clerk ID
+/**
+ * Gets a user by their Clerk authentication ID.
+ * Useful for looking up users from Clerk webhook events.
+ *
+ * @param clerkId - The Clerk user ID (subject from JWT)
+ * @returns The user document if found, null otherwise
+ *
+ * @example
+ * const user = useQuery(api.users.getByClerkId, { clerkId: "user_abc123" });
+ */
 export const getByClerkId = query({
   args: { clerkId: v.string() },
   handler: async (ctx, args) => {
@@ -39,7 +74,25 @@ export const getByClerkId = query({
   },
 });
 
-// Create or update user (called from Clerk webhook or on sign-in)
+/**
+ * Creates a new user or updates an existing user's basic info.
+ * Called during sign-in to sync Clerk user data with Convex.
+ * If the user doesn't exist, creates them with default "fan" role.
+ *
+ * @param clerkId - The Clerk user ID
+ * @param email - User's email address
+ * @param name - User's display name
+ * @param avatar - Optional URL to user's avatar image
+ * @returns The user's Convex document ID
+ *
+ * @example
+ * await upsertUser({
+ *   clerkId: "user_abc123",
+ *   email: "user@example.com",
+ *   name: "John Doe",
+ *   avatar: "https://example.com/avatar.jpg"
+ * });
+ */
 export const upsertUser = mutation({
   args: {
     clerkId: v.string(),
@@ -77,7 +130,18 @@ export const upsertUser = mutation({
   },
 });
 
-// Update user role during onboarding
+/**
+ * Updates the current user's role during onboarding.
+ * Requires authentication. Used when user selects "fan" or "musician".
+ *
+ * @param role - The new role ("fan" or "musician")
+ * @returns The user's Convex document ID
+ * @throws Error if not authenticated or user not found
+ *
+ * @example
+ * const updateRole = useMutation(api.users.updateRole);
+ * await updateRole({ role: "musician" });
+ */
 export const updateRole = mutation({
   args: {
     role: v.union(v.literal("fan"), v.literal("musician")),
@@ -103,7 +167,25 @@ export const updateRole = mutation({
   },
 });
 
-// Update user profile
+/**
+ * Updates the current user's profile information.
+ * Requires authentication. All fields are optional for partial updates.
+ *
+ * @param name - Optional new display name
+ * @param location - Optional location (city/area)
+ * @param avatar - Optional avatar image URL
+ * @param topGenres - Optional array of preferred genres (max 5)
+ * @returns The user's Convex document ID
+ * @throws Error if not authenticated or user not found
+ *
+ * @example
+ * const updateProfile = useMutation(api.users.updateProfile);
+ * await updateProfile({
+ *   name: "Jane Doe",
+ *   location: "Oakland, CA",
+ *   topGenres: ["rock", "indie"]
+ * });
+ */
 export const updateProfile = mutation({
   args: {
     name: v.optional(v.string()),
@@ -150,7 +232,17 @@ export const updateProfile = mutation({
   },
 });
 
-// Increment shows attended count
+/**
+ * Increments the current user's shows attended counter.
+ * Called when a user attends an event they RSVP'd to.
+ * Requires authentication.
+ *
+ * @throws Error if not authenticated or user not found
+ *
+ * @example
+ * const incrementShows = useMutation(api.users.incrementShowsAttended);
+ * await incrementShows();
+ */
 export const incrementShowsAttended = mutation({
   args: {},
   handler: async (ctx) => {
@@ -174,7 +266,19 @@ export const incrementShowsAttended = mutation({
   },
 });
 
-// Internal mutation for Clerk webhook
+/**
+ * Internal mutation to create a user from Clerk webhook.
+ * Not callable from client - only from other Convex functions.
+ * Creates user if they don't exist, returns existing ID if they do.
+ *
+ * @param clerkId - The Clerk user ID
+ * @param email - User's email address
+ * @param name - User's display name
+ * @param avatar - Optional avatar image URL
+ * @returns The user's Convex document ID
+ *
+ * @internal
+ */
 export const createUserFromClerk = internalMutation({
   args: {
     clerkId: v.string(),

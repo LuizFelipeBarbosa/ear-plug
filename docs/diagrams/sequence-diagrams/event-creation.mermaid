@@ -1,0 +1,97 @@
+%%{init: {'theme': 'dark', 'themeVariables': { 'primaryColor': '#C2FF00', 'primaryTextColor': '#0F0F0F', 'primaryBorderColor': '#C2FF00', 'lineColor': '#8B5CF6', 'secondaryColor': '#1A1A1A', 'tertiaryColor': '#252525'}}}%%
+
+sequenceDiagram
+    autonumber
+    participant Musician
+    participant Dashboard as BandDashboard
+    participant Modal as CreateGigModal
+    participant PlaceSearch as PlaceAutocomplete
+    participant GoogleAPI as Google Places API
+    participant ConvexMutation as Convex Mutation
+    participant ConvexDB as Convex Database
+    participant Notifications as Notification System
+    participant Fan as Subscribed Fans
+
+    Note over Musician,Fan: Event Creation Flow (Musician)
+
+    %% Step 1: Open creation modal
+    Musician->>Dashboard: Click "Create New Gig"
+    Dashboard->>Modal: Open CreateGigModal
+
+    %% Step 2: Fill event details
+    Modal->>Musician: Display form fields
+    Musician->>Modal: Enter event title
+    Musician->>Modal: Select date/time
+    Musician->>Modal: Select genres
+    Musician->>Modal: Enter capacity, price
+
+    %% Step 3: Search for venue
+    Musician->>PlaceSearch: Type venue name
+    PlaceSearch->>GoogleAPI: Places Autocomplete request
+    GoogleAPI-->>PlaceSearch: Return venue suggestions
+
+    PlaceSearch->>Musician: Display venue options
+    Musician->>PlaceSearch: Select venue from list
+
+    PlaceSearch->>GoogleAPI: Get place details<br/>(coordinates, address)
+    GoogleAPI-->>PlaceSearch: Return full venue data
+
+    PlaceSearch->>Modal: Set venue data<br/>(name, address, city, coordinates)
+
+    %% Step 4: Submit form
+    Musician->>Modal: Click "Create Event"
+    Modal->>ConvexMutation: events.createWithVenue mutation
+
+    %% Step 5: Backend processing
+    ConvexMutation->>ConvexDB: Verify musician owns band
+    ConvexDB-->>ConvexMutation: Band ownership confirmed
+
+    %% Step 6: Check/create venue
+    ConvexMutation->>ConvexDB: findByCoordinates query
+    ConvexDB-->>ConvexMutation: Search result
+
+    alt Venue does not exist
+        ConvexMutation->>ConvexDB: Insert new venue record
+        ConvexDB-->>ConvexMutation: Return new venue ID
+        Note over ConvexDB: New venue created from<br/>Google Places data
+    else Venue exists
+        Note over ConvexMutation: Use existing venue ID<br/>(matched by coordinates)
+    end
+
+    %% Step 7: Create event
+    ConvexMutation->>ConvexDB: Insert event record
+    Note over ConvexDB: Event fields:<br/>title, bandId, venueId,<br/>dateTime, genres, capacity,<br/>price, status: "confirmed"
+    ConvexDB-->>ConvexMutation: Return event ID
+
+    %% Step 8: Trigger notifications
+    ConvexMutation->>Notifications: createNearbyEventNotifications
+
+    Notifications->>ConvexDB: Query savedVenues<br/>(users following this venue)
+    ConvexDB-->>Notifications: Return follower IDs
+
+    Notifications->>ConvexDB: Query savedArtists<br/>(users following this band)
+    ConvexDB-->>Notifications: Return follower IDs
+
+    loop For each unique follower
+        Notifications->>ConvexDB: Insert notification record
+        Note over ConvexDB: type: "new_event_nearby"<br/>or "new_event_followed_artist"
+    end
+
+    Notifications-->>ConvexMutation: Notifications created
+
+    %% Step 9: Return success
+    ConvexMutation-->>Modal: { eventId, venueId }
+    Modal->>Modal: Close modal
+    Modal->>Dashboard: Trigger re-render
+
+    %% Step 10: Real-time updates
+    Dashboard->>ConvexDB: useQuery refreshes
+    ConvexDB-->>Dashboard: Updated events list
+    Dashboard->>Musician: Show new event in calendar
+
+    %% Step 11: Fans receive notifications
+    ConvexDB-->>Fan: Real-time subscription update
+    Fan->>Fan: Notification badge appears
+    Fan->>Fan: View notification:<br/>"[Band] is playing at [Venue]!"
+
+    Note over Musician,Fan: Event Successfully Created

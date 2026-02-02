@@ -1,33 +1,37 @@
 # Contributing to Ear-Plug
 
-Thank you for your interest in contributing to Ear-Plug! This document provides guidelines and instructions for contributing.
+Thank you for your interest in contributing to Ear-Plug! This document provides guidelines and instructions for contributing to the project.
 
 ## Table of Contents
 
 - [Code of Conduct](#code-of-conduct)
-- [Getting Started](#getting-started)
-- [Development Workflow](#development-workflow)
+- [Development Environment Setup](#development-environment-setup)
+- [Code Style Guidelines](#code-style-guidelines)
 - [Pull Request Process](#pull-request-process)
-- [Coding Standards](#coding-standards)
-- [Commit Messages](#commit-messages)
-- [Testing](#testing)
+- [Testing Requirements](#testing-requirements)
+- [Branch Naming Conventions](#branch-naming-conventions)
 
 ## Code of Conduct
 
 Please read and follow our [Code of Conduct](CODE_OF_CONDUCT.md) to maintain a welcoming and inclusive community.
 
-## Getting Started
+## Development Environment Setup
 
 ### Prerequisites
 
-- Node.js 20+
-- pnpm 9+
-- Git
-- Convex account (free tier available)
-- Clerk account (free tier available)
-- Google Maps API key
+| Tool | Version | Installation |
+|------|---------|--------------|
+| Node.js | 20+ | [nodejs.org](https://nodejs.org) or use nvm |
+| pnpm | 9+ | `npm install -g pnpm@9` |
+| Git | Latest | [git-scm.com](https://git-scm.com) |
 
-### Setup
+### External Services (Free Tiers Available)
+
+- **Convex** - [dashboard.convex.dev](https://dashboard.convex.dev) - Backend database and functions
+- **Clerk** - [dashboard.clerk.com](https://dashboard.clerk.com) - Authentication
+- **Google Maps** - [console.cloud.google.com](https://console.cloud.google.com) - Maps API (optional)
+
+### Initial Setup
 
 1. **Fork the repository** on GitHub
 
@@ -37,38 +41,190 @@ Please read and follow our [Code of Conduct](CODE_OF_CONDUCT.md) to maintain a w
    cd Ear-Plug
    ```
 
-3. **Install dependencies**:
+3. **Set Node version** (if using nvm):
+   ```bash
+   nvm use 20
+   ```
+
+4. **Install dependencies**:
    ```bash
    pnpm install
    ```
 
-4. **Set up environment variables** (see [Environment Variables](docs/getting-started/environment-variables.md))
+5. **Configure environment variables**:
 
-5. **Start the development servers**:
-   ```bash
-   pnpm dev
+   Create `apps/web/.env.local`:
+   ```env
+   NEXT_PUBLIC_CONVEX_URL=https://your-app.convex.cloud
+   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
+   CLERK_SECRET_KEY=sk_test_...
+   NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your-api-key
    ```
 
-## Development Workflow
+   For mobile development, create `apps/mobile/.env`:
+   ```env
+   EXPO_PUBLIC_CONVEX_URL=https://your-app.convex.cloud
+   EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
+   ```
 
-### Branch Naming
+6. **Initialize Convex**:
+   ```bash
+   npx convex dev
+   ```
+   This generates TypeScript types in `convex/_generated/`.
 
-Use descriptive branch names with prefixes:
+7. **Seed sample data** (optional):
+   ```bash
+   npx convex run seed:seedDatabase
+   ```
 
-- `feature/` - New features (e.g., `feature/event-sharing`)
-- `fix/` - Bug fixes (e.g., `fix/map-marker-click`)
-- `docs/` - Documentation updates (e.g., `docs/api-reference`)
-- `refactor/` - Code refactoring (e.g., `refactor/hooks-structure`)
-- `chore/` - Maintenance tasks (e.g., `chore/update-dependencies`)
+8. **Start development servers**:
+   ```bash
+   pnpm dev:web    # Web app at localhost:3000
+   pnpm dev:mobile # Expo mobile app
+   ```
 
-### Making Changes
+### IDE Setup
 
-1. **Create a new branch**:
+**VS Code** is recommended with these extensions:
+- ESLint
+- Prettier - Code formatter
+- Tailwind CSS IntelliSense
+- TypeScript and JavaScript Language Features
+- Expo Tools (for mobile development)
+
+Workspace settings are included in `.vscode/settings.json`.
+
+## Code Style Guidelines
+
+### TypeScript
+
+- Use strict TypeScript (`strict: true` is enabled)
+- Prefer explicit types over `any`
+- Use interfaces for object shapes
+- Import shared types from `@ear-plug/shared/types`
+
+```typescript
+// Preferred
+import type { Genre, UserRole, Event } from "@ear-plug/shared/types";
+
+function getEventsByGenre(genre: Genre): Event[] {
+  // implementation
+}
+
+// Avoid
+function getEventsByGenre(genre: any): any[] {
+  // implementation
+}
+```
+
+### React Components
+
+- Use functional components with hooks
+- Prefer named exports over default exports
+- Add `"use client"` directive for client components in Next.js
+- Follow existing component organization patterns
+
+```typescript
+"use client";
+
+import { useState } from "react";
+import type { Event } from "@ear-plug/shared/types";
+
+interface EventCardProps {
+  event: Event;
+  onRsvp?: (eventId: string) => void;
+}
+
+export function EventCard({ event, onRsvp }: EventCardProps) {
+  // Component implementation
+}
+```
+
+### Convex Functions
+
+- Use descriptive function names that indicate the action
+- Validate all inputs using Convex validators
+- Handle authentication consistently with `ctx.auth.getUserIdentity()`
+- Return meaningful error messages or null for not-found cases
+
+```typescript
+import { query, mutation } from "./_generated/server";
+import { v } from "convex/values";
+
+export const getById = query({
+  args: { eventId: v.id("events") },
+  handler: async (ctx, args) => {
+    const event = await ctx.db.get(args.eventId);
+    if (!event) return null;
+
+    // Include related data
+    const band = await ctx.db.get(event.bandId);
+    const venue = await ctx.db.get(event.venueId);
+
+    return { ...event, band, venue };
+  },
+});
+```
+
+### Styling
+
+- Use Tailwind CSS utility classes
+- Follow the design system in `packages/tailwind-config`
+- Use design tokens for colors, spacing, and typography
+- Apply mobile-first responsive design
+
+```typescript
+// Use design tokens
+<div className="bg-surface text-primary p-4 rounded-lg shadow-brutal">
+  <h2 className="font-display text-xl">Event Title</h2>
+</div>
+
+// Responsive design (mobile-first)
+<div className="flex flex-col md:flex-row gap-4">
+  {/* Content */}
+</div>
+```
+
+### File Organization
+
+```
+apps/web/src/
+├── app/              # Next.js App Router pages
+│   ├── (app)/       # Protected routes (requires auth)
+│   └── layout.tsx   # Root layout with providers
+├── components/       # React components
+│   ├── ui/          # Reusable UI components
+│   ├── fan/         # Fan-specific components
+│   ├── band/        # Musician-specific components
+│   ├── maps/        # Map-related components
+│   └── navigation/  # Navigation components
+├── hooks/           # Custom React hooks
+└── lib/             # Utilities and helpers
+
+packages/shared/src/
+├── types/           # TypeScript interfaces
+├── validation/      # Zod schemas
+├── constants/       # Shared constants
+└── utils/           # Utility functions
+```
+
+## Pull Request Process
+
+### Before You Start
+
+1. Check existing issues to see if someone is already working on it
+2. For significant changes, open an issue first to discuss the approach
+3. Ensure your fork is up to date with the main branch
+
+### Creating a Pull Request
+
+1. **Create a feature branch**:
    ```bash
    git checkout -b feature/your-feature-name
    ```
 
-2. **Make your changes** following our coding standards
+2. **Make your changes** following the code style guidelines
 
 3. **Run quality checks**:
    ```bash
@@ -76,126 +232,117 @@ Use descriptive branch names with prefixes:
    pnpm typecheck   # TypeScript
    ```
 
-4. **Test your changes** locally
+4. **Test locally**:
+   - Test on web at `localhost:3000`
+   - Test both fan and musician roles
+   - If changes affect mobile, test in Expo Go
 
-5. **Commit your changes** following commit message conventions
+5. **Commit your changes** following commit conventions:
+   ```bash
+   git commit -m "feat(events): add genre filtering to map view"
+   ```
 
-## Pull Request Process
-
-### Before Submitting
-
-- [ ] Code follows the project's coding standards
-- [ ] All lint checks pass (`pnpm lint`)
-- [ ] TypeScript compiles without errors (`pnpm typecheck`)
-- [ ] Changes are tested locally on both web and mobile (if applicable)
-- [ ] Documentation is updated (if needed)
-- [ ] Convex schema changes include migration notes
-
-### Submitting a PR
-
-1. **Push your branch**:
+6. **Push and create PR**:
    ```bash
    git push origin feature/your-feature-name
    ```
+   Then open a Pull Request on GitHub.
 
-2. **Create a Pull Request** on GitHub with:
-   - Clear title describing the change
-   - Description of what and why
-   - Screenshots/videos for UI changes
-   - Link to related issues
+### PR Requirements Checklist
 
-3. **Address review feedback** promptly
+Before submitting, ensure:
 
-### Review Criteria
+- [ ] Code follows TypeScript and React best practices
+- [ ] All lint checks pass (`pnpm lint`)
+- [ ] TypeScript compiles without errors (`pnpm typecheck`)
+- [ ] Changes are tested locally
+- [ ] Both fan and musician roles work correctly (if applicable)
+- [ ] Documentation is updated (if needed)
+- [ ] Convex schema changes include any necessary considerations noted
+
+### PR Description Template
+
+```markdown
+## Summary
+Brief description of what this PR does.
+
+## Changes
+- Change 1
+- Change 2
+
+## Screenshots (for UI changes)
+[Attach screenshots or screen recordings]
+
+## Testing
+Describe how you tested these changes.
+
+## Related Issues
+Fixes #123
+```
+
+### Review Process
 
 PRs are reviewed for:
-- Code quality and readability
-- Adherence to project patterns
-- Performance implications
-- Security considerations
-- Mobile/web compatibility
+- **Code quality** - Clean, readable, maintainable code
+- **Adherence to patterns** - Follows existing conventions
+- **Performance** - No unnecessary re-renders or heavy computations
+- **Security** - No exposed secrets, proper auth checks
+- **Cross-platform** - Works on both web and mobile (if applicable)
 
-## Coding Standards
+## Testing Requirements
 
-### TypeScript
+### Manual Testing Checklist
 
-- Use strict TypeScript (`strict: true`)
-- Prefer explicit types over `any`
-- Use interfaces for object shapes
-- Export types from `@ear-plug/shared/types`
+Before submitting a PR, verify:
 
-```typescript
-// Good
-import type { Genre, UserRole } from "@ear-plug/shared/types";
+- [ ] Web app works at `localhost:3000`
+- [ ] Mobile app works in Expo Go (if changes affect mobile)
+- [ ] Authentication flow (sign in/sign out/sign up)
+- [ ] Fan role features work correctly
+- [ ] Musician role features work correctly
+- [ ] Real-time updates work (Convex subscriptions)
+- [ ] Error states are handled gracefully
 
-function getEventsByGenre(genre: Genre): Event[] {
-  // ...
-}
+### Testing Convex Functions
 
-// Avoid
-function getEventsByGenre(genre: any): any[] {
-  // ...
-}
+Test queries and mutations using the Convex dashboard:
+
+```bash
+# Open Convex dashboard
+npx convex dashboard
+
+# Or run functions directly
+npx convex run events:listUpcoming
+npx convex run users:getCurrentUser
 ```
 
-### React Components
+### Testing Different Scenarios
 
-- Use functional components with hooks
-- Prefer named exports
-- Use `"use client"` directive for client components
-- Follow the existing component structure
+| Scenario | How to Test |
+|----------|-------------|
+| New user onboarding | Clear localStorage, sign out, visit `/` |
+| Fan experience | Select "fan" role during onboarding |
+| Musician experience | Select "musician" role during onboarding |
+| Empty states | Clear seed data with `npx convex run seed:clearDatabase` |
+| With sample data | Run `npx convex run seed:seedDatabase` |
 
-```typescript
-"use client";
+## Branch Naming Conventions
 
-import { useState } from "react";
+Use descriptive branch names with prefixes:
 
-export function EventCard({ event }: EventCardProps) {
-  // Component logic
-}
-```
+| Prefix | Use Case | Example |
+|--------|----------|---------|
+| `feature/` | New features | `feature/event-sharing` |
+| `fix/` | Bug fixes | `fix/map-marker-click` |
+| `docs/` | Documentation | `docs/api-reference` |
+| `refactor/` | Code restructuring | `refactor/hooks-consolidation` |
+| `chore/` | Maintenance | `chore/update-dependencies` |
+| `style/` | Formatting/styling | `style/button-hover-states` |
+| `perf/` | Performance | `perf/lazy-load-images` |
 
-### Convex Functions
+### Commit Message Format
 
-- Use descriptive function names
-- Validate inputs with Convex validators
-- Handle authentication consistently
-- Return meaningful error messages
-
-```typescript
-export const getById = query({
-  args: { eventId: v.id("events") },
-  handler: async (ctx, args) => {
-    const event = await ctx.db.get(args.eventId);
-    if (!event) return null;
-    // ...
-  },
-});
-```
-
-### Styling
-
-- Use Tailwind CSS classes
-- Follow the design system in `packages/tailwind-config`
-- Use design tokens (colors, spacing) from the config
-- Mobile-first responsive design
-
-### File Organization
-
-```
-apps/web/src/
-├── app/              # Next.js App Router pages
-├── components/       # React components
-│   ├── ui/          # Reusable UI components
-│   ├── fan/         # Fan-specific components
-│   └── band/        # Musician-specific components
-├── hooks/           # Custom React hooks
-└── lib/             # Utilities and helpers
-```
-
-## Commit Messages
-
-Follow the [Conventional Commits](https://www.conventionalcommits.org/) specification:
+Follow [Conventional Commits](https://www.conventionalcommits.org/):
 
 ```
 <type>(<scope>): <description>
@@ -205,8 +352,7 @@ Follow the [Conventional Commits](https://www.conventionalcommits.org/) specific
 [optional footer]
 ```
 
-### Types
-
+**Types:**
 - `feat` - New feature
 - `fix` - Bug fix
 - `docs` - Documentation only
@@ -216,46 +362,49 @@ Follow the [Conventional Commits](https://www.conventionalcommits.org/) specific
 - `test` - Adding tests
 - `chore` - Maintenance
 
-### Examples
-
+**Examples:**
 ```bash
 feat(events): add genre filtering to map view
-
 fix(auth): resolve redirect loop on sign-in
-
 docs(api): update events API documentation
-
-refactor(hooks): extract shared event logic to useSharedEvents
+refactor(hooks): extract shared event logic
+chore(deps): update convex to v1.17
 ```
 
-## Testing
+## Common Issues & Solutions
 
-### Manual Testing Checklist
+### Convex Types Not Generating
 
-Before submitting a PR, test:
-
-- [ ] Web app at `localhost:3000`
-- [ ] Mobile app in Expo Go (if applicable)
-- [ ] Both fan and musician user roles
-- [ ] Authentication flow (sign in/out)
-- [ ] Core features affected by changes
-
-### Convex Testing
-
-Test Convex functions in the dashboard:
 ```bash
-npx convex dashboard
+# Run Convex dev to regenerate types
+npx convex dev
 ```
 
-Or run functions directly:
+### Shared Package Changes Not Reflecting
+
 ```bash
-npx convex run events:listUpcoming
+# Rebuild the shared package
+cd packages/shared
+pnpm build
+
+# Or restart the dev server
+```
+
+### Authentication Redirect Loops
+
+Check the Clerk middleware in `apps/web/middleware.ts` to ensure routes are correctly categorized as public or protected.
+
+### Mobile Build Issues
+
+```bash
+# Clear Metro cache
+cd apps/mobile
+npx expo start --clear
 ```
 
 ## Questions?
 
-- Open a [GitHub Issue](https://github.com/YOUR_ORG/Ear-Plug/issues) for bugs or feature requests
-- Check existing issues before creating new ones
-- Use issue templates when available
+- **Bugs & Feature Requests** - Open a [GitHub Issue](https://github.com/YOUR_ORG/Ear-Plug/issues)
+- **Discussions** - Use [GitHub Discussions](https://github.com/YOUR_ORG/Ear-Plug/discussions)
 
 Thank you for contributing to Ear-Plug!

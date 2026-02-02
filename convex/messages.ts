@@ -1,7 +1,26 @@
+/**
+ * @fileoverview Convex queries and mutations for messaging between bands and venues.
+ * Handles conversations, message sending, and read status tracking.
+ * @module convex/messages
+ */
+
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 
-// Get all conversations for a band
+/**
+ * Gets all conversations for the current user's band.
+ * Includes venue data and unread message count for each conversation.
+ * Only available for musician users with a band.
+ * Returns empty array if not authenticated, not a musician, or no band exists.
+ *
+ * @returns Array of conversation documents with venue and unreadCount properties
+ *
+ * @example
+ * const conversations = useQuery(api.messages.getBandConversations);
+ * conversations.forEach(conv => {
+ *   console.log(`${conv.venue?.name}: ${conv.unreadCount} unread`);
+ * });
+ */
 export const getBandConversations = query({
   args: {},
   handler: async (ctx) => {
@@ -65,7 +84,19 @@ export const getBandConversations = query({
   },
 });
 
-// Get messages for a conversation
+/**
+ * Gets all messages in a conversation, ordered chronologically.
+ * Includes sender user data for each message.
+ * Requires authentication.
+ *
+ * @param conversationId - The Convex ID of the conversation
+ * @returns Array of message documents with sender property, oldest first
+ *
+ * @example
+ * const messages = useQuery(api.messages.getConversationMessages, {
+ *   conversationId: "k9x..."
+ * });
+ */
 export const getConversationMessages = query({
   args: { conversationId: v.id("conversations") },
   handler: async (ctx, args) => {
@@ -94,7 +125,23 @@ export const getConversationMessages = query({
   },
 });
 
-// Send a message
+/**
+ * Sends a new message in a conversation.
+ * Updates the conversation's last message metadata.
+ * Requires authentication.
+ *
+ * @param conversationId - The Convex ID of the conversation
+ * @param content - The message text content (1-5000 characters)
+ * @returns The new message's Convex document ID
+ * @throws Error if not authenticated or user not found
+ *
+ * @example
+ * const send = useMutation(api.messages.send);
+ * await send({
+ *   conversationId: "k9x...",
+ *   content: "Looking forward to the show!"
+ * });
+ */
 export const send = mutation({
   args: {
     conversationId: v.id("conversations"),
@@ -139,7 +186,19 @@ export const send = mutation({
   },
 });
 
-// Mark messages as read
+/**
+ * Marks all messages in a conversation as read for the current user.
+ * Only marks messages from other users as read (not the user's own messages).
+ * Requires authentication.
+ *
+ * @param conversationId - The Convex ID of the conversation
+ * @returns Object with markedCount indicating how many messages were marked
+ * @throws Error if not authenticated or user not found
+ *
+ * @example
+ * const markAsRead = useMutation(api.messages.markAsRead);
+ * const { markedCount } = await markAsRead({ conversationId: "k9x..." });
+ */
 export const markAsRead = mutation({
   args: { conversationId: v.id("conversations") },
   handler: async (ctx, args) => {
@@ -180,7 +239,25 @@ export const markAsRead = mutation({
   },
 });
 
-// Start a new conversation (or get existing)
+/**
+ * Starts a new conversation between a band and venue, or returns existing conversation.
+ * Optionally sends an initial message when creating the conversation.
+ * Requires authentication.
+ *
+ * @param bandId - The Convex ID of the band
+ * @param venueId - The Convex ID of the venue
+ * @param initialMessage - Optional message to send when creating conversation
+ * @returns The conversation's Convex document ID (new or existing)
+ * @throws Error if not authenticated or user not found
+ *
+ * @example
+ * const startConversation = useMutation(api.messages.startConversation);
+ * const conversationId = await startConversation({
+ *   bandId: "abc...",
+ *   venueId: "xyz...",
+ *   initialMessage: "Hi, we'd love to book a show!"
+ * });
+ */
 export const startConversation = mutation({
   args: {
     bandId: v.id("bands"),
@@ -261,7 +338,19 @@ export const startConversation = mutation({
   },
 });
 
-// Get unread message count for a band
+/**
+ * Gets the total count of unread messages across all conversations for the current user's band.
+ * Used for displaying notification badges.
+ * Returns 0 if not authenticated, not a musician, or no band exists.
+ *
+ * @returns Total number of unread messages
+ *
+ * @example
+ * const unreadCount = useQuery(api.messages.getUnreadCount);
+ * if (unreadCount > 0) {
+ *   // Show badge with unreadCount
+ * }
+ */
 export const getUnreadCount = query({
   args: {},
   handler: async (ctx) => {

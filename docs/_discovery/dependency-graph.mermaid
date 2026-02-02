@@ -1,0 +1,162 @@
+%%{init: {'theme': 'dark', 'themeVariables': { 'primaryColor': '#C2FF00', 'primaryTextColor': '#0F0F0F', 'primaryBorderColor': '#C2FF00', 'lineColor': '#8B5CF6', 'secondaryColor': '#1A1A1A', 'tertiaryColor': '#252525'}}}%%
+
+graph TB
+    subgraph External Services
+        Clerk[Clerk Auth]
+        Google[Google Maps API]
+        ConvexCloud[Convex Cloud]
+    end
+
+    subgraph Root["Monorepo Root"]
+        Turbo[Turborepo]
+        RootPkg[package.json]
+    end
+
+    subgraph Packages["packages/"]
+        subgraph Shared["@ear-plug/shared"]
+            Types[types/index.ts]
+            Validation[validation/index.ts]
+            Constants[constants/index.ts]
+            Utils[utils/index.ts]
+        end
+        subgraph TailwindConfig["@ear-plug/tailwind-config"]
+            BaseConfig[base.js<br/>Design Tokens]
+        end
+    end
+
+    subgraph Convex["convex/ Backend"]
+        Schema[schema.ts<br/>13 Tables]
+        AuthConfig[auth.config.ts]
+        HTTP[http.ts<br/>Webhooks]
+
+        subgraph Modules["Backend Modules"]
+            Users[users.ts]
+            Bands[bands.ts]
+            Venues[venues.ts]
+            Events[events.ts]
+            Messages[messages.ts]
+            Notifications[notifications.ts]
+            Seed[seed.ts]
+        end
+
+        subgraph ConvexUtils["utils/"]
+            GeoUtils[geo.ts<br/>Haversine]
+        end
+    end
+
+    subgraph WebApp["apps/web/ - Next.js 14"]
+        subgraph WebProviders["Providers"]
+            ClerkProvider[ClerkProvider]
+            ConvexProvider[ConvexProviderWithClerk]
+        end
+
+        subgraph WebRoutes["Routes"]
+            Landing[/ Landing]
+            AppRoutes["/(app)/*"]
+            SSO[/sso-callback]
+        end
+
+        subgraph WebComponents["Components"]
+            FanComponents[Fan Components<br/>MapView, Calendar]
+            BandComponents[Band Components<br/>Dashboard, Calendar]
+            SharedUI[Shared UI<br/>EventCard, Nav]
+        end
+
+        subgraph WebHooks["Custom Hooks"]
+            UseUser[useUser]
+            UseEvents[useEvents]
+            UseBand[useBand]
+            UseVenues[useVenues]
+            UseMessages[useMessages]
+            UseGeo[useGeolocation]
+        end
+
+        Middleware[middleware.ts<br/>Route Protection]
+        WebTailwind[tailwind.config.js]
+    end
+
+    subgraph MobileApp["apps/mobile/ - Expo 51"]
+        subgraph MobileProviders["Providers"]
+            MobileClerk[ClerkProvider]
+            MobileConvex[ConvexProviderWithClerk]
+            SecureStore[expo-secure-store<br/>Token Cache]
+        end
+
+        subgraph MobileRoutes["Routes (Expo Router)"]
+            TabsLayout["(tabs)/_layout"]
+            HomeTab[index.tsx]
+            CalendarTab[calendar.tsx]
+            MessagesTab[messages.tsx]
+            ProfileTab[profile.tsx]
+            GigDetail[gig/[id].tsx]
+            Onboarding[onboarding.tsx]
+        end
+
+        MobileNav[react-native-maps]
+        NativeWind[nativewind v4]
+    end
+
+    %% External Service Connections
+    Clerk --> ClerkProvider
+    Clerk --> MobileClerk
+    Clerk --> AuthConfig
+    Google --> FanComponents
+    Google --> MobileNav
+    ConvexCloud --> ConvexProvider
+    ConvexCloud --> MobileConvex
+
+    %% Turborepo orchestration
+    Turbo --> WebApp
+    Turbo --> MobileApp
+    Turbo --> Packages
+
+    %% Package Dependencies
+    Types --> Validation
+    Validation --> |zod| Types
+    Constants --> Types
+    BaseConfig --> WebTailwind
+    BaseConfig --> NativeWind
+
+    %% Web App Dependencies
+    Shared --> WebHooks
+    Shared --> WebComponents
+    WebHooks --> |Convex React| Modules
+    WebComponents --> WebHooks
+    FanComponents --> UseGeo
+    FanComponents --> UseEvents
+    BandComponents --> UseBand
+    BandComponents --> UseEvents
+    ClerkProvider --> ConvexProvider
+    Middleware --> Clerk
+
+    %% Mobile App Dependencies
+    Shared --> MobileRoutes
+    MobileClerk --> MobileConvex
+    SecureStore --> MobileClerk
+    MobileRoutes --> |Convex React| Modules
+
+    %% Convex Internal
+    Schema --> Modules
+    GeoUtils --> Events
+    GeoUtils --> Venues
+    HTTP --> |Webhook| Users
+    Notifications --> Events
+
+    %% Data Flow Indicators
+    Users -.->|real-time| UseUser
+    Events -.->|real-time| UseEvents
+    Bands -.->|real-time| UseBand
+    Venues -.->|real-time| UseVenues
+    Messages -.->|real-time| UseMessages
+
+    classDef external fill:#8B5CF6,stroke:#C2FF00,stroke-width:2px,color:#fff
+    classDef package fill:#1A1A1A,stroke:#C2FF00,stroke-width:2px,color:#fff
+    classDef web fill:#252525,stroke:#C2FF00,stroke-width:1px,color:#fff
+    classDef mobile fill:#252525,stroke:#8B5CF6,stroke-width:1px,color:#fff
+    classDef convex fill:#0F0F0F,stroke:#C2FF00,stroke-width:2px,color:#C2FF00
+
+    class Clerk,Google,ConvexCloud external
+    class Shared,TailwindConfig,Types,Validation,Constants,Utils,BaseConfig package
+    class WebApp,WebProviders,WebRoutes,WebComponents,WebHooks web
+    class MobileApp,MobileProviders,MobileRoutes mobile
+    class Convex,Schema,Modules,ConvexUtils convex

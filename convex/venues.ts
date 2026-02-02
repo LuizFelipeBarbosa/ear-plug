@@ -1,8 +1,15 @@
+/**
+ * @fileoverview Convex queries and mutations for venue management.
+ * Handles venue listings, nearby search, open dates, and booking applications.
+ * @module convex/venues
+ */
+
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import { haversineDistance, coordinatesMatch, COORDINATE_TOLERANCE } from "./utils/geo";
 
+/** Validator for music genre field */
 const genreValidator = v.union(
   v.literal("indie"),
   v.literal("rock"),
@@ -13,7 +20,15 @@ const genreValidator = v.union(
   v.literal("alternative")
 );
 
-// Get venue by ID
+/**
+ * Gets a venue by its Convex document ID.
+ *
+ * @param venueId - The Convex ID of the venue
+ * @returns The venue document if found, null otherwise
+ *
+ * @example
+ * const venue = useQuery(api.venues.getById, { venueId: "k9x..." });
+ */
 export const getById = query({
   args: { venueId: v.id("venues") },
   handler: async (ctx, args) => {
@@ -21,7 +36,20 @@ export const getById = query({
   },
 });
 
-// List all venues
+/**
+ * Lists venues with optional city filtering.
+ *
+ * @param city - Optional city name to filter by
+ * @param limit - Optional maximum number of results (default: 50)
+ * @returns Array of venue documents
+ *
+ * @example
+ * // Get all venues
+ * const venues = useQuery(api.venues.list, {});
+ *
+ * // Get Oakland venues only
+ * const oaklandVenues = useQuery(api.venues.list, { city: "Oakland" });
+ */
 export const list = query({
   args: {
     city: v.optional(v.string()),
@@ -41,7 +69,17 @@ export const list = query({
   },
 });
 
-// Get suggested venues for a band (based on genre match)
+/**
+ * Gets suggested venues for a band, optionally prioritized by genre match.
+ * Venues that host the specified genre are returned first.
+ *
+ * @param genre - Optional genre to prioritize matching venues
+ * @param limit - Optional maximum number of results (default: 10)
+ * @returns Array of venue documents, genre-matched first
+ *
+ * @example
+ * const venues = useQuery(api.venues.getSuggested, { genre: "rock" });
+ */
 export const getSuggested = query({
   args: {
     genre: v.optional(genreValidator),
@@ -63,7 +101,17 @@ export const getSuggested = query({
   },
 });
 
-// Search venues by name or city
+/**
+ * Searches venues by name, city, or address.
+ * Case-insensitive partial matching.
+ *
+ * @param query - Search text to match
+ * @param limit - Optional maximum number of results (default: 20)
+ * @returns Array of matching venue documents
+ *
+ * @example
+ * const results = useQuery(api.venues.search, { query: "berkeley" });
+ */
 export const search = query({
   args: {
     query: v.string(),
@@ -86,7 +134,23 @@ export const search = query({
   },
 });
 
-// Get venues near a location (simplified - returns all and lets client filter)
+/**
+ * Gets venues within a specified radius of coordinates.
+ * Uses Haversine formula for accurate distance calculation.
+ * Returns venues sorted by distance from the specified point.
+ *
+ * @param lat - Latitude of the center point
+ * @param lng - Longitude of the center point
+ * @param radiusMiles - Optional search radius in miles (default: 25)
+ * @returns Array of venue documents with distance property added
+ *
+ * @example
+ * const nearbyVenues = useQuery(api.venues.getNearby, {
+ *   lat: 37.8044,
+ *   lng: -122.2712,
+ *   radiusMiles: 10
+ * });
+ */
 export const getNearby = query({
   args: {
     lat: v.number(),
@@ -116,7 +180,19 @@ export const getNearby = query({
 });
 
 
-// Save/unsave a venue
+/**
+ * Toggles the saved/followed status of a venue for the current user.
+ * If already saved, removes the save. If not saved, adds it.
+ * Requires authentication.
+ *
+ * @param venueId - The Convex ID of the venue to save/unsave
+ * @returns Object indicating the action taken ("saved" or "unsaved")
+ * @throws Error if not authenticated or user not found
+ *
+ * @example
+ * const toggleSave = useMutation(api.venues.toggleSave);
+ * const { action } = await toggleSave({ venueId: "k9x..." });
+ */
 export const toggleSave = mutation({
   args: { venueId: v.id("venues") },
   handler: async (ctx, args) => {
@@ -156,7 +232,15 @@ export const toggleSave = mutation({
   },
 });
 
-// Get user's saved venues
+/**
+ * Gets all venues saved by the current user.
+ * Returns empty array if not authenticated or user not found.
+ *
+ * @returns Array of saved venue documents
+ *
+ * @example
+ * const savedVenues = useQuery(api.venues.getSavedVenues);
+ */
 export const getSavedVenues = query({
   args: {},
   handler: async (ctx) => {
@@ -190,7 +274,26 @@ export const getSavedVenues = query({
   },
 });
 
-// Get open dates for a venue
+/**
+ * Gets open booking dates with optional venue and genre filtering.
+ * Only returns future dates with "open" status.
+ * Includes venue data for each open date.
+ *
+ * @param venueId - Optional venue ID to filter by
+ * @param genre - Optional genre to filter by
+ * @param limit - Optional maximum number of results (default: 20)
+ * @returns Array of open date documents with venue property added
+ *
+ * @example
+ * // Get all open dates
+ * const openDates = useQuery(api.venues.getOpenDates, {});
+ *
+ * // Get rock open dates at a specific venue
+ * const rockDates = useQuery(api.venues.getOpenDates, {
+ *   venueId: "k9x...",
+ *   genre: "rock"
+ * });
+ */
 export const getOpenDates = query({
   args: {
     venueId: v.optional(v.id("venues")),
@@ -241,7 +344,26 @@ export const getOpenDates = query({
   },
 });
 
-// Apply to an open date
+/**
+ * Submits a band's application to an open date.
+ * Verifies band ownership and checks for duplicate applications.
+ * Updates open date status to "pending" on successful application.
+ * Requires authentication.
+ *
+ * @param openDateId - The Convex ID of the open date
+ * @param bandId - The Convex ID of the applying band
+ * @param message - Optional message to the venue
+ * @returns The new application's Convex document ID
+ * @throws Error if not authenticated, not authorized, already applied, or date unavailable
+ *
+ * @example
+ * const apply = useMutation(api.venues.applyToOpenDate);
+ * const applicationId = await apply({
+ *   openDateId: "k9x...",
+ *   bandId: "abc...",
+ *   message: "We'd love to play at your venue!"
+ * });
+ */
 export const applyToOpenDate = mutation({
   args: {
     openDateId: v.id("openDates"),
@@ -303,7 +425,15 @@ export const applyToOpenDate = mutation({
   },
 });
 
-// Get applications for a band
+/**
+ * Gets all applications submitted by a band with related open date and venue data.
+ *
+ * @param bandId - The Convex ID of the band
+ * @returns Array of application documents with openDate and venue properties
+ *
+ * @example
+ * const applications = useQuery(api.venues.getBandApplications, { bandId: "k9x..." });
+ */
 export const getBandApplications = query({
   args: { bandId: v.id("bands") },
   handler: async (ctx, args) => {
@@ -324,7 +454,31 @@ export const getBandApplications = query({
   },
 });
 
-// Create or find a venue from Google Places data
+/**
+ * Creates a venue from Google Places data or returns existing venue ID.
+ * Deduplicates by checking coordinates within a small tolerance.
+ * Requires authentication.
+ *
+ * @param name - Venue name
+ * @param address - Street address
+ * @param city - City name
+ * @param coordinates - Geographic coordinates {lat, lng}
+ * @param placeId - Optional Google Places ID
+ * @param capacity - Optional capacity (default: 100)
+ * @param description - Optional description
+ * @param genres - Optional array of genres
+ * @returns The venue's Convex document ID (new or existing)
+ * @throws Error if not authenticated
+ *
+ * @example
+ * const createVenue = useMutation(api.venues.createFromPlace);
+ * const venueId = await createVenue({
+ *   name: "The Starry Plough",
+ *   address: "3101 Shattuck Ave",
+ *   city: "Berkeley",
+ *   coordinates: { lat: 37.8497, lng: -122.2661 }
+ * });
+ */
 export const createFromPlace = mutation({
   args: {
     name: v.string(),
@@ -391,7 +545,21 @@ export const createFromPlace = mutation({
   },
 });
 
-// Find venue by coordinates (for deduplication)
+/**
+ * Finds a venue by coordinates within a tolerance.
+ * Used for deduplication when creating venues.
+ *
+ * @param lat - Latitude to search for
+ * @param lng - Longitude to search for
+ * @param tolerance - Optional coordinate tolerance (default: COORDINATE_TOLERANCE)
+ * @returns The matching venue document if found, null otherwise
+ *
+ * @example
+ * const venue = useQuery(api.venues.findByCoordinates, {
+ *   lat: 37.8497,
+ *   lng: -122.2661
+ * });
+ */
 export const findByCoordinates = query({
   args: {
     lat: v.number(),

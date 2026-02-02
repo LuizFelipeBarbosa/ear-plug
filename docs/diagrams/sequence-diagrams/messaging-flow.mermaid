@@ -1,0 +1,128 @@
+%%{init: {'theme': 'dark', 'themeVariables': { 'primaryColor': '#C2FF00', 'primaryTextColor': '#0F0F0F', 'primaryBorderColor': '#C2FF00', 'lineColor': '#8B5CF6', 'secondaryColor': '#1A1A1A', 'tertiaryColor': '#252525'}}}%%
+
+sequenceDiagram
+    autonumber
+    participant Musician
+    participant BandMsg as BandMessages Component
+    participant ConvexQuery as Convex Queries
+    participant ConvexMutation as Convex Mutations
+    participant ConvexDB as Convex Database
+    participant VenueUI as Venue Dashboard (Future)
+
+    Note over Musician,VenueUI: Band-Venue Messaging Flow
+
+    %% Part 1: Initiating a Conversation
+    rect rgb(26, 26, 26)
+        Note over Musician,ConvexDB: Starting a New Conversation
+
+        Musician->>BandMsg: Navigate to Messages tab
+        BandMsg->>ConvexQuery: getBandConversations()
+        ConvexQuery->>ConvexDB: Query conversations by bandId
+        ConvexDB-->>ConvexQuery: Return existing conversations
+        ConvexQuery-->>BandMsg: Display conversation list
+
+        Musician->>BandMsg: Click "Contact" on venue profile
+        BandMsg->>ConvexMutation: startConversation({ bandId, venueId })
+
+        ConvexMutation->>ConvexDB: Check existing conversation<br/>by_band_venue index
+        ConvexDB-->>ConvexMutation: Existing or null
+
+        alt Conversation exists
+            ConvexMutation-->>BandMsg: Return existing conversationId
+        else New conversation needed
+            ConvexMutation->>ConvexDB: Insert conversation record
+            Note over ConvexDB: bandId, venueId,<br/>lastMessageAt: now()
+            ConvexDB-->>ConvexMutation: Return new conversationId
+        end
+
+        BandMsg->>BandMsg: Navigate to conversation view
+    end
+
+    %% Part 2: Sending a Message
+    rect rgb(37, 37, 37)
+        Note over Musician,ConvexDB: Sending a Message
+
+        Musician->>BandMsg: Type message in input
+        Musician->>BandMsg: Click Send
+
+        BandMsg->>ConvexMutation: send({ conversationId, content })
+
+        ConvexMutation->>ConvexDB: Get sender user by clerkId
+        ConvexDB-->>ConvexMutation: Return user record
+
+        ConvexMutation->>ConvexDB: Insert message record
+        Note over ConvexDB: conversationId, senderId,<br/>content, timestamp,<br/>read: false
+
+        ConvexMutation->>ConvexDB: Update conversation<br/>lastMessageAt, lastMessagePreview
+        Note over ConvexDB: Preview truncated to 50 chars
+
+        ConvexDB-->>ConvexMutation: Write confirmed
+        ConvexMutation-->>BandMsg: Return messageId
+    end
+
+    %% Part 3: Real-time Updates
+    rect rgb(26, 26, 26)
+        Note over Musician,VenueUI: Real-time Message Delivery
+
+        ConvexDB-->>BandMsg: Subscription update<br/>getConversationMessages
+        BandMsg->>BandMsg: Append new message to list
+
+        ConvexDB-->>VenueUI: Subscription update<br/>(if venue has dashboard)
+        VenueUI->>VenueUI: Show new message indicator
+        VenueUI->>VenueUI: Update unread count badge
+    end
+
+    %% Part 4: Loading Messages
+    rect rgb(37, 37, 37)
+        Note over Musician,ConvexDB: Loading Conversation History
+
+        Musician->>BandMsg: Open a conversation
+        BandMsg->>ConvexQuery: getConversationMessages(conversationId)
+
+        ConvexQuery->>ConvexDB: Query messages by_conversation
+        ConvexDB-->>ConvexQuery: Return messages sorted by timestamp
+
+        loop For each message
+            ConvexQuery->>ConvexDB: Get sender user details
+            ConvexDB-->>ConvexQuery: Return user (name, avatar)
+        end
+
+        ConvexQuery-->>BandMsg: Messages with sender details
+        BandMsg->>Musician: Display message thread
+    end
+
+    %% Part 5: Marking as Read
+    rect rgb(26, 26, 26)
+        Note over Musician,ConvexDB: Marking Messages as Read
+
+        BandMsg->>BandMsg: User views conversation
+        BandMsg->>ConvexMutation: markAsRead({ conversationId })
+
+        ConvexMutation->>ConvexDB: Get current user
+        ConvexMutation->>ConvexDB: Query unread messages<br/>where senderId != currentUser
+
+        loop For each unread message
+            ConvexMutation->>ConvexDB: Update message.read = true
+        end
+
+        ConvexDB-->>ConvexMutation: { markedCount: n }
+        ConvexMutation-->>BandMsg: Read receipts updated
+
+        ConvexDB-->>BandMsg: getUnreadCount subscription update
+        BandMsg->>BandMsg: Update unread badge<br/>(subtract marked count)
+    end
+
+    %% Part 6: Unread Count
+    rect rgb(37, 37, 37)
+        Note over Musician,ConvexDB: Unread Count Badge
+
+        BandMsg->>ConvexQuery: getUnreadCount()
+
+        ConvexQuery->>ConvexDB: Get current user's band
+        ConvexQuery->>ConvexDB: Sum unread messages<br/>across all conversations
+
+        ConvexDB-->>ConvexQuery: Total unread count
+        ConvexQuery-->>BandMsg: Display badge in nav
+    end
+
+    Note over Musician,VenueUI: Messaging Flow Complete

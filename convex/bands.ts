@@ -1,6 +1,13 @@
+/**
+ * @fileoverview Convex queries and mutations for band management.
+ * Handles band profiles, statistics, and fan following functionality.
+ * @module convex/bands
+ */
+
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 
+/** Validator for music genre field */
 const genreValidator = v.union(
   v.literal("indie"),
   v.literal("rock"),
@@ -11,6 +18,7 @@ const genreValidator = v.union(
   v.literal("alternative")
 );
 
+/** Validator for social media links */
 const socialLinksValidator = v.object({
   spotify: v.optional(v.string()),
   appleMusic: v.optional(v.string()),
@@ -20,7 +28,15 @@ const socialLinksValidator = v.object({
   website: v.optional(v.string()),
 });
 
-// Get band by ID
+/**
+ * Gets a band by its Convex document ID.
+ *
+ * @param bandId - The Convex ID of the band
+ * @returns The band document if found, null otherwise
+ *
+ * @example
+ * const band = useQuery(api.bands.getById, { bandId: "k9x..." });
+ */
 export const getById = query({
   args: { bandId: v.id("bands") },
   handler: async (ctx, args) => {
@@ -28,7 +44,18 @@ export const getById = query({
   },
 });
 
-// Get current user's band
+/**
+ * Gets the band profile for the currently authenticated musician user.
+ * Returns null if user is not authenticated, not a musician, or has no band.
+ *
+ * @returns The band document if found, null otherwise
+ *
+ * @example
+ * const band = useQuery(api.bands.getCurrentUserBand);
+ * if (band) {
+ *   console.log(`Your band: ${band.name}`);
+ * }
+ */
 export const getCurrentUserBand = query({
   args: {},
   handler: async (ctx) => {
@@ -55,7 +82,19 @@ export const getCurrentUserBand = query({
   },
 });
 
-// Get band with stats (for dashboard)
+/**
+ * Gets the current user's band with aggregated statistics for the dashboard.
+ * Includes shows this month, total RSVPs, and follower count.
+ * Returns null if user is not authenticated, not a musician, or has no band.
+ *
+ * @returns Band document with stats property, or null
+ *
+ * @example
+ * const bandWithStats = useQuery(api.bands.getBandWithStats);
+ * if (bandWithStats) {
+ *   console.log(`Total RSVPs: ${bandWithStats.stats.totalRsvps}`);
+ * }
+ */
 export const getBandWithStats = query({
   args: {},
   handler: async (ctx) => {
@@ -118,7 +157,29 @@ export const getBandWithStats = query({
   },
 });
 
-// Create a band (for new musicians)
+/**
+ * Creates a new band profile for the authenticated musician user.
+ * Each user can only have one band.
+ * Requires authentication.
+ *
+ * @param name - Band name (1-100 characters)
+ * @param genres - Array of music genres (1-5)
+ * @param location - Band's home location
+ * @param image - Optional profile image URL
+ * @param bio - Optional biography (max 1000 characters)
+ * @param memberCount - Optional number of members (1-50)
+ * @param socialLinks - Optional social media links
+ * @returns The new band's Convex document ID
+ * @throws Error if not authenticated, user not found, or user already has a band
+ *
+ * @example
+ * const createBand = useMutation(api.bands.create);
+ * const bandId = await createBand({
+ *   name: "The Local Heroes",
+ *   genres: ["rock", "indie"],
+ *   location: "Oakland, CA"
+ * });
+ */
 export const create = mutation({
   args: {
     name: v.string(),
@@ -164,7 +225,29 @@ export const create = mutation({
   },
 });
 
-// Update band profile
+/**
+ * Updates an existing band's profile information.
+ * Only the band owner can update. All fields are optional for partial updates.
+ * Requires authentication.
+ *
+ * @param bandId - The Convex ID of the band to update
+ * @param name - Optional new band name
+ * @param genres - Optional new genres array
+ * @param location - Optional new location
+ * @param image - Optional new profile image URL
+ * @param bio - Optional new biography
+ * @param memberCount - Optional new member count
+ * @param socialLinks - Optional new social links
+ * @returns The band's Convex document ID
+ * @throws Error if not authenticated, user not found, or not authorized
+ *
+ * @example
+ * const updateBand = useMutation(api.bands.update);
+ * await updateBand({
+ *   bandId: "k9x...",
+ *   bio: "We play indie rock in the Bay Area"
+ * });
+ */
 export const update = mutation({
   args: {
     bandId: v.id("bands"),
@@ -207,7 +290,21 @@ export const update = mutation({
   },
 });
 
-// List all bands (for discovery)
+/**
+ * Lists bands with optional genre filtering.
+ * Used for band discovery features.
+ *
+ * @param genre - Optional genre to filter by
+ * @param limit - Optional maximum number of results (default: 50)
+ * @returns Array of band documents
+ *
+ * @example
+ * // Get all bands
+ * const bands = useQuery(api.bands.list, {});
+ *
+ * // Get rock bands only
+ * const rockBands = useQuery(api.bands.list, { genre: "rock" });
+ */
 export const list = query({
   args: {
     genre: v.optional(genreValidator),
@@ -229,7 +326,17 @@ export const list = query({
   },
 });
 
-// Search bands by name
+/**
+ * Searches bands by name or location.
+ * Case-insensitive partial matching.
+ *
+ * @param query - Search text to match against name or location
+ * @param limit - Optional maximum number of results (default: 20)
+ * @returns Array of matching band documents
+ *
+ * @example
+ * const results = useQuery(api.bands.search, { query: "oakland" });
+ */
 export const search = query({
   args: {
     query: v.string(),
@@ -251,7 +358,20 @@ export const search = query({
   },
 });
 
-// Save/unsave a band (for fans)
+/**
+ * Toggles the saved/followed status of a band for the current user.
+ * If already saved, removes the save. If not saved, adds it.
+ * Requires authentication.
+ *
+ * @param bandId - The Convex ID of the band to save/unsave
+ * @returns Object indicating the action taken ("saved" or "unsaved")
+ * @throws Error if not authenticated or user not found
+ *
+ * @example
+ * const toggleSave = useMutation(api.bands.toggleSave);
+ * const { action } = await toggleSave({ bandId: "k9x..." });
+ * console.log(`Band ${action}`); // "Band saved" or "Band unsaved"
+ */
 export const toggleSave = mutation({
   args: { bandId: v.id("bands") },
   handler: async (ctx, args) => {
@@ -291,7 +411,16 @@ export const toggleSave = mutation({
   },
 });
 
-// Get user's saved bands
+/**
+ * Gets all bands saved by the current user.
+ * Returns empty array if not authenticated or user not found.
+ *
+ * @returns Array of saved band documents
+ *
+ * @example
+ * const savedBands = useQuery(api.bands.getSavedBands);
+ * console.log(`Following ${savedBands.length} bands`);
+ */
 export const getSavedBands = query({
   args: {},
   handler: async (ctx) => {
@@ -325,7 +454,22 @@ export const getSavedBands = query({
   },
 });
 
-// Get analytics for a band
+/**
+ * Gets analytics data for a band's dashboard charts.
+ * Includes total RSVPs, event count, event comparison data, and traffic breakdown.
+ * Requires authentication.
+ *
+ * @param bandId - The Convex ID of the band
+ * @returns Analytics data object with chart-ready data
+ * @throws Error if not authenticated or band not found
+ *
+ * @example
+ * const analytics = useQuery(api.bands.getAnalytics, { bandId: "k9x..." });
+ * if (analytics) {
+ *   // Use analytics.eventComparison for bar chart
+ *   // Use analytics.trafficData for pie chart
+ * }
+ */
 export const getAnalytics = query({
   args: { bandId: v.id("bands") },
   handler: async (ctx, args) => {

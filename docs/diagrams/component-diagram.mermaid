@@ -1,0 +1,151 @@
+%%{init: {'theme': 'dark', 'themeVariables': { 'primaryColor': '#C2FF00', 'primaryTextColor': '#0F0F0F', 'primaryBorderColor': '#C2FF00', 'lineColor': '#8B5CF6', 'secondaryColor': '#1A1A1A', 'tertiaryColor': '#252525'}}}%%
+
+graph TB
+    subgraph Root["Monorepo Root"]
+        TurboConfig["turbo.json<br/>Task Configuration"]
+        RootPkg["package.json<br/>Workspace Root"]
+        PnpmWS["pnpm-workspace.yaml"]
+    end
+
+    subgraph WebApp["apps/web/ - Next.js 14"]
+        subgraph WebPages["src/app/ - App Router"]
+            LandingPage["/ Landing<br/>OnboardingFlow"]
+            subgraph ProtectedRoutes["/(app)/* Protected"]
+                HomePage["home/page.tsx"]
+                CalendarPage["calendar/page.tsx"]
+                MessagesPage["messages/page.tsx"]
+                ProfilePage["profile/page.tsx"]
+                GigPage["gig/[id]/page.tsx"]
+            end
+            AuthPages["sign-in, sign-up<br/>sso-callback"]
+        end
+
+        subgraph WebComponents["src/components/"]
+            subgraph BandComponents["band/"]
+                BandDashboard["BandDashboard"]
+                BandCalendar["BandCalendar"]
+                BandMessages["BandMessages"]
+                BandProfile["BandProfile"]
+                CreateGigModal["CreateGigModal"]
+                AnalyticsReport["AnalyticsReport"]
+            end
+
+            subgraph FanComponents["fan/"]
+                MapView["MapView"]
+                CalendarView["CalendarView"]
+                NotificationsView["NotificationsView"]
+                ProfileView["ProfileView"]
+            end
+
+            subgraph SharedComponents["Shared"]
+                EventCard["events/EventCard"]
+                BottomNav["navigation/BottomNav"]
+                MapInfoWindow["maps/MapInfoWindow"]
+                PlaceAutocomplete["maps/PlaceAutocomplete"]
+                UIComponents["ui/*<br/>Skeleton, GenreFilter, etc."]
+            end
+        end
+
+        subgraph WebHooks["src/hooks/"]
+            UseUser["useUser.ts"]
+            UseEvents["useEvents.ts"]
+            UseBand["useBand.ts"]
+            UseVenues["useVenues.ts"]
+            UseMessages["useMessages.ts"]
+            UseNotifications["useNotifications.ts"]
+            UseGeolocation["useGeolocation.ts"]
+        end
+
+        WebMiddleware["middleware.ts<br/>Clerk Route Protection"]
+        WebProviders["providers.tsx<br/>Clerk + Convex"]
+    end
+
+    subgraph MobileApp["apps/mobile/ - Expo 51"]
+        subgraph MobileRoutes["app/ - Expo Router"]
+            MobileLayout["_layout.tsx<br/>Root Providers"]
+            MobileOnboarding["onboarding.tsx"]
+            subgraph MobileTabs["(tabs)/"]
+                MobileHome["index.tsx"]
+                MobileCalendar["calendar.tsx"]
+                MobileMessages["messages.tsx"]
+                MobileProfile["profile.tsx"]
+            end
+            MobileGig["gig/[id].tsx"]
+        end
+        MobileAssets["assets/<br/>Fonts, Images"]
+    end
+
+    subgraph Packages["packages/"]
+        subgraph SharedPkg["shared/"]
+            Types["types/index.ts<br/>User, Band, Event, etc."]
+            Validation["validation/index.ts<br/>Zod Schemas"]
+            Constants["constants/index.ts<br/>Genres, Routes"]
+            Utils["utils/index.ts<br/>formatters, distance"]
+        end
+
+        subgraph TailwindPkg["tailwind-config/"]
+            BaseConfig["base.js<br/>Design Tokens"]
+        end
+    end
+
+    subgraph ConvexBackend["convex/ - Backend"]
+        Schema["schema.ts<br/>13 Tables"]
+        AuthConfig["auth.config.ts<br/>Clerk JWT"]
+        HTTPEndpoints["http.ts<br/>Webhooks"]
+
+        subgraph BackendModules["Backend Modules"]
+            UsersModule["users.ts"]
+            BandsModule["bands.ts"]
+            VenuesModule["venues.ts"]
+            EventsModule["events.ts"]
+            MessagesModule["messages.ts"]
+            NotificationsModule["notifications.ts"]
+            SeedModule["seed.ts"]
+        end
+
+        subgraph ConvexUtils["utils/"]
+            GeoUtils["geo.ts<br/>Haversine Distance"]
+        end
+
+        Generated["_generated/<br/>api.ts, dataModel.ts"]
+    end
+
+    %% Turborepo orchestration
+    TurboConfig --> WebApp
+    TurboConfig --> MobileApp
+    TurboConfig --> Packages
+
+    %% Web internal connections
+    WebPages --> WebComponents
+    WebComponents --> WebHooks
+    WebHooks --> Generated
+    WebMiddleware --> WebProviders
+
+    %% Mobile internal connections
+    MobileLayout --> MobileTabs
+    MobileTabs --> Generated
+
+    %% Package dependencies
+    SharedPkg --> WebHooks
+    SharedPkg --> MobileRoutes
+    BaseConfig --> WebApp
+    BaseConfig --> MobileApp
+
+    %% Convex internal
+    Schema --> BackendModules
+    BackendModules --> GeoUtils
+    BackendModules --> Generated
+    HTTPEndpoints --> UsersModule
+
+    %% Styling
+    classDef root fill:#0F0F0F,stroke:#C2FF00,stroke-width:2px,color:#C2FF00
+    classDef web fill:#252525,stroke:#C2FF00,stroke-width:1px,color:#fff
+    classDef mobile fill:#252525,stroke:#8B5CF6,stroke-width:1px,color:#fff
+    classDef package fill:#1A1A1A,stroke:#C2FF00,stroke-width:1px,color:#C2FF00
+    classDef convex fill:#1A1A1A,stroke:#8B5CF6,stroke-width:2px,color:#8B5CF6
+
+    class Root,TurboConfig,RootPkg,PnpmWS root
+    class WebApp,WebPages,WebComponents,WebHooks,BandComponents,FanComponents,SharedComponents web
+    class MobileApp,MobileRoutes,MobileTabs mobile
+    class Packages,SharedPkg,TailwindPkg,Types,Validation,Constants,Utils,BaseConfig package
+    class ConvexBackend,Schema,AuthConfig,HTTPEndpoints,BackendModules,ConvexUtils,Generated convex

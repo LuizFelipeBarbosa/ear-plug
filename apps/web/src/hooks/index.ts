@@ -1,3 +1,22 @@
+/**
+ * @fileoverview Barrel export file for all custom hooks.
+ * Provides a single import point for hook consumers.
+ * @module hooks
+ *
+ * @example
+ * import {
+ *   useCurrentUser,
+ *   useEvents,
+ *   useCurrentBand,
+ *   useVenues,
+ *   useBandConversations,
+ *   useNotifications,
+ *   useLocalStorage,
+ *   useGeolocation,
+ *   useSharedEvents
+ * } from "@/hooks";
+ */
+
 export * from "./useUser";
 export * from "./useEvents";
 export * from "./useBand";

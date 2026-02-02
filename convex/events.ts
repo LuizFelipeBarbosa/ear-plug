@@ -1,8 +1,19 @@
+/**
+ * @fileoverview Convex queries and mutations for event management.
+ * Handles event CRUD operations, user interactions (RSVP, likes),
+ * search functionality, and geospatial queries.
+ * @module convex/events
+ */
+
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { haversineDistance, coordinatesMatch } from "./utils/geo";
 
+/**
+ * Validator for music genre values.
+ * Supports: indie, rock, jazz, electronic, folk, pop, alternative
+ */
 const genreValidator = v.union(
   v.literal("indie"),
   v.literal("rock"),
@@ -13,7 +24,17 @@ const genreValidator = v.union(
   v.literal("alternative")
 );
 
-// Get all upcoming events
+/**
+ * Lists all upcoming events sorted by date.
+ * Includes related band and venue data for each event.
+ *
+ * @param args.limit - Maximum number of events to return (default: 50)
+ * @returns Array of event documents with band and venue details
+ *
+ * @example
+ * // Get next 20 upcoming events
+ * const events = await ctx.runQuery(api.events.listUpcoming, { limit: 20 });
+ */
 export const listUpcoming = query({
   args: {
     limit: v.optional(v.number()),
@@ -46,7 +67,21 @@ export const listUpcoming = query({
   },
 });
 
-// Get events by genre (supports both single genre and genres array)
+/**
+ * Lists upcoming events filtered by a specific genre.
+ * Supports both the current genres array and legacy single genre field.
+ *
+ * @param args.genre - The music genre to filter by
+ * @param args.limit - Maximum number of events to return (default: 50)
+ * @returns Array of matching event documents with band and venue details
+ *
+ * @example
+ * // Get jazz events
+ * const jazzEvents = await ctx.runQuery(api.events.listByGenre, {
+ *   genre: "jazz",
+ *   limit: 10
+ * });
+ */
 export const listByGenre = query({
   args: {
     genre: genreValidator,
@@ -85,7 +120,21 @@ export const listByGenre = query({
   },
 });
 
-// Get event by ID with full details
+/**
+ * Retrieves a single event by its ID with full details.
+ * Includes the associated band and venue documents.
+ *
+ * @param args.eventId - The Convex ID of the event
+ * @returns Event document with band and venue, or null if not found
+ *
+ * @example
+ * const event = await ctx.runQuery(api.events.getById, {
+ *   eventId: "j57..."
+ * });
+ * if (event) {
+ *   console.log(event.title, event.venue?.name);
+ * }
+ */
 export const getById = query({
   args: { eventId: v.id("events") },
   handler: async (ctx, args) => {
@@ -103,7 +152,27 @@ export const getById = query({
   },
 });
 
-// Get events by band
+/**
+ * Lists events for a specific band.
+ * Optionally includes past events. Returns events sorted by date ascending.
+ *
+ * @param args.bandId - The Convex ID of the band
+ * @param args.includesPast - If true, includes past events (default: false)
+ * @returns Array of event documents with venue details
+ *
+ * @example
+ * // Get all upcoming events for a band
+ * const upcomingEvents = await ctx.runQuery(api.events.listByBand, {
+ *   bandId: band._id
+ * });
+ *
+ * @example
+ * // Get all events including past ones
+ * const allEvents = await ctx.runQuery(api.events.listByBand, {
+ *   bandId: band._id,
+ *   includesPast: true
+ * });
+ */
 export const listByBand = query({
   args: {
     bandId: v.id("bands"),
@@ -132,7 +201,18 @@ export const listByBand = query({
   },
 });
 
-// Get events by venue
+/**
+ * Lists upcoming events at a specific venue.
+ * Returns events sorted by date ascending.
+ *
+ * @param args.venueId - The Convex ID of the venue
+ * @returns Array of upcoming event documents with band details
+ *
+ * @example
+ * const venueEvents = await ctx.runQuery(api.events.listByVenue, {
+ *   venueId: venue._id
+ * });
+ */
 export const listByVenue = query({
   args: { venueId: v.id("venues") },
   handler: async (ctx, args) => {
@@ -155,7 +235,21 @@ export const listByVenue = query({
   },
 });
 
-// Search events by title or band name
+/**
+ * Searches events by title, band name, or venue name.
+ * Performs case-insensitive partial matching on all three fields.
+ *
+ * @param args.query - The search string to match
+ * @param args.limit - Maximum number of results to return (default: 20)
+ * @returns Array of matching event documents with band and venue details
+ *
+ * @example
+ * // Search for events with "jazz" in title, band, or venue name
+ * const results = await ctx.runQuery(api.events.search, {
+ *   query: "jazz",
+ *   limit: 10
+ * });
+ */
 export const search = query({
   args: {
     query: v.string(),
@@ -194,7 +288,23 @@ export const search = query({
   },
 });
 
-// RSVP to an event
+/**
+ * Toggles RSVP status for the current user on an event.
+ * If already RSVP'd, removes the RSVP. Otherwise, adds one.
+ * Updates the event's rsvpCount accordingly.
+ *
+ * @param args.eventId - The Convex ID of the event to RSVP to
+ * @returns Object with action: "added" or "removed"
+ * @throws Error if not authenticated or user not found
+ *
+ * @example
+ * const result = await ctx.runMutation(api.events.rsvp, {
+ *   eventId: event._id
+ * });
+ * if (result.action === "added") {
+ *   toast.success("RSVP confirmed!");
+ * }
+ */
 export const rsvp = mutation({
   args: { eventId: v.id("events") },
   handler: async (ctx, args) => {
@@ -254,7 +364,20 @@ export const rsvp = mutation({
   },
 });
 
-// Like/unlike an event
+/**
+ * Toggles like status for the current user on an event.
+ * If already liked, removes the like. Otherwise, adds one.
+ *
+ * @param args.eventId - The Convex ID of the event to like/unlike
+ * @returns Object with action: "liked" or "unliked"
+ * @throws Error if not authenticated or user not found
+ *
+ * @example
+ * const result = await ctx.runMutation(api.events.toggleLike, {
+ *   eventId: event._id
+ * });
+ * // Update UI based on result.action
+ */
 export const toggleLike = mutation({
   args: { eventId: v.id("events") },
   handler: async (ctx, args) => {
@@ -295,7 +418,16 @@ export const toggleLike = mutation({
   },
 });
 
-// Get user's RSVP'd events (upcoming only)
+/**
+ * Gets the current user's upcoming RSVP'd events.
+ * Excludes past events. Returns events sorted by date ascending.
+ *
+ * @returns Array of upcoming event documents with band, venue, and rsvpedAt timestamp
+ *
+ * @example
+ * const myUpcomingEvents = await ctx.runQuery(api.events.getUserRsvps);
+ * // Display in user's "My Events" section
+ */
 export const getUserRsvps = query({
   args: {},
   handler: async (ctx) => {
@@ -338,7 +470,17 @@ export const getUserRsvps = query({
   },
 });
 
-// Get user's past RSVP'd events
+/**
+ * Gets the current user's past RSVP'd events.
+ * Only includes events that have already occurred.
+ * Returns events sorted by date descending (most recent first).
+ *
+ * @returns Array of past event documents with band, venue, and rsvpedAt timestamp
+ *
+ * @example
+ * const pastEvents = await ctx.runQuery(api.events.getUserPastRsvps);
+ * // Display in user's "Past Events" or "History" section
+ */
 export const getUserPastRsvps = query({
   args: {},
   handler: async (ctx) => {
@@ -381,7 +523,17 @@ export const getUserPastRsvps = query({
   },
 });
 
-// Get user's liked events
+/**
+ * Gets the current user's liked events.
+ * Excludes events that the user has also RSVP'd to.
+ * Returns events sorted by date ascending.
+ *
+ * @returns Array of liked event documents with band, venue, and likedAt timestamp
+ *
+ * @example
+ * const likedEvents = await ctx.runQuery(api.events.getUserLikes);
+ * // Display in "Saved Events" or "Interested" section
+ */
 export const getUserLikes = query({
   args: {},
   handler: async (ctx) => {
@@ -430,7 +582,20 @@ export const getUserLikes = query({
   },
 });
 
-// Check if user has RSVP'd or liked an event
+/**
+ * Checks the current user's RSVP and like status for a specific event.
+ * Returns false for both if not authenticated.
+ *
+ * @param args.eventId - The Convex ID of the event to check
+ * @returns Object with hasRsvp and hasLiked boolean flags
+ *
+ * @example
+ * const status = await ctx.runQuery(api.events.getUserEventStatus, {
+ *   eventId: event._id
+ * });
+ * // Use to render RSVP/Like button states
+ * <button>{status.hasRsvp ? "Cancel RSVP" : "RSVP"}</button>
+ */
 export const getUserEventStatus = query({
   args: { eventId: v.id("events") },
   handler: async (ctx, args) => {
@@ -469,7 +634,28 @@ export const getUserEventStatus = query({
   },
 });
 
-// Get nearby events (filter by distance from coordinates)
+/**
+ * Lists nearby events within a specified radius of given coordinates.
+ * Uses the Haversine formula for accurate distance calculations.
+ * Optionally filters by genre.
+ *
+ * @param args.latitude - User's latitude in decimal degrees
+ * @param args.longitude - User's longitude in decimal degrees
+ * @param args.radiusMiles - Maximum distance from user in miles
+ * @param args.genre - Optional genre filter
+ * @param args.limit - Maximum number of events to return (default: 50)
+ * @returns Array of nearby events sorted by distance, with distance in miles included
+ *
+ * @example
+ * // Find rock events within 5 miles
+ * const nearbyRockEvents = await ctx.runQuery(api.events.listNearby, {
+ *   latitude: 37.7749,
+ *   longitude: -122.4194,
+ *   radiusMiles: 5,
+ *   genre: "rock"
+ * });
+ * // Each event includes a distance field (e.g., 2.3 miles)
+ */
 export const listNearby = query({
   args: {
     latitude: v.number(),
@@ -541,7 +727,34 @@ export const listNearby = query({
   },
 });
 
-// Create a new event (for bands)
+/**
+ * Creates a new event for a band at an existing venue.
+ * Only the band owner can create events for their band.
+ * Schedules notifications for fans who follow the band or venue.
+ *
+ * @param args.title - Event title/name
+ * @param args.bandId - Convex ID of the performing band
+ * @param args.venueId - Convex ID of the venue
+ * @param args.dateTime - Event start time as Unix timestamp (milliseconds)
+ * @param args.image - Optional event image URL
+ * @param args.capacity - Venue capacity for this event
+ * @param args.price - Optional ticket price in dollars
+ * @param args.description - Optional event description
+ * @param args.genres - Array of music genres for the event
+ * @param args.genre - Optional legacy single genre field
+ * @returns The Convex ID of the newly created event
+ * @throws Error if not authenticated, band not found, or user is not the band owner
+ *
+ * @example
+ * const eventId = await ctx.runMutation(api.events.create, {
+ *   title: "Friday Night Live",
+ *   bandId: myBand._id,
+ *   venueId: selectedVenue._id,
+ *   dateTime: new Date("2024-06-15T20:00").getTime(),
+ *   capacity: 150,
+ *   genres: ["rock", "indie"]
+ * });
+ */
 export const create = mutation({
   args: {
     title: v.string(),
@@ -594,7 +807,41 @@ export const create = mutation({
   },
 });
 
-// Create a new event with venue from Google Places
+/**
+ * Creates a new event with automatic venue creation from Google Places data.
+ * If a venue with matching coordinates already exists, reuses it.
+ * Only the band owner can create events for their band.
+ * Schedules notifications for fans who follow the band or venue.
+ *
+ * @param args.title - Event title/name
+ * @param args.bandId - Convex ID of the performing band
+ * @param args.dateTime - Event start time as Unix timestamp (milliseconds)
+ * @param args.genres - Array of music genres for the event
+ * @param args.genre - Optional legacy single genre field
+ * @param args.venueName - Name of the venue from Google Places
+ * @param args.venueAddress - Street address of the venue
+ * @param args.venueCity - City where the venue is located
+ * @param args.venueCoordinates - Object with lat and lng properties
+ * @param args.venuePlaceId - Optional Google Places ID for deduplication
+ * @param args.image - Optional event image URL
+ * @param args.capacity - Optional venue capacity (default: 100)
+ * @param args.price - Optional ticket price in dollars
+ * @param args.description - Optional event description
+ * @returns Object with eventId and venueId (new or existing)
+ * @throws Error if not authenticated, band not found, or user is not the band owner
+ *
+ * @example
+ * const { eventId, venueId } = await ctx.runMutation(api.events.createWithVenue, {
+ *   title: "Album Release Party",
+ *   bandId: myBand._id,
+ *   dateTime: new Date("2024-07-20T21:00").getTime(),
+ *   genres: ["indie", "rock"],
+ *   venueName: "The Starry Plough",
+ *   venueAddress: "3101 Shattuck Ave",
+ *   venueCity: "Berkeley",
+ *   venueCoordinates: { lat: 37.8497, lng: -122.2661 }
+ * });
+ */
 export const createWithVenue = mutation({
   args: {
     title: v.string(),

@@ -1,0 +1,110 @@
+%%{init: {'theme': 'dark', 'themeVariables': { 'primaryColor': '#C2FF00', 'primaryTextColor': '#0F0F0F', 'primaryBorderColor': '#C2FF00', 'lineColor': '#8B5CF6', 'secondaryColor': '#1A1A1A', 'tertiaryColor': '#252525'}}}%%
+
+graph TB
+    subgraph Users["End Users"]
+        Fan["Fan User"]
+        Musician["Musician User"]
+    end
+
+    subgraph ClientApps["Client Applications"]
+        subgraph WebApp["Next.js 14 Web App"]
+            WebUI["React UI Components"]
+            WebHooks["Custom Hooks"]
+            ClerkWeb["@clerk/nextjs"]
+            GoogleMapsWeb["@vis.gl/react-google-maps"]
+        end
+
+        subgraph MobileApp["Expo 51 Mobile App"]
+            MobileUI["React Native UI"]
+            MobileNav["Expo Router"]
+            ClerkMobile["@clerk/clerk-expo"]
+            RNMaps["react-native-maps"]
+        end
+    end
+
+    subgraph SharedPackages["Shared Packages"]
+        SharedTypes["@ear-plug/shared<br/>Types, Validation, Utils"]
+        TailwindConfig["@ear-plug/tailwind-config<br/>Design System Tokens"]
+    end
+
+    subgraph ExternalServices["External Services"]
+        subgraph Clerk["Clerk Authentication"]
+            ClerkAuth["Auth API"]
+            ClerkJWT["JWT Service"]
+            ClerkWebhook["Webhooks"]
+        end
+
+        subgraph GoogleCloud["Google Cloud Platform"]
+            MapsAPI["Maps JavaScript API"]
+            PlacesAPI["Places API"]
+            MapsSDK["Maps SDK (iOS/Android)"]
+        end
+
+        subgraph ConvexCloud["Convex Cloud"]
+            ConvexWS["WebSocket Server"]
+            ConvexDB["Document Database"]
+            ConvexFunctions["Serverless Functions"]
+            ConvexHTTP["HTTP Endpoints"]
+        end
+    end
+
+    subgraph Infrastructure["Deployment Infrastructure"]
+        Vercel["Vercel<br/>(Web Hosting)"]
+        AppStore["App Store<br/>(iOS)"]
+        PlayStore["Play Store<br/>(Android)"]
+    end
+
+    %% User flows
+    Fan --> WebApp
+    Fan --> MobileApp
+    Musician --> WebApp
+    Musician --> MobileApp
+
+    %% Web App connections
+    WebUI --> WebHooks
+    WebHooks --> ConvexWS
+    ClerkWeb --> ClerkAuth
+    ClerkWeb --> ClerkJWT
+    GoogleMapsWeb --> MapsAPI
+    GoogleMapsWeb --> PlacesAPI
+
+    %% Mobile App connections
+    MobileUI --> MobileNav
+    MobileNav --> ConvexWS
+    ClerkMobile --> ClerkAuth
+    ClerkMobile --> ClerkJWT
+    RNMaps --> MapsSDK
+
+    %% Shared packages
+    SharedTypes --> WebHooks
+    SharedTypes --> MobileNav
+    TailwindConfig --> WebUI
+    TailwindConfig --> MobileUI
+
+    %% Convex internals
+    ConvexWS --> ConvexDB
+    ConvexWS --> ConvexFunctions
+    ConvexFunctions --> ConvexDB
+    ClerkWebhook --> ConvexHTTP
+    ConvexHTTP --> ConvexFunctions
+
+    %% Clerk to Convex auth
+    ClerkJWT --> ConvexWS
+
+    %% Deployment
+    WebApp -.-> Vercel
+    MobileApp -.-> AppStore
+    MobileApp -.-> PlayStore
+
+    %% Styling
+    classDef user fill:#C2FF00,stroke:#0F0F0F,color:#0F0F0F
+    classDef client fill:#252525,stroke:#C2FF00,stroke-width:2px,color:#fff
+    classDef package fill:#1A1A1A,stroke:#8B5CF6,stroke-width:2px,color:#fff
+    classDef external fill:#8B5CF6,stroke:#C2FF00,stroke-width:2px,color:#fff
+    classDef infra fill:#0F0F0F,stroke:#C2FF00,stroke-width:1px,color:#C2FF00
+
+    class Fan,Musician user
+    class WebApp,MobileApp,WebUI,WebHooks,MobileUI,MobileNav,ClerkWeb,ClerkMobile,GoogleMapsWeb,RNMaps client
+    class SharedTypes,TailwindConfig package
+    class Clerk,ClerkAuth,ClerkJWT,ClerkWebhook,GoogleCloud,MapsAPI,PlacesAPI,MapsSDK,ConvexCloud,ConvexWS,ConvexDB,ConvexFunctions,ConvexHTTP external
+    class Vercel,AppStore,PlayStore infra

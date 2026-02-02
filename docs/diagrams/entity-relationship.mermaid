@@ -1,0 +1,192 @@
+%%{init: {'theme': 'dark', 'themeVariables': { 'primaryColor': '#C2FF00', 'primaryTextColor': '#0F0F0F', 'primaryBorderColor': '#C2FF00', 'lineColor': '#8B5CF6', 'secondaryColor': '#1A1A1A', 'tertiaryColor': '#252525'}}}%%
+
+erDiagram
+    %% ====================
+    %% CORE ENTITIES
+    %% ====================
+
+    USERS {
+        id _id PK "Convex document ID"
+        string clerkId UK "Clerk authentication ID"
+        enum role "fan | musician"
+        string name "Display name"
+        string email UK "User email"
+        string location "City/area (optional)"
+        string avatar "Profile image URL (optional)"
+        array topGenres "Preferred genres (optional, max 5)"
+        number memberSince "Unix timestamp"
+        number showsAttended "Event count (optional)"
+    }
+
+    BANDS {
+        id _id PK "Convex document ID"
+        id userId FK "Owner musician user"
+        string name "Band name"
+        array genres "Music genres (1-5)"
+        string genre "Legacy single genre (deprecated)"
+        string location "Home base city"
+        string image "Profile image URL (optional)"
+        string bio "Band biography (optional, max 1000)"
+        number memberCount "Band members (optional, 1-50)"
+        object socialLinks "Social media links (optional)"
+        number createdAt "Unix timestamp"
+    }
+
+    VENUES {
+        id _id PK "Convex document ID"
+        string name "Venue name"
+        string address "Street address"
+        string city "City name"
+        number capacity "Max attendees"
+        object coordinates "lat/lng for mapping"
+        array images "Venue photos (optional)"
+        string description "Venue description (optional)"
+        array genres "Typical genres hosted (optional)"
+    }
+
+    EVENTS {
+        id _id PK "Convex document ID"
+        string title "Event title"
+        id bandId FK "Performing band"
+        id venueId FK "Hosting venue"
+        number dateTime "Event start (Unix timestamp)"
+        string image "Event poster (optional)"
+        number rsvpCount "Current RSVP count"
+        number capacity "Max attendees"
+        number price "Price in cents (optional, 0=free)"
+        string description "Event details (optional)"
+        array genres "Event genres (optional)"
+        string genre "Legacy single genre (deprecated)"
+        enum status "confirmed | hold | available"
+    }
+
+    %% ====================
+    %% USER INTERACTIONS
+    %% ====================
+
+    RSVPS {
+        id _id PK "Convex document ID"
+        id userId FK "RSVP'ing user"
+        id eventId FK "Target event"
+        number createdAt "Unix timestamp"
+    }
+
+    LIKES {
+        id _id PK "Convex document ID"
+        id userId FK "Liking user"
+        id eventId FK "Liked event"
+        number createdAt "Unix timestamp"
+    }
+
+    SAVED_ARTISTS {
+        id _id PK "Convex document ID"
+        id userId FK "Fan user"
+        id bandId FK "Followed band"
+        number createdAt "Unix timestamp"
+    }
+
+    SAVED_VENUES {
+        id _id PK "Convex document ID"
+        id userId FK "Fan user"
+        id venueId FK "Saved venue"
+        number createdAt "Unix timestamp"
+    }
+
+    %% ====================
+    %% MESSAGING SYSTEM
+    %% ====================
+
+    CONVERSATIONS {
+        id _id PK "Convex document ID"
+        id bandId FK "Band in conversation"
+        id venueId FK "Venue in conversation"
+        number lastMessageAt "Last activity timestamp"
+        string lastMessagePreview "Truncated preview (max 50)"
+    }
+
+    MESSAGES {
+        id _id PK "Convex document ID"
+        id conversationId FK "Parent conversation"
+        id senderId FK "Sender user"
+        string content "Message text (max 5000)"
+        number timestamp "Send time"
+        boolean read "Read status"
+    }
+
+    %% ====================
+    %% NOTIFICATIONS
+    %% ====================
+
+    NOTIFICATIONS {
+        id _id PK "Convex document ID"
+        id userId FK "Recipient user"
+        enum type "event_reminder | lineup_change | new_event_followed_artist | new_event_nearby | application_update | message"
+        string title "Notification headline"
+        string content "Notification body"
+        number timestamp "Creation time"
+        boolean read "Read status"
+        id eventId FK "Related event (optional)"
+        id bandId FK "Related band (optional)"
+        id venueId FK "Related venue (optional)"
+    }
+
+    %% ====================
+    %% BOOKING SYSTEM
+    %% ====================
+
+    OPEN_DATES {
+        id _id PK "Convex document ID"
+        id venueId FK "Offering venue"
+        number date "Available date (Unix timestamp)"
+        number offeredPay "Compensation in cents (optional)"
+        string genre "Preferred genre (optional)"
+        enum status "open | pending | filled"
+        string description "Booking notes (optional)"
+        number createdAt "Unix timestamp"
+    }
+
+    APPLICATIONS {
+        id _id PK "Convex document ID"
+        id bandId FK "Applying band"
+        id openDateId FK "Target open date"
+        enum status "pending | accepted | rejected"
+        string message "Application message (optional)"
+        number appliedAt "Submission timestamp"
+        number respondedAt "Response timestamp (optional)"
+    }
+
+    %% ====================
+    %% RELATIONSHIPS
+    %% ====================
+
+    %% Core entity relationships
+    USERS ||--o| BANDS : "owns (1 band per musician)"
+    BANDS ||--o{ EVENTS : "performs at"
+    VENUES ||--o{ EVENTS : "hosts"
+
+    %% User interaction relationships
+    USERS ||--o{ RSVPS : "makes RSVPs"
+    EVENTS ||--o{ RSVPS : "has RSVPs"
+    USERS ||--o{ LIKES : "creates likes"
+    EVENTS ||--o{ LIKES : "has likes"
+    USERS ||--o{ SAVED_ARTISTS : "follows bands"
+    BANDS ||--o{ SAVED_ARTISTS : "has followers"
+    USERS ||--o{ SAVED_VENUES : "saves venues"
+    VENUES ||--o{ SAVED_VENUES : "has followers"
+
+    %% Messaging relationships
+    BANDS ||--o{ CONVERSATIONS : "participates in"
+    VENUES ||--o{ CONVERSATIONS : "participates in"
+    CONVERSATIONS ||--o{ MESSAGES : "contains"
+    USERS ||--o{ MESSAGES : "sends"
+
+    %% Notification relationships
+    USERS ||--o{ NOTIFICATIONS : "receives"
+    EVENTS ||--o{ NOTIFICATIONS : "referenced by"
+    BANDS ||--o{ NOTIFICATIONS : "referenced by"
+    VENUES ||--o{ NOTIFICATIONS : "referenced by"
+
+    %% Booking relationships
+    VENUES ||--o{ OPEN_DATES : "offers"
+    OPEN_DATES ||--o{ APPLICATIONS : "receives"
+    BANDS ||--o{ APPLICATIONS : "submits"

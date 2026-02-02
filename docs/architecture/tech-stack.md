@@ -1,5 +1,13 @@
 # Tech Stack Project Outline
 
+## Related Diagrams
+
+For visual representations of the tech stack and architecture, see:
+
+- **[System Overview](../diagrams/system-overview.mermaid)** - High-level system components and their connections
+- **[Component Diagram](../diagrams/component-diagram.mermaid)** - Detailed module relationships within the monorepo
+- **[Deployment Diagram](../diagrams/deployment.mermaid)** - Infrastructure and deployment pipeline
+
 ## Overview
 
 A modern full-stack application with a shared codebase serving both web and mobile platforms. The architecture prioritizes code reuse, type safety, and real-time data synchronization.

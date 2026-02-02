@@ -1,0 +1,88 @@
+%%{init: {'theme': 'dark', 'themeVariables': { 'primaryColor': '#C2FF00', 'primaryTextColor': '#0F0F0F', 'primaryBorderColor': '#C2FF00', 'lineColor': '#8B5CF6', 'secondaryColor': '#1A1A1A', 'tertiaryColor': '#252525'}}}%%
+
+sequenceDiagram
+    autonumber
+    participant User
+    participant App as Web/Mobile App
+    participant LocalStorage as localStorage
+    participant ClerkUI as Clerk UI
+    participant ClerkAPI as Clerk API
+    participant Webhook as Clerk Webhook
+    participant ConvexHTTP as Convex HTTP
+    participant ConvexDB as Convex Database
+    participant AppLayout as App Layout
+
+    Note over User,AppLayout: User Registration Flow
+
+    %% Step 1: Landing and Role Selection
+    User->>App: Navigate to /
+    App->>App: Render OnboardingFlow
+    App->>User: Display role selection<br/>(Fan or Musician)
+
+    User->>App: Select role (e.g., "musician")
+    App->>LocalStorage: Store selectedRole
+
+    %% Step 2: Clerk Authentication
+    App->>User: Redirect to Clerk sign-up
+    User->>ClerkUI: Enter credentials<br/>(email, password, or OAuth)
+    ClerkUI->>ClerkAPI: Create user account
+
+    alt OAuth Provider (Google, etc.)
+        ClerkAPI->>ClerkAPI: Verify OAuth token
+    else Email/Password
+        ClerkAPI->>ClerkAPI: Send verification email
+        User->>ClerkUI: Verify email
+    end
+
+    %% Step 3: Webhook fires to create Convex user
+    ClerkAPI->>Webhook: Fire user.created webhook
+    Webhook->>ConvexHTTP: POST /clerk-webhook<br/>with user data
+
+    ConvexHTTP->>ConvexHTTP: Verify svix signature
+    ConvexHTTP->>ConvexDB: createUserFromClerk mutation
+
+    ConvexDB->>ConvexDB: Check if user exists<br/>(by clerkId)
+
+    alt User does not exist
+        ConvexDB->>ConvexDB: Insert new user record<br/>role: "fan" (default)
+    else User already exists
+        ConvexDB->>ConvexDB: Skip creation
+    end
+
+    ConvexHTTP-->>Webhook: 200 OK
+
+    %% Step 4: Return to app with JWT
+    ClerkAPI-->>ClerkUI: Authentication complete
+    ClerkUI->>App: Return with JWT token
+    App->>App: Redirect to /home
+
+    %% Step 5: App Layout syncs role from localStorage
+    App->>AppLayout: Render protected layout
+    AppLayout->>ConvexDB: useQuery(getCurrentUser)
+    ConvexDB-->>AppLayout: Return user (role: "fan")
+
+    AppLayout->>LocalStorage: Read selectedRole
+    LocalStorage-->>AppLayout: "musician"
+
+    alt Role mismatch
+        AppLayout->>ConvexDB: updateRole({ role: "musician" })
+        ConvexDB->>ConvexDB: Update user.role
+        ConvexDB-->>AppLayout: Confirm update
+    end
+
+    %% Step 6: Musician-specific setup
+    AppLayout->>AppLayout: Check if musician has band
+    AppLayout->>ConvexDB: useQuery(getCurrentUserBand)
+
+    alt No band exists
+        AppLayout->>User: Show CreateBandForm modal
+        User->>App: Fill band details
+        App->>ConvexDB: bands.create mutation
+        ConvexDB->>ConvexDB: Insert band record
+        ConvexDB-->>App: Return band ID
+    end
+
+    %% Final state
+    AppLayout->>User: Render BandDashboard<br/>(or FanMapView for fans)
+
+    Note over User,AppLayout: Registration Complete

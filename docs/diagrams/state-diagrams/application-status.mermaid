@@ -1,0 +1,92 @@
+%%{init: {'theme': 'dark', 'themeVariables': { 'primaryColor': '#C2FF00', 'primaryTextColor': '#0F0F0F', 'primaryBorderColor': '#C2FF00', 'lineColor': '#8B5CF6', 'secondaryColor': '#1A1A1A', 'tertiaryColor': '#252525'}}}%%
+
+stateDiagram-v2
+    direction TB
+
+    [*] --> OpenDate_Open: Venue posts open date
+
+    state "Open Date Status" as OpenDateGroup {
+        state "open" as OpenDate_Open
+        state "pending" as OpenDate_Pending
+        state "filled" as OpenDate_Filled
+    }
+
+    state "Application Status" as ApplicationGroup {
+        state "pending" as App_Pending
+        state "accepted" as App_Accepted
+        state "rejected" as App_Rejected
+    }
+
+    note right of OpenDate_Open
+        Open Date: open
+        - Available for applications
+        - Visible to bands in dashboard
+        - Shows offered pay and genre
+    end note
+
+    note right of OpenDate_Pending
+        Open Date: pending
+        - Has active applications
+        - Venue reviewing options
+        - Still visible but marked
+    end note
+
+    note right of OpenDate_Filled
+        Open Date: filled
+        - Band selected and confirmed
+        - No longer accepting applications
+        - Event may be created
+    end note
+
+    %% Band submits application
+    OpenDate_Open --> App_Pending: Band applies\n(applyToOpenDate mutation)
+    OpenDate_Open --> OpenDate_Pending: First application received
+
+    %% More applications can come in
+    OpenDate_Pending --> App_Pending: Another band applies
+
+    %% Venue reviews applications
+    App_Pending --> App_Accepted: Venue accepts\n(respondedAt set)
+    App_Pending --> App_Rejected: Venue rejects\n(respondedAt set)
+
+    %% Acceptance affects open date
+    App_Accepted --> OpenDate_Filled: Slot is now booked
+
+    %% What happens to other applications when one is accepted
+    state "Other Applications" as OtherApps {
+        App_Pending --> App_Rejected: Another band accepted
+    }
+
+    note left of OtherApps
+        When one application is accepted:
+        - Open date becomes "filled"
+        - All other pending applications
+          are automatically rejected
+    end note
+
+    %% Terminal states
+    OpenDate_Filled --> [*]: Booking complete
+    App_Rejected --> [*]: Application closed
+    App_Accepted --> [*]: Band confirmed
+
+    %% Validation rules
+    note right of App_Pending
+        Application: pending
+        - Band waiting for response
+        - Can view status in dashboard
+        - Cannot apply to same date again
+    end note
+
+    note right of App_Accepted
+        Application: accepted
+        - Band was selected
+        - Notification sent to band
+        - Event may be created for slot
+    end note
+
+    note right of App_Rejected
+        Application: rejected
+        - Band not selected
+        - Notification sent to band
+        - Cannot reapply to same date
+    end note

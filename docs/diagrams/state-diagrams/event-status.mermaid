@@ -1,0 +1,69 @@
+%%{init: {'theme': 'dark', 'themeVariables': { 'primaryColor': '#C2FF00', 'primaryTextColor': '#0F0F0F', 'primaryBorderColor': '#C2FF00', 'lineColor': '#8B5CF6', 'secondaryColor': '#1A1A1A', 'tertiaryColor': '#252525'}}}%%
+
+stateDiagram-v2
+    [*] --> available: Venue posts open slot
+
+    state "available" as available
+    state "hold" as hold
+    state "confirmed" as confirmed
+    state "completed" as completed
+    state "cancelled" as cancelled
+
+    note right of available
+        Open slot at venue
+        Visible to bands for booking
+        No band assigned
+    end note
+
+    note right of hold
+        Tentative booking
+        Band interested but not confirmed
+        Visible with "Hold" badge
+    end note
+
+    note right of confirmed
+        Definite event
+        Created by band
+        Visible to fans for RSVP
+    end note
+
+    note right of completed
+        Past event
+        dateTime < now
+        Read-only, historical
+    end note
+
+    note right of cancelled
+        Event cancelled
+        May or may not be visible
+        No longer accepting RSVPs
+    end note
+
+    %% Transitions from available
+    available --> hold: Band expresses interest
+    available --> confirmed: Band books directly
+
+    %% Transitions from hold
+    hold --> confirmed: Booking confirmed
+    hold --> available: Band cancels interest
+    hold --> cancelled: Venue cancels slot
+
+    %% Transitions from confirmed
+    confirmed --> completed: Event date passes
+    confirmed --> hold: Downgrade to tentative
+    confirmed --> cancelled: Event cancelled
+
+    %% Completed is a terminal state (read-only)
+    completed --> [*]
+
+    %% Cancelled can potentially be reopened
+    cancelled --> available: Slot reopened
+    cancelled --> [*]
+
+    %% Direct creation paths
+    note left of [*]
+        Events can be created:
+        1. From open slot (available)
+        2. Directly by band (confirmed)
+        3. With venue negotiation (hold)
+    end note

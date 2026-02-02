@@ -1,0 +1,91 @@
+%%{init: {'theme': 'dark', 'themeVariables': { 'primaryColor': '#C2FF00', 'primaryTextColor': '#0F0F0F', 'primaryBorderColor': '#C2FF00', 'lineColor': '#8B5CF6', 'secondaryColor': '#1A1A1A', 'tertiaryColor': '#252525'}}}%%
+
+sequenceDiagram
+    autonumber
+    participant Fan
+    participant MapView as FanMapView
+    participant EventCard as EventCard Component
+    participant Hook as useEventActions
+    participant ConvexMutation as Convex Mutation
+    participant ConvexDB as Convex Database
+    participant OtherUsers as Other Connected Users
+
+    Note over Fan,OtherUsers: Fan RSVP Flow
+
+    %% Step 1: Fan discovers event
+    Fan->>MapView: View map with events
+    MapView->>MapView: Display event markers
+    Fan->>MapView: Tap on event marker
+
+    MapView->>EventCard: Show event details<br/>in info window
+
+    %% Step 2: Check current RSVP status
+    EventCard->>ConvexDB: useQuery(getUserEventStatus)
+    ConvexDB-->>EventCard: { hasRsvp: false, hasLiked: false }
+    EventCard->>EventCard: Render RSVP button<br/>(not active)
+
+    %% Step 3: Fan decides to RSVP
+    Fan->>EventCard: Click "RSVP" button
+    EventCard->>EventCard: Set loading state
+    EventCard->>Hook: Call rsvp(eventId)
+
+    %% Step 4: Execute mutation
+    Hook->>ConvexMutation: events.rsvp({ eventId })
+
+    %% Step 5: Backend authentication
+    ConvexMutation->>ConvexMutation: ctx.auth.getUserIdentity()
+
+    alt Not authenticated
+        ConvexMutation-->>Hook: Error: "Not authenticated"
+        Hook-->>EventCard: Show error message
+    else Authenticated
+        ConvexMutation->>ConvexDB: Query user by clerkId
+        ConvexDB-->>ConvexMutation: Return user record
+    end
+
+    %% Step 6: Check existing RSVP
+    ConvexMutation->>ConvexDB: Query rsvps<br/>by_user_event index
+    ConvexDB-->>ConvexMutation: Existing RSVP or null
+
+    alt RSVP already exists (toggle off)
+        ConvexMutation->>ConvexDB: Delete RSVP record
+        ConvexMutation->>ConvexDB: Decrement event.rsvpCount
+        ConvexDB-->>ConvexMutation: Updated event
+        ConvexMutation-->>Hook: { action: "removed" }
+
+        Note over ConvexDB: rsvpCount decreased by 1
+    else No existing RSVP (toggle on)
+        ConvexMutation->>ConvexDB: Insert RSVP record<br/>(userId, eventId, createdAt)
+        ConvexMutation->>ConvexDB: Increment event.rsvpCount
+        ConvexDB-->>ConvexMutation: Updated event
+        ConvexMutation-->>Hook: { action: "added" }
+
+        Note over ConvexDB: rsvpCount increased by 1
+    end
+
+    %% Step 7: Real-time updates propagate
+    Hook-->>EventCard: Mutation complete
+    EventCard->>EventCard: Clear loading state
+
+    ConvexDB-->>MapView: Query subscription update
+    MapView->>MapView: Re-render with new count
+
+    ConvexDB-->>EventCard: getUserEventStatus update
+    EventCard->>EventCard: Update RSVP button state<br/>(now active/inactive)
+
+    %% Step 8: Other users see update
+    ConvexDB-->>OtherUsers: Broadcast event update
+    OtherUsers->>OtherUsers: UI shows new RSVP count
+
+    %% Step 9: Calendar updates
+    Fan->>MapView: Navigate to Calendar
+    MapView->>ConvexDB: useQuery(getUserRsvps)
+    ConvexDB-->>MapView: Return RSVP'd events
+
+    alt RSVP was added
+        MapView->>Fan: Show event in "My Events"
+    else RSVP was removed
+        MapView->>Fan: Event no longer in "My Events"
+    end
+
+    Note over Fan,OtherUsers: RSVP Complete - Real-time Sync

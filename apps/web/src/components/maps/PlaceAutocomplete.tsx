@@ -6,22 +6,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import usePlacesAutocomplete from "use-places-autocomplete";
 import { MapPin, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-// Types for venue data extracted from Google Places
-export interface VenueLocationData {
-  name: string;
-  address: string;
-  city: string;
-  coordinates: {
-    lat: number;
-    lng: number;
-  };
-  placeId: string;
-  // Additional optional fields
-  phoneNumber?: string;
-  website?: string;
-  capacity?: number;
-}
+import type { VenueLocationData } from "@/types";
 
 interface PlaceAutocompleteProps {
   value?: VenueLocationData | null;
@@ -218,13 +203,13 @@ export function PlaceAutocomplete({
               let name = place.name || "";
               if (!name || name === place.formatted_address) {
                 // For addresses without a specific venue name
-                const streetNumber = place.address_components?.find(c => 
+                const streetNumber = place.address_components?.find(c =>
                   c.types.includes("street_number")
                 )?.long_name;
-                const route = place.address_components?.find(c => 
+                const route = place.address_components?.find(c =>
                   c.types.includes("route")
                 )?.long_name;
-                name = streetNumber && route 
+                name = streetNumber && route
                   ? `${streetNumber} ${route}`
                   : suggestion.terms[0]?.value || "Location";
               }

@@ -1,6 +1,13 @@
+/**
+ * @fileoverview Convex queries and mutations for user notifications.
+ * Handles notification listing, read status, and automated notification creation.
+ * @module convex/notifications
+ */
+
 import { v } from "convex/values";
 import { query, mutation, internalMutation } from "./_generated/server";
 
+/** Validator for notification type field */
 const notificationTypeValidator = v.union(
   v.literal("event_reminder"),
   v.literal("lineup_change"),
@@ -10,7 +17,22 @@ const notificationTypeValidator = v.union(
   v.literal("message")
 );
 
-// Get notifications for current user
+/**
+ * Gets notifications for the current user with optional filtering.
+ * Includes related event, band, and venue data for each notification.
+ * Returns empty array if not authenticated or user not found.
+ *
+ * @param limit - Optional maximum number of results (default: 50)
+ * @param unreadOnly - Optional filter for unread notifications only
+ * @returns Array of notification documents with event, band, and venue properties
+ *
+ * @example
+ * // Get all notifications
+ * const notifications = useQuery(api.notifications.list, {});
+ *
+ * // Get only unread notifications
+ * const unread = useQuery(api.notifications.list, { unreadOnly: true });
+ */
 export const list = query({
   args: {
     limit: v.optional(v.number()),
@@ -64,7 +86,19 @@ export const list = query({
   },
 });
 
-// Get unread notification count
+/**
+ * Gets the count of unread notifications for the current user.
+ * Used for displaying notification badges.
+ * Returns 0 if not authenticated or user not found.
+ *
+ * @returns Number of unread notifications
+ *
+ * @example
+ * const unreadCount = useQuery(api.notifications.getUnreadCount);
+ * if (unreadCount > 0) {
+ *   // Show badge
+ * }
+ */
 export const getUnreadCount = query({
   args: {},
   handler: async (ctx) => {
@@ -93,7 +127,17 @@ export const getUnreadCount = query({
   },
 });
 
-// Mark notification as read
+/**
+ * Marks a single notification as read.
+ * Requires authentication.
+ *
+ * @param notificationId - The Convex ID of the notification to mark as read
+ * @throws Error if not authenticated or notification not found
+ *
+ * @example
+ * const markAsRead = useMutation(api.notifications.markAsRead);
+ * await markAsRead({ notificationId: "k9x..." });
+ */
 export const markAsRead = mutation({
   args: { notificationId: v.id("notifications") },
   handler: async (ctx, args) => {
@@ -111,7 +155,17 @@ export const markAsRead = mutation({
   },
 });
 
-// Mark all notifications as read
+/**
+ * Marks all notifications as read for the current user.
+ * Requires authentication.
+ *
+ * @returns Object with markedCount indicating how many notifications were marked
+ * @throws Error if not authenticated or user not found
+ *
+ * @example
+ * const markAllAsRead = useMutation(api.notifications.markAllAsRead);
+ * const { markedCount } = await markAllAsRead();
+ */
 export const markAllAsRead = mutation({
   args: {},
   handler: async (ctx) => {
@@ -144,7 +198,17 @@ export const markAllAsRead = mutation({
   },
 });
 
-// Delete a notification
+/**
+ * Deletes a notification.
+ * Requires authentication. Silently succeeds if notification doesn't exist.
+ *
+ * @param notificationId - The Convex ID of the notification to delete
+ * @throws Error if not authenticated
+ *
+ * @example
+ * const remove = useMutation(api.notifications.remove);
+ * await remove({ notificationId: "k9x..." });
+ */
 export const remove = mutation({
   args: { notificationId: v.id("notifications") },
   handler: async (ctx, args) => {
@@ -162,7 +226,21 @@ export const remove = mutation({
   },
 });
 
-// Create a notification (internal use)
+/**
+ * Internal mutation to create a notification.
+ * Not callable from client - only from other Convex functions.
+ *
+ * @param userId - The Convex ID of the recipient user
+ * @param type - The notification type
+ * @param title - Notification headline
+ * @param content - Notification body text
+ * @param eventId - Optional related event ID
+ * @param bandId - Optional related band ID
+ * @param venueId - Optional related venue ID
+ * @returns The new notification's Convex document ID
+ *
+ * @internal
+ */
 export const createNotification = internalMutation({
   args: {
     userId: v.id("users"),
@@ -188,7 +266,19 @@ export const createNotification = internalMutation({
   },
 });
 
-// Create event reminder notification
+/**
+ * Creates event reminder notifications for all users who RSVP'd to an event.
+ * Typically called by a scheduled job before the event starts.
+ * Requires authentication.
+ *
+ * @param eventId - The Convex ID of the event
+ * @returns Object with notifiedCount indicating how many users were notified
+ * @throws Error if event not found
+ *
+ * @example
+ * const createReminder = useMutation(api.notifications.createEventReminder);
+ * const { notifiedCount } = await createReminder({ eventId: "k9x..." });
+ */
 export const createEventReminder = mutation({
   args: {
     eventId: v.id("events"),
@@ -229,7 +319,17 @@ export const createEventReminder = mutation({
   },
 });
 
-// Notify fans who have saved a venue when a new event is created there
+/**
+ * Internal mutation to notify fans when a new event is created at a saved venue or by a saved band.
+ * Called automatically when events are created.
+ *
+ * @param eventId - The Convex ID of the new event
+ * @param venueId - The Convex ID of the venue
+ * @param bandId - The Convex ID of the band
+ * @returns Object with notifiedCount indicating how many users were notified
+ *
+ * @internal
+ */
 export const createNearbyEventNotifications = internalMutation({
   args: {
     eventId: v.id("events"),

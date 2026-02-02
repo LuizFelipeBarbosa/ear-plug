@@ -1,0 +1,127 @@
+%%{init: {'theme': 'dark', 'themeVariables': { 'primaryColor': '#C2FF00', 'primaryTextColor': '#0F0F0F', 'primaryBorderColor': '#C2FF00', 'lineColor': '#8B5CF6', 'secondaryColor': '#1A1A1A', 'tertiaryColor': '#252525'}}}%%
+
+graph TB
+    subgraph DeveloperEnvironment["Developer Environment"]
+        LocalDev["Local Development<br/>pnpm dev"]
+        Git["Git Repository"]
+    end
+
+    subgraph CI_CD["CI/CD Pipeline"]
+        GitHub["GitHub<br/>Main Branch"]
+        TurboCI["Turborepo<br/>Build Cache"]
+    end
+
+    subgraph WebHosting["Web Hosting - Vercel"]
+        VercelEdge["Vercel Edge Network<br/>Global CDN"]
+        VercelFunc["Vercel Functions<br/>API Routes"]
+        NextJS["Next.js 14<br/>SSR + Static"]
+    end
+
+    subgraph MobileDistribution["Mobile Distribution"]
+        subgraph EAS["Expo Application Services"]
+            EASBuild["EAS Build<br/>Native Builds"]
+            EASSubmit["EAS Submit<br/>Store Uploads"]
+            EASUpdate["EAS Update<br/>OTA Updates"]
+        end
+
+        subgraph AppStores["App Stores"]
+            iOS["Apple App Store<br/>iOS Distribution"]
+            Android["Google Play Store<br/>Android Distribution"]
+        end
+    end
+
+    subgraph CloudServices["Cloud Services"]
+        subgraph ConvexCloud["Convex Cloud"]
+            ConvexDeploy["Convex Deployment<br/>npx convex deploy"]
+            ConvexDB["Document Database<br/>Real-time Sync"]
+            ConvexFunctions["Serverless Functions<br/>Queries/Mutations"]
+            ConvexHTTP["HTTP Endpoints<br/>Webhooks"]
+        end
+
+        subgraph ClerkCloud["Clerk Cloud"]
+            ClerkAuth["Authentication<br/>Sign-in/Sign-up"]
+            ClerkJWT["JWT Tokens<br/>Session Management"]
+            ClerkWebhook["Webhooks<br/>User Sync"]
+        end
+
+        subgraph GoogleCloud["Google Cloud Platform"]
+            MapsAPI["Maps JavaScript API"]
+            PlacesAPI["Places API"]
+            MapsSDK["Maps SDK<br/>iOS/Android"]
+        end
+    end
+
+    subgraph EndUsers["End Users"]
+        WebUsers["Web Users<br/>Browser"]
+        iOSUsers["iOS Users<br/>iPhone/iPad"]
+        AndroidUsers["Android Users<br/>Phone/Tablet"]
+    end
+
+    %% Development Flow
+    LocalDev --> Git
+    Git --> GitHub
+
+    %% CI/CD Flow
+    GitHub --> TurboCI
+
+    %% Web Deployment
+    TurboCI --> VercelEdge
+    VercelEdge --> VercelFunc
+    VercelEdge --> NextJS
+
+    %% Mobile Deployment
+    TurboCI --> EASBuild
+    EASBuild --> EASSubmit
+    EASSubmit --> iOS
+    EASSubmit --> Android
+    EASBuild --> EASUpdate
+
+    %% Convex Deployment
+    TurboCI --> ConvexDeploy
+    ConvexDeploy --> ConvexDB
+    ConvexDeploy --> ConvexFunctions
+    ConvexDeploy --> ConvexHTTP
+
+    %% Runtime Connections
+    NextJS --> ConvexDB
+    NextJS --> ClerkAuth
+    NextJS --> MapsAPI
+    NextJS --> PlacesAPI
+
+    EASUpdate --> iOSUsers
+    EASUpdate --> AndroidUsers
+
+    iOS --> iOSUsers
+    Android --> AndroidUsers
+
+    iOSUsers --> ConvexDB
+    iOSUsers --> ClerkAuth
+    iOSUsers --> MapsSDK
+
+    AndroidUsers --> ConvexDB
+    AndroidUsers --> ClerkAuth
+    AndroidUsers --> MapsSDK
+
+    %% Web Users
+    VercelEdge --> WebUsers
+    WebUsers --> ClerkAuth
+
+    %% Clerk Webhook to Convex
+    ClerkWebhook --> ConvexHTTP
+
+    %% Styling
+    classDef dev fill:#252525,stroke:#C2FF00,stroke-width:2px,color:#fff
+    classDef cicd fill:#1A1A1A,stroke:#8B5CF6,stroke-width:2px,color:#fff
+    classDef vercel fill:#0F0F0F,stroke:#C2FF00,stroke-width:2px,color:#C2FF00
+    classDef expo fill:#0F0F0F,stroke:#8B5CF6,stroke-width:2px,color:#8B5CF6
+    classDef cloud fill:#252525,stroke:#C2FF00,stroke-width:1px,color:#fff
+    classDef stores fill:#1A1A1A,stroke:#C2FF00,stroke-width:1px,color:#C2FF00
+    classDef users fill:#C2FF00,stroke:#0F0F0F,stroke-width:2px,color:#0F0F0F
+
+    class LocalDev,Git dev
+    class GitHub,TurboCI cicd
+    class VercelEdge,VercelFunc,NextJS vercel
+    class EAS,EASBuild,EASSubmit,EASUpdate expo
+    class ConvexCloud,ConvexDeploy,ConvexDB,ConvexFunctions,ConvexHTTP,ClerkCloud,ClerkAuth,ClerkJWT,ClerkWebhook,GoogleCloud,MapsAPI,PlacesAPI,MapsSDK cloud
+    class iOS,Android stores
+    class WebUsers,iOSUsers,AndroidUsers users
