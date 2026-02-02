@@ -149,13 +149,13 @@ export default function BookingDetailPage({
       <div className="min-h-screen bg-night p-6">
         <Link
           href="/my-bookings"
-          className="inline-flex items-center gap-2 text-zinc-400 hover:text-white mb-6"
+          className="inline-flex items-center gap-2 text-zinc-400 hover:text-white mb-6 font-medium uppercase tracking-wider text-sm"
         >
           <ArrowLeft className="w-5 h-5" />
           Back to bookings
         </Link>
-        <div className="text-center py-12">
-          <h1 className="text-2xl font-display text-white mb-2">
+        <div className="text-center py-12 border-2 border-dashed border-zinc-800">
+          <h1 className="text-2xl font-bold text-white uppercase tracking-tight mb-2">
             Booking Not Found
           </h1>
           <p className="text-zinc-400">This booking doesn&apos;t exist or you don&apos;t have access</p>
@@ -193,24 +193,24 @@ export default function BookingDetailPage({
 
   return (
     <div className="min-h-screen bg-night pb-24">
-      {/* Header */}
-      <div className="sticky top-0 z-40 bg-night/95 backdrop-blur-lg border-b border-lime/10">
+      {/* Header - Brutalist */}
+      <div className="sticky top-0 z-40 bg-night-secondary border-b-2 border-lime/20">
         <div className="px-4 py-4 flex items-center gap-3">
           <Link
             href="/my-bookings"
-            className="w-10 h-10 rounded-full bg-night-secondary flex items-center justify-center text-white hover:bg-night transition-colors"
+            className="w-10 h-10 bg-night-tertiary border-2 border-zinc-800 flex items-center justify-center text-white hover:border-lime transition-colors touch-target"
           >
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div className="flex-1">
-            <h1 className="text-lg font-medium text-white truncate">
+            <h1 className="text-lg font-bold text-white uppercase tracking-tight truncate">
               {booking.eventName}
             </h1>
             <p className="text-sm text-zinc-400">{booking.band?.name}</p>
           </div>
           <span
             className={cn(
-              "px-2 py-1 rounded-full text-xs font-medium",
+              "px-2 py-1 text-xs font-bold uppercase tracking-wider",
               statusConfig?.bgColor,
               statusConfig?.color
             )}
@@ -224,18 +224,18 @@ export default function BookingDetailPage({
       <div className="p-4 space-y-4">
         {/* Status Message */}
         {statusConfig?.description && (
-          <div className="bg-night-secondary rounded-xl p-4 border border-lime/10">
-            <p className="text-zinc-300">{statusConfig.description}</p>
+          <div className="bg-night-secondary border-2 border-zinc-800 p-4">
+            <p className="text-zinc-300 text-sm">{statusConfig.description}</p>
           </div>
         )}
 
         {/* Payment Action */}
         {(canPayDeposit || canPayFinal) && (
-          <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4">
+          <div className="bg-amber-500/10 border-2 border-amber-500/30 p-4">
             <div className="flex items-start gap-3">
               <AlertCircle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
               <div className="flex-1">
-                <p className="text-amber-200 font-medium">
+                <p className="text-amber-200 font-bold uppercase tracking-wider text-sm">
                   {canPayDeposit ? "Deposit Payment Required" : "Final Payment Due"}
                 </p>
                 <p className="text-sm text-amber-200/70 mt-1">
@@ -246,7 +246,7 @@ export default function BookingDetailPage({
                 <button
                   onClick={canPayDeposit ? handlePayDeposit : handlePayFinal}
                   disabled={isProcessingPayment}
-                  className="mt-3 px-4 py-2 bg-lime text-night font-medium rounded-lg hover:bg-lime/90 transition-colors disabled:opacity-50"
+                  className="mt-3 px-4 py-2 bg-lime text-night font-bold uppercase tracking-wider text-sm border-2 border-lime hover:bg-transparent hover:text-lime transition-colors disabled:opacity-50"
                 >
                   {isProcessingPayment
                     ? "Processing..."
@@ -258,14 +258,14 @@ export default function BookingDetailPage({
         )}
 
         {/* Event Details */}
-        <div className="bg-night-secondary rounded-xl p-4 border border-lime/10">
-          <h2 className="text-lg font-medium text-white mb-4">Event Details</h2>
+        <div className="bg-night-secondary border-2 border-zinc-800 p-4">
+          <h2 className="text-lg font-bold text-white uppercase tracking-tight mb-4">Event Details</h2>
 
           <div className="space-y-3">
             <div className="flex items-center gap-3">
               <Calendar className="w-5 h-5 text-zinc-500" />
               <div>
-                <p className="text-white">{formatFullDate(booking.eventDateTime)}</p>
+                <p className="text-white font-medium">{formatFullDate(booking.eventDateTime)}</p>
                 <p className="text-sm text-zinc-400">
                   {formatEventTime(booking.eventDateTime)}
                 </p>
@@ -295,35 +295,35 @@ export default function BookingDetailPage({
             )}
 
             {booking.specialRequests && (
-              <div className="mt-4 pt-4 border-t border-lime/10">
-                <p className="text-sm text-zinc-400 mb-1">Special Requests</p>
-                <p className="text-zinc-300">{booking.specialRequests}</p>
+              <div className="mt-4 pt-4 border-t-2 border-zinc-800">
+                <p className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1">Special Requests</p>
+                <p className="text-zinc-300 text-sm">{booking.specialRequests}</p>
               </div>
             )}
           </div>
         </div>
 
         {/* Payment Summary */}
-        <div className="bg-night-secondary rounded-xl p-4 border border-lime/10">
-          <h2 className="text-lg font-medium text-white mb-4">Payment</h2>
+        <div className="bg-night-secondary border-2 border-zinc-800 p-4">
+          <h2 className="text-lg font-bold text-white uppercase tracking-tight mb-4">Payment</h2>
 
           <div className="space-y-2">
             <div className="flex justify-between">
               <span className="text-zinc-400">Total</span>
-              <span className="text-white font-medium">
+              <span className="text-white font-bold">
                 {formatPrice(booking.totalPriceInCents)}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-zinc-400">Paid</span>
-              <span className="text-green-400">
+              <span className="text-green-400 font-bold">
                 {formatPrice(booking.paidAmountInCents)}
               </span>
             </div>
             {remainingBalance > 0 && (
-              <div className="flex justify-between pt-2 border-t border-lime/10">
+              <div className="flex justify-between pt-2 border-t-2 border-zinc-800">
                 <span className="text-zinc-300">Remaining</span>
-                <span className="text-lime font-medium">
+                <span className="text-lime font-bold">
                   {formatPrice(remainingBalance)}
                 </span>
               </div>
@@ -332,14 +332,14 @@ export default function BookingDetailPage({
         </div>
 
         {/* Messages */}
-        <div className="bg-night-secondary rounded-xl border border-lime/10 overflow-hidden">
-          <div className="p-4 border-b border-lime/10">
-            <h2 className="text-lg font-medium text-white">Messages</h2>
+        <div className="bg-night-secondary border-2 border-zinc-800 overflow-hidden">
+          <div className="p-4 border-b-2 border-zinc-800">
+            <h2 className="text-lg font-bold text-white uppercase tracking-tight">Messages</h2>
           </div>
 
           <div className="h-64 overflow-y-auto p-4 space-y-3">
             {messages.length === 0 ? (
-              <p className="text-center text-zinc-500 py-8">
+              <p className="text-center text-zinc-500 py-8 uppercase text-xs tracking-wider">
                 No messages yet. Start a conversation!
               </p>
             ) : (
@@ -353,23 +353,23 @@ export default function BookingDetailPage({
                 >
                   <div
                     className={cn(
-                      "max-w-[80%] rounded-xl px-3 py-2",
+                      "max-w-[80%] px-4 py-3",
                       message.isCurrentUser
                         ? "bg-lime text-night"
                         : message.messageType === "system"
-                          ? "bg-night text-zinc-400 text-sm italic"
-                          : "bg-night text-white"
+                          ? "bg-night-tertiary text-zinc-400 text-sm italic border border-zinc-800"
+                          : "bg-night-tertiary text-white border border-zinc-800"
                     )}
                   >
                     {!message.isCurrentUser && message.messageType !== "system" && (
-                      <p className="text-xs text-zinc-400 mb-1">
+                      <p className="text-xs text-zinc-400 mb-1 uppercase tracking-wider">
                         {message.sender.name}
                       </p>
                     )}
-                    <p>{message.content}</p>
+                    <p className="text-sm">{message.content}</p>
                     <p
                       className={cn(
-                        "text-xs mt-1",
+                        "text-xs mt-1 uppercase tracking-wider",
                         message.isCurrentUser ? "text-night/60" : "text-zinc-500"
                       )}
                     >
@@ -386,7 +386,7 @@ export default function BookingDetailPage({
           {!["completed", "cancelled", "rejected", "expired"].includes(
             booking.status
           ) && (
-            <div className="p-4 border-t border-lime/10">
+            <div className="p-4 border-t-2 border-zinc-800">
               <div className="flex gap-2">
                 <input
                   type="text"
@@ -399,12 +399,12 @@ export default function BookingDetailPage({
                     }
                   }}
                   placeholder="Type a message..."
-                  className="flex-1 px-3 py-2 bg-night border border-lime/10 rounded-lg text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime/30"
+                  className="flex-1 px-4 py-3 bg-night-tertiary border-2 border-zinc-800 text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime transition-colors"
                 />
                 <button
                   onClick={handleSendMessage}
                   disabled={!messageInput.trim() || isSending}
-                  className="px-4 py-2 bg-lime text-night rounded-lg hover:bg-lime/90 transition-colors disabled:opacity-50"
+                  className="px-4 py-3 bg-lime text-night border-2 border-lime hover:bg-transparent hover:text-lime transition-colors disabled:opacity-50"
                 >
                   <Send className="w-5 h-5" />
                 </button>
@@ -415,8 +415,8 @@ export default function BookingDetailPage({
 
         {/* Cancel Booking */}
         {canCancel && (
-          <div className="bg-night-secondary rounded-xl p-4 border border-lime/10">
-            <h2 className="text-lg font-medium text-white mb-2">
+          <div className="bg-night-secondary border-2 border-zinc-800 p-4">
+            <h2 className="text-lg font-bold text-white uppercase tracking-tight mb-2">
               Cancel Booking
             </h2>
             {booking.paidAmountInCents > 0 ? (
@@ -436,7 +436,7 @@ export default function BookingDetailPage({
             {!showCancelConfirm ? (
               <button
                 onClick={() => setShowCancelConfirm(true)}
-                className="w-full py-2 text-red-400 font-medium rounded-lg border border-red-400/30 hover:bg-red-400/10 transition-colors"
+                className="w-full py-2 text-red-400 font-bold uppercase tracking-wider text-sm border-2 border-red-400/30 hover:bg-red-400/10 transition-colors"
               >
                 Cancel Booking
               </button>
@@ -454,14 +454,14 @@ export default function BookingDetailPage({
                 <div className="flex gap-2">
                   <button
                     onClick={() => setShowCancelConfirm(false)}
-                    className="flex-1 py-2 bg-night text-zinc-300 font-medium rounded-lg border border-zinc-700 hover:border-zinc-500 transition-colors"
+                    className="flex-1 py-2 bg-night-tertiary text-zinc-300 font-bold uppercase tracking-wider text-sm border-2 border-zinc-800 hover:border-zinc-600 transition-colors"
                   >
                     Keep Booking
                   </button>
                   <button
                     onClick={handleCancel}
                     disabled={isCancelling}
-                    className="flex-1 py-2 bg-red-500 text-white font-medium rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50"
+                    className="flex-1 py-2 bg-red-500 text-white font-bold uppercase tracking-wider text-sm hover:bg-red-600 transition-colors disabled:opacity-50"
                   >
                     {isCancelling ? "Cancelling..." : "Yes, Cancel"}
                   </button>

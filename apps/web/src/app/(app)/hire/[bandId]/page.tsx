@@ -73,13 +73,13 @@ export default function BandHireDetailPage({
       <div className="min-h-screen bg-night p-6">
         <Link
           href="/hire"
-          className="inline-flex items-center gap-2 text-zinc-400 hover:text-white mb-6"
+          className="inline-flex items-center gap-2 text-zinc-400 hover:text-white mb-6 font-medium uppercase tracking-wider text-sm"
         >
           <ArrowLeft className="w-5 h-5" />
           Back to marketplace
         </Link>
-        <div className="text-center py-12">
-          <h1 className="text-2xl font-display text-white mb-2">
+        <div className="text-center py-12 border-2 border-dashed border-zinc-800">
+          <h1 className="text-2xl font-bold text-white uppercase tracking-tight mb-2">
             Band Not Available
           </h1>
           <p className="text-zinc-400">
@@ -140,7 +140,7 @@ export default function BandHireDetailPage({
   return (
     <div className="min-h-screen bg-night pb-24">
       {/* Header Image */}
-      <div className="relative h-64 bg-night-secondary">
+      <div className="relative h-64 bg-night-secondary overflow-hidden">
         {band.image ? (
           <img
             src={band.image}
@@ -157,7 +157,7 @@ export default function BandHireDetailPage({
         {/* Back Button */}
         <Link
           href="/hire"
-          className="absolute top-4 left-4 w-10 h-10 rounded-full bg-night/80 backdrop-blur-sm flex items-center justify-center text-white hover:bg-night transition-colors"
+          className="absolute top-4 left-4 w-10 h-10 bg-night/80 backdrop-blur-sm border-2 border-zinc-800 flex items-center justify-center text-white hover:border-lime transition-colors touch-target"
         >
           <ArrowLeft className="w-5 h-5" />
         </Link>
@@ -166,9 +166,9 @@ export default function BandHireDetailPage({
       {/* Content */}
       <div className="px-4 -mt-16 relative">
         {/* Band Info */}
-        <div className="bg-night-secondary rounded-xl p-4 border border-lime/10 mb-4">
-          <h1 className="text-2xl font-display text-white mb-1">{band.name}</h1>
-          <div className="flex items-center gap-1 text-zinc-400 mb-3">
+        <div className="bg-night-secondary border-2 border-zinc-800 p-4 mb-4">
+          <h1 className="text-2xl font-bold text-white uppercase tracking-tight mb-1">{band.name}</h1>
+          <div className="flex items-center gap-1 text-sm text-zinc-400 mb-3">
             <MapPin className="w-4 h-4" />
             <span>{band.location}</span>
           </div>
@@ -179,7 +179,7 @@ export default function BandHireDetailPage({
               {band.genres.map((genre: Genre) => (
                 <span
                   key={genre}
-                  className="px-3 py-1 rounded-full text-sm font-medium text-night"
+                  className="px-3 py-1 text-sm font-bold uppercase tracking-wider text-night"
                   style={{ backgroundColor: GENRE_COLORS[genre] }}
                 >
                   {genre.charAt(0).toUpperCase() + genre.slice(1)}
@@ -189,17 +189,17 @@ export default function BandHireDetailPage({
           )}
 
           {/* Bio */}
-          {band.bio && <p className="text-zinc-300">{band.bio}</p>}
+          {band.bio && <p className="text-zinc-300 text-sm leading-relaxed">{band.bio}</p>}
 
           {/* Social Links */}
           {band.socialLinks && (
-            <div className="flex gap-3 mt-4 pt-4 border-t border-lime/10">
+            <div className="flex gap-3 mt-4 pt-4 border-t-2 border-zinc-800">
               {band.socialLinks.spotify && (
                 <a
                   href={band.socialLinks.spotify}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-zinc-400 hover:text-lime"
+                  className="text-zinc-400 hover:text-lime transition-colors text-sm font-medium uppercase tracking-wider"
                 >
                   Spotify
                 </a>
@@ -209,7 +209,7 @@ export default function BandHireDetailPage({
                   href={band.socialLinks.instagram}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-zinc-400 hover:text-lime"
+                  className="text-zinc-400 hover:text-lime transition-colors text-sm font-medium uppercase tracking-wider"
                 >
                   Instagram
                 </a>
@@ -219,7 +219,7 @@ export default function BandHireDetailPage({
                   href={band.socialLinks.website}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-zinc-400 hover:text-lime flex items-center gap-1"
+                  className="text-zinc-400 hover:text-lime transition-colors text-sm font-medium uppercase tracking-wider flex items-center gap-1"
                 >
                   Website <ExternalLink className="w-3 h-3" />
                 </a>
@@ -229,37 +229,37 @@ export default function BandHireDetailPage({
         </div>
 
         {/* Pricing */}
-        <div className="bg-night-secondary rounded-xl p-4 border border-lime/10 mb-4">
-          <h2 className="text-lg font-medium text-white mb-4">Pricing</h2>
+        <div className="bg-night-secondary border-2 border-zinc-800 p-4 mb-4">
+          <h2 className="text-lg font-bold text-white uppercase tracking-tight mb-4">Pricing</h2>
 
           <div className="flex items-center justify-between mb-4">
             <div>
-              <p className="text-2xl font-display text-lime">
+              <p className="text-3xl font-bold text-lime">
                 {formatPrice(listing.baseHourlyRate)}
-                <span className="text-sm text-zinc-400 font-normal">/hour</span>
+                <span className="text-sm text-zinc-400 font-normal uppercase tracking-wider">/hour</span>
               </p>
-              <p className="text-sm text-zinc-400">
+              <p className="text-sm text-zinc-400 mt-1">
                 Minimum {listing.minimumHours} hours
               </p>
             </div>
             <div className="text-right">
-              <p className="text-sm text-zinc-400">Deposit</p>
-              <p className="text-white font-medium">{listing.depositPercentage}%</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-zinc-500">Deposit</p>
+              <p className="text-white font-bold">{listing.depositPercentage}%</p>
             </div>
           </div>
 
           {/* Add-ons */}
           {listing.addOns && listing.addOns.length > 0 && (
-            <div className="border-t border-lime/10 pt-4">
-              <p className="text-sm text-zinc-400 mb-2">Available Add-ons</p>
+            <div className="border-t-2 border-zinc-800 pt-4">
+              <p className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">Available Add-ons</p>
               <div className="space-y-2">
                 {listing.addOns.map((addOn) => (
                   <div
                     key={addOn.name}
-                    className="flex items-center justify-between text-sm"
+                    className="flex items-center justify-between text-sm py-2 border-b border-zinc-800 last:border-0"
                   >
                     <span className="text-zinc-300">{addOn.name}</span>
-                    <span className="text-lime">{formatPrice(addOn.priceInCents)}</span>
+                    <span className="text-lime font-bold">{formatPrice(addOn.priceInCents)}</span>
                   </div>
                 ))}
               </div>
@@ -268,15 +268,15 @@ export default function BandHireDetailPage({
         </div>
 
         {/* Event Types */}
-        <div className="bg-night-secondary rounded-xl p-4 border border-lime/10 mb-4">
-          <h2 className="text-lg font-medium text-white mb-3">Available For</h2>
+        <div className="bg-night-secondary border-2 border-zinc-800 p-4 mb-4">
+          <h2 className="text-lg font-bold text-white uppercase tracking-tight mb-3">Available For</h2>
           <div className="flex flex-wrap gap-2">
             {listing.eventTypes.map((type) => {
               const eventType = EVENT_TYPES.find((t) => t.value === type);
               return (
                 <span
                   key={type}
-                  className="px-3 py-1.5 rounded-lg bg-night text-zinc-300 text-sm"
+                  className="px-3 py-1.5 bg-night-tertiary text-zinc-300 text-sm border border-zinc-800 font-medium uppercase tracking-wider"
                 >
                   {eventType?.label || type}
                 </span>
@@ -287,16 +287,16 @@ export default function BandHireDetailPage({
 
         {/* Booking Notes */}
         {listing.bookingNotes && (
-          <div className="bg-night-secondary rounded-xl p-4 border border-lime/10 mb-4">
-            <h2 className="text-lg font-medium text-white mb-2">Booking Info</h2>
+          <div className="bg-night-secondary border-2 border-zinc-800 p-4 mb-4">
+            <h2 className="text-lg font-bold text-white uppercase tracking-tight mb-2">Booking Info</h2>
             <p className="text-zinc-400 text-sm">{listing.bookingNotes}</p>
           </div>
         )}
 
         {/* Cancellation Policy */}
         {listing.cancellationPolicy && (
-          <div className="bg-night-secondary rounded-xl p-4 border border-lime/10 mb-4">
-            <h2 className="text-lg font-medium text-white mb-2">Cancellation Policy</h2>
+          <div className="bg-night-secondary border-2 border-zinc-800 p-4 mb-4">
+            <h2 className="text-lg font-bold text-white uppercase tracking-tight mb-2">Cancellation Policy</h2>
             <p className="text-zinc-400 text-sm">{listing.cancellationPolicy}</p>
           </div>
         )}
@@ -305,7 +305,7 @@ export default function BandHireDetailPage({
         {isFan && !showBookingForm && (
           <button
             onClick={() => setShowBookingForm(true)}
-            className="w-full py-4 bg-lime text-night font-bold text-lg rounded-xl hover:bg-lime/90 transition-colors"
+            className="w-full py-4 bg-lime text-night font-bold uppercase tracking-wider text-lg border-2 border-lime hover:bg-transparent hover:text-lime transition-all shadow-brutal hover:shadow-none hover:translate-x-1 hover:translate-y-1"
           >
             Request Booking
           </button>
@@ -315,13 +315,15 @@ export default function BandHireDetailPage({
         {showBookingForm && (
           <form
             onSubmit={handleSubmit}
-            className="bg-night-secondary rounded-xl p-4 border border-lime/10 space-y-4"
+            className="bg-night-secondary border-2 border-zinc-800 p-4 space-y-4"
           >
-            <h2 className="text-lg font-medium text-white">Book {band.name}</h2>
+            <h2 className="text-lg font-bold text-white uppercase tracking-tight">
+              Book {band.name}
+            </h2>
 
             {/* Event Type */}
             <div>
-              <label className="text-sm text-zinc-400 mb-2 block">
+              <label className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2 block">
                 Event Type *
               </label>
               <select
@@ -333,7 +335,7 @@ export default function BandHireDetailPage({
                     eventType: e.target.value as MarketplaceEventType,
                   }))
                 }
-                className="w-full px-3 py-2 bg-night border border-lime/10 rounded-lg text-white focus:outline-none focus:border-lime/30"
+                className="w-full px-4 py-3 bg-night-tertiary border-2 border-zinc-800 text-white focus:outline-none focus:border-lime transition-colors"
               >
                 <option value="">Select event type</option>
                 {listing.eventTypes.map((type) => {
@@ -349,7 +351,7 @@ export default function BandHireDetailPage({
 
             {/* Event Name */}
             <div>
-              <label className="text-sm text-zinc-400 mb-2 block">
+              <label className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2 block">
                 Event Name *
               </label>
               <input
@@ -360,13 +362,13 @@ export default function BandHireDetailPage({
                   setFormData((f) => ({ ...f, eventName: e.target.value }))
                 }
                 placeholder="e.g., Smith Wedding Reception"
-                className="w-full px-3 py-2 bg-night border border-lime/10 rounded-lg text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime/30"
+                className="w-full px-4 py-3 bg-night-tertiary border-2 border-zinc-800 text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime transition-colors"
               />
             </div>
 
             {/* Date/Time */}
             <div>
-              <label className="text-sm text-zinc-400 mb-2 block">
+              <label className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2 block">
                 Date & Time *
               </label>
               <input
@@ -377,13 +379,13 @@ export default function BandHireDetailPage({
                   setFormData((f) => ({ ...f, eventDateTime: e.target.value }))
                 }
                 min={new Date().toISOString().slice(0, 16)}
-                className="w-full px-3 py-2 bg-night border border-lime/10 rounded-lg text-white focus:outline-none focus:border-lime/30"
+                className="w-full px-4 py-3 bg-night-tertiary border-2 border-zinc-800 text-white focus:outline-none focus:border-lime transition-colors"
               />
             </div>
 
             {/* Duration */}
             <div>
-              <label className="text-sm text-zinc-400 mb-2 block">
+              <label className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2 block">
                 Duration (hours) *
               </label>
               <input
@@ -398,16 +400,16 @@ export default function BandHireDetailPage({
                     durationHours: Number(e.target.value),
                   }))
                 }
-                className="w-full px-3 py-2 bg-night border border-lime/10 rounded-lg text-white focus:outline-none focus:border-lime/30"
+                className="w-full px-4 py-3 bg-night-tertiary border-2 border-zinc-800 text-white focus:outline-none focus:border-lime transition-colors"
               />
-              <p className="text-xs text-zinc-500 mt-1">
+              <p className="text-xs text-zinc-500 mt-1 uppercase tracking-wider">
                 Minimum {listing.minimumHours} hours
               </p>
             </div>
 
             {/* Location */}
             <div>
-              <label className="text-sm text-zinc-400 mb-2 block">
+              <label className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2 block">
                 Event Location *
               </label>
               <input
@@ -418,13 +420,15 @@ export default function BandHireDetailPage({
                   setFormData((f) => ({ ...f, eventLocation: e.target.value }))
                 }
                 placeholder="Full address"
-                className="w-full px-3 py-2 bg-night border border-lime/10 rounded-lg text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime/30"
+                className="w-full px-4 py-3 bg-night-tertiary border-2 border-zinc-800 text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime transition-colors"
               />
             </div>
 
             {/* City */}
             <div>
-              <label className="text-sm text-zinc-400 mb-2 block">City</label>
+              <label className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2 block">
+                City
+              </label>
               <input
                 type="text"
                 value={formData.eventCity}
@@ -432,13 +436,13 @@ export default function BandHireDetailPage({
                   setFormData((f) => ({ ...f, eventCity: e.target.value }))
                 }
                 placeholder="City name"
-                className="w-full px-3 py-2 bg-night border border-lime/10 rounded-lg text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime/30"
+                className="w-full px-4 py-3 bg-night-tertiary border-2 border-zinc-800 text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime transition-colors"
               />
             </div>
 
             {/* Guest Count */}
             <div>
-              <label className="text-sm text-zinc-400 mb-2 block">
+              <label className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2 block">
                 Expected Guests
               </label>
               <input
@@ -449,21 +453,21 @@ export default function BandHireDetailPage({
                   setFormData((f) => ({ ...f, guestCount: e.target.value }))
                 }
                 placeholder="Number of guests"
-                className="w-full px-3 py-2 bg-night border border-lime/10 rounded-lg text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime/30"
+                className="w-full px-4 py-3 bg-night-tertiary border-2 border-zinc-800 text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime transition-colors"
               />
             </div>
 
             {/* Add-ons */}
             {listing.addOns && listing.addOns.length > 0 && (
               <div>
-                <label className="text-sm text-zinc-400 mb-2 block">
+                <label className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2 block">
                   Add-ons
                 </label>
                 <div className="space-y-2">
                   {listing.addOns.map((addOn) => (
                     <label
                       key={addOn.name}
-                      className="flex items-center justify-between p-3 bg-night rounded-lg cursor-pointer hover:bg-night/50"
+                      className="flex items-center justify-between p-3 bg-night-tertiary border-2 border-zinc-800 cursor-pointer hover:border-zinc-600 transition-colors"
                     >
                       <div className="flex items-center gap-3">
                         <input
@@ -484,10 +488,10 @@ export default function BandHireDetailPage({
                               }));
                             }
                           }}
-                          className="w-4 h-4 text-lime bg-night border-lime/30 rounded focus:ring-lime"
+                          className="w-4 h-4 text-lime bg-night border-2 border-zinc-600 rounded-none focus:ring-lime"
                         />
                         <div>
-                          <p className="text-white">{addOn.name}</p>
+                          <p className="text-white font-medium">{addOn.name}</p>
                           {addOn.description && (
                             <p className="text-xs text-zinc-500">
                               {addOn.description}
@@ -495,7 +499,7 @@ export default function BandHireDetailPage({
                           )}
                         </div>
                       </div>
-                      <span className="text-lime">
+                      <span className="text-lime font-bold">
                         +{formatPrice(addOn.priceInCents)}
                       </span>
                     </label>
@@ -506,7 +510,7 @@ export default function BandHireDetailPage({
 
             {/* Special Requests */}
             <div>
-              <label className="text-sm text-zinc-400 mb-2 block">
+              <label className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2 block">
                 Special Requests
               </label>
               <textarea
@@ -516,12 +520,12 @@ export default function BandHireDetailPage({
                 }
                 placeholder="Any special requirements or notes..."
                 rows={3}
-                className="w-full px-3 py-2 bg-night border border-lime/10 rounded-lg text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime/30 resize-none"
+                className="w-full px-4 py-3 bg-night-tertiary border-2 border-zinc-800 text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime transition-colors resize-none"
               />
             </div>
 
             {/* Price Summary */}
-            <div className="border-t border-lime/10 pt-4">
+            <div className="border-t-2 border-zinc-800 pt-4">
               <div className="flex justify-between mb-2">
                 <span className="text-zinc-400">
                   {formatPrice(listing.baseHourlyRate)} x {formData.durationHours}{" "}
@@ -543,28 +547,28 @@ export default function BandHireDetailPage({
                   </div>
                 );
               })}
-              <div className="flex justify-between font-medium text-lg mt-2 pt-2 border-t border-lime/10">
-                <span className="text-white">Total</span>
+              <div className="flex justify-between font-bold text-lg mt-2 pt-2 border-t-2 border-zinc-800">
+                <span className="text-white uppercase tracking-wider">Total</span>
                 <span className="text-lime">{formatPrice(calculateTotal())}</span>
               </div>
-              <p className="text-xs text-zinc-500 mt-1">
+              <p className="text-xs text-zinc-500 mt-1 uppercase tracking-wider">
                 Deposit due on acceptance: {formatPrice(Math.round(calculateTotal() * listing.depositPercentage / 100))}
               </p>
             </div>
 
             {/* Submit Buttons */}
-            <div className="flex gap-2">
+            <div className="flex gap-3">
               <button
                 type="button"
                 onClick={() => setShowBookingForm(false)}
-                className="flex-1 py-3 bg-night text-zinc-300 font-medium rounded-lg border border-zinc-700 hover:border-zinc-500 transition-colors"
+                className="flex-1 py-3 bg-night-tertiary text-zinc-300 font-bold uppercase tracking-wider border-2 border-zinc-800 hover:border-zinc-600 transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting || !formData.eventType || !formData.eventDateTime}
-                className="flex-1 py-3 bg-lime text-night font-medium rounded-lg hover:bg-lime/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 py-3 bg-lime text-night font-bold uppercase tracking-wider border-2 border-lime hover:bg-transparent hover:text-lime transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? "Submitting..." : "Submit Request"}
               </button>

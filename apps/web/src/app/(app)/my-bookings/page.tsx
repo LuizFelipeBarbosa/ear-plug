@@ -40,7 +40,7 @@ export default function MyBookingsPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-night p-6">
         <div className="text-center">
-          <h1 className="text-2xl font-display text-white mb-2">Fans Only</h1>
+          <h1 className="text-2xl font-bold text-white uppercase tracking-tight mb-2">Fans Only</h1>
           <p className="text-zinc-400">
             This page is for fans to manage their band bookings.
           </p>
@@ -92,10 +92,10 @@ export default function MyBookingsPage() {
 
   return (
     <div className="min-h-screen bg-night pb-24">
-      {/* Header */}
-      <div className="sticky top-0 z-40 bg-night/95 backdrop-blur-lg border-b border-lime/10">
+      {/* Header - Brutalist */}
+      <div className="sticky top-0 z-40 bg-night-secondary border-b-2 border-lime/20">
         <div className="px-4 py-4">
-          <h1 className="text-2xl font-display text-white">My Bookings</h1>
+          <h1 className="text-2xl font-bold text-white uppercase tracking-tight">My Bookings</h1>
           <p className="text-sm text-zinc-400 mt-1">
             Track your band booking requests
           </p>
@@ -108,17 +108,17 @@ export default function MyBookingsPage() {
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors",
+                "flex items-center gap-2 px-4 py-2 font-bold uppercase tracking-wider text-xs transition-colors border-2",
                 activeTab === tab.id
-                  ? "bg-lime text-night"
-                  : "bg-night-secondary text-zinc-400 hover:text-white"
+                  ? "bg-lime text-night border-lime"
+                  : "bg-night-tertiary text-zinc-400 border-zinc-800 hover:border-zinc-600"
               )}
             >
               {tab.label}
               {tab.count !== undefined && tab.count > 0 && (
                 <span
                   className={cn(
-                    "min-w-[20px] h-5 rounded-full text-xs flex items-center justify-center",
+                    "min-w-[20px] h-5 flex items-center justify-center px-1 text-xs",
                     activeTab === tab.id
                       ? "bg-night text-lime"
                       : "bg-lime text-night"
@@ -135,11 +135,11 @@ export default function MyBookingsPage() {
       {/* Content */}
       <div className="p-4">
         {filteredBookings.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-night-secondary flex items-center justify-center">
-              <Calendar className="w-8 h-8 text-zinc-500" />
+          <div className="text-center py-12 border-2 border-dashed border-zinc-800">
+            <div className="w-16 h-16 mx-auto mb-4 bg-night-tertiary border-2 border-zinc-800 flex items-center justify-center">
+              <Calendar className="w-8 h-8 text-zinc-600" />
             </div>
-            <p className="text-zinc-400">
+            <p className="text-zinc-400 font-medium">
               {activeTab === "active" && "No active booking requests"}
               {activeTab === "upcoming" && "No upcoming confirmed bookings"}
               {activeTab === "past" && "No past bookings"}
@@ -147,7 +147,7 @@ export default function MyBookingsPage() {
             {activeTab === "active" && (
               <Link
                 href="/hire"
-                className="inline-block mt-4 text-lime hover:text-lime/80"
+                className="inline-block mt-4 text-lime hover:text-lime/80 font-bold uppercase tracking-wider text-sm"
               >
                 Browse bands to hire
               </Link>
@@ -155,6 +155,9 @@ export default function MyBookingsPage() {
           </div>
         ) : (
           <div className="space-y-4">
+            <p className="text-xs font-bold uppercase tracking-wider text-zinc-500">
+              {filteredBookings.length} booking{filteredBookings.length !== 1 ? "s" : ""}
+            </p>
             {filteredBookings.map((booking) => (
               <BookingCard key={booking._id} booking={booking} />
             ))}
@@ -195,11 +198,11 @@ function BookingCard({ booking }: BookingCardProps) {
   return (
     <Link
       href={`/my-bookings/${booking._id}`}
-      className="block bg-night-secondary rounded-xl overflow-hidden border border-lime/10 hover:border-lime/30 transition-colors"
+      className="block bg-night-secondary border-2 border-zinc-800 overflow-hidden hover:border-lime/30 transition-colors group"
     >
       {/* Band Image */}
       <div className="flex">
-        <div className="w-24 h-24 bg-night flex-shrink-0">
+        <div className="w-24 h-24 bg-night flex-shrink-0 border-r-2 border-zinc-800">
           {booking.band?.image ? (
             <img
               src={booking.band.image}
@@ -216,7 +219,7 @@ function BookingCard({ booking }: BookingCardProps) {
         <div className="flex-1 p-3">
           <div className="flex items-start justify-between">
             <div>
-              <h3 className="text-white font-medium line-clamp-1">
+              <h3 className="text-white font-bold uppercase tracking-tight line-clamp-1">
                 {booking.eventName}
               </h3>
               <p className="text-sm text-zinc-400">
@@ -227,11 +230,11 @@ function BookingCard({ booking }: BookingCardProps) {
           </div>
 
           <div className="flex items-center gap-3 mt-2 text-xs text-zinc-400">
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1 uppercase tracking-wider">
               <Calendar className="w-3 h-3" />
               {formatEventDate(booking.eventDateTime)}
             </span>
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1 uppercase tracking-wider">
               <Clock className="w-3 h-3" />
               {booking.durationHours}h
             </span>
@@ -240,10 +243,10 @@ function BookingCard({ booking }: BookingCardProps) {
       </div>
 
       {/* Status Bar */}
-      <div className="px-3 py-2 border-t border-lime/10 flex items-center justify-between">
+      <div className="px-3 py-2 border-t-2 border-zinc-800 flex items-center justify-between">
         <span
           className={cn(
-            "px-2 py-1 rounded-full text-xs font-medium",
+            "px-2 py-1 text-xs font-bold uppercase tracking-wider",
             statusConfig?.bgColor,
             statusConfig?.color
           )}
@@ -253,11 +256,11 @@ function BookingCard({ booking }: BookingCardProps) {
 
         <div className="flex items-center gap-2">
           {(isDepositDue || isFinalPaymentDue) && (
-            <span className="text-xs text-amber-400 font-medium">
+            <span className="text-xs text-amber-400 font-bold uppercase tracking-wider">
               Payment required
             </span>
           )}
-          <span className="text-sm text-lime font-medium">
+          <span className="text-sm text-lime font-bold">
             {formatPrice(booking.totalPriceInCents)}
           </span>
         </div>

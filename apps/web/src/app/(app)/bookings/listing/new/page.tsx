@@ -56,13 +56,13 @@ export default function NewListingPage() {
       <div className="min-h-screen bg-night p-6">
         <Link
           href="/bookings"
-          className="inline-flex items-center gap-2 text-zinc-400 hover:text-white mb-6"
+          className="inline-flex items-center gap-2 text-zinc-400 hover:text-white mb-6 font-medium uppercase tracking-wider text-sm"
         >
           <ArrowLeft className="w-5 h-5" />
           Back
         </Link>
-        <div className="text-center py-12">
-          <h1 className="text-2xl font-display text-white mb-2">
+        <div className="text-center py-12 border-2 border-dashed border-zinc-800">
+          <h1 className="text-2xl font-bold text-white uppercase tracking-tight mb-2">
             Musicians Only
           </h1>
           <p className="text-zinc-400">
@@ -133,17 +133,17 @@ export default function NewListingPage() {
 
   return (
     <div className="min-h-screen bg-night pb-24">
-      {/* Header */}
-      <div className="sticky top-0 z-40 bg-night/95 backdrop-blur-lg border-b border-lime/10">
+      {/* Header - Brutalist */}
+      <div className="sticky top-0 z-40 bg-night-secondary border-b-2 border-lime/20">
         <div className="px-4 py-4 flex items-center gap-3">
           <Link
             href="/bookings"
-            className="w-10 h-10 rounded-full bg-night-secondary flex items-center justify-center text-white hover:bg-night transition-colors"
+            className="w-10 h-10 bg-night-tertiary border-2 border-zinc-800 flex items-center justify-center text-white hover:border-lime transition-colors touch-target"
           >
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div>
-            <h1 className="text-lg font-medium text-white">Create Listing</h1>
+            <h1 className="text-lg font-bold text-white uppercase tracking-tight">Create Listing</h1>
             <p className="text-sm text-zinc-400">{band.name}</p>
           </div>
         </div>
@@ -153,7 +153,7 @@ export default function NewListingPage() {
       <form onSubmit={handleSubmit} className="p-4 space-y-6">
         {/* Title */}
         <div>
-          <label className="text-sm text-zinc-400 mb-2 block">
+          <label className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2 block">
             Listing Title *
           </label>
           <input
@@ -162,13 +162,15 @@ export default function NewListingPage() {
             value={formData.title}
             onChange={(e) => setFormData((f) => ({ ...f, title: e.target.value }))}
             placeholder="e.g., Book us for your next event!"
-            className="w-full px-3 py-2 bg-night-secondary border border-lime/10 rounded-lg text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime/30"
+            className="w-full px-4 py-3 bg-night-tertiary border-2 border-zinc-800 text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime transition-colors"
           />
         </div>
 
         {/* Description */}
         <div>
-          <label className="text-sm text-zinc-400 mb-2 block">Description</label>
+          <label className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2 block">
+            Description
+          </label>
           <textarea
             value={formData.description}
             onChange={(e) =>
@@ -176,13 +178,13 @@ export default function NewListingPage() {
             }
             placeholder="Tell fans what makes your band special..."
             rows={4}
-            className="w-full px-3 py-2 bg-night-secondary border border-lime/10 rounded-lg text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime/30 resize-none"
+            className="w-full px-4 py-3 bg-night-tertiary border-2 border-zinc-800 text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime transition-colors resize-none"
           />
         </div>
 
         {/* Event Types */}
         <div>
-          <label className="text-sm text-zinc-400 mb-2 block">
+          <label className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2 block">
             Event Types * (select all that apply)
           </label>
           <div className="flex flex-wrap gap-2">
@@ -192,10 +194,10 @@ export default function NewListingPage() {
                 type="button"
                 onClick={() => toggleEventType(type.value)}
                 className={cn(
-                  "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+                  "px-4 py-2 font-bold uppercase tracking-wider text-xs transition-colors border-2",
                   formData.eventTypes.includes(type.value)
-                    ? "bg-lime text-night"
-                    : "bg-night-secondary text-zinc-400 hover:text-white"
+                    ? "bg-lime text-night border-lime"
+                    : "bg-night-tertiary text-zinc-400 border-zinc-800 hover:border-zinc-600"
                 )}
               >
                 {type.label}
@@ -203,19 +205,19 @@ export default function NewListingPage() {
             ))}
           </div>
           {formData.eventTypes.length === 0 && (
-            <p className="text-xs text-red-400 mt-1">
+            <p className="text-xs text-red-400 mt-1 uppercase tracking-wider">
               Select at least one event type
             </p>
           )}
         </div>
 
         {/* Pricing */}
-        <div className="bg-night-secondary rounded-xl p-4 border border-lime/10 space-y-4">
-          <h2 className="text-lg font-medium text-white">Pricing</h2>
+        <div className="bg-night-secondary border-2 border-zinc-800 p-4 space-y-4">
+          <h2 className="text-lg font-bold text-white uppercase tracking-tight">Pricing</h2>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-sm text-zinc-400 mb-2 block">
+              <label className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2 block">
                 Hourly Rate ($) *
               </label>
               <div className="relative">
@@ -230,13 +232,13 @@ export default function NewListingPage() {
                     setFormData((f) => ({ ...f, baseHourlyRate: e.target.value }))
                   }
                   placeholder="100"
-                  className="w-full pl-9 pr-3 py-2 bg-night border border-lime/10 rounded-lg text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime/30"
+                  className="w-full pl-9 pr-3 py-3 bg-night-tertiary border-2 border-zinc-800 text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime transition-colors"
                 />
               </div>
             </div>
 
             <div>
-              <label className="text-sm text-zinc-400 mb-2 block">
+              <label className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2 block">
                 Minimum Hours *
               </label>
               <input
@@ -248,13 +250,13 @@ export default function NewListingPage() {
                 onChange={(e) =>
                   setFormData((f) => ({ ...f, minimumHours: e.target.value }))
                 }
-                className="w-full px-3 py-2 bg-night border border-lime/10 rounded-lg text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime/30"
+                className="w-full px-4 py-3 bg-night-tertiary border-2 border-zinc-800 text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime transition-colors"
               />
             </div>
           </div>
 
           <div>
-            <label className="text-sm text-zinc-400 mb-2 block">
+            <label className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2 block">
               Deposit Percentage (%) *
             </label>
             <input
@@ -266,17 +268,17 @@ export default function NewListingPage() {
               onChange={(e) =>
                 setFormData((f) => ({ ...f, depositPercentage: e.target.value }))
               }
-              className="w-full px-3 py-2 bg-night border border-lime/10 rounded-lg text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime/30"
+              className="w-full px-4 py-3 bg-night-tertiary border-2 border-zinc-800 text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime transition-colors"
             />
-            <p className="text-xs text-zinc-500 mt-1">
+            <p className="text-xs text-zinc-500 mt-1 uppercase tracking-wider">
               Fans will pay this percentage upfront to secure the booking
             </p>
           </div>
         </div>
 
         {/* Add-ons */}
-        <div className="bg-night-secondary rounded-xl p-4 border border-lime/10 space-y-4">
-          <h2 className="text-lg font-medium text-white">Add-on Services</h2>
+        <div className="bg-night-secondary border-2 border-zinc-800 p-4 space-y-4">
+          <h2 className="text-lg font-bold text-white uppercase tracking-tight">Add-on Services</h2>
           <p className="text-sm text-zinc-400">
             Optional extras fans can add to their booking
           </p>
@@ -287,22 +289,22 @@ export default function NewListingPage() {
               {addOns.map((addOn, index) => (
                 <div
                   key={index}
-                  className="flex items-center justify-between p-3 bg-night rounded-lg"
+                  className="flex items-center justify-between p-3 bg-night-tertiary border-2 border-zinc-800"
                 >
                   <div>
-                    <p className="text-white font-medium">{addOn.name}</p>
+                    <p className="text-white font-bold">{addOn.name}</p>
                     {addOn.description && (
                       <p className="text-sm text-zinc-400">{addOn.description}</p>
                     )}
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="text-lime">
+                    <span className="text-lime font-bold">
                       ${(addOn.priceInCents / 100).toFixed(2)}
                     </span>
                     <button
                       type="button"
                       onClick={() => removeAddOn(index)}
-                      className="text-zinc-500 hover:text-red-400"
+                      className="text-zinc-500 hover:text-red-400 transition-colors"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -313,7 +315,7 @@ export default function NewListingPage() {
           )}
 
           {/* New add-on form */}
-          <div className="space-y-2 pt-2 border-t border-lime/10">
+          <div className="space-y-2 pt-2 border-t-2 border-zinc-800">
             <div className="grid grid-cols-2 gap-2">
               <input
                 type="text"
@@ -322,7 +324,7 @@ export default function NewListingPage() {
                   setNewAddOn((a) => ({ ...a, name: e.target.value }))
                 }
                 placeholder="Add-on name"
-                className="px-3 py-2 bg-night border border-lime/10 rounded-lg text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime/30"
+                className="px-4 py-2 bg-night-tertiary border-2 border-zinc-800 text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime transition-colors"
               />
               <div className="relative">
                 <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
@@ -335,7 +337,7 @@ export default function NewListingPage() {
                     setNewAddOn((a) => ({ ...a, price: e.target.value }))
                   }
                   placeholder="Price"
-                  className="w-full pl-9 pr-3 py-2 bg-night border border-lime/10 rounded-lg text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime/30"
+                  className="w-full pl-9 pr-3 py-2 bg-night-tertiary border-2 border-zinc-800 text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime transition-colors"
                 />
               </div>
             </div>
@@ -346,13 +348,13 @@ export default function NewListingPage() {
                 setNewAddOn((a) => ({ ...a, description: e.target.value }))
               }
               placeholder="Description (optional)"
-              className="w-full px-3 py-2 bg-night border border-lime/10 rounded-lg text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime/30"
+              className="w-full px-4 py-2 bg-night-tertiary border-2 border-zinc-800 text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime transition-colors"
             />
             <button
               type="button"
               onClick={addAddOn}
               disabled={!newAddOn.name || !newAddOn.price}
-              className="flex items-center gap-2 px-4 py-2 text-lime hover:text-lime/80 disabled:text-zinc-600 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 px-4 py-2 text-lime hover:text-lime/80 disabled:text-zinc-600 disabled:cursor-not-allowed font-bold uppercase tracking-wider text-xs transition-colors"
             >
               <Plus className="w-4 h-4" />
               Add
@@ -361,11 +363,11 @@ export default function NewListingPage() {
         </div>
 
         {/* Additional Settings */}
-        <div className="bg-night-secondary rounded-xl p-4 border border-lime/10 space-y-4">
-          <h2 className="text-lg font-medium text-white">Additional Settings</h2>
+        <div className="bg-night-secondary border-2 border-zinc-800 p-4 space-y-4">
+          <h2 className="text-lg font-bold text-white uppercase tracking-tight">Additional Settings</h2>
 
           <div>
-            <label className="text-sm text-zinc-400 mb-2 block">
+            <label className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2 block">
               Maximum Travel Distance (miles)
             </label>
             <input
@@ -377,12 +379,12 @@ export default function NewListingPage() {
                 setFormData((f) => ({ ...f, maxTravelDistance: e.target.value }))
               }
               placeholder="Leave empty for no limit"
-              className="w-full px-3 py-2 bg-night border border-lime/10 rounded-lg text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime/30"
+              className="w-full px-4 py-3 bg-night-tertiary border-2 border-zinc-800 text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime transition-colors"
             />
           </div>
 
           <div>
-            <label className="text-sm text-zinc-400 mb-2 block">
+            <label className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2 block">
               Booking Notes
             </label>
             <textarea
@@ -392,12 +394,12 @@ export default function NewListingPage() {
               }
               placeholder="Any additional info fans should know before booking..."
               rows={3}
-              className="w-full px-3 py-2 bg-night border border-lime/10 rounded-lg text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime/30 resize-none"
+              className="w-full px-4 py-3 bg-night-tertiary border-2 border-zinc-800 text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime transition-colors resize-none"
             />
           </div>
 
           <div>
-            <label className="text-sm text-zinc-400 mb-2 block">
+            <label className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2 block">
               Cancellation Policy
             </label>
             <textarea
@@ -407,7 +409,7 @@ export default function NewListingPage() {
               }
               placeholder="Describe your cancellation and refund policy..."
               rows={3}
-              className="w-full px-3 py-2 bg-night border border-lime/10 rounded-lg text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime/30 resize-none"
+              className="w-full px-4 py-3 bg-night-tertiary border-2 border-zinc-800 text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime transition-colors resize-none"
             />
           </div>
         </div>
@@ -416,14 +418,14 @@ export default function NewListingPage() {
         <div className="flex gap-3">
           <Link
             href="/bookings"
-            className="flex-1 py-3 bg-night-secondary text-zinc-300 font-medium rounded-xl text-center border border-zinc-700 hover:border-zinc-500 transition-colors"
+            className="flex-1 py-3 bg-night-tertiary text-zinc-300 font-bold uppercase tracking-wider text-center border-2 border-zinc-800 hover:border-zinc-600 transition-colors"
           >
             Cancel
           </Link>
           <button
             type="submit"
             disabled={isSubmitting || formData.eventTypes.length === 0 || !formData.baseHourlyRate}
-            className="flex-1 py-3 bg-lime text-night font-bold rounded-xl hover:bg-lime/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 py-3 bg-lime text-night font-bold uppercase tracking-wider border-2 border-lime hover:bg-transparent hover:text-lime transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmitting ? "Creating..." : "Create Listing"}
           </button>

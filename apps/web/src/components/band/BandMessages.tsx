@@ -71,23 +71,23 @@ function ConversationsList({
   const bookingCount = bookingConversations.length;
 
   return (
-    <div className="min-h-screen bg-night">
-      {/* Header */}
+    <div className="min-h-screen bg-night pb-24">
+      {/* Header - Brutalist */}
       <header className="bg-night-secondary border-b-2 border-lime/20 p-4">
         <h1 className="text-2xl font-bold text-white uppercase tracking-tight">
           Messages
         </h1>
       </header>
 
-      {/* Tabs */}
-      <div className="flex border-b border-zinc-800">
+      {/* Tabs - Brutalist */}
+      <div className="flex border-b-2 border-zinc-800">
         <button
           onClick={() => setActiveTab("all")}
           className={cn(
-            "flex-1 py-3 text-sm font-medium uppercase tracking-wide transition-colors",
+            "flex-1 py-3 text-sm font-bold uppercase tracking-wider transition-colors border-b-2",
             activeTab === "all"
-              ? "text-lime border-b-2 border-lime"
-              : "text-zinc-500 hover:text-white"
+              ? "text-lime border-lime"
+              : "text-zinc-500 border-transparent hover:text-white"
           )}
         >
           All ({allConversations.length})
@@ -95,10 +95,10 @@ function ConversationsList({
         <button
           onClick={() => setActiveTab("venues")}
           className={cn(
-            "flex-1 py-3 text-sm font-medium uppercase tracking-wide transition-colors",
+            "flex-1 py-3 text-sm font-bold uppercase tracking-wider transition-colors border-b-2",
             activeTab === "venues"
-              ? "text-lime border-b-2 border-lime"
-              : "text-zinc-500 hover:text-white"
+              ? "text-lime border-lime"
+              : "text-zinc-500 border-transparent hover:text-white"
           )}
         >
           Venues ({venueCount})
@@ -106,10 +106,10 @@ function ConversationsList({
         <button
           onClick={() => setActiveTab("bookings")}
           className={cn(
-            "flex-1 py-3 text-sm font-medium uppercase tracking-wide transition-colors",
+            "flex-1 py-3 text-sm font-bold uppercase tracking-wider transition-colors border-b-2",
             activeTab === "bookings"
-              ? "text-lime border-b-2 border-lime"
-              : "text-zinc-500 hover:text-white"
+              ? "text-lime border-lime"
+              : "text-zinc-500 border-transparent hover:text-white"
           )}
         >
           Bookings ({bookingCount})
@@ -123,8 +123,8 @@ function ConversationsList({
             <div key={i} className="p-4 flex items-center gap-3">
               <div className="w-12 h-12 bg-night-tertiary border-2 border-zinc-800 animate-shimmer" />
               <div className="flex-1 space-y-2">
-                <div className="h-4 bg-night-tertiary w-1/3 animate-shimmer" />
-                <div className="h-3 bg-night-tertiary w-2/3 animate-shimmer" />
+                <div className="h-4 bg-night-tertiary border border-zinc-800 w-1/3 animate-shimmer" />
+                <div className="h-3 bg-night-tertiary border border-zinc-800 w-2/3 animate-shimmer" />
               </div>
             </div>
           ))
@@ -133,8 +133,8 @@ function ConversationsList({
             const content = (
               <div
                 className={cn(
-                  "w-full p-4 flex items-center gap-3 text-left bg-night-tertiary border-x-2 border-transparent hover:border-lime/30 transition-all",
-                  conv.unreadCount > 0 && "border-l-2 border-l-lime"
+                  "w-full p-4 flex items-center gap-3 text-left bg-night-tertiary border-l-2 border-transparent hover:border-lime/30 transition-all",
+                  conv.unreadCount > 0 && "border-l-lime"
                 )}
               >
                 {/* Avatar */}
@@ -150,7 +150,7 @@ function ConversationsList({
                   ) : conv.type === "venue" ? (
                     <Music className="w-6 h-6 text-zinc-600" />
                   ) : (
-                    <Users className="w-6 h-6 text-violet-400" />
+                    <Users className="w-6 h-6 text-violet" />
                   )}
                 </div>
 
@@ -160,19 +160,19 @@ function ConversationsList({
                     <div className="flex items-center gap-2 min-w-0">
                       <h3
                         className={cn(
-                          "font-bold text-white uppercase tracking-wide text-sm truncate",
+                          "font-bold text-white uppercase tracking-tight text-sm truncate",
                           conv.unreadCount > 0 && "text-lime"
                         )}
                       >
                         {conv.name}
                       </h3>
                       {conv.type === "booking" && (
-                        <span className="px-1.5 py-0.5 bg-violet-500/20 text-violet-400 text-[10px] uppercase tracking-wider rounded">
+                        <span className="px-1.5 py-0.5 bg-violet/20 text-violet text-[10px] font-bold uppercase tracking-wider border border-violet/30">
                           Booking
                         </span>
                       )}
                     </div>
-                    <span className="text-xs text-zinc-500 uppercase tracking-wider flex-shrink-0">
+                    <span className="text-xs text-zinc-500 font-bold uppercase tracking-wider flex-shrink-0">
                       {getRelativeTime(conv.lastMessageAt)}
                     </span>
                   </div>
@@ -188,9 +188,9 @@ function ConversationsList({
                   </p>
                 </div>
 
-                {/* Unread Badge */}
+                {/* Unread Badge - Brutalist */}
                 {conv.unreadCount > 0 && (
-                  <span className="min-w-[24px] h-6 bg-lime text-night text-xs font-bold flex items-center justify-center px-1">
+                  <span className="min-w-[24px] h-6 bg-lime text-night text-xs font-bold flex items-center justify-center px-1 border border-night">
                     {conv.unreadCount}
                   </span>
                 )}
@@ -255,16 +255,16 @@ function ConversationView({
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-night">
-      {/* Header */}
+    <div className="min-h-screen flex flex-col bg-night pb-24">
+      {/* Header - Brutalist */}
       <header className="bg-night-secondary border-b-2 border-lime/20 p-4 flex items-center gap-3">
         <button
           onClick={onBack}
-          className="p-2 -ml-2 flex items-center justify-center hover:bg-night-tertiary border border-zinc-800 hover:border-lime/30 transition-colors touch-target"
+          className="p-2 -ml-2 flex items-center justify-center hover:bg-night-tertiary border-2 border-zinc-800 hover:border-lime/30 transition-colors touch-target"
         >
           <ArrowLeft className="w-5 h-5 text-zinc-400" />
         </button>
-        <h1 className="text-lg font-bold text-white uppercase tracking-wide">
+        <h1 className="text-lg font-bold text-white uppercase tracking-tight">
           Conversation
         </h1>
       </header>
@@ -277,7 +277,7 @@ function ConversationView({
               <div
                 key={i}
                 className={cn(
-                  "max-w-[70%] p-3 animate-shimmer",
+                  "max-w-[70%] p-3 animate-shimmer border-2 border-zinc-800",
                   i % 2 === 0 ? "ml-auto bg-lime/20" : "bg-night-tertiary"
                 )}
               >
@@ -290,14 +290,14 @@ function ConversationView({
             <MessageBubble key={msg._id} message={msg} />
           ))
         ) : (
-          <p className="text-center text-zinc-500 py-8 uppercase text-xs tracking-wider">
+          <p className="text-center text-zinc-500 py-8 uppercase text-xs font-bold tracking-wider">
             No messages yet. Start the conversation!
           </p>
         )}
       </div>
 
-      {/* Input */}
-      <div className="bg-night-secondary border-t-2 border-lime/20 p-4 pb-24">
+      {/* Input - Brutalist */}
+      <div className="bg-night-secondary border-t-2 border-lime/20 p-4">
         <div className="flex items-end gap-2">
           <textarea
             value={newMessage}
@@ -342,7 +342,7 @@ function MessageBubble({ message }: { message: any }) {
         <p className="text-sm">{message.content}</p>
         <p
           className={cn(
-            "text-xs mt-1 uppercase tracking-wider",
+            "text-xs mt-1 font-bold uppercase tracking-wider",
             isOwn ? "text-night/70" : "text-zinc-500"
           )}
         >
@@ -359,7 +359,7 @@ function EmptyState() {
       <div className="w-16 h-16 bg-night-tertiary border-2 border-zinc-800 flex items-center justify-center mb-4">
         <MessageCircle className="w-8 h-8 text-zinc-600" />
       </div>
-      <h3 className="text-lg font-bold text-white uppercase tracking-wide mb-2">
+      <h3 className="text-lg font-bold text-white uppercase tracking-tight mb-2">
         No conversations yet
       </h3>
       <p className="text-zinc-500 max-w-[250px]">

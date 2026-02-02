@@ -58,13 +58,13 @@ export default function AvailabilityPage() {
       <div className="min-h-screen bg-night p-6">
         <Link
           href="/bookings"
-          className="inline-flex items-center gap-2 text-zinc-400 hover:text-white mb-6"
+          className="inline-flex items-center gap-2 text-zinc-400 hover:text-white mb-6 font-medium uppercase tracking-wider text-sm"
         >
           <ArrowLeft className="w-5 h-5" />
           Back
         </Link>
-        <div className="text-center py-12">
-          <h1 className="text-2xl font-display text-white mb-2">
+        <div className="text-center py-12 border-2 border-dashed border-zinc-800">
+          <h1 className="text-2xl font-bold text-white uppercase tracking-tight mb-2">
             Musicians Only
           </h1>
           <p className="text-zinc-400">
@@ -80,13 +80,13 @@ export default function AvailabilityPage() {
       <div className="min-h-screen bg-night p-6">
         <Link
           href="/bookings"
-          className="inline-flex items-center gap-2 text-zinc-400 hover:text-white mb-6"
+          className="inline-flex items-center gap-2 text-zinc-400 hover:text-white mb-6 font-medium uppercase tracking-wider text-sm"
         >
           <ArrowLeft className="w-5 h-5" />
           Back
         </Link>
-        <div className="text-center py-12">
-          <h1 className="text-2xl font-display text-white mb-2">
+        <div className="text-center py-12 border-2 border-dashed border-zinc-800">
+          <h1 className="text-2xl font-bold text-white uppercase tracking-tight mb-2">
             Create a Listing First
           </h1>
           <p className="text-zinc-400 mb-6">
@@ -94,7 +94,7 @@ export default function AvailabilityPage() {
           </p>
           <Link
             href="/bookings/listing/new"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-lime text-night font-bold rounded-xl hover:bg-lime/90 transition-colors"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-lime text-night font-bold uppercase tracking-wider border-2 border-lime hover:bg-transparent hover:text-lime transition-all shadow-brutal hover:shadow-none hover:translate-x-1 hover:translate-y-1"
           >
             <Plus className="w-5 h-5" />
             Create Listing
@@ -209,17 +209,17 @@ export default function AvailabilityPage() {
 
   return (
     <div className="min-h-screen bg-night pb-24">
-      {/* Header */}
-      <div className="sticky top-0 z-40 bg-night/95 backdrop-blur-lg border-b border-lime/10">
+      {/* Header - Brutalist */}
+      <div className="sticky top-0 z-40 bg-night-secondary border-b-2 border-lime/20">
         <div className="px-4 py-4 flex items-center gap-3">
           <Link
             href="/bookings?tab=settings"
-            className="w-10 h-10 rounded-full bg-night-secondary flex items-center justify-center text-white hover:bg-night transition-colors"
+            className="w-10 h-10 bg-night-tertiary border-2 border-zinc-800 flex items-center justify-center text-white hover:border-lime transition-colors touch-target"
           >
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div>
-            <h1 className="text-lg font-medium text-white">Manage Availability</h1>
+            <h1 className="text-lg font-bold text-white uppercase tracking-tight">Manage Availability</h1>
             <p className="text-sm text-zinc-400">{band.name}</p>
           </div>
         </div>
@@ -230,7 +230,7 @@ export default function AvailabilityPage() {
         {!showAddForm && (
           <button
             onClick={() => setShowAddForm(true)}
-            className="w-full py-3 bg-lime text-night font-bold rounded-xl hover:bg-lime/90 transition-colors flex items-center justify-center gap-2"
+            className="w-full py-3 bg-lime text-night font-bold uppercase tracking-wider border-2 border-lime hover:bg-transparent hover:text-lime transition-all shadow-brutal hover:shadow-none hover:translate-x-1 hover:translate-y-1 flex items-center justify-center gap-2"
           >
             <Plus className="w-5 h-5" />
             Add Availability
@@ -239,12 +239,12 @@ export default function AvailabilityPage() {
 
         {/* Add Slot Form */}
         {showAddForm && (
-          <div className="bg-night-secondary rounded-xl p-4 border border-lime/10 space-y-4">
+          <div className="bg-night-secondary border-2 border-zinc-800 p-4 space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-medium text-white">Add Time Slot</h2>
+              <h2 className="text-lg font-bold text-white uppercase tracking-tight">Add Time Slot</h2>
               <button
                 onClick={() => setShowAddForm(false)}
-                className="text-zinc-400 hover:text-white"
+                className="text-zinc-400 hover:text-white transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -252,16 +252,16 @@ export default function AvailabilityPage() {
 
             {/* Slot Type */}
             <div>
-              <label className="text-sm text-zinc-400 mb-2 block">Type</label>
+              <label className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2 block">Type</label>
               <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={() => setNewSlot((s) => ({ ...s, type: "available" }))}
                   className={cn(
-                    "flex-1 py-2 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2",
+                    "flex-1 py-2 px-4 font-bold uppercase tracking-wider text-xs transition-colors border-2 flex items-center justify-center gap-2",
                     newSlot.type === "available"
-                      ? "bg-lime text-night"
-                      : "bg-night text-zinc-400 hover:text-white"
+                      ? "bg-lime text-night border-lime"
+                      : "bg-night-tertiary text-zinc-400 border-zinc-800 hover:border-zinc-600"
                   )}
                 >
                   <Calendar className="w-4 h-4" />
@@ -271,10 +271,10 @@ export default function AvailabilityPage() {
                   type="button"
                   onClick={() => setNewSlot((s) => ({ ...s, type: "blocked" }))}
                   className={cn(
-                    "flex-1 py-2 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2",
+                    "flex-1 py-2 px-4 font-bold uppercase tracking-wider text-xs transition-colors border-2 flex items-center justify-center gap-2",
                     newSlot.type === "blocked"
-                      ? "bg-red-500 text-white"
-                      : "bg-night text-zinc-400 hover:text-white"
+                      ? "bg-red-500 text-white border-red-500"
+                      : "bg-night-tertiary text-zinc-400 border-zinc-800 hover:border-zinc-600"
                   )}
                 >
                   <Ban className="w-4 h-4" />
@@ -285,21 +285,21 @@ export default function AvailabilityPage() {
 
             {/* Date */}
             <div>
-              <label className="text-sm text-zinc-400 mb-2 block">Date *</label>
+              <label className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2 block">Date *</label>
               <input
                 type="date"
                 required
                 value={newSlot.date}
                 onChange={(e) => setNewSlot((s) => ({ ...s, date: e.target.value }))}
                 min={new Date().toISOString().split("T")[0]}
-                className="w-full px-3 py-2 bg-night border border-lime/10 rounded-lg text-white focus:outline-none focus:border-lime/30"
+                className="w-full px-4 py-3 bg-night-tertiary border-2 border-zinc-800 text-white focus:outline-none focus:border-lime transition-colors"
               />
             </div>
 
             {/* Time Range */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm text-zinc-400 mb-2 block">
+                <label className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2 block">
                   Start Time *
                 </label>
                 <input
@@ -309,11 +309,11 @@ export default function AvailabilityPage() {
                   onChange={(e) =>
                     setNewSlot((s) => ({ ...s, startTime: e.target.value }))
                   }
-                  className="w-full px-3 py-2 bg-night border border-lime/10 rounded-lg text-white focus:outline-none focus:border-lime/30"
+                  className="w-full px-4 py-3 bg-night-tertiary border-2 border-zinc-800 text-white focus:outline-none focus:border-lime transition-colors"
                 />
               </div>
               <div>
-                <label className="text-sm text-zinc-400 mb-2 block">
+                <label className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2 block">
                   End Time *
                 </label>
                 <input
@@ -323,12 +323,12 @@ export default function AvailabilityPage() {
                   onChange={(e) =>
                     setNewSlot((s) => ({ ...s, endTime: e.target.value }))
                   }
-                  className="w-full px-3 py-2 bg-night border border-lime/10 rounded-lg text-white focus:outline-none focus:border-lime/30"
+                  className="w-full px-4 py-3 bg-night-tertiary border-2 border-zinc-800 text-white focus:outline-none focus:border-lime transition-colors"
                 />
               </div>
             </div>
 
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-zinc-500 uppercase tracking-wider">
               {newSlot.type === "available"
                 ? "This time slot will be shown to fans looking to book you."
                 : "This will block off the time so fans cannot request bookings."}
@@ -339,7 +339,7 @@ export default function AvailabilityPage() {
               <button
                 type="button"
                 onClick={() => setShowAddForm(false)}
-                className="flex-1 py-2 bg-night text-zinc-300 font-medium rounded-lg border border-zinc-700 hover:border-zinc-500 transition-colors"
+                className="flex-1 py-2 bg-night-tertiary text-zinc-300 font-bold uppercase tracking-wider text-sm border-2 border-zinc-800 hover:border-zinc-600 transition-colors"
               >
                 Cancel
               </button>
@@ -348,10 +348,10 @@ export default function AvailabilityPage() {
                 onClick={handleAddSlot}
                 disabled={isSubmitting || !newSlot.date}
                 className={cn(
-                  "flex-1 py-2 font-bold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed",
+                  "flex-1 py-2 font-bold uppercase tracking-wider text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed",
                   newSlot.type === "available"
-                    ? "bg-lime text-night hover:bg-lime/90"
-                    : "bg-red-500 text-white hover:bg-red-600"
+                    ? "bg-lime text-night border-2 border-lime hover:bg-transparent hover:text-lime"
+                    : "bg-red-500 text-white border-2 border-red-500 hover:bg-transparent hover:text-red-500"
                 )}
               >
                 {isSubmitting ? "Adding..." : "Add Slot"}
@@ -362,13 +362,13 @@ export default function AvailabilityPage() {
 
         {/* Existing Slots */}
         <div className="space-y-4">
-          <h2 className="text-lg font-medium text-white">Your Schedule</h2>
+          <h2 className="text-lg font-bold text-white uppercase tracking-tight">Your Schedule</h2>
 
           {upcomingDates.length === 0 ? (
-            <div className="bg-night-secondary rounded-xl p-6 border border-lime/10 text-center">
+            <div className="bg-night-secondary border-2 border-dashed border-zinc-800 p-6 text-center">
               <Calendar className="w-12 h-12 text-zinc-600 mx-auto mb-3" />
-              <p className="text-zinc-400">No upcoming availability set</p>
-              <p className="text-sm text-zinc-500 mt-1">
+              <p className="text-zinc-400 font-medium">No upcoming availability set</p>
+              <p className="text-sm text-zinc-500 mt-1 uppercase tracking-wider">
                 Add available time slots so fans can book you
               </p>
             </div>
@@ -386,12 +386,12 @@ export default function AvailabilityPage() {
                 return (
                   <div
                     key={dateKey}
-                    className="bg-night-secondary rounded-xl border border-lime/10 overflow-hidden"
+                    className="bg-night-secondary border-2 border-zinc-800 overflow-hidden"
                   >
-                    <div className="px-4 py-3 bg-night border-b border-lime/10">
-                      <h3 className="font-medium text-white">{dateDisplay}</h3>
+                    <div className="px-4 py-3 bg-night-tertiary border-b-2 border-zinc-800">
+                      <h3 className="font-bold text-white uppercase tracking-tight">{dateDisplay}</h3>
                     </div>
-                    <div className="divide-y divide-lime/5">
+                    <div className="divide-y divide-zinc-800">
                       {dateSlots
                         .sort((a, b) => a.startDateTime - b.startDateTime)
                         .map((slot) => {
@@ -408,12 +408,12 @@ export default function AvailabilityPage() {
                               <div className="flex items-center gap-3">
                                 <div
                                   className={cn(
-                                    "w-10 h-10 rounded-lg flex items-center justify-center",
+                                    "w-10 h-10 border-2 flex items-center justify-center",
                                     isBooked
-                                      ? "bg-violet-500/20 text-violet-400"
+                                      ? "bg-violet/20 border-violet text-violet"
                                       : isBlocked
-                                        ? "bg-red-500/20 text-red-400"
-                                        : "bg-lime/20 text-lime"
+                                        ? "bg-red-500/20 border-red-500 text-red-400"
+                                        : "bg-lime/20 border-lime text-lime"
                                   )}
                                 >
                                   {isBooked ? (
@@ -425,14 +425,14 @@ export default function AvailabilityPage() {
                                   )}
                                 </div>
                                 <div>
-                                  <p className="text-white font-medium">
+                                  <p className="text-white font-bold uppercase tracking-wider text-sm">
                                     {start.time} - {end.time}
                                   </p>
                                   <p
                                     className={cn(
-                                      "text-sm",
+                                      "text-xs font-bold uppercase tracking-wider",
                                       isBooked
-                                        ? "text-violet-400"
+                                        ? "text-violet"
                                         : isBlocked
                                           ? "text-red-400"
                                           : "text-lime"
@@ -468,26 +468,26 @@ export default function AvailabilityPage() {
         </div>
 
         {/* Help Text */}
-        <div className="bg-night-secondary rounded-xl p-4 border border-lime/10">
-          <h3 className="font-medium text-white mb-2">How Availability Works</h3>
-          <ul className="text-sm text-zinc-400 space-y-2">
-            <li className="flex items-start gap-2">
-              <div className="w-2 h-2 rounded-full bg-lime mt-1.5 shrink-0" />
+        <div className="bg-night-secondary border-2 border-zinc-800 p-4">
+          <h3 className="font-bold text-white uppercase tracking-tight mb-3">How Availability Works</h3>
+          <ul className="text-sm text-zinc-400 space-y-3">
+            <li className="flex items-start gap-3">
+              <div className="w-2 h-2 bg-lime mt-2 shrink-0" />
               <span>
                 <strong className="text-white">Available slots</strong> are shown to
                 fans browsing your listing. They can request bookings during these
                 times.
               </span>
             </li>
-            <li className="flex items-start gap-2">
-              <div className="w-2 h-2 rounded-full bg-red-500 mt-1.5 shrink-0" />
+            <li className="flex items-start gap-3">
+              <div className="w-2 h-2 bg-red-500 mt-2 shrink-0" />
               <span>
                 <strong className="text-white">Blocked slots</strong> prevent any
                 booking requests for those times. Use this when you&apos;re unavailable.
               </span>
             </li>
-            <li className="flex items-start gap-2">
-              <div className="w-2 h-2 rounded-full bg-violet-500 mt-1.5 shrink-0" />
+            <li className="flex items-start gap-3">
+              <div className="w-2 h-2 bg-violet mt-2 shrink-0" />
               <span>
                 <strong className="text-white">Booked slots</strong> are automatically
                 created when a booking is confirmed. You cannot delete these.

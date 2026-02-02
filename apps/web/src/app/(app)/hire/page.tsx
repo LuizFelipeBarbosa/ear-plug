@@ -52,19 +52,21 @@ export default function HireMarketplacePage() {
 
   return (
     <div className="min-h-screen bg-night pb-24">
-      {/* Header */}
-      <div className="sticky top-0 z-40 bg-night/95 backdrop-blur-lg border-b border-lime/10">
+      {/* Header - Brutalist Style */}
+      <div className="sticky top-0 z-40 bg-night-secondary border-b-2 border-lime/20">
         <div className="px-4 py-4">
-          <h1 className="text-2xl font-display text-white">Hire a Band</h1>
+          <h1 className="text-2xl font-bold text-white uppercase tracking-tight">
+            Hire a Band
+          </h1>
           <p className="text-sm text-zinc-400 mt-1">
             Find the perfect band for your event
           </p>
         </div>
 
-        {/* Search Bar */}
+        {/* Search Bar - Brutalist */}
         <div className="px-4 pb-4 flex gap-2">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
             <input
               type="text"
               placeholder="Search by location..."
@@ -75,33 +77,35 @@ export default function HireMarketplacePage() {
                   location: e.target.value || undefined,
                 }))
               }
-              className="w-full pl-10 pr-4 py-2 bg-night-secondary border border-lime/10 rounded-lg text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime/30"
+              className="w-full pl-12 pr-4 py-3 bg-night-tertiary border-2 border-zinc-800 text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime transition-colors"
             />
           </div>
           <button
             onClick={() => setShowFilters(!showFilters)}
             className={cn(
-              "px-4 py-2 rounded-lg border transition-colors flex items-center gap-2",
+              "px-4 py-3 border-2 transition-colors flex items-center justify-center touch-target",
               showFilters || hasActiveFilters
                 ? "bg-lime text-night border-lime"
-                : "bg-night-secondary text-zinc-400 border-lime/10 hover:border-lime/30"
+                : "bg-night-tertiary text-zinc-400 border-zinc-800 hover:border-zinc-600"
             )}
           >
             <Filter className="w-5 h-5" />
             {hasActiveFilters && (
-              <span className="text-xs">
+              <span className="text-xs ml-2 font-bold">
                 {Object.values(filters).filter((v) => v !== undefined).length}
               </span>
             )}
           </button>
         </div>
 
-        {/* Filters Panel */}
+        {/* Filters Panel - Brutalist */}
         {showFilters && (
-          <div className="px-4 pb-4 space-y-4 border-t border-lime/10 pt-4">
+          <div className="px-4 pb-4 space-y-4 border-t-2 border-zinc-800 pt-4">
             {/* Event Type */}
             <div>
-              <label className="text-sm text-zinc-400 mb-2 block">Event Type</label>
+              <label className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2 block">
+                Event Type
+              </label>
               <div className="flex flex-wrap gap-2">
                 {EVENT_TYPES.map((type) => (
                   <button
@@ -113,10 +117,10 @@ export default function HireMarketplacePage() {
                       }))
                     }
                     className={cn(
-                      "px-3 py-1.5 rounded-full text-sm transition-colors",
+                      "px-3 py-1.5 text-sm font-medium uppercase tracking-wider transition-colors border-2",
                       filters.eventType === type.value
-                        ? "bg-lime text-night"
-                        : "bg-night-secondary text-zinc-400 hover:text-white"
+                        ? "bg-lime text-night border-lime"
+                        : "bg-night-tertiary text-zinc-400 border-zinc-800 hover:border-zinc-600"
                     )}
                   >
                     {type.label}
@@ -127,7 +131,9 @@ export default function HireMarketplacePage() {
 
             {/* Genre */}
             <div>
-              <label className="text-sm text-zinc-400 mb-2 block">Genre</label>
+              <label className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2 block">
+                Genre
+              </label>
               <div className="flex flex-wrap gap-2">
                 {GENRES.map((genre) => (
                   <button
@@ -139,13 +145,17 @@ export default function HireMarketplacePage() {
                       }))
                     }
                     className={cn(
-                      "px-3 py-1.5 rounded-full text-sm transition-colors",
+                      "px-3 py-1.5 text-sm font-medium uppercase tracking-wider transition-colors border-2",
                       filters.genre === genre.value
-                        ? "text-night"
-                        : "bg-night-secondary text-zinc-400 hover:text-white"
+                        ? "text-night border-transparent"
+                        : "bg-night-tertiary text-zinc-400 border-zinc-800 hover:border-zinc-600"
                     )}
                     style={{
                       backgroundColor:
+                        filters.genre === genre.value
+                          ? GENRE_COLORS[genre.value]
+                          : undefined,
+                      borderColor:
                         filters.genre === genre.value
                           ? GENRE_COLORS[genre.value]
                           : undefined,
@@ -159,46 +169,52 @@ export default function HireMarketplacePage() {
 
             {/* Price Range */}
             <div>
-              <label className="text-sm text-zinc-400 mb-2 block">
+              <label className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2 block">
                 Price Range (per hour)
               </label>
               <div className="flex gap-2 items-center">
-                <input
-                  type="number"
-                  placeholder="Min"
-                  value={filters.minPrice ? filters.minPrice / 100 : ""}
-                  onChange={(e) =>
-                    setFilters((f) => ({
-                      ...f,
-                      minPrice: e.target.value
-                        ? Number(e.target.value) * 100
-                        : undefined,
-                    }))
-                  }
-                  className="w-24 px-3 py-2 bg-night-secondary border border-lime/10 rounded-lg text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime/30"
-                />
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                  <input
+                    type="number"
+                    placeholder="Min"
+                    value={filters.minPrice ? filters.minPrice / 100 : ""}
+                    onChange={(e) =>
+                      setFilters((f) => ({
+                        ...f,
+                        minPrice: e.target.value
+                          ? Number(e.target.value) * 100
+                          : undefined,
+                      }))
+                    }
+                    className="w-28 pl-9 pr-3 py-2 bg-night-tertiary border-2 border-zinc-800 text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime transition-colors"
+                  />
+                </div>
                 <span className="text-zinc-500">to</span>
-                <input
-                  type="number"
-                  placeholder="Max"
-                  value={filters.maxPrice ? filters.maxPrice / 100 : ""}
-                  onChange={(e) =>
-                    setFilters((f) => ({
-                      ...f,
-                      maxPrice: e.target.value
-                        ? Number(e.target.value) * 100
-                        : undefined,
-                    }))
-                  }
-                  className="w-24 px-3 py-2 bg-night-secondary border border-lime/10 rounded-lg text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime/30"
-                />
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                  <input
+                    type="number"
+                    placeholder="Max"
+                    value={filters.maxPrice ? filters.maxPrice / 100 : ""}
+                    onChange={(e) =>
+                      setFilters((f) => ({
+                        ...f,
+                        maxPrice: e.target.value
+                          ? Number(e.target.value) * 100
+                          : undefined,
+                      }))
+                    }
+                    className="w-28 pl-9 pr-3 py-2 bg-night-tertiary border-2 border-zinc-800 text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime transition-colors"
+                  />
+                </div>
               </div>
             </div>
 
             {hasActiveFilters && (
               <button
                 onClick={clearFilters}
-                className="text-sm text-lime hover:text-lime/80 flex items-center gap-1"
+                className="text-sm text-lime hover:text-lime/80 flex items-center gap-1 font-medium uppercase tracking-wider"
               >
                 <X className="w-4 h-4" />
                 Clear all filters
@@ -211,11 +227,11 @@ export default function HireMarketplacePage() {
       {/* Results */}
       <div className="p-4">
         {listings.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-night-secondary flex items-center justify-center">
-              <Music className="w-8 h-8 text-zinc-500" />
+          <div className="text-center py-12 border-2 border-dashed border-zinc-800">
+            <div className="w-16 h-16 mx-auto mb-4 bg-night-tertiary border-2 border-zinc-800 flex items-center justify-center">
+              <Music className="w-8 h-8 text-zinc-600" />
             </div>
-            <p className="text-zinc-400">
+            <p className="text-zinc-400 font-medium">
               {hasActiveFilters
                 ? "No bands found matching your filters"
                 : "No bands available for hire yet"}
@@ -223,7 +239,7 @@ export default function HireMarketplacePage() {
             {hasActiveFilters && (
               <button
                 onClick={clearFilters}
-                className="mt-4 text-lime hover:text-lime/80"
+                className="mt-4 text-lime hover:text-lime/80 font-bold uppercase tracking-wider text-sm"
               >
                 Clear filters
               </button>
@@ -231,7 +247,7 @@ export default function HireMarketplacePage() {
           </div>
         ) : (
           <div className="space-y-4">
-            <p className="text-sm text-zinc-500">
+            <p className="text-xs font-bold uppercase tracking-wider text-zinc-500">
               {listings.length} band{listings.length !== 1 ? "s" : ""} available
             </p>
             {listings.map((listing) => (
@@ -268,15 +284,15 @@ function BandHireCard({ listing }: BandHireCardProps) {
   return (
     <Link
       href={`/hire/${band._id}`}
-      className="block bg-night-secondary rounded-xl overflow-hidden border border-lime/10 hover:border-lime/30 transition-colors"
+      className="block bg-night-secondary border-2 border-zinc-800 overflow-hidden hover:border-lime/30 transition-colors group"
     >
       {/* Band Image */}
-      <div className="relative h-40 bg-night">
+      <div className="relative h-40 bg-night overflow-hidden">
         {band.image ? (
           <img
             src={band.image}
             alt={band.name}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
@@ -284,8 +300,8 @@ function BandHireCard({ listing }: BandHireCardProps) {
           </div>
         )}
         {/* Price Badge */}
-        <div className="absolute top-3 right-3 px-3 py-1 bg-night/80 backdrop-blur-sm rounded-full">
-          <span className="text-lime font-medium">
+        <div className="absolute top-3 right-3 px-3 py-1.5 bg-night border-2 border-lime">
+          <span className="text-lime font-bold text-sm">
             {formatPrice(listing.baseHourlyRate)}/hr
           </span>
         </div>
@@ -295,7 +311,7 @@ function BandHireCard({ listing }: BandHireCardProps) {
       <div className="p-4">
         <div className="flex items-start justify-between mb-2">
           <div>
-            <h3 className="text-lg font-medium text-white">{band.name}</h3>
+            <h3 className="text-lg font-bold text-white uppercase tracking-tight">{band.name}</h3>
             <div className="flex items-center gap-1 text-sm text-zinc-400">
               <MapPin className="w-4 h-4" />
               <span>{band.location}</span>
@@ -310,7 +326,7 @@ function BandHireCard({ listing }: BandHireCardProps) {
             {band.genres.slice(0, 3).map((genre) => (
               <span
                 key={genre}
-                className="px-2 py-0.5 rounded-full text-xs font-medium text-night"
+                className="px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-night"
                 style={{ backgroundColor: GENRE_COLORS[genre] }}
               >
                 {genre.charAt(0).toUpperCase() + genre.slice(1)}
@@ -331,21 +347,21 @@ function BandHireCard({ listing }: BandHireCardProps) {
             return (
               <span
                 key={type}
-                className="px-2 py-0.5 rounded text-xs bg-night text-zinc-400"
+                className="px-2 py-0.5 text-xs bg-night-tertiary text-zinc-400 border border-zinc-800"
               >
                 {eventType?.label || type}
               </span>
             );
           })}
           {listing.eventTypes.length > 3 && (
-            <span className="px-2 py-0.5 rounded text-xs bg-night text-zinc-500">
+            <span className="px-2 py-0.5 text-xs text-zinc-500">
               +{listing.eventTypes.length - 3} more
             </span>
           )}
         </div>
 
         {/* Min Hours */}
-        <p className="mt-3 text-xs text-zinc-500">
+        <p className="mt-3 text-xs text-zinc-500 uppercase tracking-wider">
           Min {listing.minimumHours} hours
         </p>
       </div>

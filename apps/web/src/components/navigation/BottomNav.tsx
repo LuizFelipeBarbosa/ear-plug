@@ -101,7 +101,7 @@ export function BottomNav() {
   const navItems = isFan ? fanNavItems : musicianNavItems;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-night-secondary/95 backdrop-blur-lg border-t-2 border-lime/20 safe-area-inset-bottom">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-night-secondary border-t-2 border-lime/20 safe-area-inset-bottom">
       <div className="flex items-center justify-around h-16 max-w-lg mx-auto">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
@@ -130,9 +130,9 @@ export function BottomNav() {
                   {item.icon}
                 </div>
                 
-                {/* Badge */}
+                {/* Badge - Brutalist Style */}
                 {item.badge !== undefined && item.badge > 0 ? (
-                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-lime text-night text-xs font-bold rounded-full flex items-center justify-center px-1">
+                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-lime text-night text-xs font-bold flex items-center justify-center px-1 border border-night">
                     {item.badge > 9 ? "9+" : item.badge}
                   </span>
                 ) : null}
@@ -141,8 +141,8 @@ export function BottomNav() {
               {/* Label */}
               <span
                 className={cn(
-                  "text-[10px] mt-1 font-medium tracking-wide uppercase",
-                  isActive && "font-bold"
+                  "text-[10px] mt-1 font-bold tracking-wider uppercase",
+                  isActive && "text-lime"
                 )}
               >
                 {item.label}
@@ -150,7 +150,7 @@ export function BottomNav() {
               
               {/* Active indicator bar */}
               {isActive && (
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-lime rounded-full shadow-glow-lime" />
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-lime shadow-glow-lime" />
               )}
             </Link>
           );

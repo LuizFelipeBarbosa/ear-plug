@@ -16,6 +16,8 @@ import {
   Users,
   DollarSign,
   MessageCircle,
+  Music,
+  Plus,
 } from "lucide-react";
 import Link from "next/link";
 import { formatPrice, formatEventDate, formatEventTime } from "@ear-plug/shared";
@@ -47,7 +49,7 @@ export default function BookingsPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-night p-6">
         <div className="text-center">
-          <h1 className="text-2xl font-display text-white mb-2">Musicians Only</h1>
+          <h1 className="text-2xl font-bold text-white uppercase tracking-tight mb-2">Musicians Only</h1>
           <p className="text-zinc-400">This page is for musicians to manage their bookings.</p>
         </div>
       </div>
@@ -84,26 +86,26 @@ export default function BookingsPage() {
 
   return (
     <div className="min-h-screen bg-night pb-24">
-      {/* Header */}
-      <div className="sticky top-0 z-40 bg-night/95 backdrop-blur-lg border-b border-lime/10">
+      {/* Header - Brutalist */}
+      <div className="sticky top-0 z-40 bg-night-secondary border-b-2 border-lime/20">
         <div className="px-4 py-4">
-          <h1 className="text-2xl font-display text-white">Bookings</h1>
+          <h1 className="text-2xl font-bold text-white uppercase tracking-tight">Bookings</h1>
           {band && (
             <p className="text-sm text-zinc-400 mt-1">{band.name}</p>
           )}
         </div>
 
         {/* Tabs */}
-        <div className="flex px-4 gap-1 overflow-x-auto pb-2">
+        <div className="flex px-4 gap-1 overflow-x-auto pb-2 no-scrollbar">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors",
+                "flex items-center gap-2 px-4 py-2 font-bold uppercase tracking-wider text-xs whitespace-nowrap transition-colors border-2",
                 activeTab === tab.id
-                  ? "bg-lime text-night"
-                  : "bg-night-secondary text-zinc-400 hover:text-white"
+                  ? "bg-lime text-night border-lime"
+                  : "bg-night-tertiary text-zinc-400 border-zinc-800 hover:border-zinc-600"
               )}
             >
               {tab.icon}
@@ -111,7 +113,7 @@ export default function BookingsPage() {
               {tab.count !== undefined && tab.count > 0 && (
                 <span
                   className={cn(
-                    "min-w-[20px] h-5 rounded-full text-xs flex items-center justify-center",
+                    "min-w-[20px] h-5 flex items-center justify-center px-1",
                     activeTab === tab.id
                       ? "bg-night text-lime"
                       : "bg-lime text-night"
@@ -130,11 +132,11 @@ export default function BookingsPage() {
         {activeTab === "settings" ? (
           <ListingSettings listing={listing} band={band} />
         ) : filteredBookings.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-night-secondary flex items-center justify-center">
-              <Calendar className="w-8 h-8 text-zinc-500" />
+          <div className="text-center py-12 border-2 border-dashed border-zinc-800">
+            <div className="w-16 h-16 mx-auto mb-4 bg-night-tertiary border-2 border-zinc-800 flex items-center justify-center">
+              <Calendar className="w-8 h-8 text-zinc-600" />
             </div>
-            <p className="text-zinc-400">
+            <p className="text-zinc-400 font-medium">
               {activeTab === "requests" && "No pending booking requests"}
               {activeTab === "upcoming" && "No upcoming bookings"}
               {activeTab === "past" && "No past bookings"}
@@ -185,16 +187,16 @@ function BookingCard({ booking, onAccept, onReject }: BookingCardProps) {
   return (
     <Link
       href={`/bookings/${booking._id}`}
-      className="block bg-night-secondary rounded-xl p-4 border border-lime/10 hover:border-lime/30 transition-colors"
+      className="block bg-night-secondary border-2 border-zinc-800 p-4 hover:border-lime/30 transition-colors group"
     >
       <div className="flex items-start justify-between mb-3">
         <div>
-          <h3 className="text-white font-medium">{booking.eventName}</h3>
+          <h3 className="text-white font-bold uppercase tracking-tight">{booking.eventName}</h3>
           <p className="text-sm text-zinc-400 capitalize">{booking.eventType.replace("_", " ")}</p>
         </div>
         <span
           className={cn(
-            "px-2 py-1 rounded-full text-xs font-medium",
+            "px-2 py-1 text-xs font-bold uppercase tracking-wider",
             statusConfig?.bgColor,
             statusConfig?.color
           )}
@@ -206,7 +208,7 @@ function BookingCard({ booking, onAccept, onReject }: BookingCardProps) {
       <div className="space-y-2 text-sm">
         <div className="flex items-center gap-2 text-zinc-400">
           <Calendar className="w-4 h-4" />
-          <span>
+          <span className="uppercase tracking-wider">
             {formatEventDate(booking.eventDateTime)} at {formatEventTime(booking.eventDateTime)}
           </span>
         </div>
@@ -216,48 +218,48 @@ function BookingCard({ booking, onAccept, onReject }: BookingCardProps) {
         </div>
         <div className="flex items-center gap-2 text-zinc-400">
           <Clock className="w-4 h-4" />
-          <span>{booking.durationHours} hours</span>
+          <span className="uppercase tracking-wider">{booking.durationHours} hours</span>
         </div>
         {booking.guestCount && (
           <div className="flex items-center gap-2 text-zinc-400">
             <Users className="w-4 h-4" />
-            <span>{booking.guestCount} guests</span>
+            <span className="uppercase tracking-wider">{booking.guestCount} guests</span>
           </div>
         )}
         <div className="flex items-center gap-2 text-lime">
           <DollarSign className="w-4 h-4" />
-          <span className="font-medium">{formatPrice(booking.totalPriceInCents)}</span>
+          <span className="font-bold uppercase tracking-wider">{formatPrice(booking.totalPriceInCents)}</span>
         </div>
       </div>
 
       {booking.fan && (
-        <div className="mt-3 pt-3 border-t border-lime/10 flex items-center justify-between">
+        <div className="mt-3 pt-3 border-t-2 border-zinc-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
             {booking.fan.avatar ? (
               <img
                 src={booking.fan.avatar}
                 alt={booking.fan.name}
-                className="w-8 h-8 rounded-full"
+                className="w-8 h-8 border-2 border-zinc-800"
               />
             ) : (
-              <div className="w-8 h-8 rounded-full bg-lime/20 flex items-center justify-center text-lime text-sm font-medium">
+              <div className="w-8 h-8 bg-lime/20 border-2 border-lime/30 flex items-center justify-center text-lime text-sm font-bold">
                 {booking.fan.name.charAt(0)}
               </div>
             )}
-            <span className="text-sm text-zinc-300">{booking.fan.name}</span>
+            <span className="text-sm text-zinc-300 font-medium">{booking.fan.name}</span>
           </div>
           <ChevronRight className="w-5 h-5 text-zinc-500" />
         </div>
       )}
 
       {onAccept && onReject && (
-        <div className="mt-3 pt-3 border-t border-lime/10 flex gap-2">
+        <div className="mt-3 pt-3 border-t-2 border-zinc-800 flex gap-2">
           <button
             onClick={(e) => {
               e.preventDefault();
               onAccept();
             }}
-            className="flex-1 py-2 px-4 bg-lime text-night font-medium rounded-lg hover:bg-lime/90 transition-colors"
+            className="flex-1 py-2 px-4 bg-lime text-night font-bold uppercase tracking-wider text-xs border-2 border-lime hover:bg-transparent hover:text-lime transition-colors"
           >
             Accept
           </button>
@@ -266,7 +268,7 @@ function BookingCard({ booking, onAccept, onReject }: BookingCardProps) {
               e.preventDefault();
               onReject();
             }}
-            className="flex-1 py-2 px-4 bg-night-secondary text-zinc-300 font-medium rounded-lg border border-zinc-700 hover:border-zinc-500 transition-colors"
+            className="flex-1 py-2 px-4 bg-night-tertiary text-zinc-300 font-bold uppercase tracking-wider text-xs border-2 border-zinc-800 hover:border-zinc-600 transition-colors"
           >
             Decline
           </button>
@@ -284,20 +286,20 @@ interface ListingSettingsProps {
 function ListingSettings({ listing, band }: ListingSettingsProps) {
   if (!listing) {
     return (
-      <div className="text-center py-12">
-        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-night-secondary flex items-center justify-center">
-          <Settings className="w-8 h-8 text-zinc-500" />
+      <div className="text-center py-12 border-2 border-dashed border-zinc-800">
+        <div className="w-16 h-16 mx-auto mb-4 bg-night-tertiary border-2 border-zinc-800 flex items-center justify-center">
+          <Settings className="w-8 h-8 text-zinc-600" />
         </div>
-        <h2 className="text-xl font-display text-white mb-2">No Listing Yet</h2>
+        <h2 className="text-xl font-bold text-white uppercase tracking-tight mb-2">No Listing Yet</h2>
         <p className="text-zinc-400 mb-6">
           Create a listing to start receiving booking requests from fans
         </p>
         <Link
           href="/bookings/listing/new"
-          className="inline-flex items-center gap-2 px-6 py-3 bg-lime text-night font-medium rounded-full hover:bg-lime/90 transition-colors"
+          className="inline-flex items-center gap-2 px-6 py-3 bg-lime text-night font-bold uppercase tracking-wider text-sm border-2 border-lime hover:bg-transparent hover:text-lime transition-all shadow-brutal hover:shadow-none hover:translate-x-1 hover:translate-y-1"
         >
+          <Plus className="w-4 h-4" />
           Create Listing
-          <ChevronRight className="w-4 h-4" />
         </Link>
       </div>
     );
@@ -306,52 +308,52 @@ function ListingSettings({ listing, band }: ListingSettingsProps) {
   return (
     <div className="space-y-6">
       {/* Listing Status Card */}
-      <div className="bg-night-secondary rounded-xl p-4 border border-lime/10">
+      <div className="bg-night-secondary border-2 border-zinc-800 p-4">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-medium text-white">Your Listing</h2>
+          <h2 className="text-lg font-bold text-white uppercase tracking-tight">Your Listing</h2>
           <span
             className={cn(
-              "px-2 py-1 rounded-full text-xs font-medium",
+              "px-2 py-1 text-xs font-bold uppercase tracking-wider border-2",
               listing.status === "active"
-                ? "bg-green-100 text-green-600"
+                ? "bg-lime/20 text-lime border-lime"
                 : listing.status === "paused"
-                  ? "bg-yellow-100 text-yellow-600"
-                  : "bg-gray-100 text-gray-600"
+                  ? "bg-amber-500/20 text-amber-400 border-amber-400"
+                  : "bg-zinc-800 text-zinc-400 border-zinc-700"
             )}
           >
             {listing.status.charAt(0).toUpperCase() + listing.status.slice(1)}
           </span>
         </div>
 
-        <h3 className="text-white font-medium mb-2">{listing.title}</h3>
+        <h3 className="text-white font-bold uppercase tracking-tight mb-2">{listing.title}</h3>
         {listing.description && (
           <p className="text-sm text-zinc-400 mb-4 line-clamp-2">{listing.description}</p>
         )}
 
         <div className="grid grid-cols-2 gap-4 text-sm">
-          <div>
-            <span className="text-zinc-500">Base Rate</span>
-            <p className="text-white font-medium">
+          <div className="bg-night-tertiary border border-zinc-800 p-3">
+            <span className="text-xs font-bold uppercase tracking-wider text-zinc-500 block mb-1">Base Rate</span>
+            <p className="text-white font-bold">
               {formatPrice(listing.baseHourlyRate)}/hr
             </p>
           </div>
-          <div>
-            <span className="text-zinc-500">Min Hours</span>
-            <p className="text-white font-medium">{listing.minimumHours} hours</p>
+          <div className="bg-night-tertiary border border-zinc-800 p-3">
+            <span className="text-xs font-bold uppercase tracking-wider text-zinc-500 block mb-1">Min Hours</span>
+            <p className="text-white font-bold">{listing.minimumHours} hours</p>
           </div>
-          <div>
-            <span className="text-zinc-500">Deposit</span>
-            <p className="text-white font-medium">{listing.depositPercentage}%</p>
+          <div className="bg-night-tertiary border border-zinc-800 p-3">
+            <span className="text-xs font-bold uppercase tracking-wider text-zinc-500 block mb-1">Deposit</span>
+            <p className="text-white font-bold">{listing.depositPercentage}%</p>
           </div>
-          <div>
-            <span className="text-zinc-500">Event Types</span>
-            <p className="text-white font-medium">{listing.eventTypes.length} types</p>
+          <div className="bg-night-tertiary border border-zinc-800 p-3">
+            <span className="text-xs font-bold uppercase tracking-wider text-zinc-500 block mb-1">Event Types</span>
+            <p className="text-white font-bold">{listing.eventTypes.length} types</p>
           </div>
         </div>
 
         <Link
           href="/bookings/listing/edit"
-          className="mt-4 w-full flex items-center justify-center gap-2 py-2 px-4 bg-night text-white font-medium rounded-lg border border-lime/20 hover:border-lime/40 transition-colors"
+          className="mt-4 w-full flex items-center justify-center gap-2 py-3 px-4 bg-night-tertiary text-white font-bold uppercase tracking-wider text-sm border-2 border-zinc-800 hover:border-lime transition-colors"
         >
           Edit Listing
           <ChevronRight className="w-4 h-4" />
@@ -359,14 +361,14 @@ function ListingSettings({ listing, band }: ListingSettingsProps) {
       </div>
 
       {/* Availability Section */}
-      <div className="bg-night-secondary rounded-xl p-4 border border-lime/10">
-        <h2 className="text-lg font-medium text-white mb-4">Availability</h2>
+      <div className="bg-night-secondary border-2 border-zinc-800 p-4">
+        <h2 className="text-lg font-bold text-white uppercase tracking-tight mb-2">Availability</h2>
         <p className="text-sm text-zinc-400 mb-4">
           Set your available dates so fans know when they can book you
         </p>
         <Link
           href="/bookings/availability"
-          className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-night text-white font-medium rounded-lg border border-lime/20 hover:border-lime/40 transition-colors"
+          className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-night-tertiary text-white font-bold uppercase tracking-wider text-sm border-2 border-zinc-800 hover:border-lime transition-colors"
         >
           Manage Availability
           <ChevronRight className="w-4 h-4" />
@@ -374,19 +376,19 @@ function ListingSettings({ listing, band }: ListingSettingsProps) {
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-night-secondary rounded-xl p-4 border border-lime/10">
-        <h2 className="text-lg font-medium text-white mb-4">Quick Actions</h2>
+      <div className="bg-night-secondary border-2 border-zinc-800 p-4">
+        <h2 className="text-lg font-bold text-white uppercase tracking-tight mb-4">Quick Actions</h2>
         <div className="space-y-2">
           {listing.status === "active" ? (
-            <button className="w-full py-2 px-4 text-left text-zinc-300 hover:text-white hover:bg-night rounded-lg transition-colors">
+            <button className="w-full py-3 px-4 text-left text-zinc-300 hover:text-white hover:bg-night-tertiary border-2 border-zinc-800 hover:border-zinc-600 transition-colors font-medium uppercase tracking-wider text-sm">
               Pause Listing
             </button>
           ) : listing.status === "paused" ? (
-            <button className="w-full py-2 px-4 text-left text-zinc-300 hover:text-white hover:bg-night rounded-lg transition-colors">
+            <button className="w-full py-3 px-4 text-left text-lime hover:bg-night-tertiary border-2 border-zinc-800 hover:border-lime transition-colors font-bold uppercase tracking-wider text-sm">
               Activate Listing
             </button>
           ) : null}
-          <button className="w-full py-2 px-4 text-left text-red-400 hover:text-red-300 hover:bg-night rounded-lg transition-colors">
+          <button className="w-full py-3 px-4 text-left text-red-400 hover:text-red-300 hover:bg-night-tertiary border-2 border-zinc-800 hover:border-red-400 transition-colors font-bold uppercase tracking-wider text-sm">
             Archive Listing
           </button>
         </div>
