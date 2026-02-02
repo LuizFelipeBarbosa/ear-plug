@@ -2,11 +2,15 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { MessageCircle, Send, ArrowLeft } from "lucide-react";
+import Link from "next/link";
+import { MessageCircle, Send, ArrowLeft, Music, Users } from "lucide-react";
 import { useBandConversations, useConversation } from "@/hooks/useMessages";
+import { useBookingConversations } from "@/hooks/useBookings";
 import { getRelativeTime } from "@ear-plug/shared/constants";
 import { cn } from "@/lib/utils";
 import type { Id } from "../../../../../convex/_generated/dataModel";
+
+type ConversationType = "venue" | "booking";
 
 export function BandMessagesView() {
   const [selectedConversation, setSelectedConversation] =
@@ -29,7 +33,42 @@ function ConversationsList({
 }: {
   onSelect: (id: Id<"conversations">) => void;
 }) {
-  const { conversations, isLoading } = useBandConversations();
+  const { conversations, isLoading: venueLoading } = useBandConversations();
+  const { bandConversations: bookingConversations, isLoading: bookingLoading } = useBookingConversations();
+  const [activeTab, setActiveTab] = useState<"all" | "venues" | "bookings">("all");
+
+  const isLoading = venueLoading || bookingLoading;
+
+  // Combine and sort all conversations
+  const allConversations = [
+    ...conversations.map((conv) => ({
+      ...conv,
+      type: "venue" as ConversationType,
+      name: conv.venue?.name || "Unknown Venue",
+      image: conv.venue?.images?.[0],
+      linkTo: null as string | null,
+    })),
+    ...bookingConversations.map((conv: any) => ({
+      ...conv,
+      type: "booking" as ConversationType,
+      name: conv.fan?.name || "Fan",
+      image: null,
+      linkTo: `/bookings/${conv.bookingId}`,
+      lastMessageAt: conv.lastMessageAt || conv._creationTime,
+      lastMessagePreview: conv.lastMessage?.content || "New booking request",
+      unreadCount: conv.unreadCount || 0,
+    })),
+  ].sort((a, b) => (b.lastMessageAt || 0) - (a.lastMessageAt || 0));
+
+  const filteredConversations = allConversations.filter((conv) => {
+    if (activeTab === "all") return true;
+    if (activeTab === "venues") return conv.type === "venue";
+    if (activeTab === "bookings") return conv.type === "booking";
+    return true;
+  });
+
+  const venueCount = conversations.length;
+  const bookingCount = bookingConversations.length;
 
   return (
     <div className="min-h-screen bg-night">
@@ -39,6 +78,43 @@ function ConversationsList({
           Messages
         </h1>
       </header>
+
+      {/* Tabs */}
+      <div className="flex border-b border-zinc-800">
+        <button
+          onClick={() => setActiveTab("all")}
+          className={cn(
+            "flex-1 py-3 text-sm font-medium uppercase tracking-wide transition-colors",
+            activeTab === "all"
+              ? "text-lime border-b-2 border-lime"
+              : "text-zinc-500 hover:text-white"
+          )}
+        >
+          All ({allConversations.length})
+        </button>
+        <button
+          onClick={() => setActiveTab("venues")}
+          className={cn(
+            "flex-1 py-3 text-sm font-medium uppercase tracking-wide transition-colors",
+            activeTab === "venues"
+              ? "text-lime border-b-2 border-lime"
+              : "text-zinc-500 hover:text-white"
+          )}
+        >
+          Venues ({venueCount})
+        </button>
+        <button
+          onClick={() => setActiveTab("bookings")}
+          className={cn(
+            "flex-1 py-3 text-sm font-medium uppercase tracking-wide transition-colors",
+            activeTab === "bookings"
+              ? "text-lime border-b-2 border-lime"
+              : "text-zinc-500 hover:text-white"
+          )}
+        >
+          Bookings ({bookingCount})
+        </button>
+      </div>
 
       {/* Conversations List */}
       <div className="divide-y-2 divide-zinc-800">
@@ -52,66 +128,94 @@ function ConversationsList({
               </div>
             </div>
           ))
-        ) : conversations.length > 0 ? (
-          conversations.map((conv) => (
-            <button
-              key={conv._id}
-              onClick={() => onSelect(conv._id)}
-              className={cn(
-                "w-full p-4 flex items-center gap-3 text-left bg-night-tertiary border-x-2 border-transparent hover:border-lime/30 transition-all",
-                conv.unreadCount > 0 && "border-l-2 border-l-lime"
-              )}
-            >
-              {/* Venue Avatar */}
-              <div className="w-12 h-12 overflow-hidden bg-night-secondary border-2 border-zinc-800 flex-shrink-0">
-                {conv.venue?.images?.[0] ? (
-                  <Image
-                    src={conv.venue.images[0]}
-                    alt={conv.venue.name}
-                    width={48}
-                    height={48}
-                    className="object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-violet/30 to-lime/30" />
+        ) : filteredConversations.length > 0 ? (
+          filteredConversations.map((conv) => {
+            const content = (
+              <div
+                className={cn(
+                  "w-full p-4 flex items-center gap-3 text-left bg-night-tertiary border-x-2 border-transparent hover:border-lime/30 transition-all",
+                  conv.unreadCount > 0 && "border-l-2 border-l-lime"
                 )}
-              </div>
+              >
+                {/* Avatar */}
+                <div className="w-12 h-12 overflow-hidden bg-night-secondary border-2 border-zinc-800 flex-shrink-0 flex items-center justify-center">
+                  {conv.type === "venue" && conv.image ? (
+                    <Image
+                      src={conv.image}
+                      alt={conv.name}
+                      width={48}
+                      height={48}
+                      className="object-cover"
+                    />
+                  ) : conv.type === "venue" ? (
+                    <Music className="w-6 h-6 text-zinc-600" />
+                  ) : (
+                    <Users className="w-6 h-6 text-violet-400" />
+                  )}
+                </div>
 
-              {/* Content */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between">
-                  <h3
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <h3
+                        className={cn(
+                          "font-bold text-white uppercase tracking-wide text-sm truncate",
+                          conv.unreadCount > 0 && "text-lime"
+                        )}
+                      >
+                        {conv.name}
+                      </h3>
+                      {conv.type === "booking" && (
+                        <span className="px-1.5 py-0.5 bg-violet-500/20 text-violet-400 text-[10px] uppercase tracking-wider rounded">
+                          Booking
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-xs text-zinc-500 uppercase tracking-wider flex-shrink-0">
+                      {getRelativeTime(conv.lastMessageAt)}
+                    </span>
+                  </div>
+                  <p
                     className={cn(
-                      "font-bold text-white uppercase tracking-wide text-sm truncate",
-                      conv.unreadCount > 0 && "text-lime"
+                      "text-sm truncate mt-0.5",
+                      conv.unreadCount > 0
+                        ? "text-white font-medium"
+                        : "text-zinc-500"
                     )}
                   >
-                    {conv.venue?.name || "Unknown Venue"}
-                  </h3>
-                  <span className="text-xs text-zinc-500 uppercase tracking-wider flex-shrink-0">
-                    {getRelativeTime(conv.lastMessageAt)}
-                  </span>
+                    {conv.lastMessagePreview || "No messages yet"}
+                  </p>
                 </div>
-                <p
-                  className={cn(
-                    "text-sm truncate mt-0.5",
-                    conv.unreadCount > 0
-                      ? "text-white font-medium"
-                      : "text-zinc-500"
-                  )}
-                >
-                  {conv.lastMessagePreview || "No messages yet"}
-                </p>
-              </div>
 
-              {/* Unread Badge */}
-              {conv.unreadCount > 0 && (
-                <span className="min-w-[24px] h-6 bg-lime text-night text-xs font-bold flex items-center justify-center px-1">
-                  {conv.unreadCount}
-                </span>
-              )}
-            </button>
-          ))
+                {/* Unread Badge */}
+                {conv.unreadCount > 0 && (
+                  <span className="min-w-[24px] h-6 bg-lime text-night text-xs font-bold flex items-center justify-center px-1">
+                    {conv.unreadCount}
+                  </span>
+                )}
+              </div>
+            );
+
+            // Booking conversations link to booking detail, venue conversations use internal state
+            if (conv.type === "booking" && conv.linkTo) {
+              return (
+                <Link key={conv._id} href={conv.linkTo}>
+                  {content}
+                </Link>
+              );
+            }
+
+            return (
+              <button
+                key={conv._id}
+                onClick={() => conv.type === "venue" && onSelect(conv._id as Id<"conversations">)}
+                className="w-full"
+              >
+                {content}
+              </button>
+            );
+          })
         ) : (
           <EmptyState />
         )}
