@@ -141,7 +141,7 @@ export default function AvailabilityPage() {
           listingId: listing._id as Id<"bandListings">,
           startDateTime: startDateTime.getTime(),
           endDateTime: endDateTime.getTime(),
-          reason: "Blocked by band",
+          notes: "Blocked by band",
         });
       }
 
