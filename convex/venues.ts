@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+import { haversineDistance, coordinatesMatch, COORDINATE_TOLERANCE } from "./utils/geo";
 
 const genreValidator = v.union(
   v.literal("indie"),
@@ -99,7 +100,7 @@ export const getNearby = query({
 
     // Calculate distance and filter
     const venuesWithDistance = venues.map((venue) => {
-      const distance = calculateDistance(
+      const distance = haversineDistance(
         args.lat,
         args.lng,
         venue.coordinates.lat,
@@ -114,29 +115,6 @@ export const getNearby = query({
   },
 });
 
-// Haversine formula for distance calculation
-function calculateDistance(
-  lat1: number,
-  lng1: number,
-  lat2: number,
-  lng2: number
-): number {
-  const R = 3959; // Earth's radius in miles
-  const dLat = toRad(lat2 - lat1);
-  const dLng = toRad(lng2 - lng1);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(lat1)) *
-      Math.cos(toRad(lat2)) *
-      Math.sin(dLng / 2) *
-      Math.sin(dLng / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
-
-function toRad(deg: number): number {
-  return deg * (Math.PI / 180);
-}
 
 // Save/unsave a venue
 export const toggleSave = mutation({
@@ -368,12 +346,15 @@ export const createFromPlace = mutation({
     }
 
     // Check if venue already exists by coordinates (within small tolerance)
-    // or by placeId if provided
-    const existingVenues = await ctx.db.query("venues").collect();
-    
+    // or by placeId if provided - use indexed query by city to avoid full table scan
+    const existingVenues = await ctx.db
+      .query("venues")
+      .withIndex("by_city", (q) => q.eq("city", args.city))
+      .collect();
+
     // Try to find by placeId first
     if (args.placeId) {
-      const byPlaceId = existingVenues.find(v => 
+      const byPlaceId = existingVenues.find(v =>
         v.name === args.name && v.address === args.address
       );
       if (byPlaceId) {
@@ -382,11 +363,14 @@ export const createFromPlace = mutation({
     }
 
     // Try to find by coordinates (within ~10 meters tolerance)
-    const byCoordinates = existingVenues.find(v => {
-      const latDiff = Math.abs(v.coordinates.lat - args.coordinates.lat);
-      const lngDiff = Math.abs(v.coordinates.lng - args.coordinates.lng);
-      return latDiff < 0.0001 && lngDiff < 0.0001;
-    });
+    const byCoordinates = existingVenues.find(v =>
+      coordinatesMatch(
+        v.coordinates.lat,
+        v.coordinates.lng,
+        args.coordinates.lat,
+        args.coordinates.lng
+      )
+    );
 
     if (byCoordinates) {
       return byCoordinates._id;
@@ -415,14 +399,18 @@ export const findByCoordinates = query({
     tolerance: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const tolerance = args.tolerance || 0.0001; // ~10 meters
+    const tolerance = args.tolerance || COORDINATE_TOLERANCE;
     const venues = await ctx.db.query("venues").collect();
 
-    const match = venues.find(v => {
-      const latDiff = Math.abs(v.coordinates.lat - args.lat);
-      const lngDiff = Math.abs(v.coordinates.lng - args.lng);
-      return latDiff < tolerance && lngDiff < tolerance;
-    });
+    const match = venues.find(v =>
+      coordinatesMatch(
+        v.coordinates.lat,
+        v.coordinates.lng,
+        args.lat,
+        args.lng,
+        tolerance
+      )
+    );
 
     return match || null;
   },

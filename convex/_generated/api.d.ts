@@ -15,6 +15,7 @@ import type * as messages from "../messages.js";
 import type * as notifications from "../notifications.js";
 import type * as seed from "../seed.js";
 import type * as users from "../users.js";
+import type * as utils_geo from "../utils/geo.js";
 import type * as venues from "../venues.js";
 
 import type {
@@ -31,6 +32,7 @@ declare const fullApi: ApiFromModules<{
   notifications: typeof notifications;
   seed: typeof seed;
   users: typeof users;
+  "utils/geo": typeof utils_geo;
   venues: typeof venues;
 }>;
 

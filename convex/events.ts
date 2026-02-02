@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { internal } from "./_generated/api";
+import { haversineDistance, coordinatesMatch } from "./utils/geo";
 
 const genreValidator = v.union(
   v.literal("indie"),
@@ -540,30 +541,6 @@ export const listNearby = query({
   },
 });
 
-// Haversine distance formula (returns miles)
-function haversineDistance(
-  lat1: number,
-  lng1: number,
-  lat2: number,
-  lng2: number
-): number {
-  const R = 3958.8; // Earth's radius in miles
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lng2 - lng1);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(lat1)) *
-    Math.cos(toRad(lat2)) *
-    Math.sin(dLon / 2) *
-    Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
-
-function toRad(deg: number): number {
-  return (deg * Math.PI) / 180;
-}
-
 // Create a new event (for bands)
 export const create = mutation({
   args: {
@@ -659,13 +636,19 @@ export const createWithVenue = mutation({
       throw new Error("Not authorized to create events for this band");
     }
 
-    // Check if venue already exists by coordinates
-    const existingVenues = await ctx.db.query("venues").collect();
-    const existingVenue = existingVenues.find(v => {
-      const latDiff = Math.abs(v.coordinates.lat - args.venueCoordinates.lat);
-      const lngDiff = Math.abs(v.coordinates.lng - args.venueCoordinates.lng);
-      return latDiff < 0.0001 && lngDiff < 0.0001;
-    });
+    // Check if venue already exists by coordinates (use indexed query by city)
+    const existingVenues = await ctx.db
+      .query("venues")
+      .withIndex("by_city", (q) => q.eq("city", args.venueCity))
+      .collect();
+    const existingVenue = existingVenues.find((v) =>
+      coordinatesMatch(
+        v.coordinates.lat,
+        v.coordinates.lng,
+        args.venueCoordinates.lat,
+        args.venueCoordinates.lng
+      )
+    );
 
     let venueId;
     if (existingVenue) {
