@@ -123,8 +123,8 @@ export default function MusicianBookingDetailPage({
     try {
       await updateQuote({
         bookingId: booking._id as Id<"bookings">,
-        newTotalPriceInCents: Math.round(Number(newQuote) * 100),
-        note: quoteNote || undefined,
+        newPriceInCents: Math.round(Number(newQuote) * 100),
+        message: quoteNote || undefined,
       });
       setShowQuoteForm(false);
       setNewQuote("");
