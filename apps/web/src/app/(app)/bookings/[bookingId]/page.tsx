@@ -24,7 +24,7 @@ import {
 import Link from "next/link";
 import { formatPrice, formatEventDate, formatEventTime, formatFullDate, getRelativeTime } from "@ear-plug/shared";
 import { BOOKING_STATUS_CONFIG, EVENT_TYPES } from "@ear-plug/shared";
-import type { Id } from "../../../../../../convex/_generated/dataModel";
+import type { Id } from "../../../../../../../convex/_generated/dataModel";
 
 export default function MusicianBookingDetailPage({
   params,

@@ -8,7 +8,7 @@ import { useCurrentUser } from "@/hooks/useUser";
 import { cn } from "@/lib/utils";
 import { ArrowLeft, Plus, X, Calendar, Clock, Ban } from "lucide-react";
 import Link from "next/link";
-import type { Id } from "../../../../../../convex/_generated/dataModel";
+import type { Id } from "../../../../../../../convex/_generated/dataModel";
 
 type SlotType = "available" | "blocked";
 
