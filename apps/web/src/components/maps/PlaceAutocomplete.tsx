@@ -8,6 +8,9 @@ import { MapPin, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { VenueLocationData } from "@/types";
 
+// Re-export for consumers who import from this module
+export type { VenueLocationData };
+
 interface PlaceAutocompleteProps {
   value?: VenueLocationData | null;
   onChange: (venue: VenueLocationData | null) => void;
