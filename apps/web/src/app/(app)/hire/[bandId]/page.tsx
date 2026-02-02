@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, use } from "react";
+import { useState } from "react";
 import { useBandListingByBand, useAvailableSlots, useCheckAvailability } from "@/hooks/useBandListing";
 import { useBookingActions } from "@/hooks/useBookings";
 import { useCurrentUser } from "@/hooks/useUser";
@@ -27,9 +27,9 @@ import type { Id } from "../../../../../../../convex/_generated/dataModel";
 export default function BandHireDetailPage({
   params,
 }: {
-  params: Promise<{ bandId: string }>;
+  params: { bandId: string };
 }) {
-  const { bandId } = use(params);
+  const { bandId } = params;
   const router = useRouter();
   const { user, isFan, isLoading: userLoading } = useCurrentUser();
   const { listing, isLoading: listingLoading } = useBandListingByBand(

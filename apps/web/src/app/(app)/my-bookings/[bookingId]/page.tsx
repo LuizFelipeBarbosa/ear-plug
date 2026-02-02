@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, use, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useBookingDetail, useBookingActions, useBookingMessages, usePayments } from "@/hooks/useBookings";
 import { useCurrentUser } from "@/hooks/useUser";
 import { useRouter } from "next/navigation";
@@ -26,9 +26,9 @@ import type { Id } from "../../../../../../../convex/_generated/dataModel";
 export default function BookingDetailPage({
   params,
 }: {
-  params: Promise<{ bookingId: string }>;
+  params: { bookingId: string };
 }) {
-  const { bookingId } = use(params);
+  const { bookingId } = params;
   const router = useRouter();
   const { user, isFan, isLoading: userLoading } = useCurrentUser();
   const { booking, conversation, messages, isLoading: bookingLoading } = useBookingDetail(
