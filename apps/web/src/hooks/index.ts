@@ -27,3 +27,6 @@ export * from "./useLocalStorage";
 export * from "./useGeolocation";
 export * from "./useSharedEvents";
 export { useBandEvents } from "./useSharedEvents";
+// Marketplace hooks
+export * from "./useBandListing";
+export * from "./useBookings";

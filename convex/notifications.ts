@@ -14,7 +14,16 @@ const notificationTypeValidator = v.union(
   v.literal("new_event_followed_artist"),
   v.literal("new_event_nearby"),
   v.literal("application_update"),
-  v.literal("message")
+  v.literal("message"),
+  // Booking marketplace notification types
+  v.literal("booking_request"),
+  v.literal("booking_accepted"),
+  v.literal("booking_rejected"),
+  v.literal("booking_cancelled"),
+  v.literal("deposit_received"),
+  v.literal("payment_received"),
+  v.literal("booking_reminder"),
+  v.literal("booking_message")
 );
 
 /**

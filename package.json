@@ -22,6 +22,7 @@
     "node": ">=20"
   },
   "dependencies": {
-    "convex": "^1.16.0"
+    "convex": "^1.16.0",
+    "stripe": "^17.5.0"
   }
 }

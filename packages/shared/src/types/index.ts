@@ -59,7 +59,87 @@ export type NotificationType =
   | "new_event_followed_artist"   // New event from a saved band
   | "new_event_nearby"            // New event at a saved venue
   | "application_update"          // Update on band's application status
-  | "message";                    // New message in a conversation
+  | "message"                     // New message in a conversation
+  // Booking marketplace notification types
+  | "booking_request"             // New booking request from fan
+  | "booking_accepted"            // Band accepted booking
+  | "booking_rejected"            // Band rejected booking
+  | "booking_cancelled"           // Booking was cancelled
+  | "deposit_received"            // Deposit payment received
+  | "payment_received"            // Full payment received
+  | "booking_reminder"            // Reminder about upcoming booked event
+  | "booking_message";            // New message in booking conversation
+
+// ============================================================================
+// MARKETPLACE TYPES
+// ============================================================================
+
+/**
+ * Types of events for marketplace bookings.
+ */
+export type MarketplaceEventType =
+  | "wedding"
+  | "corporate"
+  | "private_party"
+  | "public_gig"
+  | "festival"
+  | "other";
+
+/**
+ * Status of a booking request.
+ */
+export type BookingStatus =
+  | "pending"        // Initial request, awaiting band response
+  | "negotiating"    // Band and fan discussing terms
+  | "accepted"       // Band accepted, waiting for deposit
+  | "deposit_paid"   // Deposit paid, booking secured
+  | "confirmed"      // Fully paid and confirmed
+  | "completed"      // Event has occurred
+  | "cancelled"      // Cancelled by either party
+  | "rejected"       // Band declined the request
+  | "expired";       // Request timed out
+
+/**
+ * Status of a band marketplace listing.
+ */
+export type ListingStatus =
+  | "draft"     // Not yet published
+  | "active"    // Live and accepting bookings
+  | "paused"    // Temporarily not accepting
+  | "archived"; // No longer active
+
+/**
+ * Status of a band availability slot.
+ */
+export type AvailabilityStatus =
+  | "available" // Open for booking
+  | "booked"    // Slot has been booked
+  | "blocked";  // Manually blocked by band
+
+/**
+ * Types of messages in booking conversations.
+ */
+export type BookingMessageType =
+  | "text"          // Regular text message
+  | "quote_update"  // Price/quote change
+  | "system";       // Automated system message
+
+/**
+ * Types of payment transactions.
+ */
+export type TransactionType =
+  | "deposit"        // Initial deposit payment
+  | "final_payment"  // Remaining balance
+  | "refund";        // Money returned to fan
+
+/**
+ * Status of a payment transaction.
+ */
+export type TransactionStatus =
+  | "pending"   // Payment initiated
+  | "succeeded" // Completed successfully
+  | "failed"    // Payment failed
+  | "refunded"; // Has been refunded
 
 /**
  * Geographic coordinates for mapping and distance calculations.
@@ -390,4 +470,219 @@ export interface MapFilters {
   radiusMiles?: number;
   /** Text search query for event/band/venue names */
   searchQuery?: string;
+}
+
+// ============================================================================
+// MARKETPLACE ENTITIES
+// ============================================================================
+
+/**
+ * Add-on service offered by a band.
+ */
+export interface BandListingAddOn {
+  /** Add-on name */
+  name: string;
+  /** Description of the add-on */
+  description?: string;
+  /** Price in cents */
+  priceInCents: number;
+}
+
+/**
+ * Band marketplace listing entity.
+ * Contains pricing, availability settings, and supported event types.
+ */
+export interface BandListing extends BaseEntity {
+  /** ID of the band */
+  bandId: string;
+  /** Listing title/headline */
+  title: string;
+  /** Detailed description */
+  description?: string;
+  /** Supported event types */
+  eventTypes: MarketplaceEventType[];
+  /** Base hourly rate in cents */
+  baseHourlyRate: number;
+  /** Minimum booking hours */
+  minimumHours: number;
+  /** Deposit percentage (0-100) */
+  depositPercentage: number;
+  /** Optional add-on services */
+  addOns?: BandListingAddOn[];
+  /** Maximum travel distance in miles */
+  maxTravelDistance?: number;
+  /** Additional booking notes */
+  bookingNotes?: string;
+  /** Cancellation policy text */
+  cancellationPolicy?: string;
+  /** Current listing status */
+  status: ListingStatus;
+  /** Unix timestamp (ms) when created */
+  createdAt: number;
+  /** Unix timestamp (ms) when last updated */
+  updatedAt: number;
+}
+
+/**
+ * Band listing with band data populated.
+ */
+export interface BandListingWithBand extends BandListing {
+  /** The band this listing belongs to */
+  band: Band;
+}
+
+/**
+ * Band availability slot entity.
+ */
+export interface BandAvailability extends BaseEntity {
+  /** ID of the band */
+  bandId: string;
+  /** ID of the listing */
+  listingId: string;
+  /** Start date/time (Unix timestamp ms) */
+  startDateTime: number;
+  /** End date/time (Unix timestamp ms) */
+  endDateTime: number;
+  /** Slot status */
+  status: AvailabilityStatus;
+  /** ID of booking if slot is booked */
+  bookingId?: string;
+  /** Notes for blocked slots */
+  notes?: string;
+  /** Unix timestamp (ms) when created */
+  createdAt: number;
+}
+
+/**
+ * Booking request entity.
+ */
+export interface Booking extends BaseEntity {
+  /** ID of the fan who made the booking */
+  fanId: string;
+  /** ID of the band being booked */
+  bandId: string;
+  /** ID of the band's listing */
+  listingId: string;
+  /** Type of event */
+  eventType: MarketplaceEventType;
+  /** Event name/title */
+  eventName: string;
+  /** Event description */
+  eventDescription?: string;
+  /** Event date/time (Unix timestamp ms) */
+  eventDateTime: number;
+  /** Duration in hours */
+  durationHours: number;
+  /** Event location/address */
+  eventLocation: string;
+  /** Event city */
+  eventCity?: string;
+  /** Expected number of guests */
+  guestCount?: number;
+  /** Selected add-on names */
+  selectedAddOns?: string[];
+  /** Special requests */
+  specialRequests?: string;
+  /** Total price in cents */
+  totalPriceInCents: number;
+  /** Deposit amount in cents */
+  depositAmountInCents: number;
+  /** Amount paid so far in cents */
+  paidAmountInCents: number;
+  /** Current booking status */
+  status: BookingStatus;
+  /** Reason for cancellation/rejection */
+  statusReason?: string;
+  /** Unix timestamp (ms) when requested */
+  requestedAt: number;
+  /** Unix timestamp (ms) when band responded */
+  respondedAt?: number;
+  /** Unix timestamp (ms) when deposit was paid */
+  depositPaidAt?: number;
+  /** Unix timestamp (ms) when final payment was made */
+  finalPaymentAt?: number;
+  /** Unix timestamp (ms) when confirmed */
+  confirmedAt?: number;
+  /** Unix timestamp (ms) when completed */
+  completedAt?: number;
+  /** Unix timestamp (ms) when cancelled */
+  cancelledAt?: number;
+}
+
+/**
+ * Booking with related data populated.
+ */
+export interface BookingWithDetails extends Booking {
+  /** The band being booked */
+  band: Band | null;
+  /** The fan who made the booking */
+  fan: User | null;
+  /** The band's listing */
+  listing: BandListing | null;
+}
+
+/**
+ * Booking conversation entity.
+ */
+export interface BookingConversation extends BaseEntity {
+  /** ID of the booking */
+  bookingId: string;
+  /** ID of the fan */
+  fanId: string;
+  /** ID of the band */
+  bandId: string;
+  /** Unix timestamp (ms) of last message */
+  lastMessageAt: number;
+  /** Preview of last message */
+  lastMessagePreview?: string;
+  /** Unread count for fan */
+  fanUnreadCount: number;
+  /** Unread count for band */
+  bandUnreadCount: number;
+}
+
+/**
+ * Booking message entity.
+ */
+export interface BookingMessage extends BaseEntity {
+  /** ID of the conversation */
+  conversationId: string;
+  /** ID of the sender */
+  senderId: string;
+  /** Message content */
+  content: string;
+  /** Message type */
+  messageType: BookingMessageType;
+  /** For quote updates: new price in cents */
+  newPriceInCents?: number;
+  /** Unix timestamp (ms) when sent */
+  timestamp: number;
+  /** Whether the message has been read */
+  read: boolean;
+}
+
+/**
+ * Payment transaction entity.
+ */
+export interface Transaction extends BaseEntity {
+  /** ID of the booking */
+  bookingId: string;
+  /** Transaction type */
+  type: TransactionType;
+  /** Amount in cents */
+  amountInCents: number;
+  /** Stripe PaymentIntent ID */
+  stripePaymentIntentId?: string;
+  /** Stripe Charge ID */
+  stripeChargeId?: string;
+  /** Stripe Refund ID */
+  stripeRefundId?: string;
+  /** Transaction status */
+  status: TransactionStatus;
+  /** Error message if failed */
+  errorMessage?: string;
+  /** Unix timestamp (ms) when created */
+  createdAt: number;
+  /** Unix timestamp (ms) when last updated */
+  updatedAt: number;
 }

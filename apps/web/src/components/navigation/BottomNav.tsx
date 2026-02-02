@@ -9,10 +9,13 @@ import {
   User,
   LayoutDashboard,
   MessageCircle,
+  Music,
+  CalendarCheck,
 } from "lucide-react";
 import { useCurrentUser } from "@/hooks/useUser";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useBandConversations } from "@/hooks/useMessages";
+import { useBandBookings, useBookingConversations } from "@/hooks/useBookings";
 import { cn } from "@/lib/utils";
 
 interface NavItem {
@@ -28,8 +31,13 @@ export function BottomNav() {
   const { user, isFan, isMusician } = useCurrentUser();
   const { unreadCount: notificationCount } = useNotifications();
   const { unreadCount: messageCount } = useBandConversations();
+  const { counts: bookingCounts } = useBandBookings();
+  const { unreadCount: bookingMessageCount } = useBookingConversations();
 
   if (!user) return null;
+
+  // Calculate booking badge count (pending requests for musicians)
+  const bookingBadgeCount = isMusician ? bookingCounts.pending : 0;
 
   const fanNavItems: NavItem[] = [
     {
@@ -38,15 +46,15 @@ export function BottomNav() {
       icon: <Map className="w-6 h-6" strokeWidth={1.5} />,
     },
     {
-      href: "/calendar",
-      label: "My Events",
-      icon: <Calendar className="w-6 h-6" strokeWidth={1.5} />,
+      href: "/hire",
+      label: "Hire a Band",
+      icon: <Music className="w-6 h-6" strokeWidth={1.5} />,
     },
     {
-      href: "/messages",
-      label: "Notifications",
-      icon: <Bell className="w-6 h-6" strokeWidth={1.5} />,
-      badge: notificationCount,
+      href: "/my-bookings",
+      label: "My Bookings",
+      icon: <CalendarCheck className="w-6 h-6" strokeWidth={1.5} />,
+      badge: bookingMessageCount,
     },
     {
       href: "/profile",
@@ -62,15 +70,16 @@ export function BottomNav() {
       icon: <LayoutDashboard className="w-6 h-6" strokeWidth={1.5} />,
     },
     {
-      href: "/calendar",
-      label: "Shows",
-      icon: <Calendar className="w-6 h-6" strokeWidth={1.5} />,
+      href: "/bookings",
+      label: "Bookings",
+      icon: <CalendarCheck className="w-6 h-6" strokeWidth={1.5} />,
+      badge: bookingBadgeCount,
     },
     {
       href: "/messages",
       label: "Messages",
       icon: <MessageCircle className="w-6 h-6" strokeWidth={1.5} />,
-      badge: messageCount,
+      badge: messageCount + bookingMessageCount,
     },
     {
       href: "/profile",

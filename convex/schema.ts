@@ -78,7 +78,118 @@ const notificationTypeValidator = v.union(
   v.literal("new_event_followed_artist"),
   v.literal("new_event_nearby"),
   v.literal("application_update"),
-  v.literal("message")
+  v.literal("message"),
+  // Booking marketplace notification types
+  v.literal("booking_request"),
+  v.literal("booking_accepted"),
+  v.literal("booking_rejected"),
+  v.literal("booking_cancelled"),
+  v.literal("deposit_received"),
+  v.literal("payment_received"),
+  v.literal("booking_reminder"),
+  v.literal("booking_message")
+);
+
+/**
+ * Validator for marketplace event types.
+ * Categories of private/public events fans can book bands for.
+ */
+const marketplaceEventTypeValidator = v.union(
+  v.literal("wedding"),
+  v.literal("corporate"),
+  v.literal("private_party"),
+  v.literal("public_gig"),
+  v.literal("festival"),
+  v.literal("other")
+);
+
+/**
+ * Validator for booking status.
+ * Tracks the lifecycle of a booking from request to completion.
+ * - "pending": Initial request from fan, awaiting band response
+ * - "negotiating": Band and fan are discussing terms/price
+ * - "accepted": Band accepted the booking
+ * - "deposit_paid": Fan has paid the deposit
+ * - "confirmed": Fully paid and confirmed
+ * - "completed": Event has occurred
+ * - "cancelled": Booking was cancelled by either party
+ * - "rejected": Band declined the request
+ * - "expired": Request timed out without response
+ */
+const bookingStatusValidator = v.union(
+  v.literal("pending"),
+  v.literal("negotiating"),
+  v.literal("accepted"),
+  v.literal("deposit_paid"),
+  v.literal("confirmed"),
+  v.literal("completed"),
+  v.literal("cancelled"),
+  v.literal("rejected"),
+  v.literal("expired")
+);
+
+/**
+ * Validator for band listing status.
+ * - "draft": Listing not yet published
+ * - "active": Listing is live and accepting bookings
+ * - "paused": Temporarily not accepting bookings
+ * - "archived": No longer active
+ */
+const listingStatusValidator = v.union(
+  v.literal("draft"),
+  v.literal("active"),
+  v.literal("paused"),
+  v.literal("archived")
+);
+
+/**
+ * Validator for band availability slot status.
+ * - "available": Open for booking
+ * - "booked": Slot has been booked
+ * - "blocked": Manually blocked by band
+ */
+const availabilityStatusValidator = v.union(
+  v.literal("available"),
+  v.literal("booked"),
+  v.literal("blocked")
+);
+
+/**
+ * Validator for booking message types.
+ * - "text": Regular text message
+ * - "quote_update": Price/quote change message
+ * - "system": Automated system message
+ */
+const bookingMessageTypeValidator = v.union(
+  v.literal("text"),
+  v.literal("quote_update"),
+  v.literal("system")
+);
+
+/**
+ * Validator for transaction types.
+ * - "deposit": Initial deposit payment
+ * - "final_payment": Remaining balance payment
+ * - "refund": Money returned to fan
+ */
+const transactionTypeValidator = v.union(
+  v.literal("deposit"),
+  v.literal("final_payment"),
+  v.literal("refund")
+);
+
+/**
+ * Validator for transaction status.
+ * - "pending": Payment initiated
+ * - "succeeded": Payment completed successfully
+ * - "failed": Payment failed
+ * - "refunded": Payment has been refunded
+ */
+const transactionStatusValidator = v.union(
+  v.literal("pending"),
+  v.literal("succeeded"),
+  v.literal("failed"),
+  v.literal("refunded")
 );
 
 /**
@@ -504,4 +615,266 @@ export default defineSchema({
     .index("by_open_date", ["openDateId"])
     .index("by_band_open_date", ["bandId", "openDateId"])
     .index("by_status", ["status"]),
+
+  // ==================== BAND LISTINGS (MARKETPLACE) ====================
+  /**
+   * Band Listings table - Band's marketplace profile for accepting bookings.
+   *
+   * Contains pricing, availability settings, and supported event types.
+   * Each band can have one active listing at a time.
+   *
+   * Indexes:
+   * - by_band: Get listing for a specific band
+   * - by_status: Filter listings by status
+   * - by_status_event_type: Search active listings by event type
+   */
+  bandListings: defineTable({
+    /** Reference to the band */
+    bandId: v.id("bands"),
+    /** Listing title/headline */
+    title: v.string(),
+    /** Detailed description of services offered */
+    description: v.optional(v.string()),
+    /** Event types the band is available for */
+    eventTypes: v.array(marketplaceEventTypeValidator),
+    /** Base hourly rate in cents */
+    baseHourlyRate: v.number(),
+    /** Minimum booking hours */
+    minimumHours: v.number(),
+    /** Deposit percentage required (0-100) */
+    depositPercentage: v.number(),
+    /** Optional add-on services with pricing */
+    addOns: v.optional(
+      v.array(
+        v.object({
+          name: v.string(),
+          description: v.optional(v.string()),
+          priceInCents: v.number(),
+        })
+      )
+    ),
+    /** Maximum travel distance in miles (0 = no limit) */
+    maxTravelDistance: v.optional(v.number()),
+    /** Additional notes about booking requirements */
+    bookingNotes: v.optional(v.string()),
+    /** Cancellation policy description */
+    cancellationPolicy: v.optional(v.string()),
+    /** Current listing status */
+    status: listingStatusValidator,
+    /** Unix timestamp when listing was created */
+    createdAt: v.number(),
+    /** Unix timestamp when listing was last updated */
+    updatedAt: v.number(),
+  })
+    .index("by_band", ["bandId"])
+    .index("by_status", ["status"]),
+
+  // ==================== BAND AVAILABILITY ====================
+  /**
+   * Band Availability table - Specific date/time slots for bookings.
+   *
+   * Tracks when a band is available, booked, or blocked off.
+   *
+   * Indexes:
+   * - by_band: Get all availability for a band
+   * - by_listing: Get availability for a specific listing
+   * - by_band_date: Check availability for a specific date
+   * - by_status: Filter by availability status
+   */
+  bandAvailability: defineTable({
+    /** Reference to the band */
+    bandId: v.id("bands"),
+    /** Reference to the band's listing */
+    listingId: v.id("bandListings"),
+    /** Start date/time (Unix timestamp) */
+    startDateTime: v.number(),
+    /** End date/time (Unix timestamp) */
+    endDateTime: v.number(),
+    /** Slot status */
+    status: availabilityStatusValidator,
+    /** Reference to booking if slot is booked */
+    bookingId: v.optional(v.id("bookings")),
+    /** Notes for blocked slots */
+    notes: v.optional(v.string()),
+    /** Unix timestamp when slot was created */
+    createdAt: v.number(),
+  })
+    .index("by_band", ["bandId"])
+    .index("by_listing", ["listingId"])
+    .index("by_band_date", ["bandId", "startDateTime"])
+    .index("by_status", ["status"]),
+
+  // ==================== BOOKINGS ====================
+  /**
+   * Bookings table - Booking requests from fans to bands.
+   *
+   * Tracks the full lifecycle of a booking from request to completion.
+   *
+   * Indexes:
+   * - by_fan: Get all bookings for a fan
+   * - by_band: Get all bookings for a band
+   * - by_listing: Get bookings for a specific listing
+   * - by_status: Filter bookings by status
+   * - by_event_date: Sort bookings by event date
+   */
+  bookings: defineTable({
+    /** Reference to the fan who requested the booking */
+    fanId: v.id("users"),
+    /** Reference to the band being booked */
+    bandId: v.id("bands"),
+    /** Reference to the band's listing */
+    listingId: v.id("bandListings"),
+    /** Type of event */
+    eventType: marketplaceEventTypeValidator,
+    /** Event name/title */
+    eventName: v.string(),
+    /** Event description */
+    eventDescription: v.optional(v.string()),
+    /** Event date/time (Unix timestamp) */
+    eventDateTime: v.number(),
+    /** Event duration in hours */
+    durationHours: v.number(),
+    /** Event location/address */
+    eventLocation: v.string(),
+    /** Event city */
+    eventCity: v.optional(v.string()),
+    /** Expected number of guests */
+    guestCount: v.optional(v.number()),
+    /** Selected add-on names */
+    selectedAddOns: v.optional(v.array(v.string())),
+    /** Additional requirements from fan */
+    specialRequests: v.optional(v.string()),
+    /** Current quoted total price in cents */
+    totalPriceInCents: v.number(),
+    /** Deposit amount in cents */
+    depositAmountInCents: v.number(),
+    /** Amount paid so far in cents */
+    paidAmountInCents: v.number(),
+    /** Current booking status */
+    status: bookingStatusValidator,
+    /** Reason for cancellation/rejection */
+    statusReason: v.optional(v.string()),
+    /** Unix timestamp when booking was requested */
+    requestedAt: v.number(),
+    /** Unix timestamp when band responded */
+    respondedAt: v.optional(v.number()),
+    /** Unix timestamp when deposit was paid */
+    depositPaidAt: v.optional(v.number()),
+    /** Unix timestamp when final payment was made */
+    finalPaymentAt: v.optional(v.number()),
+    /** Unix timestamp when booking was confirmed */
+    confirmedAt: v.optional(v.number()),
+    /** Unix timestamp when booking was completed */
+    completedAt: v.optional(v.number()),
+    /** Unix timestamp when booking was cancelled */
+    cancelledAt: v.optional(v.number()),
+  })
+    .index("by_fan", ["fanId"])
+    .index("by_band", ["bandId"])
+    .index("by_listing", ["listingId"])
+    .index("by_status", ["status"])
+    .index("by_event_date", ["eventDateTime"]),
+
+  // ==================== BOOKING CONVERSATIONS ====================
+  /**
+   * Booking Conversations table - Messaging threads for bookings.
+   *
+   * Each booking has one conversation between the fan and band.
+   *
+   * Indexes:
+   * - by_booking: Get conversation for a booking
+   * - by_fan: Get all conversations for a fan
+   * - by_band: Get all conversations for a band
+   * - by_last_message: Sort conversations by recent activity
+   */
+  bookingConversations: defineTable({
+    /** Reference to the booking */
+    bookingId: v.id("bookings"),
+    /** Reference to the fan */
+    fanId: v.id("users"),
+    /** Reference to the band */
+    bandId: v.id("bands"),
+    /** Unix timestamp of the most recent message */
+    lastMessageAt: v.number(),
+    /** Preview text of the last message */
+    lastMessagePreview: v.optional(v.string()),
+    /** Number of unread messages for fan */
+    fanUnreadCount: v.number(),
+    /** Number of unread messages for band */
+    bandUnreadCount: v.number(),
+  })
+    .index("by_booking", ["bookingId"])
+    .index("by_fan", ["fanId"])
+    .index("by_band", ["bandId"])
+    .index("by_last_message", ["lastMessageAt"]),
+
+  // ==================== BOOKING MESSAGES ====================
+  /**
+   * Booking Messages table - Individual messages within booking conversations.
+   *
+   * Supports text messages, quote updates, and system messages.
+   *
+   * Indexes:
+   * - by_conversation: Get all messages in a conversation
+   * - by_sender: Get all messages sent by a user
+   * - by_timestamp: Sort messages chronologically
+   */
+  bookingMessages: defineTable({
+    /** Reference to the parent conversation */
+    conversationId: v.id("bookingConversations"),
+    /** Reference to the sender user */
+    senderId: v.id("users"),
+    /** Message content */
+    content: v.string(),
+    /** Type of message */
+    messageType: bookingMessageTypeValidator,
+    /** For quote_update messages: new price in cents */
+    newPriceInCents: v.optional(v.number()),
+    /** Unix timestamp when message was sent */
+    timestamp: v.number(),
+    /** Whether the recipient has read this message */
+    read: v.boolean(),
+  })
+    .index("by_conversation", ["conversationId"])
+    .index("by_sender", ["senderId"])
+    .index("by_timestamp", ["timestamp"]),
+
+  // ==================== TRANSACTIONS ====================
+  /**
+   * Transactions table - Payment transaction records.
+   *
+   * Tracks all payments and refunds for bookings.
+   *
+   * Indexes:
+   * - by_booking: Get all transactions for a booking
+   * - by_stripe_payment_intent: Look up by Stripe PaymentIntent ID
+   * - by_status: Filter transactions by status
+   * - by_type: Filter transactions by type
+   */
+  transactions: defineTable({
+    /** Reference to the booking */
+    bookingId: v.id("bookings"),
+    /** Transaction type */
+    type: transactionTypeValidator,
+    /** Amount in cents */
+    amountInCents: v.number(),
+    /** Stripe PaymentIntent ID */
+    stripePaymentIntentId: v.optional(v.string()),
+    /** Stripe Charge ID (for refunds) */
+    stripeChargeId: v.optional(v.string()),
+    /** Stripe Refund ID */
+    stripeRefundId: v.optional(v.string()),
+    /** Transaction status */
+    status: transactionStatusValidator,
+    /** Error message if failed */
+    errorMessage: v.optional(v.string()),
+    /** Unix timestamp when transaction was created */
+    createdAt: v.number(),
+    /** Unix timestamp when transaction was last updated */
+    updatedAt: v.number(),
+  })
+    .index("by_booking", ["bookingId"])
+    .index("by_stripe_payment_intent", ["stripePaymentIntentId"])
+    .index("by_status", ["status"])
+    .index("by_type", ["type"]),
 });

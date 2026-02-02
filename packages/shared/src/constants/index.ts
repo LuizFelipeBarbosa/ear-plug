@@ -4,7 +4,7 @@
  * @module @ear-plug/shared/constants
  */
 
-import type { Genre } from "../types";
+import type { Genre, MarketplaceEventType, BookingStatus, ListingStatus } from "../types";
 
 /**
  * Genre options with display labels for UI dropdowns and filters.
@@ -77,6 +77,13 @@ export const ROUTES = {
   GIG: "/gig",
   /** Onboarding/landing page */
   ONBOARDING: "/",
+  // Marketplace routes
+  /** Hire a band marketplace (for fans) */
+  HIRE: "/hire",
+  /** Fan's bookings dashboard */
+  MY_BOOKINGS: "/my-bookings",
+  /** Musician's booking management */
+  BOOKINGS: "/bookings",
 } as const;
 
 /**
@@ -174,6 +181,208 @@ export const NOTIFICATION_TYPE_CONFIG = {
     icon: "message-circle",
     title: "New Message",
   },
+  // Booking marketplace notification types
+  booking_request: {
+    icon: "calendar-plus",
+    title: "Booking Request",
+  },
+  booking_accepted: {
+    icon: "check-circle",
+    title: "Booking Accepted",
+  },
+  booking_rejected: {
+    icon: "x-circle",
+    title: "Booking Declined",
+  },
+  booking_cancelled: {
+    icon: "calendar-x",
+    title: "Booking Cancelled",
+  },
+  deposit_received: {
+    icon: "dollar-sign",
+    title: "Deposit Received",
+  },
+  payment_received: {
+    icon: "credit-card",
+    title: "Payment Received",
+  },
+  booking_reminder: {
+    icon: "bell",
+    title: "Booking Reminder",
+  },
+  booking_message: {
+    icon: "message-square",
+    title: "New Message",
+  },
+} as const;
+
+// ============================================================================
+// MARKETPLACE CONSTANTS
+// ============================================================================
+
+/**
+ * Marketplace event type options with display labels.
+ * Maps internal event type values to human-readable labels.
+ */
+export const EVENT_TYPES: { value: MarketplaceEventType; label: string; icon: string }[] = [
+  { value: "wedding", label: "Wedding", icon: "heart" },
+  { value: "corporate", label: "Corporate Event", icon: "briefcase" },
+  { value: "private_party", label: "Private Party", icon: "party-popper" },
+  { value: "public_gig", label: "Public Gig", icon: "users" },
+  { value: "festival", label: "Festival", icon: "tent" },
+  { value: "other", label: "Other", icon: "sparkles" },
+];
+
+/**
+ * Color mapping for each event type.
+ * Used for visual differentiation in UI elements.
+ */
+export const EVENT_TYPE_COLORS: Record<MarketplaceEventType, string> = {
+  wedding: "#ec4899",      // Pink
+  corporate: "#6366f1",    // Indigo
+  private_party: "#f59e0b", // Amber
+  public_gig: "#22c55e",   // Green
+  festival: "#8b5cf6",     // Violet
+  other: "#06b6d4",        // Cyan
+};
+
+/**
+ * Booking status display configuration.
+ * Maps status values to labels, colors, and icons for UI rendering.
+ */
+export const BOOKING_STATUS_CONFIG: Record<BookingStatus, {
+  label: string;
+  color: string;
+  bgColor: string;
+  icon: string;
+  description: string;
+}> = {
+  pending: {
+    label: "Pending",
+    color: "text-yellow-600",
+    bgColor: "bg-yellow-100",
+    icon: "clock",
+    description: "Waiting for band response",
+  },
+  negotiating: {
+    label: "Negotiating",
+    color: "text-orange-600",
+    bgColor: "bg-orange-100",
+    icon: "message-circle",
+    description: "Discussing terms with band",
+  },
+  accepted: {
+    label: "Accepted",
+    color: "text-blue-600",
+    bgColor: "bg-blue-100",
+    icon: "check",
+    description: "Pay deposit to secure booking",
+  },
+  deposit_paid: {
+    label: "Deposit Paid",
+    color: "text-indigo-600",
+    bgColor: "bg-indigo-100",
+    icon: "dollar-sign",
+    description: "Booking secured, pay balance before event",
+  },
+  confirmed: {
+    label: "Confirmed",
+    color: "text-green-600",
+    bgColor: "bg-green-100",
+    icon: "check-circle",
+    description: "Fully paid and confirmed",
+  },
+  completed: {
+    label: "Completed",
+    color: "text-gray-600",
+    bgColor: "bg-gray-100",
+    icon: "flag",
+    description: "Event has taken place",
+  },
+  cancelled: {
+    label: "Cancelled",
+    color: "text-red-600",
+    bgColor: "bg-red-100",
+    icon: "x-circle",
+    description: "Booking was cancelled",
+  },
+  rejected: {
+    label: "Declined",
+    color: "text-red-600",
+    bgColor: "bg-red-100",
+    icon: "x",
+    description: "Band declined the request",
+  },
+  expired: {
+    label: "Expired",
+    color: "text-gray-500",
+    bgColor: "bg-gray-100",
+    icon: "clock",
+    description: "Request expired without response",
+  },
+};
+
+/**
+ * Listing status display configuration.
+ * Maps status values to labels and colors for UI rendering.
+ */
+export const LISTING_STATUS_CONFIG: Record<ListingStatus, {
+  label: string;
+  color: string;
+  bgColor: string;
+  icon: string;
+}> = {
+  draft: {
+    label: "Draft",
+    color: "text-gray-600",
+    bgColor: "bg-gray-100",
+    icon: "file-edit",
+  },
+  active: {
+    label: "Active",
+    color: "text-green-600",
+    bgColor: "bg-green-100",
+    icon: "check-circle",
+  },
+  paused: {
+    label: "Paused",
+    color: "text-yellow-600",
+    bgColor: "bg-yellow-100",
+    icon: "pause-circle",
+  },
+  archived: {
+    label: "Archived",
+    color: "text-gray-500",
+    bgColor: "bg-gray-100",
+    icon: "archive",
+  },
+};
+
+/**
+ * Default deposit percentage for new listings.
+ */
+export const DEFAULT_DEPOSIT_PERCENTAGE = 25;
+
+/**
+ * Minimum hourly rate in cents ($10/hour).
+ */
+export const MINIMUM_HOURLY_RATE = 1000;
+
+/**
+ * Default minimum booking hours.
+ */
+export const DEFAULT_MINIMUM_HOURS = 2;
+
+/**
+ * Refund policy thresholds.
+ */
+export const REFUND_POLICY = {
+  /** Days before event for full refund */
+  FULL_REFUND_DAYS: 30,
+  /** Days before event for partial (50%) refund */
+  PARTIAL_REFUND_DAYS: 14,
+  /** Percentage for partial refund */
+  PARTIAL_REFUND_PERCENTAGE: 50,
 } as const;
 
 /**

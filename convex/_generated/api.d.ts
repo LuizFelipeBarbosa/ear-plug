@@ -8,11 +8,16 @@
  * @module
  */
 
+import type * as bandAvailability from "../bandAvailability.js";
+import type * as bandListings from "../bandListings.js";
 import type * as bands from "../bands.js";
+import type * as bookingMessages from "../bookingMessages.js";
+import type * as bookings from "../bookings.js";
 import type * as events from "../events.js";
 import type * as http from "../http.js";
 import type * as messages from "../messages.js";
 import type * as notifications from "../notifications.js";
+import type * as payments from "../payments.js";
 import type * as seed from "../seed.js";
 import type * as users from "../users.js";
 import type * as utils_geo from "../utils/geo.js";
@@ -25,11 +30,16 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  bandAvailability: typeof bandAvailability;
+  bandListings: typeof bandListings;
   bands: typeof bands;
+  bookingMessages: typeof bookingMessages;
+  bookings: typeof bookings;
   events: typeof events;
   http: typeof http;
   messages: typeof messages;
   notifications: typeof notifications;
+  payments: typeof payments;
   seed: typeof seed;
   users: typeof users;
   "utils/geo": typeof utils_geo;
