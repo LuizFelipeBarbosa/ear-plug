@@ -46,13 +46,18 @@ export function BottomNav() {
       icon: <Map className="w-6 h-6" strokeWidth={1.5} />,
     },
     {
+      href: "/calendar",
+      label: "My Events",
+      icon: <Calendar className="w-6 h-6" strokeWidth={1.5} />,
+    },
+    {
       href: "/hire",
-      label: "Hire a Band",
+      label: "Hire",
       icon: <Music className="w-6 h-6" strokeWidth={1.5} />,
     },
     {
       href: "/my-bookings",
-      label: "My Bookings",
+      label: "Bookings",
       icon: <CalendarCheck className="w-6 h-6" strokeWidth={1.5} />,
       badge: bookingMessageCount,
     },
@@ -68,6 +73,11 @@ export function BottomNav() {
       href: "/home",
       label: "Dashboard",
       icon: <LayoutDashboard className="w-6 h-6" strokeWidth={1.5} />,
+    },
+    {
+      href: "/calendar",
+      label: "Shows",
+      icon: <Calendar className="w-6 h-6" strokeWidth={1.5} />,
     },
     {
       href: "/bookings",
