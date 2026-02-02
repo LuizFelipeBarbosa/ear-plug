@@ -1,5 +1,8 @@
 "use client";
 
+// Force dynamic rendering to avoid Next.js 14.2.0 staticPathsWorker bug
+export const dynamic = "force-dynamic";
+
 import { useState } from "react";
 import { useBandListingByBand, useAvailableSlots, useCheckAvailability } from "@/hooks/useBandListing";
 import { useBookingActions } from "@/hooks/useBookings";

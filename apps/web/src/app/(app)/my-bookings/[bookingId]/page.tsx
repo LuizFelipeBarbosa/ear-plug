@@ -1,5 +1,8 @@
 "use client";
 
+// Force dynamic rendering to avoid Next.js 14.2.0 staticPathsWorker bug
+export const dynamic = "force-dynamic";
+
 import { useState, useEffect, useRef } from "react";
 import { useBookingDetail, useBookingActions, useBookingMessages, usePayments } from "@/hooks/useBookings";
 import { useCurrentUser } from "@/hooks/useUser";
