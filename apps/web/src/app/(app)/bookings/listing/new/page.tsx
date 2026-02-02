@@ -10,7 +10,7 @@ import { ArrowLeft, Plus, X, DollarSign } from "lucide-react";
 import Link from "next/link";
 import { EVENT_TYPES } from "@ear-plug/shared";
 import type { MarketplaceEventType } from "@ear-plug/shared";
-import type { Id } from "../../../../../../../convex/_generated/dataModel";
+import type { Id } from "../../../../../../../../convex/_generated/dataModel";
 
 interface AddOn {
   name: string;
