@@ -1,8 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import { Heart, MapPin, Calendar, Clock, Check } from "lucide-react";
+import { Heart, Check } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import { EventImage } from "@/components/ui/OptimizedImage";
@@ -21,15 +20,20 @@ interface EventCardProps {
     capacity: number;
     band?: { name: string; image?: string } | null;
     venue?: { name: string; city: string; address: string } | null;
+    isVenueAddressHidden?: boolean;
+    attendanceStatus?: "on_list" | "attended";
+    attendedAt?: number;
   };
   variant?: "default" | "compact";
   showLikeButton?: boolean;
+  showAttendanceStatus?: boolean;
 }
 
 export function EventCard({
   event,
   variant = "default",
   showLikeButton = true,
+  showAttendanceStatus = false,
 }: EventCardProps) {
   const { mode } = useProfileContext();
   const allowFanActions = mode === "personal";
@@ -75,15 +79,45 @@ export function EventCard({
             <h3 className="font-semibold text-white truncate group-hover:text-lime transition-colors">
               {event.title}
             </h3>
-            <p className="text-sm text-zinc-400 truncate">
-              {event.venue?.name}
-            </p>
+            {event.venue ? (
+              <div className="relative mt-0.5 overflow-hidden rounded-sm">
+                <p
+                  className={cn(
+                    "text-sm truncate transition-all duration-200",
+                    event.isVenueAddressHidden
+                      ? "text-zinc-500 blur-sm opacity-20 select-none"
+                      : "text-zinc-400"
+                  )}
+                >
+                  {event.venue.name}
+                </p>
+                {event.isVenueAddressHidden && (
+                  <div className="absolute inset-0 flex items-center bg-night/80 backdrop-blur-sm px-2">
+                    <p className="w-full truncate text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-200">
+                      RSVP to reveal location
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : null}
             <p className={cn(
               "text-xs font-medium mt-1 uppercase tracking-wide",
               isPast ? "text-zinc-500" : "text-lime"
             )}>
               {formatEventDate(event.dateTime)} • {formatEventTime(event.dateTime)}
             </p>
+            {showAttendanceStatus && (
+              <span
+                className={cn(
+                  "inline-flex mt-2 px-2 py-1 text-[10px] font-bold uppercase tracking-wider border",
+                  event.attendanceStatus === "attended"
+                    ? "border-lime/50 text-lime bg-lime/10"
+                    : "border-zinc-700 text-zinc-400 bg-night-secondary"
+                )}
+              >
+                {event.attendanceStatus === "attended" ? "Attended" : "No check-in"}
+              </span>
+            )}
           </div>
 
           {/* RSVP & Like Buttons */}
@@ -148,18 +182,39 @@ export function EventCard({
             {event.title}
           </h3>
 
-          {/* Venue Name */}
+          {/* Venue */}
           {event.venue && (
-            <p className="text-sm text-zinc-300 truncate mt-0.5">
-              {event.venue.name}
-            </p>
-          )}
-
-          {/* Address */}
-          {event.venue?.address && (
-            <p className="text-sm text-zinc-500 truncate">
-              {event.venue.address}
-            </p>
+            <div className="relative mt-0.5 overflow-hidden rounded-sm">
+              <div
+                className={cn(
+                  "transition-all duration-200",
+                  event.isVenueAddressHidden && "blur-sm opacity-20 select-none pointer-events-none"
+                )}
+              >
+                <p className="text-sm text-zinc-300 truncate">
+                  {event.venue.name}
+                </p>
+                {event.venue.address && (
+                  <p
+                    className={cn(
+                      "text-sm truncate",
+                      event.isVenueAddressHidden ? "text-zinc-500 italic" : "text-zinc-500"
+                    )}
+                  >
+                    {event.isVenueAddressHidden
+                      ? "Address revealed after RSVP"
+                      : event.venue.address}
+                  </p>
+                )}
+              </div>
+              {event.isVenueAddressHidden && (
+                <div className="absolute inset-0 flex items-center bg-night/80 backdrop-blur-sm px-2">
+                  <p className="w-full truncate text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-200">
+                    RSVP to reveal location
+                  </p>
+                </div>
+              )}
+            </div>
           )}
 
           {/* Date */}
@@ -169,6 +224,18 @@ export function EventCard({
           )}>
             {formatEventDate(event.dateTime)}
           </p>
+          {showAttendanceStatus && (
+            <span
+              className={cn(
+                "inline-flex mt-2 px-2 py-1 text-[10px] font-bold uppercase tracking-wider border",
+                event.attendanceStatus === "attended"
+                  ? "border-lime/50 text-lime bg-lime/10"
+                  : "border-zinc-700 text-zinc-400 bg-night-secondary"
+              )}
+            >
+              {event.attendanceStatus === "attended" ? "Attended" : "No check-in"}
+            </span>
+          )}
         </div>
 
         {/* Completed badge or Like Button */}

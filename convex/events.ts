@@ -9,7 +9,9 @@ import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { haversineDistance, coordinatesMatch } from "./utils/geo";
-import { requireBandRole } from "./utils/permissions";
+import { requireAuthenticatedUser, requireBandRole } from "./utils/permissions";
+import type { Doc, Id } from "./_generated/dataModel";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
 
 /**
  * Validator for music genre values.
@@ -24,6 +26,231 @@ const genreValidator = v.union(
   v.literal("pop"),
   v.literal("alternative")
 );
+
+const eventStatusValidator = v.union(
+  v.literal("confirmed"),
+  v.literal("hold"),
+  v.literal("available")
+);
+
+const eventAddressVisibilityValidator = v.union(
+  v.literal("public"),
+  v.literal("rsvp_only")
+);
+
+type EventAddressVisibility = "public" | "rsvp_only";
+type GuestRsvpType = "on_list" | "attended";
+
+const guestFilterTypeValidator = v.union(
+  v.literal("all"),
+  v.literal("on_list"),
+  v.literal("attended")
+);
+
+const MASKED_VENUE_ADDRESS = "Address revealed after RSVP";
+const GUEST_LIST_PREVIEW_LIMIT = 6;
+const GUEST_LIST_CAP = 500;
+
+interface ViewerContext {
+  userId: Id<"users"> | null;
+  memberBandIds: Set<Id<"bands">>;
+  rsvpEventIds: Set<Id<"events">>;
+}
+
+interface EventBandAccess {
+  event: Doc<"events">;
+  membership: Doc<"bandMemberships">;
+  canViewGuestList: boolean;
+  canManageGuestList: boolean;
+}
+
+interface VenueResolutionInput {
+  venueName: string;
+  venueAddress: string;
+  venueCity: string;
+  venueCoordinates: {
+    lat: number;
+    lng: number;
+  };
+  capacity?: number;
+}
+
+function getAttendanceStatus(
+  rsvp: Pick<Doc<"rsvps">, "attendanceStatus">
+): GuestRsvpType {
+  return rsvp.attendanceStatus ?? "on_list";
+}
+
+async function decrementShowsAttended(
+  ctx: MutationCtx,
+  userId: Id<"users">
+) {
+  const user = await ctx.db.get(userId);
+  if (!user) return;
+
+  // Legacy seeded/manual values may not match historical attended RSVP count.
+  await ctx.db.patch(userId, {
+    showsAttended: Math.max(0, (user.showsAttended ?? 0) - 1),
+  });
+}
+
+async function incrementShowsAttended(
+  ctx: MutationCtx,
+  userId: Id<"users">
+) {
+  const user = await ctx.db.get(userId);
+  if (!user) return;
+
+  // Legacy seeded/manual values may not match historical attended RSVP count.
+  await ctx.db.patch(userId, {
+    showsAttended: (user.showsAttended ?? 0) + 1,
+  });
+}
+
+async function buildViewerContext(ctx: QueryCtx): Promise<ViewerContext> {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) {
+    return {
+      userId: null,
+      memberBandIds: new Set<Id<"bands">>(),
+      rsvpEventIds: new Set<Id<"events">>(),
+    };
+  }
+
+  const user = await ctx.db
+    .query("users")
+    .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+    .unique();
+
+  if (!user) {
+    return {
+      userId: null,
+      memberBandIds: new Set<Id<"bands">>(),
+      rsvpEventIds: new Set<Id<"events">>(),
+    };
+  }
+
+  const [memberships, rsvps] = await Promise.all([
+    ctx.db
+      .query("bandMemberships")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .collect(),
+    ctx.db
+      .query("rsvps")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .collect(),
+  ]);
+
+  return {
+    userId: user._id,
+    memberBandIds: new Set(memberships.map((membership) => membership.bandId)),
+    rsvpEventIds: new Set(rsvps.map((rsvp) => rsvp.eventId)),
+  };
+}
+
+function canViewAddress(
+  event: Pick<Doc<"events">, "_id" | "bandId" | "addressVisibility">,
+  viewerContext: ViewerContext
+): boolean {
+  const visibility = event.addressVisibility ?? "public";
+
+  if (visibility === "public") {
+    return true;
+  }
+
+  if (viewerContext.memberBandIds.has(event.bandId)) {
+    return true;
+  }
+
+  return viewerContext.rsvpEventIds.has(event._id);
+}
+
+function applyAddressMask<
+  T extends {
+    _id: Id<"events">;
+    bandId: Id<"bands">;
+    addressVisibility?: EventAddressVisibility;
+    venue?: { address: string } | null;
+  },
+>(event: T, viewerContext: ViewerContext): T & { isVenueAddressHidden: boolean } {
+  if (!event.venue || canViewAddress(event, viewerContext)) {
+    return {
+      ...event,
+      isVenueAddressHidden: false,
+    };
+  }
+
+  return {
+    ...event,
+    venue: {
+      ...event.venue,
+      address: MASKED_VENUE_ADDRESS,
+    },
+    isVenueAddressHidden: true,
+  };
+}
+
+async function resolveEventBandAccess(
+  ctx: QueryCtx | MutationCtx,
+  eventId: Id<"events">
+): Promise<EventBandAccess> {
+  // Event-specific authorization helper; can be generalized in utils/permissions if reused.
+  const event = await ctx.db.get(eventId);
+  if (!event) {
+    throw new Error("Event not found");
+  }
+
+  const user = await requireAuthenticatedUser(ctx);
+  const membership = await ctx.db
+    .query("bandMemberships")
+    .withIndex("by_band_user", (q) =>
+      q.eq("bandId", event.bandId).eq("userId", user._id)
+    )
+    .unique();
+
+  if (!membership) {
+    throw new Error("Not authorized for this band");
+  }
+
+  return {
+    event,
+    membership,
+    canViewGuestList: true,
+    canManageGuestList:
+      membership.role === "owner" || membership.role === "admin",
+  };
+}
+
+async function findOrCreateVenueByLocation(
+  ctx: MutationCtx,
+  input: VenueResolutionInput
+): Promise<Id<"venues">> {
+  const existingVenues = await ctx.db
+    .query("venues")
+    .withIndex("by_city", (q) => q.eq("city", input.venueCity))
+    .collect();
+
+  const existingVenue = existingVenues.find((venue) =>
+    coordinatesMatch(
+      venue.coordinates.lat,
+      venue.coordinates.lng,
+      input.venueCoordinates.lat,
+      input.venueCoordinates.lng
+    )
+  );
+
+  if (existingVenue) {
+    return existingVenue._id;
+  }
+
+  return await ctx.db.insert("venues", {
+    name: input.venueName,
+    address: input.venueAddress,
+    city: input.venueCity,
+    coordinates: input.venueCoordinates,
+    capacity: input.capacity || 100,
+  });
+}
 
 /**
  * Lists all upcoming events sorted by date.
@@ -43,6 +270,7 @@ export const listUpcoming = query({
   handler: async (ctx, args) => {
     const now = Date.now();
     const limit = args.limit || 50;
+    const viewerContext = await buildViewerContext(ctx);
 
     const events = await ctx.db
       .query("events")
@@ -56,11 +284,14 @@ export const listUpcoming = query({
       events.map(async (event) => {
         const band = await ctx.db.get(event.bandId);
         const venue = await ctx.db.get(event.venueId);
-        return {
-          ...event,
-          band,
-          venue,
-        };
+        return applyAddressMask(
+          {
+            ...event,
+            band,
+            venue,
+          },
+          viewerContext
+        );
       })
     );
 
@@ -91,6 +322,7 @@ export const listByGenre = query({
   handler: async (ctx, args) => {
     const now = Date.now();
     const limit = args.limit || 50;
+    const viewerContext = await buildViewerContext(ctx);
 
     // Get all upcoming events and filter by genre
     const events = await ctx.db
@@ -113,7 +345,10 @@ export const listByGenre = query({
       filteredEvents.map(async (event) => {
         const band = await ctx.db.get(event.bandId);
         const venue = await ctx.db.get(event.venueId);
-        return { ...event, band, venue };
+        return applyAddressMask(
+          { ...event, band, venue },
+          viewerContext
+        );
       })
     );
 
@@ -141,15 +376,19 @@ export const getById = query({
   handler: async (ctx, args) => {
     const event = await ctx.db.get(args.eventId);
     if (!event) return null;
+    const viewerContext = await buildViewerContext(ctx);
 
     const band = await ctx.db.get(event.bandId);
     const venue = await ctx.db.get(event.venueId);
 
-    return {
-      ...event,
-      band,
-      venue,
-    };
+    return applyAddressMask(
+      {
+        ...event,
+        band,
+        venue,
+      },
+      viewerContext
+    );
   },
 });
 
@@ -260,6 +499,7 @@ export const search = query({
     const searchQuery = args.query.toLowerCase();
     const limit = args.limit || 20;
     const now = Date.now();
+    const viewerContext = await buildViewerContext(ctx);
 
     // Get all upcoming events
     const events = await ctx.db
@@ -273,7 +513,10 @@ export const search = query({
       events.map(async (event) => {
         const band = await ctx.db.get(event.bandId);
         const venue = await ctx.db.get(event.venueId);
-        return { ...event, band, venue };
+        return applyAddressMask(
+          { ...event, band, venue },
+          viewerContext
+        );
       })
     );
 
@@ -332,6 +575,10 @@ export const rsvp = mutation({
       .unique();
 
     if (existingRsvp) {
+      if (getAttendanceStatus(existingRsvp) === "attended") {
+        await decrementShowsAttended(ctx, user._id);
+      }
+
       // Remove RSVP
       await ctx.db.delete(existingRsvp._id);
 
@@ -351,6 +598,7 @@ export const rsvp = mutation({
       userId: user._id,
       eventId: args.eventId,
       createdAt: Date.now(),
+      attendanceStatus: "on_list",
     });
 
     // Increment RSVP count
@@ -461,7 +709,13 @@ export const getUserRsvps = query({
 
         const band = await ctx.db.get(event.bandId);
         const venue = await ctx.db.get(event.venueId);
-        return { ...event, band, venue, rsvpedAt: rsvp.createdAt };
+        // No address masking needed here: this list only contains RSVP'd events.
+        return {
+          ...event,
+          band,
+          venue,
+          rsvpedAt: rsvp.createdAt,
+        };
       })
     );
 
@@ -476,7 +730,7 @@ export const getUserRsvps = query({
  * Only includes events that have already occurred.
  * Returns events sorted by date descending (most recent first).
  *
- * @returns Array of past event documents with band, venue, and rsvpedAt timestamp
+ * @returns Array of past event documents with band, venue, rsvpedAt, and attendance status
  *
  * @example
  * const pastEvents = await ctx.runQuery(api.events.getUserPastRsvps);
@@ -514,7 +768,15 @@ export const getUserPastRsvps = query({
 
         const band = await ctx.db.get(event.bandId);
         const venue = await ctx.db.get(event.venueId);
-        return { ...event, band, venue, rsvpedAt: rsvp.createdAt };
+        // No address masking needed here: this list only contains RSVP'd events.
+        return {
+          ...event,
+          band,
+          venue,
+          rsvpedAt: rsvp.createdAt,
+          attendanceStatus: getAttendanceStatus(rsvp),
+          attendedAt: rsvp.attendedAt,
+        };
       })
     );
 
@@ -538,42 +800,30 @@ export const getUserPastRsvps = query({
 export const getUserLikes = query({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      return [];
-    }
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
-      .unique();
-
-    if (!user) {
+    const viewerContext = await buildViewerContext(ctx);
+    const userId = viewerContext.userId;
+    if (!userId) {
       return [];
     }
 
     const likes = await ctx.db
       .query("likes")
-      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
-
-    // Get user's RSVPs to exclude from liked events
-    const rsvps = await ctx.db
-      .query("rsvps")
-      .withIndex("by_user", (q) => q.eq("userId", user._id))
-      .collect();
-    const rsvpEventIds = new Set(rsvps.map((r) => r.eventId));
 
     const eventsWithDetails = await Promise.all(
       likes.map(async (like) => {
-        if (rsvpEventIds.has(like.eventId)) return null; // Exclude RSVP'd events
+        if (viewerContext.rsvpEventIds.has(like.eventId)) return null; // Exclude RSVP'd events
 
         const event = await ctx.db.get(like.eventId);
         if (!event) return null;
 
         const band = await ctx.db.get(event.bandId);
         const venue = await ctx.db.get(event.venueId);
-        return { ...event, band, venue, likedAt: like.createdAt };
+        return applyAddressMask(
+          { ...event, band, venue, likedAt: like.createdAt },
+          viewerContext
+        );
       })
     );
 
@@ -636,6 +886,219 @@ export const getUserEventStatus = query({
 });
 
 /**
+ * Guest list summary for band workspace event management.
+ * Returns preview guests for card rendering and capability flags.
+ */
+export const getEventGuestListSummary = query({
+  args: {
+    eventId: v.id("events"),
+  },
+  handler: async (ctx, args) => {
+    const access = await resolveEventBandAccess(ctx, args.eventId);
+
+    if (!access.canViewGuestList) {
+      throw new Error("Not authorized for this band");
+    }
+
+    const previewRsvps = await ctx.db
+      .query("rsvps")
+      .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
+      .order("desc")
+      .take(GUEST_LIST_PREVIEW_LIMIT);
+
+    const previewGuests = (
+      await Promise.all(
+        previewRsvps.map(async (rsvp) => {
+          const user = await ctx.db.get(rsvp.userId);
+          if (!user) return null;
+
+          return {
+            rsvpId: rsvp._id,
+            userId: user._id,
+            name: user.name,
+            avatar: user.avatar,
+            rsvpType: getAttendanceStatus(rsvp),
+          };
+        })
+      )
+    ).filter((guest): guest is NonNullable<typeof guest> => guest !== null);
+
+    return {
+      totalCount: access.event.rsvpCount,
+      previewGuests,
+      canManage: access.canManageGuestList,
+    };
+  },
+});
+
+/**
+ * Lists guests for an event guest-management panel.
+ * Filters and search are applied within a capped RSVP set for safety.
+ * Uses latest 501 RSVP rows to detect truncation and returns at most 500 rows.
+ */
+export const listEventGuests = query({
+  args: {
+    eventId: v.id("events"),
+    rsvpType: v.optional(guestFilterTypeValidator),
+    search: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const access = await resolveEventBandAccess(ctx, args.eventId);
+    if (!access.canViewGuestList) {
+      throw new Error("Not authorized for this band");
+    }
+
+    const filterType = args.rsvpType ?? "all";
+    const searchQuery = args.search?.trim().toLowerCase() ?? "";
+    const rsvps = await ctx.db
+      .query("rsvps")
+      .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
+      .order("desc")
+      .take(GUEST_LIST_CAP + 1);
+
+    const capReached = rsvps.length > GUEST_LIST_CAP;
+    const cappedRsvps = capReached ? rsvps.slice(0, GUEST_LIST_CAP) : rsvps;
+
+    const guestsWithUsers = await Promise.all(
+      cappedRsvps.map(async (rsvp) => {
+        const user = await ctx.db.get(rsvp.userId);
+        if (!user) return null;
+
+        const rsvpType = getAttendanceStatus(rsvp);
+
+        return {
+          rsvpId: rsvp._id,
+          userId: user._id,
+          name: user.name,
+          avatar: user.avatar,
+          rsvpType,
+          rsvpedAt: rsvp.createdAt,
+          attendedAt: rsvp.attendedAt,
+        };
+      })
+    );
+
+    const guests = guestsWithUsers
+      .filter((guest): guest is NonNullable<typeof guest> => guest !== null)
+      .filter((guest) => {
+        if (filterType !== "all" && guest.rsvpType !== filterType) {
+          return false;
+        }
+
+        if (!searchQuery) {
+          return true;
+        }
+
+        return guest.name.toLowerCase().includes(searchQuery);
+      })
+      .sort((a, b) => b.rsvpedAt - a.rsvpedAt);
+
+    return {
+      guests,
+      capReached,
+      cap: GUEST_LIST_CAP,
+      totalCount: access.event.rsvpCount,
+      canManage: access.canManageGuestList,
+    };
+  },
+});
+
+/**
+ * Sets attendance status for an RSVP'd guest.
+ * Only band owners/admins can modify attendance.
+ */
+export const setEventGuestAttendance = mutation({
+  args: {
+    eventId: v.id("events"),
+    rsvpId: v.id("rsvps"),
+    attended: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const access = await resolveEventBandAccess(ctx, args.eventId);
+    if (!access.canManageGuestList) {
+      throw new Error("Not authorized for this band");
+    }
+
+    const rsvp = await ctx.db.get(args.rsvpId);
+    if (!rsvp) {
+      throw new Error("RSVP not found");
+    }
+
+    if (rsvp.eventId !== args.eventId) {
+      throw new Error("RSVP does not belong to this event");
+    }
+
+    const currentStatus = getAttendanceStatus(rsvp);
+    const nextStatus: GuestRsvpType = args.attended ? "attended" : "on_list";
+
+    if (currentStatus === nextStatus) {
+      return { changed: false, rsvpType: currentStatus };
+    }
+
+    if (nextStatus === "attended") {
+      await ctx.db.patch(args.rsvpId, {
+        attendanceStatus: "attended",
+        attendedAt: Date.now(),
+      });
+      await incrementShowsAttended(ctx, rsvp.userId);
+    } else {
+      await ctx.db.patch(args.rsvpId, {
+        attendanceStatus: "on_list",
+        attendedAt: undefined,
+      });
+      await decrementShowsAttended(ctx, rsvp.userId);
+    }
+
+    return {
+      changed: true,
+      rsvpType: nextStatus,
+    };
+  },
+});
+
+/**
+ * Removes a guest RSVP from an event.
+ * Only band owners/admins can remove guests.
+ */
+export const removeEventGuestRsvp = mutation({
+  args: {
+    eventId: v.id("events"),
+    rsvpId: v.id("rsvps"),
+  },
+  handler: async (ctx, args) => {
+    const access = await resolveEventBandAccess(ctx, args.eventId);
+    if (!access.canManageGuestList) {
+      throw new Error("Not authorized for this band");
+    }
+
+    const rsvp = await ctx.db.get(args.rsvpId);
+    if (!rsvp) {
+      throw new Error("RSVP not found");
+    }
+
+    if (rsvp.eventId !== args.eventId) {
+      throw new Error("RSVP does not belong to this event");
+    }
+
+    if (getAttendanceStatus(rsvp) === "attended") {
+      await decrementShowsAttended(ctx, rsvp.userId);
+    }
+
+    await ctx.db.delete(args.rsvpId);
+
+    await ctx.db.patch(access.event._id, {
+      rsvpCount: Math.max(0, access.event.rsvpCount - 1),
+    });
+
+    return {
+      action: "removed",
+      eventId: args.eventId,
+      rsvpId: args.rsvpId,
+    };
+  },
+});
+
+/**
  * Lists nearby events within a specified radius of given coordinates.
  * Uses the Haversine formula for accurate distance calculations.
  * Optionally filters by genre.
@@ -668,6 +1131,7 @@ export const listNearby = query({
   handler: async (ctx, args) => {
     const now = Date.now();
     const limit = args.limit || 50;
+    const viewerContext = await buildViewerContext(ctx);
 
     // Get all upcoming events
     let events = await ctx.db
@@ -709,12 +1173,15 @@ export const listNearby = query({
           return null;
         }
 
-        return {
-          ...event,
-          band,
-          venue,
-          distance: Math.round(distance * 10) / 10, // Round to 1 decimal
-        };
+        return applyAddressMask(
+          {
+            ...event,
+            band,
+            venue,
+            distance: Math.round(distance * 10) / 10, // Round to 1 decimal
+          },
+          viewerContext
+        );
       })
     );
 
@@ -768,6 +1235,8 @@ export const create = mutation({
     description: v.optional(v.string()),
     genres: v.array(genreValidator), // Multiple genres
     genre: v.optional(genreValidator), // Legacy field for backward compatibility
+    status: v.optional(eventStatusValidator),
+    addressVisibility: v.optional(eventAddressVisibilityValidator),
   },
   handler: async (ctx, args) => {
     const band = await ctx.db.get(args.bandId);
@@ -777,11 +1246,12 @@ export const create = mutation({
 
     await requireBandRole(ctx, args.bandId, ["owner", "admin"]);
 
-    const { genre, ...restArgs } = args;
+    const { genre, status, addressVisibility, ...restArgs } = args;
     const eventId = await ctx.db.insert("events", {
       ...restArgs,
       rsvpCount: 0,
-      status: "confirmed",
+      status: status ?? "confirmed",
+      addressVisibility: addressVisibility ?? "public",
     });
 
     // Schedule notifications for fans who saved this venue or band
@@ -849,6 +1319,8 @@ export const createWithVenue = mutation({
     capacity: v.optional(v.number()),
     price: v.optional(v.number()),
     description: v.optional(v.string()),
+    status: v.optional(eventStatusValidator),
+    addressVisibility: v.optional(eventAddressVisibilityValidator),
   },
   handler: async (ctx, args) => {
     const band = await ctx.db.get(args.bandId);
@@ -858,33 +1330,13 @@ export const createWithVenue = mutation({
 
     await requireBandRole(ctx, args.bandId, ["owner", "admin"]);
 
-    // Check if venue already exists by coordinates (use indexed query by city)
-    const existingVenues = await ctx.db
-      .query("venues")
-      .withIndex("by_city", (q) => q.eq("city", args.venueCity))
-      .collect();
-    const existingVenue = existingVenues.find((v) =>
-      coordinatesMatch(
-        v.coordinates.lat,
-        v.coordinates.lng,
-        args.venueCoordinates.lat,
-        args.venueCoordinates.lng
-      )
-    );
-
-    let venueId;
-    if (existingVenue) {
-      venueId = existingVenue._id;
-    } else {
-      // Create new venue
-      venueId = await ctx.db.insert("venues", {
-        name: args.venueName,
-        address: args.venueAddress,
-        city: args.venueCity,
-        coordinates: args.venueCoordinates,
-        capacity: args.capacity || 100,
-      });
-    }
+    const venueId = await findOrCreateVenueByLocation(ctx, {
+      venueName: args.venueName,
+      venueAddress: args.venueAddress,
+      venueCity: args.venueCity,
+      venueCoordinates: args.venueCoordinates,
+      capacity: args.capacity,
+    });
 
     // Create the event
     const eventId = await ctx.db.insert("events", {
@@ -898,7 +1350,8 @@ export const createWithVenue = mutation({
       description: args.description,
       genres: args.genres,
       rsvpCount: 0,
-      status: "confirmed",
+      status: args.status ?? "confirmed",
+      addressVisibility: args.addressVisibility ?? "public",
     });
 
     // Schedule notifications for fans who saved this venue or band
@@ -909,5 +1362,109 @@ export const createWithVenue = mutation({
     });
 
     return { eventId, venueId };
+  },
+});
+
+/**
+ * Updates an existing event and optionally reassigns/creates its venue.
+ * Only band owners/admins can update events for their band.
+ *
+ * Venue updates are optional as a group:
+ * - If no venue fields are provided, keep existing venueId.
+ * - If any venue field is provided, all required venue fields must be provided.
+ */
+export const updateWithVenue = mutation({
+  args: {
+    eventId: v.id("events"),
+    title: v.optional(v.string()),
+    dateTime: v.optional(v.number()),
+    image: v.optional(v.string()),
+    capacity: v.optional(v.number()),
+    price: v.optional(v.number()),
+    description: v.optional(v.string()),
+    genres: v.optional(v.array(genreValidator)),
+    genre: v.optional(genreValidator),
+    status: v.optional(eventStatusValidator),
+    addressVisibility: v.optional(eventAddressVisibilityValidator),
+    venueName: v.optional(v.string()),
+    venueAddress: v.optional(v.string()),
+    venueCity: v.optional(v.string()),
+    venueCoordinates: v.optional(
+      v.object({
+        lat: v.number(),
+        lng: v.number(),
+      })
+    ),
+    venuePlaceId: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const event = await ctx.db.get(args.eventId);
+    if (!event) {
+      throw new Error("Event not found");
+    }
+
+    await requireBandRole(ctx, event.bandId, ["owner", "admin"]);
+
+    if (args.capacity !== undefined && args.capacity < event.rsvpCount) {
+      throw new Error(
+        `Cannot reduce capacity below current RSVP count (${event.rsvpCount}).`
+      );
+    }
+
+    const hasAnyVenueUpdate =
+      args.venueName !== undefined ||
+      args.venueAddress !== undefined ||
+      args.venueCity !== undefined ||
+      args.venueCoordinates !== undefined ||
+      args.venuePlaceId !== undefined;
+
+    let venueId = event.venueId;
+
+    if (hasAnyVenueUpdate) {
+      if (
+        !args.venueName ||
+        !args.venueAddress ||
+        !args.venueCity ||
+        !args.venueCoordinates
+      ) {
+        throw new Error(
+          "To update venue, provide venueName, venueAddress, venueCity, and venueCoordinates."
+        );
+      }
+
+      venueId = await findOrCreateVenueByLocation(ctx, {
+        venueName: args.venueName,
+        venueAddress: args.venueAddress,
+        venueCity: args.venueCity,
+        venueCoordinates: args.venueCoordinates,
+        capacity: args.capacity ?? event.capacity,
+      });
+    }
+
+    const updates: Partial<Doc<"events">> = {
+      venueId,
+    };
+
+    if (args.title !== undefined) updates.title = args.title;
+    if (args.dateTime !== undefined) updates.dateTime = args.dateTime;
+    if (args.image !== undefined) updates.image = args.image;
+    if (args.capacity !== undefined) updates.capacity = args.capacity;
+    if (args.price !== undefined) updates.price = args.price;
+    if (args.description !== undefined) updates.description = args.description;
+    if (args.genres !== undefined) {
+      updates.genres = args.genres;
+      if (args.genre === undefined && args.genres.length > 0) {
+        updates.genre = args.genres[0];
+      }
+    }
+    if (args.genre !== undefined) updates.genre = args.genre;
+    if (args.status !== undefined) updates.status = args.status;
+    if (args.addressVisibility !== undefined) {
+      updates.addressVisibility = args.addressVisibility;
+    }
+
+    await ctx.db.patch(args.eventId, updates);
+
+    return { eventId: args.eventId, venueId };
   },
 });

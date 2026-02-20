@@ -8,7 +8,7 @@
 
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
-import type { Genre } from "@ear-plug/shared/types";
+import type { Genre, GuestFilterType } from "@ear-plug/shared/types";
 import type { Id } from "../../../../convex/_generated/dataModel";
 
 /**
@@ -160,6 +160,59 @@ export function useUserEvents() {
     pastRsvps: pastRsvps ?? [],
     /** True while any query is loading */
     isLoading: rsvps === undefined || likes === undefined || pastRsvps === undefined,
+  };
+}
+
+/**
+ * Hook for guest-list preview data on band event detail pages.
+ */
+export function useEventGuestListSummary(eventId: Id<"events"> | undefined) {
+  const summary = useQuery(
+    api.events.getEventGuestListSummary,
+    eventId ? { eventId } : "skip"
+  );
+
+  return {
+    summary,
+    isLoading: eventId !== undefined && summary === undefined,
+  };
+}
+
+/**
+ * Hook for full event guest-list management state.
+ */
+export function useEventGuestList(
+  eventId: Id<"events"> | undefined,
+  options?: { rsvpType?: GuestFilterType; search?: string }
+) {
+  const guestsResult = useQuery(
+    api.events.listEventGuests,
+    eventId
+      ? {
+          eventId,
+          rsvpType: options?.rsvpType,
+          search: options?.search?.trim() ? options.search : undefined,
+        }
+      : "skip"
+  );
+
+  const setGuestAttendanceMutation = useMutation(api.events.setEventGuestAttendance);
+  const removeGuestRsvpMutation = useMutation(api.events.removeEventGuestRsvp);
+
+  return {
+    guests: guestsResult?.guests ?? [],
+    capReached: guestsResult?.capReached ?? false,
+    cap: guestsResult?.cap ?? 500,
+    totalCount: guestsResult?.totalCount ?? 0,
+    canManage: guestsResult?.canManage ?? false,
+    isLoading: eventId !== undefined && guestsResult === undefined,
+    setGuestAttendance: (args: {
+      eventId: Id<"events">;
+      rsvpId: Id<"rsvps">;
+      attended: boolean;
+    }) => setGuestAttendanceMutation(args),
+    removeGuestRsvp: (args: { eventId: Id<"events">; rsvpId: Id<"rsvps"> }) =>
+      removeGuestRsvpMutation(args),
   };
 }
 

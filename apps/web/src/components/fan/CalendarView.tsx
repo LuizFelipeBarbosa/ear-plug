@@ -116,7 +116,11 @@ export function FanCalendarView() {
                 </h2>
                 <div className="space-y-3">
                   {monthEvents?.map((event) => (
-                    <EventCard key={event._id} event={event} />
+                    <EventCard
+                      key={event._id}
+                      event={event}
+                      showAttendanceStatus={activeTab === "past"}
+                    />
                   ))}
                 </div>
               </div>

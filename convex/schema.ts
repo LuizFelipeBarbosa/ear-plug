@@ -61,6 +61,16 @@ const eventStatusValidator = v.union(
 );
 
 /**
+ * Validator for event address visibility.
+ * - "public": Street address is visible to all fans
+ * - "rsvp_only": Street address is revealed only after RSVP
+ */
+const eventAddressVisibilityValidator = v.union(
+  v.literal("public"),
+  v.literal("rsvp_only")
+);
+
+/**
  * Validator for open date status.
  * - "open": Available for applications
  * - "pending": Has applications under review
@@ -350,6 +360,11 @@ export default defineSchema({
     genre: v.optional(genreValidator),
     /** Booking status */
     status: eventStatusValidator,
+    /**
+     * Street-address visibility for fan-facing surfaces.
+     * Optional for backward compatibility; treat missing as "public".
+     */
+    addressVisibility: v.optional(eventAddressVisibilityValidator),
   })
     .index("by_band", ["bandId"])
     .index("by_venue", ["venueId"])
@@ -375,6 +390,13 @@ export default defineSchema({
     eventId: v.id("events"),
     /** Unix timestamp when RSVP was created */
     createdAt: v.number(),
+    /**
+     * Attendance state managed by bands at check-in time.
+     * Optional for backward compatibility; treat missing as "on_list".
+     */
+    attendanceStatus: v.optional(v.union(v.literal("on_list"), v.literal("attended"))),
+    /** Unix timestamp when the RSVP was marked attended */
+    attendedAt: v.optional(v.number()),
   })
     .index("by_user", ["userId"])
     .index("by_event", ["eventId"])
