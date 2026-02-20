@@ -88,6 +88,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <ProfileContextProvider>
       <div className="min-h-screen bg-night">
         {children}
+        {/* Reserve vertical space for fixed bottom navigation */}
+        <div aria-hidden className="h-16 safe-area-inset-bottom" />
         <BottomNav />
       </div>
     </ProfileContextProvider>
