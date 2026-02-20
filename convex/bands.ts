@@ -50,6 +50,48 @@ export const getById = query({
 });
 
 /**
+ * Returns public band header data plus viewer-specific follow/membership state.
+ * Requires authentication (route is app-scoped).
+ */
+export const getPublicBandProfile = query({
+  args: { bandId: v.id("bands") },
+  handler: async (ctx, args) => {
+    const user = await requireAuthenticatedUser(ctx);
+
+    const band = await ctx.db.get(args.bandId);
+    if (!band) {
+      return null;
+    }
+
+    const [followers, savedEntry, membership] = await Promise.all([
+      ctx.db
+        .query("savedArtists")
+        .withIndex("by_band", (q) => q.eq("bandId", args.bandId))
+        .collect(),
+      ctx.db
+        .query("savedArtists")
+        .withIndex("by_user_band", (q) =>
+          q.eq("userId", user._id).eq("bandId", args.bandId)
+        )
+        .unique(),
+      ctx.db
+        .query("bandMemberships")
+        .withIndex("by_band_user", (q) =>
+          q.eq("bandId", args.bandId).eq("userId", user._id)
+        )
+        .unique(),
+    ]);
+
+    return {
+      band,
+      followerCount: followers.length,
+      isFollowing: Boolean(savedEntry),
+      viewerMembershipRole: membership?.role,
+    };
+  },
+});
+
+/**
  * Legacy compatibility query returning the first band found for the user.
  * Prefer `listMyBands` in new web flows.
  *

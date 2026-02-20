@@ -34,7 +34,7 @@ import {
 } from "recharts";
 import { useCurrentBand, useBandAnalytics } from "@/hooks/useBand";
 import { EditBandProfileModal } from "@/components/band/EditBandProfileModal";
-import { DemoMediaGallery } from "@/components/band/MediaGallery";
+import { BandFeedSection } from "@/components/band/posts/BandFeedSection";
 import { ProfileWorkspaceSwitcher } from "@/components/profile/ProfileWorkspaceSwitcher";
 import { GENRE_COLORS, formatFullDate } from "@ear-plug/shared/constants";
 import { getInitials } from "@ear-plug/shared/utils";
@@ -308,10 +308,13 @@ export function BandProfileView() {
 
       {/* Media Gallery */}
       <section className="p-4">
-        <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-3">
-          Photos & Videos
-        </h3>
-        <DemoMediaGallery />
+        <BandFeedSection
+          bandId={band._id}
+          canManagePosts={canEditBandProfile}
+          allowFanInteractions={false}
+          title="Photos & Videos"
+          description="Publish rehearsal clips, show recaps, and fan-facing media."
+        />
       </section>
 
       {/* Analytics Report Section */}

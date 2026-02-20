@@ -323,6 +323,110 @@ export interface Like extends BaseEntity {
 }
 
 /**
+ * Band post media type.
+ */
+export type BandPostMediaType = "image" | "video";
+
+/**
+ * Band post lifecycle status for soft-delete workflows.
+ */
+export type BandPostLifecycleStatus = "active" | "deletion_queued";
+
+/**
+ * Band media post entity.
+ */
+export interface BandPost extends BaseEntity {
+  /** ID of the owning band */
+  bandId: string;
+  /** ID of the user who created the post */
+  authorUserId: string;
+  /** Convex storage file ID */
+  mediaStorageId: string;
+  /** Media type for rendering */
+  mediaType: BandPostMediaType;
+  /** Optional caption text */
+  caption?: string;
+  /** MIME type for uploaded media */
+  mimeType: string;
+  /** Uploaded file size in bytes */
+  fileSizeBytes: number;
+  /** Optional duration for video posts */
+  durationSeconds?: number;
+  /** Number of likes */
+  likeCount: number;
+  /** Number of comments */
+  commentCount: number;
+  /** Lifecycle status for active/deletion-queued posts */
+  lifecycleStatus?: BandPostLifecycleStatus;
+  /** Unix timestamp (ms) when deletion was requested */
+  deletedAt?: number;
+  /** User who requested deletion */
+  deletedByUserId?: string;
+  /** Unix timestamp (ms) when post was created */
+  createdAt: number;
+}
+
+/**
+ * Like on a band media post.
+ */
+export interface BandPostLike extends BaseEntity {
+  /** ID of the liked post */
+  postId: string;
+  /** ID of the user who liked the post */
+  userId: string;
+  /** Unix timestamp (ms) when like was created */
+  createdAt: number;
+}
+
+/**
+ * Comment on a band media post.
+ */
+export interface BandPostComment extends BaseEntity {
+  /** ID of the parent post */
+  postId: string;
+  /** ID of the authoring user */
+  userId: string;
+  /** Comment body */
+  content: string;
+  /** Unix timestamp (ms) when comment was created */
+  createdAt: number;
+}
+
+/**
+ * Feed-ready band post with presentation and viewer-specific metadata.
+ */
+export interface BandPostFeedItem extends BandPost {
+  /** Resolved storage URL for rendering media */
+  mediaUrl: string | null;
+  /** Whether current viewer liked this post */
+  isLikedByCurrentUser: boolean;
+  /** Whether current viewer can delete this post */
+  canDelete: boolean;
+  /** Whether current viewer can moderate comments on this post */
+  canManageComments: boolean;
+  /** Post author summary */
+  author: {
+    _id: string;
+    name: string;
+    avatar?: string;
+  } | null;
+}
+
+/**
+ * Feed-ready band post comment with author and permission metadata.
+ */
+export interface BandPostCommentFeedItem extends BandPostComment {
+  /** Comment author summary */
+  author: {
+    _id: string;
+    name: string;
+    avatar?: string;
+  } | null;
+  /** Whether current viewer can delete this comment */
+  canDelete: boolean;
+}
+
+/**
  * Conversation entity.
  * Represents a messaging thread between a band and venue.
  */

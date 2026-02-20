@@ -9,6 +9,7 @@
  */
 
 import type * as bandMembers from "../bandMembers.js";
+import type * as bandPosts from "../bandPosts.js";
 import type * as bands from "../bands.js";
 import type * as events from "../events.js";
 import type * as http from "../http.js";
@@ -30,6 +31,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   bandMembers: typeof bandMembers;
+  bandPosts: typeof bandPosts;
   bands: typeof bands;
   events: typeof events;
   http: typeof http;

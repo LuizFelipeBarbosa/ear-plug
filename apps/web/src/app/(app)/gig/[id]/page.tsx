@@ -180,6 +180,12 @@ export default function EventDetailsPage({ params }: PageProps) {
                 ).map((g: string) => g.charAt(0).toUpperCase() + g.slice(1)).join(" • ")}
               </p>
             </div>
+            <Link
+              href={`/bands/${event.bandId}`}
+              className="ml-auto px-3 py-2 border border-lime/40 text-lime text-[10px] font-bold uppercase tracking-wider hover:bg-lime hover:text-night transition-colors"
+            >
+              View Band Profile
+            </Link>
           </div>
         )}
 
