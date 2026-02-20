@@ -262,6 +262,118 @@ export const eventCreateSchema = z.object({
 });
 
 /**
+ * Schema for validating band post media type values.
+ */
+export const bandPostMediaTypeSchema = z.enum(["image", "video"]);
+
+/**
+ * Schema for creating a band post from an uploaded storage file.
+ */
+export const bandPostCreateSchema = z.object({
+  /** ID of the owning band (required) */
+  bandId: z.string(),
+  /** Convex storage ID of uploaded media (required) */
+  storageId: z.string(),
+  /** Media type (required) */
+  mediaType: bandPostMediaTypeSchema,
+  /** Optional caption text (max 2200 chars) */
+  caption: z.string().max(2200).optional(),
+  /** Optional video duration in seconds (max 90) */
+  durationSeconds: z.number().positive().max(90).optional(),
+});
+
+/**
+ * Schema for creating a comment on a band post.
+ */
+export const bandPostCommentCreateSchema = z.object({
+  /** ID of the target post (required) */
+  postId: z.string(),
+  /** Comment body (1-500 chars, required) */
+  content: z.string().trim().min(1).max(500),
+});
+
+/**
+ * Shared cursor pagination args for band post feed pages.
+ */
+export const bandPostPaginationSchema = z.object({
+  cursor: z.string().optional(),
+  limit: z.number().int().min(1).max(36).optional(),
+});
+
+/**
+ * Shared cursor pagination args for band post comment pages.
+ */
+export const bandPostCommentPaginationSchema = z.object({
+  cursor: z.string().optional(),
+  limit: z.number().int().min(1).max(100).optional(),
+});
+
+const bandPostAuthorSchema = z.object({
+  _id: z.string(),
+  name: z.string(),
+  avatar: z.string().optional(),
+});
+
+/**
+ * Band post feed DTO consumed by web/mobile clients.
+ */
+export const bandPostFeedItemSchema = z.object({
+  _id: z.string(),
+  _creationTime: z.number(),
+  bandId: z.string(),
+  authorUserId: z.string(),
+  mediaStorageId: z.string(),
+  mediaType: bandPostMediaTypeSchema,
+  caption: z.string().optional(),
+  mimeType: z.string(),
+  fileSizeBytes: z.number(),
+  durationSeconds: z.number().optional(),
+  likeCount: z.number(),
+  commentCount: z.number(),
+  lifecycleStatus: z.enum(["active", "deletion_queued"]).optional(),
+  deletedAt: z.number().optional(),
+  deletedByUserId: z.string().optional(),
+  createdAt: z.number(),
+  mediaUrl: z.string().nullable(),
+  author: bandPostAuthorSchema.nullable(),
+  isLikedByCurrentUser: z.boolean(),
+  canDelete: z.boolean(),
+  canManageComments: z.boolean(),
+});
+
+/**
+ * Paginated band post feed response DTO.
+ */
+export const bandPostListResponseSchema = z.object({
+  posts: z.array(bandPostFeedItemSchema),
+  nextCursor: z.string().optional(),
+  done: z.boolean(),
+});
+
+/**
+ * Band post comment feed DTO.
+ */
+export const bandPostCommentFeedItemSchema = z.object({
+  _id: z.string(),
+  _creationTime: z.number(),
+  postId: z.string(),
+  userId: z.string(),
+  content: z.string(),
+  createdAt: z.number(),
+  author: bandPostAuthorSchema.nullable(),
+  canDelete: z.boolean(),
+});
+
+/**
+ * Paginated band post comment response DTO.
+ */
+export const bandPostCommentListResponseSchema = z.object({
+  comments: z.array(bandPostCommentFeedItemSchema),
+  nextCursor: z.string().optional(),
+  done: z.boolean(),
+});
+
+/**
  * Schema for validating message sending inputs.
  * Enforces message length limits.
  *
@@ -377,6 +489,23 @@ export type BandUpdateInput = z.infer<typeof bandUpdateSchema>;
  * Inferred type for event creation payloads.
  */
 export type EventCreateInput = z.infer<typeof eventCreateSchema>;
+
+/**
+ * Inferred type for band post media type.
+ */
+export type BandPostMediaTypeInput = z.infer<typeof bandPostMediaTypeSchema>;
+
+/**
+ * Inferred type for band post creation payloads.
+ */
+export type BandPostCreateInput = z.infer<typeof bandPostCreateSchema>;
+
+/**
+ * Inferred type for band post comment creation payloads.
+ */
+export type BandPostCommentCreateInput = z.infer<
+  typeof bandPostCommentCreateSchema
+>;
 
 /**
  * Inferred type for message sending payloads.

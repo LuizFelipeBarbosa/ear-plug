@@ -33,6 +33,22 @@ const genreValidator = v.union(
 );
 
 /**
+ * Validator for band post media type.
+ */
+const bandPostMediaTypeValidator = v.union(
+  v.literal("image"),
+  v.literal("video")
+);
+
+/**
+ * Validator for band post lifecycle status.
+ */
+const bandPostLifecycleStatusValidator = v.union(
+  v.literal("active"),
+  v.literal("deletion_queued")
+);
+
+/**
  * Validator for event booking status.
  * - "confirmed": Event is definitely happening
  * - "hold": Tentative booking
@@ -432,6 +448,84 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_venue", ["venueId"])
     .index("by_user_venue", ["userId", "venueId"]),
+
+  // ==================== BAND POSTS ====================
+  /**
+   * Band posts table - Photo and video posts published by bands.
+   *
+   * Stores media metadata and denormalized interaction counters.
+   *
+   * Indexes:
+   * - by_band_created: Fetch a band's feed newest-first
+   * - by_author_created: Fetch all posts authored by a specific user
+   */
+  bandPosts: defineTable({
+    /** Reference to the owning band */
+    bandId: v.id("bands"),
+    /** Reference to the user who created the post */
+    authorUserId: v.id("users"),
+    /** Reference to Convex storage object */
+    mediaStorageId: v.id("_storage"),
+    /** Media type */
+    mediaType: bandPostMediaTypeValidator,
+    /** Optional caption text */
+    caption: v.optional(v.string()),
+    /** Uploaded file MIME type */
+    mimeType: v.string(),
+    /** Uploaded file size in bytes */
+    fileSizeBytes: v.number(),
+    /** Video duration in seconds (video posts only) */
+    durationSeconds: v.optional(v.number()),
+    /** Number of likes for quick feed rendering */
+    likeCount: v.number(),
+    /** Number of comments for quick feed rendering */
+    commentCount: v.number(),
+    /** Lifecycle status used for soft-delete workflows */
+    lifecycleStatus: v.optional(bandPostLifecycleStatusValidator),
+    /** Unix timestamp when delete was requested */
+    deletedAt: v.optional(v.number()),
+    /** User who requested deletion */
+    deletedByUserId: v.optional(v.id("users")),
+    /** Unix timestamp when post was created */
+    createdAt: v.number(),
+  })
+    .index("by_band_created", ["bandId", "createdAt"])
+    .index("by_band_status_created", ["bandId", "lifecycleStatus", "createdAt"])
+    .index("by_author_created", ["authorUserId", "createdAt"]),
+
+  // ==================== BAND POST LIKES ====================
+  /**
+   * Likes on band posts by authenticated users.
+   */
+  bandPostLikes: defineTable({
+    /** Reference to the liked post */
+    postId: v.id("bandPosts"),
+    /** Reference to the user who liked the post */
+    userId: v.id("users"),
+    /** Unix timestamp when like was created */
+    createdAt: v.number(),
+  })
+    .index("by_post", ["postId"])
+    .index("by_user", ["userId"])
+    .index("by_user_post", ["userId", "postId"]),
+
+  // ==================== BAND POST COMMENTS ====================
+  /**
+   * Comments on band posts.
+   */
+  bandPostComments: defineTable({
+    /** Reference to the parent post */
+    postId: v.id("bandPosts"),
+    /** Reference to the user who wrote the comment */
+    userId: v.id("users"),
+    /** Comment body */
+    content: v.string(),
+    /** Unix timestamp when comment was created */
+    createdAt: v.number(),
+  })
+    .index("by_post_created", ["postId", "createdAt"])
+    .index("by_post_user_created", ["postId", "userId", "createdAt"])
+    .index("by_user_created", ["userId", "createdAt"]),
 
   // ==================== CONVERSATIONS ====================
   /**

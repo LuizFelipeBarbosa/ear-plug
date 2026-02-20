@@ -10,3 +10,4 @@ export { CreateBandForm } from "./CreateBandForm";
 export { CreateGigModal } from "./CreateGigModal";
 export { EditBandProfileModal } from "./EditBandProfileModal";
 export { MediaGallery, DemoMediaGallery } from "./MediaGallery";
+export { BandFeedSection } from "./posts/BandFeedSection";

@@ -117,6 +117,16 @@ export function PlaceAutocomplete({
     }
   }, [value, setValue]);
 
+  useEffect(() => {
+    if (
+      placesStatus === "ready" &&
+      manualVenueInput.trim().length > 0 &&
+      inputValue.trim().length === 0
+    ) {
+      setValue(manualVenueInput, false);
+    }
+  }, [placesStatus, manualVenueInput, inputValue, setValue]);
+
   // Handle input change
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
@@ -252,11 +262,19 @@ export function PlaceAutocomplete({
           </div>
           <input
             type="text"
-            disabled
-            placeholder="Loading Google Maps..."
-            className="w-full pl-12 pr-4 py-3.5 bg-night-tertiary border-2 border-zinc-800 rounded-none text-zinc-500 placeholder:text-zinc-600 focus:outline-none"
+            value={manualVenueInput}
+            onChange={(event) => {
+              setManualVenueInput(event.target.value);
+              onChange(null);
+            }}
+            disabled={disabled}
+            placeholder={placeholder}
+            className="w-full pl-12 pr-4 py-3.5 bg-night-tertiary border-2 border-zinc-800 rounded-none text-white placeholder:text-zinc-600 focus:outline-none focus:border-lime transition-colors"
           />
         </div>
+        <p className="text-xs text-zinc-600 mt-1.5">
+          Loading venue suggestions. You can start typing now.
+        </p>
       </div>
     );
   }
