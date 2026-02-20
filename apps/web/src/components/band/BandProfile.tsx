@@ -19,6 +19,7 @@ import {
   Calendar,
   Crown,
   Shield,
+  X,
 } from "lucide-react";
 import {
   BarChart,
@@ -46,6 +47,7 @@ const CHART_COLORS = ["#C2FF00", "#8B5CF6"];
 export function BandProfileView() {
   const { band, bandWithStats, isLoading } = useCurrentBand();
   const [showEditModal, setShowEditModal] = useState(false);
+  const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false);
   const { analytics, isLoading: analyticsLoading } = useBandAnalytics(band?._id);
   const [invitePhoneNumber, setInvitePhoneNumber] = useState("");
   const [inviteRole, setInviteRole] = useState<"admin" | "member">("member");
@@ -116,14 +118,19 @@ export function BandProfileView() {
   return (
     <div className="min-h-screen pb-6 bg-night">
       {/* Header */}
-      <header className="relative bg-night-secondary border-b-2 border-lime/20 p-6 overflow-hidden">
+      <header className="relative bg-night-secondary border-b-2 border-lime/20 p-6 overflow-visible">
         {/* Subtle gradient accent */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-violet/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
 
         <div className="relative">
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="text-xl font-bold text-white uppercase tracking-tight">Band Profile</h1>
-            <button className="p-2 flex items-center justify-center hover:bg-night-tertiary border border-zinc-800 hover:border-lime/30 transition-colors touch-target">
+          <div className="flex items-center justify-between mb-6 gap-3">
+            <ProfileWorkspaceSwitcher className="flex-1 min-w-0" variant="header" />
+            <button
+              type="button"
+              onClick={() => setIsSettingsMenuOpen(true)}
+              className="p-2 flex items-center justify-center hover:bg-night-tertiary border border-zinc-800 hover:border-lime/30 transition-colors touch-target"
+              aria-label="Open band settings"
+            >
               <Settings className="w-5 h-5 text-zinc-400" />
             </button>
           </div>
@@ -185,10 +192,6 @@ export function BandProfileView() {
           </div>
         </div>
       </header>
-
-      <section className="p-4">
-        <ProfileWorkspaceSwitcher />
-      </section>
 
       {/* Bio */}
       {band.bio && (
@@ -266,170 +269,6 @@ export function BandProfileView() {
             />
             <StatCard label="Total RSVPs" value={bandWithStats.stats.totalRsvps} accent="violet" />
             <StatCard label="Followers" value={bandWithStats.stats.newFans} accent="lime" />
-          </div>
-        </section>
-      )}
-
-      <section className="p-4">
-        <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-3">
-          Members
-        </h3>
-        {!canManageMembers && (
-          <p className="text-xs uppercase tracking-wider text-zinc-500 mb-3">
-            Member access is read-only.
-          </p>
-        )}
-
-        <div className="bg-night-tertiary border-2 border-zinc-800 p-4 space-y-3">
-          {members === undefined ? (
-            <p className="text-zinc-500 text-sm">Loading members...</p>
-          ) : members.length === 0 ? (
-            <p className="text-zinc-500 text-sm">No members found.</p>
-          ) : (
-            members.map((entry) => (
-              <div
-                key={entry.membership._id}
-                className="flex items-center justify-between gap-3 border border-zinc-800 bg-night-secondary px-3 py-2"
-              >
-                <div>
-                  <p className="text-white text-sm font-semibold">{entry.user.name}</p>
-                  <p className="text-zinc-500 text-xs uppercase tracking-wider">
-                    {entry.membership.role}
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  {entry.membership.role === "owner" ? (
-                    <Crown className="w-4 h-4 text-lime" />
-                  ) : entry.membership.role === "admin" ? (
-                    <Shield className="w-4 h-4 text-violet" />
-                  ) : null}
-
-                  {canManageMembers && entry.membership.role !== "owner" && (
-                    <>
-                      <button
-                        onClick={() =>
-                          updateMemberRole({
-                            bandId: band._id,
-                            memberUserId: entry.user._id,
-                            role:
-                              entry.membership.role === "member" ? "admin" : "member",
-                          })
-                        }
-                        className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider border border-zinc-700 text-zinc-300 hover:border-lime/30"
-                      >
-                        {entry.membership.role === "member" ? "Make Admin" : "Make Member"}
-                      </button>
-                      <button
-                        onClick={() =>
-                          removeMember({
-                            bandId: band._id,
-                            memberUserId: entry.user._id,
-                          })
-                        }
-                        className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider border border-red-500/40 text-red-400 hover:bg-red-500/10"
-                      >
-                        Remove
-                      </button>
-                    </>
-                  )}
-
-                  {canTransferOwnership && entry.membership.role !== "owner" && (
-                    <button
-                      onClick={() =>
-                        transferOwnership({
-                          bandId: band._id,
-                          newOwnerUserId: entry.user._id,
-                        })
-                      }
-                      className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider border border-violet/40 text-violet hover:bg-violet/10"
-                    >
-                      Transfer Owner
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </section>
-
-      {canManageMembers && (
-        <section className="p-4">
-          <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-3">
-            Invite Members
-          </h3>
-          <div className="bg-night-tertiary border-2 border-zinc-800 p-4">
-            <div className="flex flex-col sm:flex-row gap-2">
-              <input
-                type="tel"
-                value={invitePhoneNumber}
-                onChange={(event) => {
-                  setInvitePhoneNumber(event.target.value);
-                  if (inviteError) {
-                    setInviteError(null);
-                  }
-                }}
-                placeholder="+14155551212 or (415) 555-1212"
-                className="flex-1 bg-night-secondary border-2 border-zinc-800 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime"
-              />
-              <select
-                value={inviteRole}
-                onChange={(event) =>
-                  setInviteRole(event.target.value as "admin" | "member")
-                }
-                className="bg-night-secondary border-2 border-zinc-800 px-3 py-2 text-sm text-white focus:outline-none focus:border-lime"
-              >
-                <option value="member">Member</option>
-                <option value="admin">Admin</option>
-              </select>
-              <button
-                onClick={handleInvite}
-                disabled={isInviting}
-                className={cn(
-                  "px-4 py-2 text-xs font-bold uppercase tracking-wider border-2 transition-colors",
-                  isInviting
-                    ? "border-zinc-700 text-zinc-500"
-                    : "border-lime bg-lime text-night hover:bg-transparent hover:text-lime"
-                )}
-              >
-                {isInviting ? "Inviting..." : "Invite"}
-              </button>
-            </div>
-
-            {inviteError && (
-              <p className="mt-2 text-xs uppercase tracking-wider text-red-400 font-semibold">
-                {inviteError}
-              </p>
-            )}
-
-            <div className="mt-4 space-y-2">
-              {(invites ?? []).map((invite) => (
-                <div
-                  key={invite._id}
-                  className="flex items-center justify-between border border-zinc-800 bg-night-secondary px-3 py-2"
-                >
-                  <div>
-                    <p className="text-sm text-white">
-                      {invite.phoneNumber ??
-                        invite.targetUser?.phoneNumber ??
-                        invite.email}
-                    </p>
-                    <p className="text-[10px] uppercase tracking-wider text-zinc-500">
-                      {invite.role} • {invite.status}
-                    </p>
-                  </div>
-                  {invite.status === "pending" && (
-                    <button
-                      onClick={() => revokeInvite({ inviteId: invite._id })}
-                      className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider border border-red-500/40 text-red-400 hover:bg-red-500/10"
-                    >
-                      Revoke
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
           </div>
         </section>
       )}
@@ -638,6 +477,200 @@ export function BandProfileView() {
           </button>
         </SignOutButton>
       </div>
+
+      {isSettingsMenuOpen && (
+        <div className="fixed inset-0 z-[60]">
+          <button
+            type="button"
+            onClick={() => setIsSettingsMenuOpen(false)}
+            className="absolute inset-0 bg-black/70"
+            aria-label="Close band settings menu"
+          />
+
+          <aside className="absolute right-0 top-0 h-full w-full max-w-xl bg-night-secondary border-l-2 border-lime/20 overflow-y-auto">
+            <div className="sticky top-0 z-10 bg-night-secondary border-b border-zinc-800 p-4 flex items-center justify-between">
+              <h3 className="text-sm font-bold uppercase tracking-widest text-white">
+                Band Settings
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsSettingsMenuOpen(false)}
+                className="p-2 border border-zinc-700 text-zinc-400 hover:text-white hover:border-lime/30"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <section className="p-4">
+              <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-3">
+                Members
+              </h4>
+              {!canManageMembers && (
+                <p className="text-xs uppercase tracking-wider text-zinc-500 mb-3">
+                  Member access is read-only.
+                </p>
+              )}
+
+              <div className="bg-night-tertiary border-2 border-zinc-800 p-4 space-y-3">
+                {members === undefined ? (
+                  <p className="text-zinc-500 text-sm">Loading members...</p>
+                ) : members.length === 0 ? (
+                  <p className="text-zinc-500 text-sm">No members found.</p>
+                ) : (
+                  members.map((entry) => (
+                    <div
+                      key={entry.membership._id}
+                      className="flex items-center justify-between gap-3 border border-zinc-800 bg-night-secondary px-3 py-2"
+                    >
+                      <div>
+                        <p className="text-white text-sm font-semibold">{entry.user.name}</p>
+                        <p className="text-zinc-500 text-xs uppercase tracking-wider">
+                          {entry.membership.role}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {entry.membership.role === "owner" ? (
+                          <Crown className="w-4 h-4 text-lime" />
+                        ) : entry.membership.role === "admin" ? (
+                          <Shield className="w-4 h-4 text-violet" />
+                        ) : null}
+
+                        {canManageMembers && entry.membership.role !== "owner" && (
+                          <>
+                            <button
+                              onClick={() =>
+                                updateMemberRole({
+                                  bandId: band._id,
+                                  memberUserId: entry.user._id,
+                                  role:
+                                    entry.membership.role === "member"
+                                      ? "admin"
+                                      : "member",
+                                })
+                              }
+                              className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider border border-zinc-700 text-zinc-300 hover:border-lime/30"
+                            >
+                              {entry.membership.role === "member"
+                                ? "Make Admin"
+                                : "Make Member"}
+                            </button>
+                            <button
+                              onClick={() =>
+                                removeMember({
+                                  bandId: band._id,
+                                  memberUserId: entry.user._id,
+                                })
+                              }
+                              className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider border border-red-500/40 text-red-400 hover:bg-red-500/10"
+                            >
+                              Remove
+                            </button>
+                          </>
+                        )}
+
+                        {canTransferOwnership && entry.membership.role !== "owner" && (
+                          <button
+                            onClick={() =>
+                              transferOwnership({
+                                bandId: band._id,
+                                newOwnerUserId: entry.user._id,
+                              })
+                            }
+                            className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider border border-violet/40 text-violet hover:bg-violet/10"
+                          >
+                            Transfer Owner
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </section>
+
+            {canManageMembers && (
+              <section className="p-4 pt-0">
+                <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-3">
+                  Invite Members
+                </h4>
+                <div className="bg-night-tertiary border-2 border-zinc-800 p-4">
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <input
+                      type="tel"
+                      value={invitePhoneNumber}
+                      onChange={(event) => {
+                        setInvitePhoneNumber(event.target.value);
+                        if (inviteError) {
+                          setInviteError(null);
+                        }
+                      }}
+                      placeholder="+14155551212 or (415) 555-1212"
+                      className="flex-1 bg-night-secondary border-2 border-zinc-800 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime"
+                    />
+                    <select
+                      value={inviteRole}
+                      onChange={(event) =>
+                        setInviteRole(event.target.value as "admin" | "member")
+                      }
+                      className="bg-night-secondary border-2 border-zinc-800 px-3 py-2 text-sm text-white focus:outline-none focus:border-lime"
+                    >
+                      <option value="member">Member</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                    <button
+                      onClick={handleInvite}
+                      disabled={isInviting}
+                      className={cn(
+                        "px-4 py-2 text-xs font-bold uppercase tracking-wider border-2 transition-colors",
+                        isInviting
+                          ? "border-zinc-700 text-zinc-500"
+                          : "border-lime bg-lime text-night hover:bg-transparent hover:text-lime"
+                      )}
+                    >
+                      {isInviting ? "Inviting..." : "Invite"}
+                    </button>
+                  </div>
+
+                  {inviteError && (
+                    <p className="mt-2 text-xs uppercase tracking-wider text-red-400 font-semibold">
+                      {inviteError}
+                    </p>
+                  )}
+
+                  <div className="mt-4 space-y-2">
+                    {(invites ?? []).map((invite) => (
+                      <div
+                        key={invite._id}
+                        className="flex items-center justify-between border border-zinc-800 bg-night-secondary px-3 py-2"
+                      >
+                        <div>
+                          <p className="text-sm text-white">
+                            {invite.phoneNumber ??
+                              invite.targetUser?.phoneNumber ??
+                              invite.email}
+                          </p>
+                          <p className="text-[10px] uppercase tracking-wider text-zinc-500">
+                            {invite.role} • {invite.status}
+                          </p>
+                        </div>
+                        {invite.status === "pending" && (
+                          <button
+                            onClick={() => revokeInvite({ inviteId: invite._id })}
+                            className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider border border-red-500/40 text-red-400 hover:bg-red-500/10"
+                          >
+                            Revoke
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </section>
+            )}
+          </aside>
+        </div>
+      )}
 
       {/* Edit Profile Modal */}
       <EditBandProfileModal

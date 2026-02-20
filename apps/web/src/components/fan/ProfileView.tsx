@@ -46,6 +46,7 @@ export function FanProfileView() {
   const declineInvite = useMutation(api.bandMembers.declineInvite);
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isWorkspaceMenuOpen, setIsWorkspaceMenuOpen] = useState(false);
   const [showCreateBandForm, setShowCreateBandForm] = useState(false);
   const [processingInviteId, setProcessingInviteId] = useState<Id<"bandInvites"> | null>(null);
 
@@ -77,6 +78,7 @@ export function FanProfileView() {
     try {
       await acceptInvite({ inviteId });
       setBandMode(bandId);
+      setIsWorkspaceMenuOpen(false);
       router.push("/home");
     } finally {
       setProcessingInviteId(null);
@@ -94,53 +96,59 @@ export function FanProfileView() {
 
   return (
     <div className="min-h-screen pb-6 bg-night">
-      <header className="relative bg-night-secondary p-6 overflow-hidden">
+      <header className="relative bg-night-secondary p-6 overflow-visible">
         <div className="absolute top-0 right-0 w-64 h-64 bg-violet/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
 
-        <div className="relative flex items-center justify-between mb-6">
-          <h1 className="text-xl font-bold text-white uppercase tracking-tight">Profile</h1>
-          <div className="flex items-center gap-2">
+        <div className="relative">
+          <div className="flex items-center justify-between mb-6 gap-3">
+            <ProfileWorkspaceSwitcher className="flex-1 min-w-0" variant="header" />
             <button
-              onClick={() => setIsEditModalOpen(true)}
+              type="button"
+              onClick={() => setIsWorkspaceMenuOpen(true)}
               className="p-2 flex items-center justify-center hover:bg-night-tertiary border border-zinc-800 hover:border-lime/30 transition-colors touch-target"
+              aria-label="Open personal workspace menu"
             >
-              <Edit className="w-5 h-5 text-zinc-400" />
-            </button>
-            <button className="p-2 flex items-center justify-center hover:bg-night-tertiary border border-zinc-800 hover:border-lime/30 transition-colors touch-target">
               <Settings className="w-5 h-5 text-zinc-400" />
             </button>
           </div>
-        </div>
 
-        <div className="relative flex items-center gap-4">
-          <div className="w-20 h-20 overflow-hidden bg-night-tertiary border-2 border-lime/30 flex items-center justify-center">
-            {user.avatar ? (
-              <Image
-                src={user.avatar}
-                alt={user.name}
-                width={80}
-                height={80}
-                className="object-cover"
-              />
-            ) : (
-              <span className="text-2xl font-bold text-lime">{getInitials(user.name)}</span>
-            )}
-          </div>
-          <div>
-            <h2 className="text-xl font-bold text-white uppercase tracking-tight">{user.name}</h2>
-            {user.location && (
-              <div className="flex items-center gap-1 text-zinc-400 text-sm mt-1">
-                <MapPin className="w-4 h-4 text-lime" />
-                <span>{user.location}</span>
+          <div className="bg-night-tertiary/80 backdrop-blur-sm border-2 border-zinc-800 p-4">
+            <div className="flex items-center gap-4">
+              <div className="w-20 h-20 overflow-hidden bg-night-secondary border-2 border-lime/30 flex items-center justify-center flex-shrink-0">
+                {user.avatar ? (
+                  <Image
+                    src={user.avatar}
+                    alt={user.name}
+                    width={80}
+                    height={80}
+                    className="object-cover"
+                  />
+                ) : (
+                  <span className="text-2xl font-bold text-lime">{getInitials(user.name)}</span>
+                )}
               </div>
-            )}
+              <div className="flex-1 min-w-0">
+                <h2 className="text-xl font-bold text-white uppercase tracking-tight truncate">
+                  {user.name}
+                </h2>
+                {user.location && (
+                  <div className="flex items-center gap-1 text-zinc-400 text-sm mt-1">
+                    <MapPin className="w-4 h-4 text-lime" />
+                    <span>{user.location}</span>
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={() => setIsEditModalOpen(true)}
+                className="p-2 flex items-center justify-center hover:bg-night-secondary border border-zinc-800 hover:border-lime/30 transition-colors touch-target"
+                aria-label="Edit profile"
+              >
+                <Edit className="w-5 h-5 text-zinc-400" />
+              </button>
+            </div>
           </div>
         </div>
       </header>
-
-      <section className="p-4">
-        <ProfileWorkspaceSwitcher />
-      </section>
 
       <div className="px-4 relative z-10">
         <div className="bg-night-tertiary border-2 border-zinc-800 p-4">
@@ -166,103 +174,6 @@ export function FanProfileView() {
           </div>
         </div>
       </div>
-
-      <section className="p-4">
-        <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-3">
-          Band Workspace
-        </h3>
-
-        {myBands.length === 0 ? (
-          <div className="bg-night-tertiary border-2 border-zinc-800 p-4">
-            <p className="text-zinc-400 text-sm mb-3">
-              You are signed in as a fan. Create a band to unlock shared band tools.
-            </p>
-            <button
-              onClick={() => setShowCreateBandForm(true)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-lime text-night border-2 border-lime font-bold uppercase tracking-wider text-xs hover:bg-transparent hover:text-lime transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              Create Band
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            <p className="text-xs uppercase tracking-wider text-zinc-500 px-1 pb-1">
-              Switch active workspace using the selector above.
-            </p>
-            <button
-              onClick={() => setShowCreateBandForm(true)}
-              className="w-full bg-night-tertiary border-2 border-dashed border-lime/40 px-4 py-3 text-lime text-xs font-bold uppercase tracking-wider hover:border-lime"
-            >
-              + Create Another Band
-            </button>
-            {myBands.map((entry) => (
-              <div
-                key={entry.band._id}
-                className="w-full bg-night-tertiary border-2 border-zinc-800 px-4 py-3 text-left"
-              >
-                <p className="text-white font-bold uppercase tracking-wide text-sm">
-                  {entry.band.name}
-                </p>
-                <p className="text-zinc-500 text-xs uppercase tracking-wider mt-1">
-                  Role: {entry.membership.role}
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {pendingInvites.length > 0 && (
-        <section className="p-4">
-          <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-3">
-            Pending Invites
-          </h3>
-          <div className="space-y-2">
-            {pendingInvites.map((invite) => (
-              <div
-                key={invite._id}
-                className="bg-night-tertiary border-2 border-zinc-800 p-4"
-              >
-                <p className="text-white font-bold uppercase tracking-wide text-sm">
-                  {invite.band?.name || "Band"}
-                </p>
-                <p className="text-zinc-500 text-xs uppercase tracking-wider mt-1">
-                  Invited as {invite.role}
-                </p>
-                <div className="flex gap-2 mt-3">
-                  <button
-                    onClick={() => handleAcceptInvite(invite._id, invite.bandId)}
-                    disabled={processingInviteId === invite._id}
-                    className={cn(
-                      "flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 border-2 text-xs font-bold uppercase tracking-wider transition-colors",
-                      processingInviteId === invite._id
-                        ? "border-zinc-700 text-zinc-500"
-                        : "border-lime bg-lime text-night hover:bg-transparent hover:text-lime"
-                    )}
-                  >
-                    <Check className="w-4 h-4" />
-                    Accept
-                  </button>
-                  <button
-                    onClick={() => handleDeclineInvite(invite._id)}
-                    disabled={processingInviteId === invite._id}
-                    className={cn(
-                      "flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 border-2 text-xs font-bold uppercase tracking-wider transition-colors",
-                      processingInviteId === invite._id
-                        ? "border-zinc-700 text-zinc-500"
-                        : "border-zinc-700 text-zinc-300 hover:border-red-500/40 hover:text-red-400"
-                    )}
-                  >
-                    <X className="w-4 h-4" />
-                    Decline
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
 
       <section className="p-4">
         <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-3">
@@ -317,6 +228,135 @@ export function FanProfileView() {
           </button>
         </SignOutButton>
       </div>
+
+      {isWorkspaceMenuOpen && (
+        <div className="fixed inset-0 z-[60]">
+          <button
+            type="button"
+            onClick={() => setIsWorkspaceMenuOpen(false)}
+            className="absolute inset-0 bg-black/70"
+            aria-label="Close personal workspace menu"
+          />
+
+          <aside className="absolute right-0 top-0 h-full w-full max-w-xl bg-night-secondary border-l-2 border-lime/20 overflow-y-auto">
+            <div className="sticky top-0 z-10 bg-night-secondary border-b border-zinc-800 p-4 flex items-center justify-between">
+              <h3 className="text-sm font-bold uppercase tracking-widest text-white">
+                Workspace
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsWorkspaceMenuOpen(false)}
+                className="p-2 border border-zinc-700 text-zinc-400 hover:text-white hover:border-lime/30"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <section className="p-4">
+              <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-3">
+                Band Creation
+              </h4>
+
+              {myBands.length === 0 ? (
+                <div className="bg-night-tertiary border-2 border-zinc-800 p-4">
+                  <p className="text-zinc-400 text-sm mb-3">
+                    Create your first band workspace to unlock band tools.
+                  </p>
+                  <button
+                    onClick={() => {
+                      setIsWorkspaceMenuOpen(false);
+                      setShowCreateBandForm(true);
+                    }}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-lime text-night border-2 border-lime font-bold uppercase tracking-wider text-xs hover:bg-transparent hover:text-lime transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Create Band
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-xs uppercase tracking-wider text-zinc-500 px-1 pb-1">
+                    Use the profile dropdown to switch between personal and band workspaces.
+                  </p>
+                  <button
+                    onClick={() => {
+                      setIsWorkspaceMenuOpen(false);
+                      setShowCreateBandForm(true);
+                    }}
+                    className="w-full bg-night-tertiary border-2 border-dashed border-lime/40 px-4 py-3 text-lime text-xs font-bold uppercase tracking-wider hover:border-lime"
+                  >
+                    + Create Another Band
+                  </button>
+                  {myBands.map((entry) => (
+                    <div
+                      key={entry.band._id}
+                      className="w-full bg-night-tertiary border-2 border-zinc-800 px-4 py-3 text-left"
+                    >
+                      <p className="text-white font-bold uppercase tracking-wide text-sm">
+                        {entry.band.name}
+                      </p>
+                      <p className="text-zinc-500 text-xs uppercase tracking-wider mt-1">
+                        Role: {entry.membership.role}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            {pendingInvites.length > 0 && (
+              <section className="p-4 pt-0">
+                <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-3">
+                  Pending Invites
+                </h4>
+                <div className="space-y-2">
+                  {pendingInvites.map((invite) => (
+                    <div
+                      key={invite._id}
+                      className="bg-night-tertiary border-2 border-zinc-800 p-4"
+                    >
+                      <p className="text-white font-bold uppercase tracking-wide text-sm">
+                        {invite.band?.name || "Band"}
+                      </p>
+                      <p className="text-zinc-500 text-xs uppercase tracking-wider mt-1">
+                        Invited as {invite.role}
+                      </p>
+                      <div className="flex gap-2 mt-3">
+                        <button
+                          onClick={() => handleAcceptInvite(invite._id, invite.bandId)}
+                          disabled={processingInviteId === invite._id}
+                          className={cn(
+                            "flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 border-2 text-xs font-bold uppercase tracking-wider transition-colors",
+                            processingInviteId === invite._id
+                              ? "border-zinc-700 text-zinc-500"
+                              : "border-lime bg-lime text-night hover:bg-transparent hover:text-lime"
+                          )}
+                        >
+                          <Check className="w-4 h-4" />
+                          Accept
+                        </button>
+                        <button
+                          onClick={() => handleDeclineInvite(invite._id)}
+                          disabled={processingInviteId === invite._id}
+                          className={cn(
+                            "flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 border-2 text-xs font-bold uppercase tracking-wider transition-colors",
+                            processingInviteId === invite._id
+                              ? "border-zinc-700 text-zinc-500"
+                              : "border-zinc-700 text-zinc-300 hover:border-red-500/40 hover:text-red-400"
+                          )}
+                        >
+                          <X className="w-4 h-4" />
+                          Decline
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+          </aside>
+        </div>
+      )}
 
       <EditProfileModal
         isOpen={isEditModalOpen}
