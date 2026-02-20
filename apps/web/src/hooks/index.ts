@@ -26,4 +26,5 @@ export * from "./useNotifications";
 export * from "./useLocalStorage";
 export * from "./useGeolocation";
 export * from "./useSharedEvents";
+export * from "./useProfileContext";
 export { useBandEvents } from "./useSharedEvents";

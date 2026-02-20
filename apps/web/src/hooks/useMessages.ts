@@ -6,9 +6,11 @@
 
 "use client";
 
+import { useCallback } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
+import { useProfileContext } from "./useProfileContext";
 
 /**
  * Hook for accessing the current band's conversations.
@@ -36,12 +38,22 @@ import type { Id } from "../../../../convex/_generated/dataModel";
  *   );
  * }
  */
-export function useBandConversations() {
+export function useBandConversations(bandIdOverride?: Id<"bands">) {
+  const { mode, bandId } = useProfileContext();
+  const resolvedBandId =
+    bandIdOverride ?? (mode === "band" ? (bandId as Id<"bands"> | undefined) : undefined);
+
   /** Array of conversations with venue data and unread counts */
-  const conversations = useQuery(api.messages.getBandConversations);
+  const conversations = useQuery(
+    api.messages.getBandConversations,
+    resolvedBandId ? { bandId: resolvedBandId } : "skip"
+  );
 
   /** Total unread message count across all conversations */
-  const unreadCount = useQuery(api.messages.getUnreadCount);
+  const unreadCount = useQuery(
+    api.messages.getUnreadCount,
+    resolvedBandId ? { bandId: resolvedBandId } : "skip"
+  );
 
   /** Mutation to start a new conversation or get existing one */
   const startConversation = useMutation(api.messages.startConversation);
@@ -52,7 +64,9 @@ export function useBandConversations() {
     /** Total number of unread messages */
     unreadCount: unreadCount ?? 0,
     /** True while conversations are loading */
-    isLoading: conversations === undefined,
+    isLoading: resolvedBandId !== undefined && conversations === undefined,
+    /** Active band id used for this hook */
+    bandId: resolvedBandId,
     /** Mutation to start or get a conversation with a venue */
     startConversation,
   };
@@ -106,10 +120,27 @@ export function useConversation(conversationId: Id<"conversations"> | undefined)
   );
 
   /** Mutation to send a new message */
-  const sendMessage = useMutation(api.messages.send);
+  const sendMessageMutation = useMutation(api.messages.send);
 
   /** Mutation to mark all messages as read */
-  const markAsRead = useMutation(api.messages.markAsRead);
+  const markAsReadMutation = useMutation(api.messages.markAsRead);
+
+  const sendMessage = useCallback(
+    (content: string) => {
+      if (!conversationId) {
+        return Promise.resolve(undefined);
+      }
+      return sendMessageMutation({ conversationId, content });
+    },
+    [conversationId, sendMessageMutation]
+  );
+
+  const markAsRead = useCallback(() => {
+    if (!conversationId) {
+      return Promise.resolve(undefined);
+    }
+    return markAsReadMutation({ conversationId });
+  }, [conversationId, markAsReadMutation]);
 
   return {
     /** Array of message documents with sender property, oldest first */
@@ -122,13 +153,12 @@ export function useConversation(conversationId: Id<"conversations"> | undefined)
      * @param content - The message text to send
      * @returns Promise that resolves when the message is sent
      */
-    sendMessage: (content: string) =>
-      conversationId && sendMessage({ conversationId, content }),
+    sendMessage,
     /**
      * Marks all messages in this conversation as read.
      *
      * @returns Promise that resolves when messages are marked
      */
-    markAsRead: () => conversationId && markAsRead({ conversationId }),
+    markAsRead,
   };
 }

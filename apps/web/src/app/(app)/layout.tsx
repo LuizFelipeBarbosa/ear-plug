@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth, useUser } from "@clerk/nextjs";
 import { useMutation } from "convex/react";
 import { useCurrentUser } from "@/hooks/useUser";
-import { useRolePersistence } from "@/hooks/useLocalStorage";
+import { ProfileContextProvider } from "@/hooks/useProfileContext";
 import { BottomNav } from "@/components/navigation/BottomNav";
 import { api } from "../../../../../convex/_generated/api";
 
@@ -14,9 +14,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { isLoaded, isSignedIn } = useAuth();
   const { user: clerkUser } = useUser();
   const { user, isLoading } = useCurrentUser();
-  const { role: persistedRole } = useRolePersistence();
   const upsertUser = useMutation(api.users.upsertUser);
-  const updateRole = useMutation(api.users.updateRole);
   const [isCreatingUser, setIsCreatingUser] = useState(false);
 
   useEffect(() => {
@@ -43,14 +41,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           await upsertUser({
             clerkId: clerkUser.id,
             email: clerkUser.primaryEmailAddress?.emailAddress || "",
+            phoneNumber: clerkUser.primaryPhoneNumber?.phoneNumber,
             name: clerkUser.fullName || clerkUser.firstName || "User",
             avatar: clerkUser.imageUrl,
           });
-
-          // Update role if persisted from onboarding
-          if (persistedRole) {
-            await updateRole({ role: persistedRole });
-          }
         } catch (error) {
           console.error("Failed to create user:", error);
         } finally {
@@ -61,7 +55,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
 
     createUser();
-  }, [isLoaded, isSignedIn, clerkUser, isLoading, user, isCreatingUser, persistedRole, upsertUser, updateRole]);
+  }, [isLoaded, isSignedIn, clerkUser, isLoading, user, isCreatingUser, upsertUser]);
 
   // Show loading state while auth loads, Convex loads, or user is being created
   if (!isLoaded || isLoading || isCreatingUser) {
@@ -91,9 +85,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-night">
-      {children}
-      <BottomNav />
-    </div>
+    <ProfileContextProvider>
+      <div className="min-h-screen bg-night">
+        {children}
+        {/* Reserve vertical space for fixed bottom navigation */}
+        <div aria-hidden className="h-16 safe-area-inset-bottom" />
+        <BottomNav />
+      </div>
+    </ProfileContextProvider>
   );
 }

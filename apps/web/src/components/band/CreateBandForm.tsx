@@ -18,6 +18,7 @@ import { CityAutocomplete } from "@/components/ui/CityAutocomplete";
 import { GENRES } from "@ear-plug/shared/constants";
 import type { Genre } from "@ear-plug/shared/types";
 import { cn } from "@/lib/utils";
+import { useProfileContext } from "@/hooks/useProfileContext";
 
 type Step = "basics" | "genre" | "details" | "social";
 
@@ -47,6 +48,7 @@ const STEPS: { id: Step; title: string; icon: React.ReactNode }[] = [
 export function CreateBandForm() {
   const router = useRouter();
   const createBand = useMutation(api.bands.create);
+  const { setBandMode } = useProfileContext();
 
   const [currentStep, setCurrentStep] = useState<Step>("basics");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -101,7 +103,7 @@ export function CreateBandForm() {
     setError(null);
 
     try {
-      await createBand({
+      const bandId = await createBand({
         name: formData.name.trim(),
         location: formData.location.trim(),
         genres: formData.genres,
@@ -112,6 +114,7 @@ export function CreateBandForm() {
           : undefined,
       });
 
+      setBandMode(bandId);
       router.push("/home");
     } catch (err: any) {
       setError(err.message || "Failed to create band. Please try again.");

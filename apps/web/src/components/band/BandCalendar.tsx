@@ -15,6 +15,7 @@ import {
 import { useQuery } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import { useCurrentBand } from "@/hooks/useBand";
+import { useProfileContext } from "@/hooks/useProfileContext";
 import { CreateGigModal } from "./CreateGigModal";
 import {
   formatEventDate,
@@ -27,8 +28,13 @@ import type { EventStatus, Genre } from "@ear-plug/shared/types";
 
 export function BandCalendarView() {
   const { band, isLoading: bandLoading } = useCurrentBand();
+  const { bands } = useProfileContext();
   const [viewMonth, setViewMonth] = useState(new Date());
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const activeMembership = bands.find((entry) => entry.band._id === band?._id);
+  const canManageShows =
+    activeMembership?.membership.role === "owner" ||
+    activeMembership?.membership.role === "admin";
 
   // Get events from Convex database
   const events = useQuery(
@@ -73,7 +79,7 @@ export function BandCalendarView() {
           <h1 className="text-2xl font-bold text-white uppercase tracking-tight">
             Shows & Availability
           </h1>
-          {band && (
+          {band && canManageShows && (
             <button
               onClick={() => setIsModalOpen(true)}
               className="flex items-center gap-2 px-4 py-2.5 bg-lime text-night font-bold uppercase tracking-wider text-xs border-2 border-lime hover:bg-transparent hover:text-lime transition-all touch-target"
@@ -83,6 +89,11 @@ export function BandCalendarView() {
             </button>
           )}
         </div>
+        {band && !canManageShows && (
+          <p className="text-[11px] uppercase tracking-wider text-zinc-500">
+            Member access: owners/admins create gigs.
+          </p>
+        )}
 
         {/* Month Navigation */}
         <div className="flex items-center justify-between">
@@ -135,12 +146,16 @@ export function BandCalendarView() {
             ))}
           </div>
         ) : (
-          <EmptyState onCreateClick={() => setIsModalOpen(true)} band={band} />
+          <EmptyState
+            onCreateClick={() => setIsModalOpen(true)}
+            band={band}
+            canManageShows={canManageShows}
+          />
         )}
       </div>
 
       {/* Create Gig Modal */}
-      {band && (
+      {band && canManageShows && (
         <CreateGigModal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
@@ -264,9 +279,11 @@ function EventItem({ event }: EventItemProps) {
 function EmptyState({
   onCreateClick,
   band,
+  canManageShows,
 }: {
   onCreateClick: () => void;
   band: any;
+  canManageShows: boolean;
 }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center border-2 border-dashed border-zinc-800">
@@ -281,7 +298,7 @@ function EmptyState({
           ? "Create your first gig to get started building your calendar"
           : "Create your band profile to start managing shows"}
       </p>
-      {band ? (
+      {band && canManageShows ? (
         <button
           onClick={onCreateClick}
           className="flex items-center gap-2 px-6 py-3 bg-lime text-night font-bold uppercase tracking-wider text-sm border-2 border-lime hover:bg-transparent hover:text-lime transition-all"
@@ -289,6 +306,11 @@ function EmptyState({
           <Plus className="w-4 h-4" />
           Create First Gig
         </button>
+      ) : band ? (
+        <div className="flex items-center gap-2 text-zinc-600">
+          <Users className="w-5 h-5" />
+          <span className="text-sm">Only owners/admins can create gigs</span>
+        </div>
       ) : (
         <div className="flex items-center gap-2 text-zinc-600">
           <Music className="w-5 h-5" />

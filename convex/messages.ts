@@ -1,109 +1,96 @@
 /**
  * @fileoverview Convex queries and mutations for messaging between bands and venues.
- * Handles conversations, message sending, and read status tracking.
+ * Handles conversations, message sending, and per-user read status tracking.
  * @module convex/messages
  */
 
 import { v } from "convex/values";
-import { query, mutation } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
+import {
+  requireAuthenticatedUser,
+  requireBandMember,
+  requireBandRole,
+} from "./utils/permissions";
+
+async function countUnreadMessages(
+  ctx: QueryCtx | MutationCtx,
+  conversationId: Id<"conversations">,
+  userId: Id<"users">,
+  lastReadAt: number
+) {
+  const unreadMessages = await ctx.db
+    .query("messages")
+    .withIndex("by_conversation", (q) => q.eq("conversationId", conversationId))
+    .filter((q) =>
+      q.and(
+        q.neq(q.field("senderId"), userId),
+        q.gt(q.field("timestamp"), lastReadAt)
+      )
+    )
+    .collect();
+
+  return unreadMessages.length;
+}
 
 /**
- * Gets all conversations for the current user's band.
- * Includes venue data and unread message count for each conversation.
- * Only available for musician users with a band.
- * Returns empty array if not authenticated, not a musician, or no band exists.
- *
- * @returns Array of conversation documents with venue and unreadCount properties
- *
- * @example
- * const conversations = useQuery(api.messages.getBandConversations);
- * conversations.forEach(conv => {
- *   console.log(`${conv.venue?.name}: ${conv.unreadCount} unread`);
- * });
+ * Gets all conversations for a band.
+ * Requires band membership.
  */
 export const getBandConversations = query({
-  args: {},
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      return [];
-    }
+  args: {
+    bandId: v.id("bands"),
+  },
+  handler: async (ctx, args) => {
+    const { user } = await requireBandMember(ctx, args.bandId);
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
-      .unique();
-
-    if (!user || user.role !== "musician") {
-      return [];
-    }
-
-    // Get user's band
-    const band = await ctx.db
-      .query("bands")
-      .withIndex("by_user", (q) => q.eq("userId", user._id))
-      .first();
-
-    if (!band) {
-      return [];
-    }
-
-    // Get all conversations for this band
     const conversations = await ctx.db
       .query("conversations")
-      .withIndex("by_band", (q) => q.eq("bandId", band._id))
+      .withIndex("by_band", (q) => q.eq("bandId", args.bandId))
       .order("desc")
       .collect();
 
-    // Fetch venue data and unread count
-    const conversationsWithDetails = await Promise.all(
-      conversations.map(async (conv) => {
-        const venue = await ctx.db.get(conv.venueId);
-
-        // Count unread messages
-        const unreadMessages = await ctx.db
-          .query("messages")
-          .withIndex("by_conversation", (q) => q.eq("conversationId", conv._id))
-          .filter((q) =>
-            q.and(
-              q.eq(q.field("read"), false),
-              q.neq(q.field("senderId"), user._id)
-            )
+    return await Promise.all(
+      conversations.map(async (conversation) => {
+        const venue = await ctx.db.get(conversation.venueId);
+        const readCursor = await ctx.db
+          .query("conversationReads")
+          .withIndex("by_conversation_user", (q) =>
+            q.eq("conversationId", conversation._id).eq("userId", user._id)
           )
-          .collect();
+          .unique();
+
+        const unreadCount = await countUnreadMessages(
+          ctx,
+          conversation._id,
+          user._id,
+          readCursor?.lastReadAt ?? 0
+        );
 
         return {
-          ...conv,
+          ...conversation,
           venue,
-          unreadCount: unreadMessages.length,
+          unreadCount,
         };
       })
     );
-
-    return conversationsWithDetails;
   },
 });
 
 /**
- * Gets all messages in a conversation, ordered chronologically.
- * Includes sender user data for each message.
- * Requires authentication.
- *
- * @param conversationId - The Convex ID of the conversation
- * @returns Array of message documents with sender property, oldest first
- *
- * @example
- * const messages = useQuery(api.messages.getConversationMessages, {
- *   conversationId: "k9x..."
- * });
+ * Gets all messages in a conversation.
+ * Requires membership in the conversation's band.
  */
 export const getConversationMessages = query({
   args: { conversationId: v.id("conversations") },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
+    const conversation = await ctx.db.get(args.conversationId);
+    if (!conversation) {
       return [];
     }
+
+    await requireBandMember(ctx, conversation.bandId);
 
     const messages = await ctx.db
       .query("messages")
@@ -113,34 +100,21 @@ export const getConversationMessages = query({
       .order("asc")
       .collect();
 
-    // Fetch sender data
-    const messagesWithSender = await Promise.all(
-      messages.map(async (msg) => {
-        const sender = await ctx.db.get(msg.senderId);
-        return { ...msg, sender };
+    return await Promise.all(
+      messages.map(async (message) => {
+        const sender = await ctx.db.get(message.senderId);
+        return {
+          ...message,
+          sender,
+        };
       })
     );
-
-    return messagesWithSender;
   },
 });
 
 /**
  * Sends a new message in a conversation.
- * Updates the conversation's last message metadata.
- * Requires authentication.
- *
- * @param conversationId - The Convex ID of the conversation
- * @param content - The message text content (1-5000 characters)
- * @returns The new message's Convex document ID
- * @throws Error if not authenticated or user not found
- *
- * @example
- * const send = useMutation(api.messages.send);
- * await send({
- *   conversationId: "k9x...",
- *   content: "Looking forward to the show!"
- * });
+ * Requires membership in the conversation's band.
  */
 export const send = mutation({
   args: {
@@ -148,37 +122,29 @@ export const send = mutation({
     content: v.string(),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
+    const user = await requireAuthenticatedUser(ctx);
+
+    const conversation = await ctx.db.get(args.conversationId);
+    if (!conversation) {
+      throw new Error("Conversation not found");
     }
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
-      .unique();
-
-    if (!user) {
-      throw new Error("User not found");
-    }
+    await requireBandMember(ctx, conversation.bandId);
 
     const now = Date.now();
-
-    // Create the message
     const messageId = await ctx.db.insert("messages", {
       conversationId: args.conversationId,
       senderId: user._id,
       content: args.content,
       timestamp: now,
-      read: false,
+      read: false, // legacy field retained for compatibility
     });
 
-    // Update conversation with last message info
-    await ctx.db.patch(args.conversationId, {
+    await ctx.db.patch(conversation._id, {
       lastMessageAt: now,
       lastMessagePreview:
         args.content.length > 50
-          ? args.content.substring(0, 47) + "..."
+          ? `${args.content.substring(0, 47)}...`
           : args.content,
     });
 
@@ -187,36 +153,28 @@ export const send = mutation({
 });
 
 /**
- * Marks all messages in a conversation as read for the current user.
- * Only marks messages from other users as read (not the user's own messages).
- * Requires authentication.
- *
- * @param conversationId - The Convex ID of the conversation
- * @returns Object with markedCount indicating how many messages were marked
- * @throws Error if not authenticated or user not found
- *
- * @example
- * const markAsRead = useMutation(api.messages.markAsRead);
- * const { markedCount } = await markAsRead({ conversationId: "k9x..." });
+ * Marks a conversation as read for the current user.
+ * Uses per-user read cursor (`conversationReads`).
  */
 export const markAsRead = mutation({
   args: { conversationId: v.id("conversations") },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
+    const user = await requireAuthenticatedUser(ctx);
+
+    const conversation = await ctx.db.get(args.conversationId);
+    if (!conversation) {
+      throw new Error("Conversation not found");
     }
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+    await requireBandMember(ctx, conversation.bandId);
+
+    const existingCursor = await ctx.db
+      .query("conversationReads")
+      .withIndex("by_conversation_user", (q) =>
+        q.eq("conversationId", args.conversationId).eq("userId", user._id)
+      )
       .unique();
 
-    if (!user) {
-      throw new Error("User not found");
-    }
-
-    // Get all unread messages not from this user
     const unreadMessages = await ctx.db
       .query("messages")
       .withIndex("by_conversation", (q) =>
@@ -224,39 +182,33 @@ export const markAsRead = mutation({
       )
       .filter((q) =>
         q.and(
-          q.eq(q.field("read"), false),
-          q.neq(q.field("senderId"), user._id)
+          q.neq(q.field("senderId"), user._id),
+          q.gt(q.field("timestamp"), existingCursor?.lastReadAt ?? 0)
         )
       )
       .collect();
 
-    // Mark all as read
-    await Promise.all(
-      unreadMessages.map((msg) => ctx.db.patch(msg._id, { read: true }))
-    );
+    const now = Date.now();
+
+    if (existingCursor) {
+      await ctx.db.patch(existingCursor._id, {
+        lastReadAt: now,
+      });
+    } else {
+      await ctx.db.insert("conversationReads", {
+        conversationId: args.conversationId,
+        userId: user._id,
+        lastReadAt: now,
+      });
+    }
 
     return { markedCount: unreadMessages.length };
   },
 });
 
 /**
- * Starts a new conversation between a band and venue, or returns existing conversation.
- * Optionally sends an initial message when creating the conversation.
- * Requires authentication.
- *
- * @param bandId - The Convex ID of the band
- * @param venueId - The Convex ID of the venue
- * @param initialMessage - Optional message to send when creating conversation
- * @returns The conversation's Convex document ID (new or existing)
- * @throws Error if not authenticated or user not found
- *
- * @example
- * const startConversation = useMutation(api.messages.startConversation);
- * const conversationId = await startConversation({
- *   bandId: "abc...",
- *   venueId: "xyz...",
- *   initialMessage: "Hi, we'd love to book a show!"
- * });
+ * Starts a new conversation between a band and venue, or returns existing one.
+ * Only owner/admin may start conversations.
  */
 export const startConversation = mutation({
   args: {
@@ -265,21 +217,8 @@ export const startConversation = mutation({
     initialMessage: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
+    const { user } = await requireBandRole(ctx, args.bandId, ["owner", "admin"]);
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
-      .unique();
-
-    if (!user) {
-      throw new Error("User not found");
-    }
-
-    // Check if conversation already exists
     const existing = await ctx.db
       .query("conversations")
       .withIndex("by_band_venue", (q) =>
@@ -288,29 +227,30 @@ export const startConversation = mutation({
       .unique();
 
     if (existing) {
-      // Send initial message if provided
-      if (args.initialMessage) {
-        await ctx.db.insert("messages", {
-          conversationId: existing._id,
-          senderId: user._id,
-          content: args.initialMessage,
-          timestamp: Date.now(),
-          read: false,
-        });
-
-        await ctx.db.patch(existing._id, {
-          lastMessageAt: Date.now(),
-          lastMessagePreview:
-            args.initialMessage.length > 50
-              ? args.initialMessage.substring(0, 47) + "..."
-              : args.initialMessage,
-        });
+      if (!args.initialMessage) {
+        return existing._id;
       }
+
+      const now = Date.now();
+      await ctx.db.insert("messages", {
+        conversationId: existing._id,
+        senderId: user._id,
+        content: args.initialMessage,
+        timestamp: now,
+        read: false,
+      });
+
+      await ctx.db.patch(existing._id, {
+        lastMessageAt: now,
+        lastMessagePreview:
+          args.initialMessage.length > 50
+            ? `${args.initialMessage.substring(0, 47)}...`
+            : args.initialMessage,
+      });
 
       return existing._id;
     }
 
-    // Create new conversation
     const now = Date.now();
     const conversationId = await ctx.db.insert("conversations", {
       bandId: args.bandId,
@@ -318,12 +258,11 @@ export const startConversation = mutation({
       lastMessageAt: now,
       lastMessagePreview: args.initialMessage
         ? args.initialMessage.length > 50
-          ? args.initialMessage.substring(0, 47) + "..."
+          ? `${args.initialMessage.substring(0, 47)}...`
           : args.initialMessage
         : undefined,
     });
 
-    // Send initial message if provided
     if (args.initialMessage) {
       await ctx.db.insert("messages", {
         conversationId,
@@ -334,69 +273,48 @@ export const startConversation = mutation({
       });
     }
 
+    // Sender has effectively read up to current message timestamp.
+    await ctx.db.insert("conversationReads", {
+      conversationId,
+      userId: user._id,
+      lastReadAt: now,
+    });
+
     return conversationId;
   },
 });
 
 /**
- * Gets the total count of unread messages across all conversations for the current user's band.
- * Used for displaying notification badges.
- * Returns 0 if not authenticated, not a musician, or no band exists.
- *
- * @returns Total number of unread messages
- *
- * @example
- * const unreadCount = useQuery(api.messages.getUnreadCount);
- * if (unreadCount > 0) {
- *   // Show badge with unreadCount
- * }
+ * Gets total unread message count for a band.
+ * Requires band membership.
  */
 export const getUnreadCount = query({
-  args: {},
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      return 0;
-    }
+  args: {
+    bandId: v.id("bands"),
+  },
+  handler: async (ctx, args) => {
+    const { user } = await requireBandMember(ctx, args.bandId);
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
-      .unique();
-
-    if (!user || user.role !== "musician") {
-      return 0;
-    }
-
-    const band = await ctx.db
-      .query("bands")
-      .withIndex("by_user", (q) => q.eq("userId", user._id))
-      .first();
-
-    if (!band) {
-      return 0;
-    }
-
-    // Get all conversations
     const conversations = await ctx.db
       .query("conversations")
-      .withIndex("by_band", (q) => q.eq("bandId", band._id))
+      .withIndex("by_band", (q) => q.eq("bandId", args.bandId))
       .collect();
 
-    // Count unread messages
     let totalUnread = 0;
-    for (const conv of conversations) {
-      const unread = await ctx.db
-        .query("messages")
-        .withIndex("by_conversation", (q) => q.eq("conversationId", conv._id))
-        .filter((q) =>
-          q.and(
-            q.eq(q.field("read"), false),
-            q.neq(q.field("senderId"), user._id)
-          )
+    for (const conversation of conversations) {
+      const cursor = await ctx.db
+        .query("conversationReads")
+        .withIndex("by_conversation_user", (q) =>
+          q.eq("conversationId", conversation._id).eq("userId", user._id)
         )
-        .collect();
-      totalUnread += unread.length;
+        .unique();
+
+      totalUnread += await countUnreadMessages(
+        ctx,
+        conversation._id,
+        user._id,
+        cursor?.lastReadAt ?? 0
+      );
     }
 
     return totalUnread;

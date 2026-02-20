@@ -1,6 +1,6 @@
 /**
  * @fileoverview Convex database schema definition for the Ear-Plug platform.
- * Defines all 13 tables, their fields, validators, and indexes.
+ * Defines the database tables, fields, validators, and indexes.
  * @module convex/schema
  */
 
@@ -69,6 +69,29 @@ const applicationStatusValidator = v.union(
 );
 
 /**
+ * Validator for band membership roles.
+ * - "owner": Full control, including ownership transfer
+ * - "admin": Can manage band profile and members
+ * - "member": Can access shared workspace, cannot manage members/settings
+ */
+const bandMemberRoleValidator = v.union(
+  v.literal("owner"),
+  v.literal("admin"),
+  v.literal("member")
+);
+
+/**
+ * Validator for band invite lifecycle status.
+ */
+const bandInviteStatusValidator = v.union(
+  v.literal("pending"),
+  v.literal("accepted"),
+  v.literal("declined"),
+  v.literal("revoked"),
+  v.literal("expired")
+);
+
+/**
  * Validator for notification types.
  * Each type triggers different UI handling and display.
  */
@@ -78,7 +101,11 @@ const notificationTypeValidator = v.union(
   v.literal("new_event_followed_artist"),
   v.literal("new_event_nearby"),
   v.literal("application_update"),
-  v.literal("message")
+  v.literal("message"),
+  v.literal("booking_cancelled"),
+  v.literal("booking_message"),
+  v.literal("booking_accepted"),
+  v.literal("booking_request")
 );
 
 /**
@@ -118,6 +145,7 @@ export default defineSchema({
    * Indexes:
    * - by_clerk_id: Look up user by Clerk authentication ID
    * - by_email: Look up user by email address
+   * - by_phone_number: Look up user by normalized E.164 phone number
    * - by_role: Filter users by role (fan/musician)
    */
   users: defineTable({
@@ -129,6 +157,8 @@ export default defineSchema({
     name: v.string(),
     /** Email address */
     email: v.string(),
+    /** Primary phone number (normalized E.164 when available) */
+    phoneNumber: v.optional(v.string()),
     /** User's location (city/area) */
     location: v.optional(v.string()),
     /** Avatar image URL */
@@ -142,6 +172,7 @@ export default defineSchema({
   })
     .index("by_clerk_id", ["clerkId"])
     .index("by_email", ["email"])
+    .index("by_phone_number", ["phoneNumber"])
     .index("by_role", ["role"]),
 
   // ==================== BANDS ====================
@@ -179,6 +210,59 @@ export default defineSchema({
   })
     .index("by_user", ["userId"])
     .index("by_name", ["name"]),
+
+  // ==================== BAND MEMBERSHIPS ====================
+  /**
+   * Shared workspace access for band profiles.
+   *
+   * Legacy single-owner `bands.userId` remains for compatibility, while this
+   * table is the source of truth for authorization.
+   */
+  bandMemberships: defineTable({
+    /** Reference to the shared band workspace */
+    bandId: v.id("bands"),
+    /** Reference to member user */
+    userId: v.id("users"),
+    /** Membership role */
+    role: bandMemberRoleValidator,
+    /** Unix timestamp when membership was created */
+    joinedAt: v.number(),
+    /** User who invited this member (optional for backfilled owners) */
+    invitedBy: v.optional(v.id("users")),
+  })
+    .index("by_band", ["bandId"])
+    .index("by_user", ["userId"])
+    .index("by_band_user", ["bandId", "userId"]),
+
+  // ==================== BAND INVITES ====================
+  /**
+   * Pending/accepted/declined invitations for existing users to join a band.
+   */
+  bandInvites: defineTable({
+    /** Target band workspace */
+    bandId: v.id("bands"),
+    /** Target existing user */
+    targetUserId: v.id("users"),
+    /** Target email (denormalized for audit/debugging) */
+    email: v.string(),
+    /** Target phone number (denormalized, normalized E.164 when available) */
+    phoneNumber: v.optional(v.string()),
+    /** Invited role */
+    role: v.union(v.literal("admin"), v.literal("member")),
+    /** Current invite status */
+    status: bandInviteStatusValidator,
+    /** User who sent the invite */
+    invitedBy: v.id("users"),
+    /** Unix timestamp when invite was created */
+    createdAt: v.number(),
+    /** Unix timestamp when invite was accepted/declined/revoked/expired */
+    respondedAt: v.optional(v.number()),
+    /** Unix timestamp after which pending invite is invalid */
+    expiresAt: v.number(),
+  })
+    .index("by_band", ["bandId"])
+    .index("by_target_user", ["targetUserId"])
+    .index("by_band_target_status", ["bandId", "targetUserId", "status"]),
 
   // ==================== VENUES ====================
   /**
@@ -404,6 +488,21 @@ export default defineSchema({
     .index("by_conversation", ["conversationId"])
     .index("by_sender", ["senderId"])
     .index("by_timestamp", ["timestamp"]),
+
+  // ==================== CONVERSATION READS ====================
+  /**
+   * Per-user read cursors for conversation-level unread counts.
+   */
+  conversationReads: defineTable({
+    /** Conversation being tracked */
+    conversationId: v.id("conversations"),
+    /** Member whose read cursor is stored */
+    userId: v.id("users"),
+    /** Unix timestamp of latest message this user has read */
+    lastReadAt: v.number(),
+  })
+    .index("by_conversation_user", ["conversationId", "userId"])
+    .index("by_user", ["userId"]),
 
   // ==================== NOTIFICATIONS ====================
   /**

@@ -9,6 +9,7 @@ import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { haversineDistance, coordinatesMatch } from "./utils/geo";
+import { requireBandRole } from "./utils/permissions";
 
 /**
  * Validator for music genre values.
@@ -769,25 +770,12 @@ export const create = mutation({
     genre: v.optional(genreValidator), // Legacy field for backward compatibility
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
-
-    // Verify the band belongs to this user
     const band = await ctx.db.get(args.bandId);
     if (!band) {
       throw new Error("Band not found");
     }
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
-      .unique();
-
-    if (!user || band.userId !== user._id) {
-      throw new Error("Not authorized to create events for this band");
-    }
+    await requireBandRole(ctx, args.bandId, ["owner", "admin"]);
 
     const { genre, ...restArgs } = args;
     const eventId = await ctx.db.insert("events", {
@@ -863,25 +851,12 @@ export const createWithVenue = mutation({
     description: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
-
-    // Verify the band belongs to this user
     const band = await ctx.db.get(args.bandId);
     if (!band) {
       throw new Error("Band not found");
     }
 
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
-      .unique();
-
-    if (!user || band.userId !== user._id) {
-      throw new Error("Not authorized to create events for this band");
-    }
+    await requireBandRole(ctx, args.bandId, ["owner", "admin"]);
 
     // Check if venue already exists by coordinates (use indexed query by city)
     const existingVenues = await ctx.db

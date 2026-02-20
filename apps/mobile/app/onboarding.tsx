@@ -24,6 +24,7 @@ export default function OnboardingScreen() {
         await upsertUser({
           clerkId: clerkUser.id,
           email: clerkUser.primaryEmailAddress?.emailAddress || "",
+          phoneNumber: clerkUser.primaryPhoneNumber?.phoneNumber,
           name: clerkUser.fullName || clerkUser.firstName || "User",
           avatar: clerkUser.imageUrl,
         });

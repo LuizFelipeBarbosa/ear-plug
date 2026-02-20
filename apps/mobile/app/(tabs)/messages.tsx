@@ -6,7 +6,11 @@ import { Bell, MessageCircle } from "lucide-react-native";
 export default function MessagesScreen() {
   const user = useQuery(api.users.getCurrentUser);
   const notifications = useQuery(api.notifications.list, { limit: 20 });
-  const conversations = useQuery(api.messages.getBandConversations);
+  const activeBand = useQuery(api.bands.getCurrentUserBand);
+  const conversations = useQuery(
+    api.messages.getBandConversations,
+    activeBand ? { bandId: activeBand._id } : "skip"
+  );
   
   const isFan = user?.role === "fan";
 

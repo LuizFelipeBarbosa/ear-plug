@@ -1,13 +1,15 @@
 "use client";
 
 import { useCurrentUser } from "@/hooks/useUser";
+import { useProfileContext } from "@/hooks/useProfileContext";
 import { FanMapView } from "@/components/fan/MapView";
 import { BandDashboard } from "@/components/band/BandDashboard";
 
 export default function HomePage() {
-  const { user, isFan, isLoading } = useCurrentUser();
+  const { user, isLoading } = useCurrentUser();
+  const { mode, isHydrated } = useProfileContext();
 
-  if (isLoading) {
+  if (isLoading || !isHydrated) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-night">
         <div className="animate-pulse">
@@ -17,7 +19,7 @@ export default function HomePage() {
     );
   }
 
-  if (isFan) {
+  if (!user || mode === "personal") {
     return <FanMapView />;
   }
 

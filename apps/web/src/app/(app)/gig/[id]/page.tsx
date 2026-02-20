@@ -15,6 +15,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { useEvent } from "@/hooks/useEvents";
+import { useProfileContext } from "@/hooks/useProfileContext";
 import {
   formatEventDate,
   formatEventTime,
@@ -35,6 +36,7 @@ export default function EventDetailsPage({ params }: PageProps) {
 
   const { event, hasRsvp, hasLiked, isLoading, rsvp, toggleLike } =
     useEvent(eventId);
+  const { mode, bandId, bands } = useProfileContext();
 
   const handleShare = async () => {
     if (navigator.share) {
@@ -89,6 +91,13 @@ export default function EventDetailsPage({ params }: PageProps) {
   const spotsLeft = event.capacity - event.rsvpCount;
   const fillPercentage = Math.min((event.rsvpCount / event.capacity) * 100, 100);
   const isPast = event.dateTime < Date.now();
+  const inBandMode = mode === "band";
+  const activeBandMembership = bands.find((entry) => entry.band._id === bandId);
+  const canManageEvent =
+    inBandMode &&
+    bandId === event.bandId &&
+    (activeBandMembership?.membership.role === "owner" ||
+      activeBandMembership?.membership.role === "admin");
 
   return (
     <div className="min-h-screen bg-night pb-28">
@@ -124,7 +133,7 @@ export default function EventDetailsPage({ params }: PageProps) {
             >
               <Share2 className="w-5 h-5" />
             </button>
-            {!isPast && (
+            {!isPast && !inBandMode && (
               <button
                 onClick={() => toggleLike()}
                 className={cn(
@@ -239,6 +248,10 @@ export default function EventDetailsPage({ params }: PageProps) {
             <div className="w-full py-4 font-bold text-lg uppercase tracking-wider border-2 border-zinc-700 bg-zinc-800 text-zinc-400 text-center">
               Event Completed
             </div>
+          ) : inBandMode ? (
+            <div className="w-full py-4 font-bold text-sm uppercase tracking-wider border-2 border-zinc-700 bg-zinc-800 text-zinc-300 text-center">
+              Band workspace view (RSVP/Like disabled)
+            </div>
           ) : (
             <button
               onClick={() => rsvp()}
@@ -256,6 +269,15 @@ export default function EventDetailsPage({ params }: PageProps) {
             </button>
           )}
         </div>
+
+        {canManageEvent && (
+          <Link
+            href="/calendar"
+            className="block mb-6 w-full py-3 text-center font-bold text-xs uppercase tracking-wider border-2 border-violet text-violet hover:bg-violet hover:text-white transition-colors"
+          >
+            Manage This Event
+          </Link>
+        )}
 
         {/* Venue Info */}
         {event.venue && (

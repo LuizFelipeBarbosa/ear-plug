@@ -11,6 +11,7 @@ import {
   MessageCircle,
 } from "lucide-react";
 import { useCurrentUser } from "@/hooks/useUser";
+import { useProfileContext } from "@/hooks/useProfileContext";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useBandConversations } from "@/hooks/useMessages";
 import { cn } from "@/lib/utils";
@@ -25,7 +26,8 @@ interface NavItem {
 
 export function BottomNav() {
   const pathname = usePathname();
-  const { user, isFan, isMusician } = useCurrentUser();
+  const { user } = useCurrentUser();
+  const { mode } = useProfileContext();
   const { unreadCount: notificationCount } = useNotifications();
   const { unreadCount: messageCount } = useBandConversations();
 
@@ -55,7 +57,7 @@ export function BottomNav() {
     },
   ];
 
-  const musicianNavItems: NavItem[] = [
+  const bandNavItems: NavItem[] = [
     {
       href: "/home",
       label: "Dashboard",
@@ -79,7 +81,7 @@ export function BottomNav() {
     },
   ];
 
-  const navItems = isFan ? fanNavItems : musicianNavItems;
+  const navItems = mode === "personal" ? fanNavItems : bandNavItems;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-night-secondary/95 backdrop-blur-lg border-t-2 border-lime/20 safe-area-inset-bottom">

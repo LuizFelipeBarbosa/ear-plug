@@ -6,7 +6,10 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import usePlacesAutocomplete from "use-places-autocomplete";
 import { MapPin, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ensurePlacesLibrary } from "@/lib/google/ensurePlacesLibrary";
 import type { VenueLocationData } from "@/types";
+
+export type { VenueLocationData };
 
 interface PlaceAutocompleteProps {
   value?: VenueLocationData | null;
@@ -38,47 +41,41 @@ export function PlaceAutocomplete({
   label = "Location",
   error,
 }: PlaceAutocompleteProps) {
-  const [isScriptLoaded, setIsScriptLoaded] = useState(false);
-  const [isScriptError, setIsScriptError] = useState(false);
+  const [placesStatus, setPlacesStatus] = useState<"loading" | "ready" | "error">(
+    "loading"
+  );
+  const [placesErrorMessage, setPlacesErrorMessage] = useState<string | null>(
+    null
+  );
+  const [manualVenueInput, setManualVenueInput] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
-  // Check if Google Maps script is loaded
   useEffect(() => {
-    const checkScript = () => {
-      if (window.google?.maps?.places) {
-        setIsScriptLoaded(true);
-      } else {
-        // Retry after a short delay
-        setTimeout(checkScript, 100);
+    let isCancelled = false;
+
+    async function initializePlacesLibrary() {
+      const result = await ensurePlacesLibrary();
+      if (isCancelled) {
+        return;
       }
+
+      if (result.ready) {
+        setPlacesStatus("ready");
+        setPlacesErrorMessage(null);
+        return;
+      }
+
+      setPlacesStatus("error");
+      setPlacesErrorMessage(result.message);
+    }
+
+    void initializePlacesLibrary();
+
+    return () => {
+      isCancelled = true;
     };
-
-    // Check if API key is available
-    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-    if (!apiKey) {
-      setIsScriptError(true);
-      return;
-    }
-
-    // Check if script already exists
-    const existingScript = document.querySelector(
-      `script[src*="maps.googleapis.com/maps/api/js"]`
-    );
-
-    if (existingScript) {
-      checkScript();
-    } else {
-      // Load the script
-      const script = document.createElement("script");
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
-      script.async = true;
-      script.defer = true;
-      script.onload = () => setIsScriptLoaded(true);
-      script.onerror = () => setIsScriptError(true);
-      document.head.appendChild(script);
-    }
   }, []);
 
   // Handle click outside to close suggestions
@@ -114,6 +111,7 @@ export function PlaceAutocomplete({
   useEffect(() => {
     if (value) {
       setValue(value.name, false);
+      setManualVenueInput(value.address || value.name);
     } else {
       setValue("", false);
     }
@@ -239,7 +237,7 @@ export function PlaceAutocomplete({
   );
 
   // Render loading state
-  if (!isScriptLoaded) {
+  if (placesStatus === "loading") {
     return (
       <div className="w-full">
         {label && (
@@ -264,7 +262,7 @@ export function PlaceAutocomplete({
   }
 
   // Render error state
-  if (isScriptError) {
+  if (placesStatus === "error") {
     return (
       <div className="w-full">
         {label && (
@@ -279,13 +277,18 @@ export function PlaceAutocomplete({
           </div>
           <input
             type="text"
-            disabled
-            placeholder="Google Maps API key required"
-            className="w-full pl-12 pr-4 py-3.5 bg-night-tertiary border-2 border-red-900/50 rounded-none text-zinc-500"
+            value={manualVenueInput}
+            onChange={(event) => {
+              setManualVenueInput(event.target.value);
+              onChange(null);
+            }}
+            placeholder="Enter venue manually"
+            className="w-full pl-12 pr-4 py-3.5 bg-night-tertiary border-2 border-zinc-800 rounded-none text-white placeholder:text-zinc-600 focus:outline-none focus:border-lime"
           />
         </div>
-        <p className="text-xs text-red-500 mt-1.5">
-          Please configure NEXT_PUBLIC_GOOGLE_MAPS_API_KEY in your environment.
+        <p className="text-xs text-zinc-600 mt-1.5">
+          {placesErrorMessage ||
+            "Venue autocomplete unavailable. Type details manually and retry when maps is available."}
         </p>
       </div>
     );

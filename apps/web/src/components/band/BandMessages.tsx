@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import { MessageCircle, Send, ArrowLeft } from "lucide-react";
 import { useBandConversations, useConversation } from "@/hooks/useMessages";
@@ -132,9 +132,9 @@ function ConversationView({
   const [newMessage, setNewMessage] = useState("");
 
   // Mark as read when viewing
-  useState(() => {
+  useEffect(() => {
     markAsRead();
-  });
+  }, [markAsRead]);
 
   const handleSend = async () => {
     if (!newMessage.trim()) return;

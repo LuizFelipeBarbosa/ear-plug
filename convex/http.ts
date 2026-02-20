@@ -15,20 +15,33 @@ http.route({
     switch (eventType) {
       case "user.created":
       case "user.updated": {
-        const { id, email_addresses, first_name, last_name, image_url } =
-          payload.data;
+        const {
+          id,
+          email_addresses,
+          first_name,
+          last_name,
+          image_url,
+          primary_phone_number_id,
+          phone_numbers,
+        } = payload.data;
 
         const email = email_addresses?.[0]?.email_address;
+        const primaryPhone = Array.isArray(phone_numbers)
+          ? (
+              phone_numbers.find(
+                (entry: { id?: string }) => entry.id === primary_phone_number_id
+              ) ?? phone_numbers[0]
+            )?.phone_number
+          : undefined;
         const name = [first_name, last_name].filter(Boolean).join(" ") || "User";
 
-        if (email) {
-          await ctx.runMutation(internal.users.createUserFromClerk, {
-            clerkId: id,
-            email,
-            name,
-            avatar: image_url,
-          });
-        }
+        await ctx.runMutation(internal.users.createUserFromClerk, {
+          clerkId: id,
+          email: email ?? "",
+          phoneNumber: primaryPhone,
+          name,
+          avatar: image_url,
+        });
         break;
       }
 

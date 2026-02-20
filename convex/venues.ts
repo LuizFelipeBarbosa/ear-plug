@@ -8,6 +8,7 @@ import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import { haversineDistance, coordinatesMatch, COORDINATE_TOLERANCE } from "./utils/geo";
+import { requireBandRole } from "./utils/permissions";
 
 /** Validator for music genre field */
 const genreValidator = v.union(
@@ -371,25 +372,7 @@ export const applyToOpenDate = mutation({
     message: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
-      .unique();
-
-    if (!user) {
-      throw new Error("User not found");
-    }
-
-    // Verify band ownership
-    const band = await ctx.db.get(args.bandId);
-    if (!band || band.userId !== user._id) {
-      throw new Error("Not authorized to apply for this band");
-    }
+    await requireBandRole(ctx, args.bandId, ["owner", "admin"]);
 
     // Check if already applied
     const existing = await ctx.db

@@ -14,6 +14,7 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 import { useCurrentBand } from "@/hooks/useBand";
+import { useProfileContext } from "@/hooks/useProfileContext";
 import { useSuggestedVenues, useOpenDates } from "@/hooks/useVenues";
 import { CreateBandForm } from "@/components/band/CreateBandForm";
 import { formatEventDate, formatPrice } from "@ear-plug/shared/constants";
@@ -21,6 +22,7 @@ import { cn } from "@/lib/utils";
 
 export function BandDashboard() {
   const { bandWithStats, isLoading } = useCurrentBand();
+  const { bands } = useProfileContext();
   const { venues: suggestedVenues, isLoading: venuesLoading } = useSuggestedVenues(
     bandWithStats?.genres?.[0] // Use first genre for venue suggestions
   );
@@ -30,9 +32,15 @@ export function BandDashboard() {
   });
 
   const [applyingTo, setApplyingTo] = useState<string | null>(null);
+  const activeMembership = bands.find(
+    (entry) => entry.band._id === bandWithStats?._id
+  );
+  const canApplyToOpenDates =
+    activeMembership?.membership.role === "owner" ||
+    activeMembership?.membership.role === "admin";
 
   const handleApply = async (openDateId: string) => {
-    if (!bandWithStats) return;
+    if (!bandWithStats || !canApplyToOpenDates) return;
 
     setApplyingTo(openDateId);
     try {
@@ -161,6 +169,11 @@ export function BandDashboard() {
             See All <ChevronRight className="w-4 h-4" />
           </button>
         </div>
+        {!canApplyToOpenDates && (
+          <p className="text-[11px] uppercase tracking-wider text-zinc-500 mb-3">
+            Member access: owners/admins can apply.
+          </p>
+        )}
 
         <div className="space-y-3">
           {datesLoading ? (
@@ -177,6 +190,7 @@ export function BandDashboard() {
                 openDate={openDate}
                 onApply={() => handleApply(openDate._id)}
                 isApplying={applyingTo === openDate._id}
+                canApply={canApplyToOpenDates}
               />
             ))
           ) : (
@@ -267,10 +281,12 @@ function OpenDateCard({
   openDate,
   onApply,
   isApplying,
+  canApply,
 }: {
   openDate: any;
   onApply: () => void;
   isApplying: boolean;
+  canApply: boolean;
 }) {
   return (
     <div className="bg-night-tertiary border-2 border-zinc-800 p-4 flex items-center justify-between group hover:border-lime/20 transition-colors">
@@ -297,15 +313,15 @@ function OpenDateCard({
       </div>
       <button
         onClick={onApply}
-        disabled={isApplying}
+        disabled={isApplying || !canApply}
         className={cn(
           "px-5 py-2.5 font-bold uppercase text-xs tracking-wider transition-all touch-target",
-          isApplying
+          isApplying || !canApply
             ? "bg-zinc-800 text-zinc-500 border-2 border-zinc-800"
             : "bg-lime text-night border-2 border-lime hover:bg-transparent hover:text-lime"
         )}
       >
-        {isApplying ? "Applying..." : "Apply"}
+        {isApplying ? "Applying..." : canApply ? "Apply" : "Read only"}
       </button>
     </div>
   );

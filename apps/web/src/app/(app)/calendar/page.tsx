@@ -1,13 +1,15 @@
 "use client";
 
 import { useCurrentUser } from "@/hooks/useUser";
+import { useProfileContext } from "@/hooks/useProfileContext";
 import { FanCalendarView } from "@/components/fan/CalendarView";
 import { BandCalendarView } from "@/components/band/BandCalendar";
 
 export default function CalendarPage() {
-  const { isFan, isLoading } = useCurrentUser();
+  const { isLoading } = useCurrentUser();
+  const { mode, isHydrated } = useProfileContext();
 
-  if (isLoading) {
+  if (isLoading || !isHydrated) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-night">
         <div className="animate-pulse">
@@ -17,7 +19,7 @@ export default function CalendarPage() {
     );
   }
 
-  if (isFan) {
+  if (mode === "personal") {
     return <FanCalendarView />;
   }
 
