@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Image from "next/image";
 import { SignOutButton } from "@clerk/nextjs";
+import { useMutation, useQuery } from "convex/react";
+import { api } from "../../../../../convex/_generated/api";
 import {
   MapPin,
   Users,
@@ -15,6 +17,8 @@ import {
   Youtube,
   ExternalLink,
   Calendar,
+  Crown,
+  Shield,
 } from "lucide-react";
 import {
   BarChart,
@@ -30,6 +34,7 @@ import {
 import { useCurrentBand, useBandAnalytics } from "@/hooks/useBand";
 import { EditBandProfileModal } from "@/components/band/EditBandProfileModal";
 import { DemoMediaGallery } from "@/components/band/MediaGallery";
+import { ProfileWorkspaceSwitcher } from "@/components/profile/ProfileWorkspaceSwitcher";
 import { GENRE_COLORS, formatFullDate } from "@ear-plug/shared/constants";
 import { getInitials } from "@ear-plug/shared/utils";
 import { cn } from "@/lib/utils";
@@ -42,6 +47,34 @@ export function BandProfileView() {
   const { band, bandWithStats, isLoading } = useCurrentBand();
   const [showEditModal, setShowEditModal] = useState(false);
   const { analytics, isLoading: analyticsLoading } = useBandAnalytics(band?._id);
+  const [invitePhoneNumber, setInvitePhoneNumber] = useState("");
+  const [inviteRole, setInviteRole] = useState<"admin" | "member">("member");
+  const [isInviting, setIsInviting] = useState(false);
+  const [inviteError, setInviteError] = useState<string | null>(null);
+
+  const myBands = useQuery(api.bands.listMyBands);
+  const activeMembership = myBands?.find((entry) => entry.band._id === band?._id);
+  const memberRole = activeMembership?.membership.role;
+  const canEditBandProfile = memberRole === "owner" || memberRole === "admin";
+  const canManageMembers = memberRole === "owner" || memberRole === "admin";
+  const canTransferOwnership = memberRole === "owner";
+
+  const members = useQuery(
+    api.bandMembers.listMembers,
+    band ? { bandId: band._id } : "skip"
+  );
+  const invites = useQuery(
+    api.bandMembers.listBandInvites,
+    band && canManageMembers ? { bandId: band._id } : "skip"
+  );
+
+  const inviteExistingUserByPhone = useMutation(
+    api.bandMembers.inviteExistingUserByPhone
+  );
+  const updateMemberRole = useMutation(api.bandMembers.updateMemberRole);
+  const removeMember = useMutation(api.bandMembers.removeMember);
+  const revokeInvite = useMutation(api.bandMembers.revokeInvite);
+  const transferOwnership = useMutation(api.bandMembers.transferOwnership);
 
   if (isLoading) {
     return (
@@ -61,6 +94,24 @@ export function BandProfileView() {
       </div>
     );
   }
+
+  const handleInvite = async () => {
+    if (!invitePhoneNumber.trim()) return;
+    setIsInviting(true);
+    setInviteError(null);
+    try {
+      await inviteExistingUserByPhone({
+        bandId: band._id,
+        phoneNumber: invitePhoneNumber.trim(),
+        role: inviteRole,
+      });
+      setInvitePhoneNumber("");
+    } catch (error: any) {
+      setInviteError(error?.message || "Failed to invite user");
+    } finally {
+      setIsInviting(false);
+    }
+  };
 
   return (
     <div className="min-h-screen pb-6 bg-night">
@@ -122,16 +173,22 @@ export function BandProfileView() {
                   )}
                 </div>
               </div>
-              <button
-                onClick={() => setShowEditModal(true)}
-                className="p-2 hover:bg-night-tertiary border border-zinc-800 hover:border-lime/30 transition-colors touch-target"
-              >
-                <Edit className="w-5 h-5 text-zinc-400" />
-              </button>
+              {canEditBandProfile && (
+                <button
+                  onClick={() => setShowEditModal(true)}
+                  className="p-2 hover:bg-night-tertiary border border-zinc-800 hover:border-lime/30 transition-colors touch-target"
+                >
+                  <Edit className="w-5 h-5 text-zinc-400" />
+                </button>
+              )}
             </div>
           </div>
         </div>
       </header>
+
+      <section className="p-4">
+        <ProfileWorkspaceSwitcher />
+      </section>
 
       {/* Bio */}
       {band.bio && (
@@ -209,6 +266,170 @@ export function BandProfileView() {
             />
             <StatCard label="Total RSVPs" value={bandWithStats.stats.totalRsvps} accent="violet" />
             <StatCard label="Followers" value={bandWithStats.stats.newFans} accent="lime" />
+          </div>
+        </section>
+      )}
+
+      <section className="p-4">
+        <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-3">
+          Members
+        </h3>
+        {!canManageMembers && (
+          <p className="text-xs uppercase tracking-wider text-zinc-500 mb-3">
+            Member access is read-only.
+          </p>
+        )}
+
+        <div className="bg-night-tertiary border-2 border-zinc-800 p-4 space-y-3">
+          {members === undefined ? (
+            <p className="text-zinc-500 text-sm">Loading members...</p>
+          ) : members.length === 0 ? (
+            <p className="text-zinc-500 text-sm">No members found.</p>
+          ) : (
+            members.map((entry) => (
+              <div
+                key={entry.membership._id}
+                className="flex items-center justify-between gap-3 border border-zinc-800 bg-night-secondary px-3 py-2"
+              >
+                <div>
+                  <p className="text-white text-sm font-semibold">{entry.user.name}</p>
+                  <p className="text-zinc-500 text-xs uppercase tracking-wider">
+                    {entry.membership.role}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {entry.membership.role === "owner" ? (
+                    <Crown className="w-4 h-4 text-lime" />
+                  ) : entry.membership.role === "admin" ? (
+                    <Shield className="w-4 h-4 text-violet" />
+                  ) : null}
+
+                  {canManageMembers && entry.membership.role !== "owner" && (
+                    <>
+                      <button
+                        onClick={() =>
+                          updateMemberRole({
+                            bandId: band._id,
+                            memberUserId: entry.user._id,
+                            role:
+                              entry.membership.role === "member" ? "admin" : "member",
+                          })
+                        }
+                        className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider border border-zinc-700 text-zinc-300 hover:border-lime/30"
+                      >
+                        {entry.membership.role === "member" ? "Make Admin" : "Make Member"}
+                      </button>
+                      <button
+                        onClick={() =>
+                          removeMember({
+                            bandId: band._id,
+                            memberUserId: entry.user._id,
+                          })
+                        }
+                        className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider border border-red-500/40 text-red-400 hover:bg-red-500/10"
+                      >
+                        Remove
+                      </button>
+                    </>
+                  )}
+
+                  {canTransferOwnership && entry.membership.role !== "owner" && (
+                    <button
+                      onClick={() =>
+                        transferOwnership({
+                          bandId: band._id,
+                          newOwnerUserId: entry.user._id,
+                        })
+                      }
+                      className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider border border-violet/40 text-violet hover:bg-violet/10"
+                    >
+                      Transfer Owner
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </section>
+
+      {canManageMembers && (
+        <section className="p-4">
+          <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-3">
+            Invite Members
+          </h3>
+          <div className="bg-night-tertiary border-2 border-zinc-800 p-4">
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="tel"
+                value={invitePhoneNumber}
+                onChange={(event) => {
+                  setInvitePhoneNumber(event.target.value);
+                  if (inviteError) {
+                    setInviteError(null);
+                  }
+                }}
+                placeholder="+14155551212 or (415) 555-1212"
+                className="flex-1 bg-night-secondary border-2 border-zinc-800 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime"
+              />
+              <select
+                value={inviteRole}
+                onChange={(event) =>
+                  setInviteRole(event.target.value as "admin" | "member")
+                }
+                className="bg-night-secondary border-2 border-zinc-800 px-3 py-2 text-sm text-white focus:outline-none focus:border-lime"
+              >
+                <option value="member">Member</option>
+                <option value="admin">Admin</option>
+              </select>
+              <button
+                onClick={handleInvite}
+                disabled={isInviting}
+                className={cn(
+                  "px-4 py-2 text-xs font-bold uppercase tracking-wider border-2 transition-colors",
+                  isInviting
+                    ? "border-zinc-700 text-zinc-500"
+                    : "border-lime bg-lime text-night hover:bg-transparent hover:text-lime"
+                )}
+              >
+                {isInviting ? "Inviting..." : "Invite"}
+              </button>
+            </div>
+
+            {inviteError && (
+              <p className="mt-2 text-xs uppercase tracking-wider text-red-400 font-semibold">
+                {inviteError}
+              </p>
+            )}
+
+            <div className="mt-4 space-y-2">
+              {(invites ?? []).map((invite) => (
+                <div
+                  key={invite._id}
+                  className="flex items-center justify-between border border-zinc-800 bg-night-secondary px-3 py-2"
+                >
+                  <div>
+                    <p className="text-sm text-white">
+                      {invite.phoneNumber ??
+                        invite.targetUser?.phoneNumber ??
+                        invite.email}
+                    </p>
+                    <p className="text-[10px] uppercase tracking-wider text-zinc-500">
+                      {invite.role} • {invite.status}
+                    </p>
+                  </div>
+                  {invite.status === "pending" && (
+                    <button
+                      onClick={() => revokeInvite({ inviteId: invite._id })}
+                      className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider border border-red-500/40 text-red-400 hover:bg-red-500/10"
+                    >
+                      Revoke
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         </section>
       )}
@@ -420,7 +641,7 @@ export function BandProfileView() {
 
       {/* Edit Profile Modal */}
       <EditBandProfileModal
-        isOpen={showEditModal}
+        isOpen={canEditBandProfile && showEditModal}
         onClose={() => setShowEditModal(false)}
         band={{
           _id: band._id,

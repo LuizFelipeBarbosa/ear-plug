@@ -6,6 +6,11 @@
 
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
+import {
+  requireAuthenticatedUser,
+  requireBandMember,
+  requireBandRole,
+} from "./utils/permissions";
 
 /** Validator for music genre field */
 const genreValidator = v.union(
@@ -45,8 +50,8 @@ export const getById = query({
 });
 
 /**
- * Gets the band profile for the currently authenticated musician user.
- * Returns null if user is not authenticated, not a musician, or has no band.
+ * Legacy compatibility query returning the first band found for the user.
+ * Prefer `listMyBands` in new web flows.
  *
  * @returns The band document if found, null otherwise
  *
@@ -69,38 +74,38 @@ export const getCurrentUserBand = query({
       .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
       .unique();
 
-    if (!user || user.role !== "musician") {
+    if (!user) {
       return null;
     }
 
-    const band = await ctx.db
-      .query("bands")
+    // Legacy fallback + compatibility helper:
+    // prefer membership-based access, then fall back to legacy single-owner link.
+    const membership = await ctx.db
+      .query("bandMemberships")
       .withIndex("by_user", (q) => q.eq("userId", user._id))
       .first();
 
-    return band;
+    if (membership) {
+      return await ctx.db.get(membership.bandId);
+    }
+
+    return await ctx.db
+      .query("bands")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .first();
   },
 });
 
 /**
- * Gets the current user's band with aggregated statistics for the dashboard.
- * Includes shows this month, total RSVPs, and follower count.
- * Returns null if user is not authenticated, not a musician, or has no band.
- *
- * @returns Band document with stats property, or null
- *
- * @example
- * const bandWithStats = useQuery(api.bands.getBandWithStats);
- * if (bandWithStats) {
- *   console.log(`Total RSVPs: ${bandWithStats.stats.totalRsvps}`);
- * }
+ * Lists all bands the current user belongs to with membership metadata.
+ * This is the primary source for profile context switcher options.
  */
-export const getBandWithStats = query({
+export const listMyBands = query({
   args: {},
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      return null;
+      return [];
     }
 
     const user = await ctx.db
@@ -108,14 +113,55 @@ export const getBandWithStats = query({
       .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
       .unique();
 
-    if (!user || user.role !== "musician") {
-      return null;
+    if (!user) {
+      return [];
     }
 
-    const band = await ctx.db
-      .query("bands")
+    const memberships = await ctx.db
+      .query("bandMemberships")
       .withIndex("by_user", (q) => q.eq("userId", user._id))
-      .first();
+      .collect();
+
+    const membershipsWithBand = await Promise.all(
+      memberships.map(async (membership) => {
+        const band = await ctx.db.get(membership.bandId);
+        if (!band) {
+          return null;
+        }
+        return {
+          membership,
+          band,
+        };
+      })
+    );
+
+    return membershipsWithBand
+      .filter((entry): entry is NonNullable<typeof entry> => entry !== null)
+      .sort((a, b) => a.band.name.localeCompare(b.band.name));
+  },
+});
+
+/**
+ * Gets the specified band with aggregated statistics for the dashboard.
+ * Includes shows this month, total RSVPs, and follower count.
+ * Returns null if user is not authenticated, not a musician, or has no band.
+ *
+ * @returns Band document with stats property, or null
+ *
+ * @example
+ * const bandWithStats = useQuery(api.bands.getBandWithStats, { bandId: "k9x..." });
+ * if (bandWithStats) {
+ *   console.log(`Total RSVPs: ${bandWithStats.stats.totalRsvps}`);
+ * }
+ */
+export const getBandWithStats = query({
+  args: {
+    bandId: v.id("bands"),
+  },
+  handler: async (ctx, args) => {
+    await requireBandMember(ctx, args.bandId);
+
+    const band = await ctx.db.get(args.bandId);
 
     if (!band) {
       return null;
@@ -158,8 +204,8 @@ export const getBandWithStats = query({
 });
 
 /**
- * Creates a new band profile for the authenticated musician user.
- * Each user can only have one band.
+ * Creates a new band profile for the authenticated user.
+ * User may create multiple bands; ownership is represented through memberships.
  * Requires authentication.
  *
  * @param name - Band name (1-100 characters)
@@ -191,34 +237,20 @@ export const create = mutation({
     socialLinks: v.optional(socialLinksValidator),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
-      .unique();
-
-    if (!user) {
-      throw new Error("User not found");
-    }
-
-    // Check if user already has a band
-    const existingBand = await ctx.db
-      .query("bands")
-      .withIndex("by_user", (q) => q.eq("userId", user._id))
-      .first();
-
-    if (existingBand) {
-      throw new Error("User already has a band");
-    }
+    const user = await requireAuthenticatedUser(ctx);
+    const now = Date.now();
 
     const bandId = await ctx.db.insert("bands", {
       userId: user._id,
       ...args,
-      createdAt: Date.now(),
+      createdAt: now,
+    });
+
+    await ctx.db.insert("bandMemberships", {
+      bandId,
+      userId: user._id,
+      role: "owner",
+      joinedAt: now,
     });
 
     return bandId;
@@ -227,7 +259,7 @@ export const create = mutation({
 
 /**
  * Updates an existing band's profile information.
- * Only the band owner can update. All fields are optional for partial updates.
+ * Owners and admins can update. All fields are optional for partial updates.
  * Requires authentication.
  *
  * @param bandId - The Convex ID of the band to update
@@ -260,24 +292,7 @@ export const update = mutation({
     socialLinks: v.optional(socialLinksValidator),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
-      .unique();
-
-    if (!user) {
-      throw new Error("User not found");
-    }
-
-    const band = await ctx.db.get(args.bandId);
-    if (!band || band.userId !== user._id) {
-      throw new Error("Not authorized to update this band");
-    }
+    await requireBandRole(ctx, args.bandId, ["owner", "admin"]);
 
     const { bandId, ...updates } = args;
     const filteredUpdates = Object.fromEntries(
@@ -473,10 +488,7 @@ export const getSavedBands = query({
 export const getAnalytics = query({
   args: { bandId: v.id("bands") },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
+    await requireBandMember(ctx, args.bandId);
 
     const band = await ctx.db.get(args.bandId);
     if (!band) {

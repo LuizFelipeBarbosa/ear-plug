@@ -14,7 +14,11 @@ const notificationTypeValidator = v.union(
   v.literal("new_event_followed_artist"),
   v.literal("new_event_nearby"),
   v.literal("application_update"),
-  v.literal("message")
+  v.literal("message"),
+  v.literal("booking_cancelled"),
+  v.literal("booking_message"),
+  v.literal("booking_accepted"),
+  v.literal("booking_request")
 );
 
 /**
@@ -263,6 +267,51 @@ export const createNotification = internalMutation({
       bandId: args.bandId,
       venueId: args.venueId,
     });
+  },
+});
+
+/**
+ * Internal helper to fan out a single band-scoped notification to all members.
+ */
+export const notifyBandMembers = internalMutation({
+  args: {
+    bandId: v.id("bands"),
+    type: notificationTypeValidator,
+    title: v.string(),
+    content: v.string(),
+    eventId: v.optional(v.id("events")),
+    venueId: v.optional(v.id("venues")),
+  },
+  handler: async (ctx, args) => {
+    const memberships = await ctx.db
+      .query("bandMemberships")
+      .withIndex("by_band", (q) => q.eq("bandId", args.bandId))
+      .collect();
+
+    const uniqueUserIds = Array.from(
+      new Set(memberships.map((membership) => membership.userId))
+    );
+
+    const createdIds = await Promise.all(
+      uniqueUserIds.map((userId) =>
+        ctx.db.insert("notifications", {
+          userId,
+          type: args.type,
+          title: args.title,
+          content: args.content,
+          timestamp: Date.now(),
+          read: false,
+          eventId: args.eventId,
+          bandId: args.bandId,
+          venueId: args.venueId,
+        })
+      )
+    );
+
+    return {
+      notifiedCount: createdIds.length,
+      notificationIds: createdIds,
+    };
   },
 });
 

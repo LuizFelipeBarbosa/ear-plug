@@ -9,8 +9,30 @@
  * Determines the user's experience and available features.
  * - "fan": Music fan who discovers events, RSVPs, and follows bands
  * - "musician": Band member who manages their band profile and events
+ *
+ * @deprecated Legacy compatibility field. Web now uses profile context + band memberships.
  */
 export type UserRole = "fan" | "musician";
+
+/**
+ * Active profile context mode in the web app.
+ */
+export type ProfileMode = "personal" | "band";
+
+/**
+ * Role a user can hold within a shared band workspace.
+ */
+export type BandMemberRole = "owner" | "admin" | "member";
+
+/**
+ * Status for existing-user band invites.
+ */
+export type BandInviteStatus =
+  | "pending"
+  | "accepted"
+  | "declined"
+  | "revoked"
+  | "expired";
 
 /**
  * Music genre categories supported by the platform.
@@ -59,7 +81,11 @@ export type NotificationType =
   | "new_event_followed_artist"   // New event from a saved band
   | "new_event_nearby"            // New event at a saved venue
   | "application_update"          // Update on band's application status
-  | "message";                    // New message in a conversation
+  | "message"                     // New message in a conversation
+  | "booking_cancelled"           // Booking was canceled
+  | "booking_message"             // Booking thread update
+  | "booking_accepted"            // Booking accepted
+  | "booking_request";            // New booking request
 
 /**
  * Geographic coordinates for mapping and distance calculations.
@@ -114,6 +140,8 @@ export interface User extends BaseEntity {
   name: string;
   /** User's email address */
   email: string;
+  /** User's primary phone number (normalized E.164 when available) */
+  phoneNumber?: string;
   /** User's location (city/area) */
   location?: string;
   /** URL to user's avatar image */
@@ -149,6 +177,58 @@ export interface Band extends BaseEntity {
   socialLinks?: SocialLinks;
   /** Unix timestamp (ms) when band profile was created */
   createdAt: number;
+}
+
+/**
+ * Membership linking a user to a shared band workspace.
+ */
+export interface BandMembership extends BaseEntity {
+  /** ID of the band workspace */
+  bandId: string;
+  /** ID of the member user */
+  userId: string;
+  /** Member role within the workspace */
+  role: BandMemberRole;
+  /** Unix timestamp (ms) when membership started */
+  joinedAt: number;
+  /** Optional user who invited this member */
+  invitedBy?: string;
+}
+
+/**
+ * Invitation for an existing user to join a band workspace.
+ */
+export interface BandInvite extends BaseEntity {
+  /** Target band workspace */
+  bandId: string;
+  /** Existing target user */
+  targetUserId: string;
+  /** @deprecated Legacy compatibility field. Prefer phoneNumber for invites. */
+  email: string;
+  /** Target phone number (denormalized, normalized E.164 when available) */
+  phoneNumber?: string;
+  /** Invited role */
+  role: Exclude<BandMemberRole, "owner">;
+  /** Invite lifecycle status */
+  status: BandInviteStatus;
+  /** User who created the invite */
+  invitedBy: string;
+  /** Unix timestamp (ms) when invite was created */
+  createdAt: number;
+  /** Unix timestamp (ms) when invite was responded to */
+  respondedAt?: number;
+  /** Unix timestamp (ms) when pending invite expires */
+  expiresAt: number;
+}
+
+/**
+ * Web client profile context (tab-scoped).
+ */
+export interface ProfileContext {
+  /** Active mode */
+  mode: ProfileMode;
+  /** Active band when mode is "band" */
+  bandId?: string;
 }
 
 /**

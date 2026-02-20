@@ -1,13 +1,15 @@
 "use client";
 
 import { useCurrentUser } from "@/hooks/useUser";
+import { useProfileContext } from "@/hooks/useProfileContext";
 import { FanNotificationsView } from "@/components/fan/NotificationsView";
 import { BandMessagesView } from "@/components/band/BandMessages";
 
 export default function MessagesPage() {
-  const { isFan, isLoading } = useCurrentUser();
+  const { isLoading } = useCurrentUser();
+  const { mode, isHydrated } = useProfileContext();
 
-  if (isLoading) {
+  if (isLoading || !isHydrated) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-night">
         <div className="animate-pulse">
@@ -17,7 +19,7 @@ export default function MessagesPage() {
     );
   }
 
-  if (isFan) {
+  if (mode === "personal") {
     return <FanNotificationsView />;
   }
 

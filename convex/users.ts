@@ -5,8 +5,13 @@
  */
 
 import { v } from "convex/values";
-import { query, mutation, internalMutation } from "./_generated/server";
-import { Id } from "./_generated/dataModel";
+import {
+  query,
+  mutation,
+  internalMutation,
+  internalQuery,
+} from "./_generated/server";
+import { normalizeInvitePhone } from "./utils/phone";
 
 /**
  * Gets the currently authenticated user from the database.
@@ -98,19 +103,42 @@ export const upsertUser = mutation({
     clerkId: v.string(),
     email: v.string(),
     name: v.string(),
+    phoneNumber: v.optional(v.string()),
     avatar: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const normalizedPhone =
+      args.phoneNumber && args.phoneNumber.trim().length > 0
+        ? normalizeInvitePhone(args.phoneNumber)
+        : null;
+
     const existingUser = await ctx.db
       .query("users")
       .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
       .unique();
 
     if (existingUser) {
-      await ctx.db.patch(existingUser._id, {
-        email: args.email,
+      const updates: {
+        email?: string;
+        name: string;
+        avatar?: string;
+        phoneNumber?: string;
+      } = {
         name: args.name,
-        avatar: args.avatar,
+      };
+
+      if (args.email.trim().length > 0) {
+        updates.email = args.email;
+      }
+      if (args.avatar !== undefined) {
+        updates.avatar = args.avatar;
+      }
+      if (normalizedPhone?.ok) {
+        updates.phoneNumber = normalizedPhone.e164;
+      }
+
+      await ctx.db.patch(existingUser._id, {
+        ...updates,
       });
       return existingUser._id;
     }
@@ -119,6 +147,7 @@ export const upsertUser = mutation({
     const userId = await ctx.db.insert("users", {
       clerkId: args.clerkId,
       email: args.email,
+      phoneNumber: normalizedPhone?.ok ? normalizedPhone.e164 : undefined,
       name: args.name,
       avatar: args.avatar,
       role: "fan", // Default role
@@ -161,7 +190,10 @@ export const updateRole = mutation({
       throw new Error("User not found");
     }
 
-    await ctx.db.patch(user._id, { role: args.role });
+    // Web is fan-first. Keep this mutation for backward compatibility, but
+    // clamp to "fan" so legacy clients cannot switch auth mode.
+    void args;
+    await ctx.db.patch(user._id, { role: "fan" });
 
     return user._id;
   },
@@ -284,26 +316,90 @@ export const createUserFromClerk = internalMutation({
     clerkId: v.string(),
     email: v.string(),
     name: v.string(),
+    phoneNumber: v.optional(v.string()),
     avatar: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const normalizedPhone =
+      args.phoneNumber && args.phoneNumber.trim().length > 0
+        ? normalizeInvitePhone(args.phoneNumber)
+        : null;
+
     const existingUser = await ctx.db
       .query("users")
       .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
       .unique();
 
     if (existingUser) {
+      const updates: {
+        email?: string;
+        name: string;
+        avatar?: string;
+        phoneNumber?: string;
+      } = {
+        name: args.name,
+      };
+
+      if (args.email.trim().length > 0) {
+        updates.email = args.email;
+      }
+      if (args.avatar !== undefined) {
+        updates.avatar = args.avatar;
+      }
+      if (normalizedPhone?.ok) {
+        updates.phoneNumber = normalizedPhone.e164;
+      }
+
+      await ctx.db.patch(existingUser._id, updates);
       return existingUser._id;
     }
 
     return await ctx.db.insert("users", {
       clerkId: args.clerkId,
       email: args.email,
+      phoneNumber: normalizedPhone?.ok ? normalizedPhone.e164 : undefined,
       name: args.name,
       avatar: args.avatar,
       role: "fan",
       memberSince: Date.now(),
       showsAttended: 0,
     });
+  },
+});
+
+export const setUserPhoneNumber = internalMutation({
+  args: {
+    userId: v.id("users"),
+    phoneNumber: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.userId, {
+      phoneNumber: args.phoneNumber,
+    });
+    return args.userId;
+  },
+});
+
+export const getUsersForPhoneBackfillPage = internalQuery({
+  args: {
+    cursor: v.optional(v.string()),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const limit = Math.min(Math.max(args.limit ?? 50, 1), 100);
+    const page = await ctx.db.query("users").order("asc").paginate({
+      cursor: args.cursor ?? null,
+      numItems: limit,
+    });
+
+    return {
+      users: page.page.map((user) => ({
+        _id: user._id,
+        clerkId: user.clerkId,
+        phoneNumber: user.phoneNumber,
+      })),
+      nextCursor: page.continueCursor ?? undefined,
+      done: page.isDone,
+    };
   },
 });

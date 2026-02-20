@@ -9,6 +9,7 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
+import { useProfileContext } from "./useProfileContext";
 
 /**
  * Hook for accessing and managing the current musician user's band.
@@ -36,11 +37,20 @@ import type { Id } from "../../../../convex/_generated/dataModel";
  * }
  */
 export function useCurrentBand() {
-  /** Basic band document for the current user */
-  const band = useQuery(api.bands.getCurrentUserBand);
+  const { mode, bandId } = useProfileContext();
+  const activeBandId = mode === "band" ? bandId : undefined;
+
+  /** Basic band document for the active workspace */
+  const band = useQuery(
+    api.bands.getById,
+    activeBandId ? { bandId: activeBandId } : "skip"
+  );
 
   /** Band document with aggregated statistics */
-  const bandWithStats = useQuery(api.bands.getBandWithStats);
+  const bandWithStats = useQuery(
+    api.bands.getBandWithStats,
+    activeBandId ? { bandId: activeBandId } : "skip"
+  );
 
   /** Mutation to create a new band */
   const createBand = useMutation(api.bands.create);
@@ -54,7 +64,9 @@ export function useCurrentBand() {
     /** Band document with stats (showsThisMonth, totalRsvps, newFans) */
     bandWithStats,
     /** True while the band query is loading */
-    isLoading: band === undefined,
+    isLoading: activeBandId !== undefined && band === undefined,
+    /** Active band id from profile context */
+    activeBandId,
     /** Mutation to create a new band profile */
     createBand,
     /** Mutation to update the band profile */

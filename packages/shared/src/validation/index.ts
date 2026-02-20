@@ -35,6 +35,27 @@ export const genreSchema = z.enum([
 export const userRoleSchema = z.enum(["fan", "musician"]);
 
 /**
+ * Schema for profile context mode in web app.
+ */
+export const profileModeSchema = z.enum(["personal", "band"]);
+
+/**
+ * Schema for band workspace membership role.
+ */
+export const bandMemberRoleSchema = z.enum(["owner", "admin", "member"]);
+
+/**
+ * Schema for band invite status lifecycle.
+ */
+export const bandInviteStatusSchema = z.enum([
+  "pending",
+  "accepted",
+  "declined",
+  "revoked",
+  "expired",
+]);
+
+/**
  * Schema for validating event status values.
  * Used for band calendar event management.
  *
@@ -79,7 +100,45 @@ export const notificationTypeSchema = z.enum([
   "new_event_nearby",
   "application_update",
   "message",
+  "booking_cancelled",
+  "booking_message",
+  "booking_accepted",
+  "booking_request",
 ]);
+
+/**
+ * Schema for client-side profile context payload.
+ */
+export const profileContextSchema = z
+  .object({
+    mode: profileModeSchema,
+    bandId: z.string().optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.mode === "band" && !value.bandId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "bandId is required when mode is 'band'",
+        path: ["bandId"],
+      });
+    }
+  });
+
+/**
+ * Schema for creating/updating an invite by phone number.
+ */
+export const bandInviteCreateSchema = z.object({
+  bandId: z.string(),
+  phoneNumber: z.string().min(7).max(30),
+  role: z.enum(["admin", "member"]),
+});
+
+/**
+ * Schema for invite response actions.
+ */
+export const bandInviteResponseSchema = z.object({
+  inviteId: z.string(),
+});
 
 /**
  * Schema for validating geographic coordinates.
@@ -285,6 +344,21 @@ export type GenreInput = z.infer<typeof genreSchema>;
 export type UserRoleInput = z.infer<typeof userRoleSchema>;
 
 /**
+ * Inferred type for profile mode.
+ */
+export type ProfileModeInput = z.infer<typeof profileModeSchema>;
+
+/**
+ * Inferred type for band membership role.
+ */
+export type BandMemberRoleInput = z.infer<typeof bandMemberRoleSchema>;
+
+/**
+ * Inferred type for band invite status.
+ */
+export type BandInviteStatusInput = z.infer<typeof bandInviteStatusSchema>;
+
+/**
  * Inferred type for user profile update payloads.
  */
 export type UserProfileUpdateInput = z.infer<typeof userProfileUpdateSchema>;
@@ -323,3 +397,18 @@ export type MapFilterInput = z.infer<typeof mapFilterSchema>;
  * Inferred type for application creation payloads.
  */
 export type ApplicationCreateInput = z.infer<typeof applicationCreateSchema>;
+
+/**
+ * Inferred type for client profile context.
+ */
+export type ProfileContextInput = z.infer<typeof profileContextSchema>;
+
+/**
+ * Inferred type for invite create payload.
+ */
+export type BandInviteCreateInput = z.infer<typeof bandInviteCreateSchema>;
+
+/**
+ * Inferred type for invite response payload.
+ */
+export type BandInviteResponseInput = z.infer<typeof bandInviteResponseSchema>;

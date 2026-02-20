@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import usePlacesAutocomplete from "use-places-autocomplete";
 import { MapPin, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ensurePlacesLibrary } from "@/lib/google/ensurePlacesLibrary";
 
 interface CityAutocompleteProps {
   value?: string;
@@ -35,43 +36,40 @@ export function CityAutocomplete({
   label = "Location",
   error,
 }: CityAutocompleteProps) {
-  const [isScriptLoaded, setIsScriptLoaded] = useState(false);
-  const [isScriptError, setIsScriptError] = useState(false);
+  const [placesStatus, setPlacesStatus] = useState<"loading" | "ready" | "error">(
+    "loading"
+  );
+  const [placesErrorMessage, setPlacesErrorMessage] = useState<string | null>(
+    null
+  );
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
-  // Check if Google Maps script is loaded
   useEffect(() => {
-    const checkScript = () => {
-      if (window.google?.maps?.places) {
-        setIsScriptLoaded(true);
-      } else {
-        setTimeout(checkScript, 100);
+    let isCancelled = false;
+
+    async function initializePlacesLibrary() {
+      const result = await ensurePlacesLibrary();
+      if (isCancelled) {
+        return;
       }
+
+      if (result.ready) {
+        setPlacesStatus("ready");
+        setPlacesErrorMessage(null);
+        return;
+      }
+
+      setPlacesStatus("error");
+      setPlacesErrorMessage(result.message);
+    }
+
+    void initializePlacesLibrary();
+
+    return () => {
+      isCancelled = true;
     };
-
-    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-    if (!apiKey) {
-      setIsScriptError(true);
-      return;
-    }
-
-    const existingScript = document.querySelector(
-      `script[src*="maps.googleapis.com/maps/api/js"]`
-    );
-
-    if (existingScript) {
-      checkScript();
-    } else {
-      const script = document.createElement("script");
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
-      script.async = true;
-      script.defer = true;
-      script.onload = () => setIsScriptLoaded(true);
-      script.onerror = () => setIsScriptError(true);
-      document.head.appendChild(script);
-    }
   }, []);
 
   // Handle click outside to close suggestions
@@ -146,7 +144,7 @@ export function CityAutocomplete({
   );
 
   // Render loading state
-  if (!isScriptLoaded) {
+  if (placesStatus === "loading") {
     return (
       <div className="w-full">
         {label && (
@@ -171,7 +169,7 @@ export function CityAutocomplete({
   }
 
   // Render error state
-  if (isScriptError) {
+  if (placesStatus === "error") {
     return (
       <div className="w-full">
         {label && (
@@ -193,7 +191,7 @@ export function CityAutocomplete({
           />
         </div>
         <p className="text-xs text-zinc-600 mt-1.5">
-          Autocomplete unavailable. Type your city name manually.
+          {placesErrorMessage || "Autocomplete unavailable. Type your city name manually."}
         </p>
       </div>
     );

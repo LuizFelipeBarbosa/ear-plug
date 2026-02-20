@@ -5,10 +5,11 @@ import Link from "next/link";
 import { Heart, MapPin, Calendar, Clock, Check } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
-import { EventImage, AvatarImage } from "@/components/ui/OptimizedImage";
+import { EventImage } from "@/components/ui/OptimizedImage";
 import { formatEventDate, formatEventTime } from "@ear-plug/shared/constants";
 import { cn } from "@/lib/utils";
 import type { Id } from "../../../../../convex/_generated/dataModel";
+import { useProfileContext } from "@/hooks/useProfileContext";
 
 interface EventCardProps {
   event: {
@@ -30,9 +31,12 @@ export function EventCard({
   variant = "default",
   showLikeButton = true,
 }: EventCardProps) {
-  const eventStatus = useQuery(api.events.getUserEventStatus, {
-    eventId: event._id,
-  });
+  const { mode } = useProfileContext();
+  const allowFanActions = mode === "personal";
+  const eventStatus = useQuery(
+    api.events.getUserEventStatus,
+    allowFanActions ? { eventId: event._id } : "skip"
+  );
   const toggleLike = useMutation(api.events.toggleLike);
   const rsvp = useMutation(api.events.rsvp);
 
@@ -48,8 +52,8 @@ export function EventCard({
     await rsvp({ eventId: event._id });
   };
 
-  const isLiked = eventStatus?.hasLiked ?? false;
-  const hasRsvp = eventStatus?.hasRsvp ?? false;
+  const isLiked = allowFanActions ? eventStatus?.hasLiked ?? false : false;
+  const hasRsvp = allowFanActions ? eventStatus?.hasRsvp ?? false : false;
   const isPast = event.dateTime < Date.now();
 
   if (variant === "compact") {
@@ -84,9 +88,9 @@ export function EventCard({
 
           {/* RSVP & Like Buttons */}
           <div className="flex items-center gap-1">
-            {isPast ? (
+            {isPast || !allowFanActions ? (
               <span className="px-3 py-1.5 text-xs font-bold uppercase tracking-wider bg-zinc-800 text-zinc-400 border border-zinc-700">
-                Completed
+                {isPast ? "Completed" : "View only"}
               </span>
             ) : (
               <button
@@ -102,7 +106,7 @@ export function EventCard({
                 <Check className={cn("w-5 h-5", hasRsvp && "stroke-[3]")} />
               </button>
             )}
-            {showLikeButton && !isPast && (
+            {showLikeButton && !isPast && allowFanActions && (
               <button
                 onClick={handleLikeClick}
                 className="p-2 flex items-center justify-center hover:bg-zinc-800 transition-colors touch-target"
@@ -168,9 +172,9 @@ export function EventCard({
         </div>
 
         {/* Completed badge or Like Button */}
-        {isPast ? (
+        {isPast || !allowFanActions ? (
           <span className="px-3 py-1.5 text-xs font-bold uppercase tracking-wider bg-zinc-800 text-zinc-400 border border-zinc-700 flex-shrink-0">
-            Completed
+            {isPast ? "Completed" : "View only"}
           </span>
         ) : showLikeButton ? (
           <button
