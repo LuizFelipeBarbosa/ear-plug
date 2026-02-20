@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { SignOutButton } from "@clerk/nextjs";
@@ -33,6 +33,8 @@ import type { Genre } from "@ear-plug/shared/types";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { cn } from "@/lib/utils";
 
+const PANEL_TRANSITION_MS = 220;
+
 export function FanProfileView() {
   const router = useRouter();
   const { user, updateProfile } = useCurrentUser();
@@ -47,6 +49,8 @@ export function FanProfileView() {
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isWorkspaceMenuOpen, setIsWorkspaceMenuOpen] = useState(false);
+  const [isWorkspaceMenuVisible, setIsWorkspaceMenuVisible] = useState(false);
+  const workspaceMenuCloseTimeout = useRef<number | null>(null);
   const [showCreateBandForm, setShowCreateBandForm] = useState(false);
   const [processingInviteId, setProcessingInviteId] = useState<Id<"bandInvites"> | null>(null);
 
@@ -78,7 +82,7 @@ export function FanProfileView() {
     try {
       await acceptInvite({ inviteId });
       setBandMode(bandId);
-      setIsWorkspaceMenuOpen(false);
+      closeWorkspaceMenu();
       router.push("/home");
     } finally {
       setProcessingInviteId(null);
@@ -94,6 +98,36 @@ export function FanProfileView() {
     }
   };
 
+  useEffect(() => {
+    return () => {
+      if (workspaceMenuCloseTimeout.current !== null) {
+        window.clearTimeout(workspaceMenuCloseTimeout.current);
+      }
+    };
+  }, []);
+
+  const openWorkspaceMenu = () => {
+    if (workspaceMenuCloseTimeout.current !== null) {
+      window.clearTimeout(workspaceMenuCloseTimeout.current);
+      workspaceMenuCloseTimeout.current = null;
+    }
+    setIsWorkspaceMenuOpen(true);
+    requestAnimationFrame(() => {
+      setIsWorkspaceMenuVisible(true);
+    });
+  };
+
+  const closeWorkspaceMenu = () => {
+    setIsWorkspaceMenuVisible(false);
+    if (workspaceMenuCloseTimeout.current !== null) {
+      window.clearTimeout(workspaceMenuCloseTimeout.current);
+    }
+    workspaceMenuCloseTimeout.current = window.setTimeout(() => {
+      setIsWorkspaceMenuOpen(false);
+      workspaceMenuCloseTimeout.current = null;
+    }, PANEL_TRANSITION_MS);
+  };
+
   return (
     <div className="min-h-screen pb-6 bg-night">
       <header className="relative bg-night-secondary p-6 overflow-visible">
@@ -104,7 +138,7 @@ export function FanProfileView() {
             <ProfileWorkspaceSwitcher className="flex-1 min-w-0" variant="header" />
             <button
               type="button"
-              onClick={() => setIsWorkspaceMenuOpen(true)}
+              onClick={openWorkspaceMenu}
               className="p-2 flex items-center justify-center hover:bg-night-tertiary border border-zinc-800 hover:border-lime/30 transition-colors touch-target"
               aria-label="Open personal workspace menu"
             >
@@ -230,22 +264,35 @@ export function FanProfileView() {
       </div>
 
       {isWorkspaceMenuOpen && (
-        <div className="fixed inset-0 z-[60]">
+        <div
+          className={cn(
+            "fixed inset-0 z-[60] transition-opacity duration-200",
+            isWorkspaceMenuVisible ? "opacity-100" : "opacity-0 pointer-events-none"
+          )}
+        >
           <button
             type="button"
-            onClick={() => setIsWorkspaceMenuOpen(false)}
-            className="absolute inset-0 bg-black/70"
+            onClick={closeWorkspaceMenu}
+            className={cn(
+              "absolute inset-0 bg-black/70 transition-opacity duration-200",
+              isWorkspaceMenuVisible ? "opacity-100" : "opacity-0"
+            )}
             aria-label="Close personal workspace menu"
           />
 
-          <aside className="absolute right-0 top-0 h-full w-full max-w-xl bg-night-secondary border-l-2 border-lime/20 overflow-y-auto">
+          <aside
+            className={cn(
+              "absolute right-0 top-0 h-full w-full max-w-xl bg-night-secondary border-l-2 border-lime/20 overflow-y-auto transition-transform duration-200 ease-out will-change-transform",
+              isWorkspaceMenuVisible ? "translate-x-0" : "translate-x-full"
+            )}
+          >
             <div className="sticky top-0 z-10 bg-night-secondary border-b border-zinc-800 p-4 flex items-center justify-between">
               <h3 className="text-sm font-bold uppercase tracking-widest text-white">
                 Workspace
               </h3>
               <button
                 type="button"
-                onClick={() => setIsWorkspaceMenuOpen(false)}
+                onClick={closeWorkspaceMenu}
                 className="p-2 border border-zinc-700 text-zinc-400 hover:text-white hover:border-lime/30"
               >
                 <X className="w-4 h-4" />
@@ -264,7 +311,7 @@ export function FanProfileView() {
                   </p>
                   <button
                     onClick={() => {
-                      setIsWorkspaceMenuOpen(false);
+                      closeWorkspaceMenu();
                       setShowCreateBandForm(true);
                     }}
                     className="inline-flex items-center gap-2 px-4 py-2.5 bg-lime text-night border-2 border-lime font-bold uppercase tracking-wider text-xs hover:bg-transparent hover:text-lime transition-colors"
@@ -280,7 +327,7 @@ export function FanProfileView() {
                   </p>
                   <button
                     onClick={() => {
-                      setIsWorkspaceMenuOpen(false);
+                      closeWorkspaceMenu();
                       setShowCreateBandForm(true);
                     }}
                     className="w-full bg-night-tertiary border-2 border-dashed border-lime/40 px-4 py-3 text-lime text-xs font-bold uppercase tracking-wider hover:border-lime"

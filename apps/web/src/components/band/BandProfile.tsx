@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { SignOutButton } from "@clerk/nextjs";
 import { useMutation, useQuery } from "convex/react";
@@ -43,11 +43,14 @@ import type { Genre } from "@ear-plug/shared/types";
 
 // Electric Indie-Brutalist Chart Colors
 const CHART_COLORS = ["#C2FF00", "#8B5CF6"];
+const PANEL_TRANSITION_MS = 220;
 
 export function BandProfileView() {
   const { band, bandWithStats, isLoading } = useCurrentBand();
   const [showEditModal, setShowEditModal] = useState(false);
   const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false);
+  const [isSettingsMenuVisible, setIsSettingsMenuVisible] = useState(false);
+  const settingsMenuCloseTimeout = useRef<number | null>(null);
   const { analytics, isLoading: analyticsLoading } = useBandAnalytics(band?._id);
   const [invitePhoneNumber, setInvitePhoneNumber] = useState("");
   const [inviteRole, setInviteRole] = useState<"admin" | "member">("member");
@@ -77,6 +80,36 @@ export function BandProfileView() {
   const removeMember = useMutation(api.bandMembers.removeMember);
   const revokeInvite = useMutation(api.bandMembers.revokeInvite);
   const transferOwnership = useMutation(api.bandMembers.transferOwnership);
+
+  useEffect(() => {
+    return () => {
+      if (settingsMenuCloseTimeout.current !== null) {
+        window.clearTimeout(settingsMenuCloseTimeout.current);
+      }
+    };
+  }, []);
+
+  const openSettingsMenu = () => {
+    if (settingsMenuCloseTimeout.current !== null) {
+      window.clearTimeout(settingsMenuCloseTimeout.current);
+      settingsMenuCloseTimeout.current = null;
+    }
+    setIsSettingsMenuOpen(true);
+    requestAnimationFrame(() => {
+      setIsSettingsMenuVisible(true);
+    });
+  };
+
+  const closeSettingsMenu = () => {
+    setIsSettingsMenuVisible(false);
+    if (settingsMenuCloseTimeout.current !== null) {
+      window.clearTimeout(settingsMenuCloseTimeout.current);
+    }
+    settingsMenuCloseTimeout.current = window.setTimeout(() => {
+      setIsSettingsMenuOpen(false);
+      settingsMenuCloseTimeout.current = null;
+    }, PANEL_TRANSITION_MS);
+  };
 
   if (isLoading) {
     return (
@@ -127,7 +160,7 @@ export function BandProfileView() {
             <ProfileWorkspaceSwitcher className="flex-1 min-w-0" variant="header" />
             <button
               type="button"
-              onClick={() => setIsSettingsMenuOpen(true)}
+              onClick={openSettingsMenu}
               className="p-2 flex items-center justify-center hover:bg-night-tertiary border border-zinc-800 hover:border-lime/30 transition-colors touch-target"
               aria-label="Open band settings"
             >
@@ -479,22 +512,35 @@ export function BandProfileView() {
       </div>
 
       {isSettingsMenuOpen && (
-        <div className="fixed inset-0 z-[60]">
+        <div
+          className={cn(
+            "fixed inset-0 z-[60] transition-opacity duration-200",
+            isSettingsMenuVisible ? "opacity-100" : "opacity-0 pointer-events-none"
+          )}
+        >
           <button
             type="button"
-            onClick={() => setIsSettingsMenuOpen(false)}
-            className="absolute inset-0 bg-black/70"
+            onClick={closeSettingsMenu}
+            className={cn(
+              "absolute inset-0 bg-black/70 transition-opacity duration-200",
+              isSettingsMenuVisible ? "opacity-100" : "opacity-0"
+            )}
             aria-label="Close band settings menu"
           />
 
-          <aside className="absolute right-0 top-0 h-full w-full max-w-xl bg-night-secondary border-l-2 border-lime/20 overflow-y-auto">
+          <aside
+            className={cn(
+              "absolute right-0 top-0 h-full w-full max-w-xl bg-night-secondary border-l-2 border-lime/20 overflow-y-auto transition-transform duration-200 ease-out will-change-transform",
+              isSettingsMenuVisible ? "translate-x-0" : "translate-x-full"
+            )}
+          >
             <div className="sticky top-0 z-10 bg-night-secondary border-b border-zinc-800 p-4 flex items-center justify-between">
               <h3 className="text-sm font-bold uppercase tracking-widest text-white">
                 Band Settings
               </h3>
               <button
                 type="button"
-                onClick={() => setIsSettingsMenuOpen(false)}
+                onClick={closeSettingsMenu}
                 className="p-2 border border-zinc-700 text-zinc-400 hover:text-white hover:border-lime/30"
               >
                 <X className="w-4 h-4" />
