@@ -2,7 +2,11 @@
  * Shared TypeScript types for the Ear-Plug web application
  */
 
-import type { Genre } from "@ear-plug/shared/types";
+import type {
+    EventAddressVisibility,
+    EventStatus,
+    Genre
+} from "@ear-plug/shared/types";
 
 /**
  * Venue data extracted from Google Places
@@ -36,6 +40,27 @@ export interface CreateEventInput {
     capacity?: number;
     description?: string;
     price?: number;
+    status?: EventStatus;
+    addressVisibility?: EventAddressVisibility;
+}
+
+/**
+ * Event input for updating existing events
+ */
+export interface UpdateEventInput {
+    eventId: string;
+    title?: string;
+    date?: string; // ISO date string (YYYY-MM-DD)
+    startTime?: string; // HH:MM format
+    endTime?: string; // HH:MM format
+    venue?: VenueLocationData;
+    image?: string;
+    genres?: Genre[];
+    capacity?: number;
+    description?: string;
+    price?: number;
+    status?: EventStatus;
+    addressVisibility?: EventAddressVisibility;
 }
 
 /**

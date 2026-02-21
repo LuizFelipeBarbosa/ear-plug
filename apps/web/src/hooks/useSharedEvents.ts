@@ -10,10 +10,10 @@ import { useCallback } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
-import type { VenueLocationData, CreateEventInput } from "@/types";
+import type { VenueLocationData, CreateEventInput, UpdateEventInput } from "@/types";
 
 // Re-export types for backwards compatibility
-export type { VenueLocationData, CreateEventInput } from "@/types";
+export type { VenueLocationData, CreateEventInput, UpdateEventInput } from "@/types";
 
 /**
  * Hook for creating events that are stored in the Convex database.
@@ -51,6 +51,8 @@ export type { VenueLocationData, CreateEventInput } from "@/types";
 export function useSharedEvents() {
   /** Mutation to create an event with venue data in one call */
   const createEventWithVenue = useMutation(api.events.createWithVenue);
+  /** Mutation to update an event with optional venue changes */
+  const updateEventWithVenue = useMutation(api.events.updateWithVenue);
 
   /** Mutation to create a venue from Google Places data */
   const createVenue = useMutation(api.venues.createFromPlace);
@@ -98,11 +100,73 @@ export function useSharedEvents() {
         capacity: input.capacity,
         price: input.price,
         description: input.description,
+        status: input.status,
+        addressVisibility: input.addressVisibility,
       });
 
       return result;
     },
     [createEventWithVenue]
+  );
+
+  /**
+   * Updates an existing event.
+   * Supports partial updates and optional venue reassignment by place data.
+   *
+   * @param input - Event update input
+   * @returns Object containing the updated event ID and venue ID
+   */
+  const updateEvent = useCallback(
+    async (input: UpdateEventInput): Promise<{ eventId: Id<"events">; venueId: Id<"venues"> }> => {
+      const mutationArgs: {
+        eventId: Id<"events">;
+        title?: string;
+        dateTime?: number;
+        image?: string;
+        capacity?: number;
+        price?: number;
+        description?: string;
+        genres?: CreateEventInput["genres"];
+        status?: "confirmed" | "hold" | "available";
+        addressVisibility?: "public" | "rsvp_only";
+        venueName?: string;
+        venueAddress?: string;
+        venueCity?: string;
+        venueCoordinates?: { lat: number; lng: number };
+        venuePlaceId?: string;
+      } = {
+        eventId: input.eventId as Id<"events">,
+      };
+
+      if (input.date || input.startTime) {
+        if (!input.date || !input.startTime) {
+          throw new Error("Both date and startTime are required when updating event date/time");
+        }
+        mutationArgs.dateTime = new Date(`${input.date}T${input.startTime}`).getTime();
+      }
+
+      if (input.title !== undefined) mutationArgs.title = input.title;
+      if (input.image !== undefined) mutationArgs.image = input.image;
+      if (input.capacity !== undefined) mutationArgs.capacity = input.capacity;
+      if (input.price !== undefined) mutationArgs.price = input.price;
+      if (input.description !== undefined) mutationArgs.description = input.description;
+      if (input.genres !== undefined) mutationArgs.genres = input.genres;
+      if (input.status !== undefined) mutationArgs.status = input.status;
+      if (input.addressVisibility !== undefined) {
+        mutationArgs.addressVisibility = input.addressVisibility;
+      }
+
+      if (input.venue) {
+        mutationArgs.venueName = input.venue.name;
+        mutationArgs.venueAddress = input.venue.address;
+        mutationArgs.venueCity = input.venue.city;
+        mutationArgs.venueCoordinates = input.venue.coordinates;
+        mutationArgs.venuePlaceId = input.venue.placeId;
+      }
+
+      return await updateEventWithVenue(mutationArgs);
+    },
+    [updateEventWithVenue]
   );
 
   /**
@@ -140,6 +204,8 @@ export function useSharedEvents() {
   return {
     /** Creates an event with automatic venue handling */
     createEvent,
+    /** Updates an event with optional venue handling */
+    updateEvent,
     /** Creates a venue from Google Places data */
     createVenue: createVenueFromPlace,
   };

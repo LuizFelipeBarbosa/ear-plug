@@ -56,6 +56,23 @@ export type Genre =
 export type EventStatus = "confirmed" | "hold" | "available";
 
 /**
+ * Visibility setting for event street addresses.
+ * - "public": Street address is visible to all fans
+ * - "rsvp_only": Street address is shown after RSVP
+ */
+export type EventAddressVisibility = "public" | "rsvp_only";
+
+/**
+ * Guest-list RSVP state managed by bands.
+ */
+export type GuestRsvpType = "on_list" | "attended";
+
+/**
+ * Filter options for guest-list panels.
+ */
+export type GuestFilterType = "all" | GuestRsvpType;
+
+/**
  * Status of an open date at a venue.
  * - "open": Available for band applications
  * - "pending": Applications received, under review
@@ -283,6 +300,8 @@ export interface Event extends BaseEntity {
   genre?: Genre;
   /** Current booking status */
   status: EventStatus;
+  /** Street-address visibility for fan-facing surfaces */
+  addressVisibility?: EventAddressVisibility;
 }
 
 /**
@@ -294,6 +313,12 @@ export interface EventWithDetails extends Event {
   band: Band | null;
   /** The hosting venue (null if not found) */
   venue: Venue | null;
+  /** Whether venue street address is hidden for the current viewer */
+  isVenueAddressHidden?: boolean;
+  /** RSVP attendance status when returned from RSVP history payloads */
+  attendanceStatus?: GuestRsvpType;
+  /** Unix timestamp (ms) when RSVP was marked attended */
+  attendedAt?: number;
 }
 
 /**
@@ -307,6 +332,48 @@ export interface RSVP extends BaseEntity {
   eventId: string;
   /** Unix timestamp (ms) when RSVP was created */
   createdAt: number;
+  /** Attendance status managed by band check-in */
+  attendanceStatus?: GuestRsvpType;
+  /** Unix timestamp (ms) when RSVP was marked attended */
+  attendedAt?: number;
+}
+
+/**
+ * Guest row returned to band guest-management surfaces.
+ */
+export interface EventGuestListItem {
+  /** RSVP document ID */
+  rsvpId: string;
+  /** Guest user ID */
+  userId: string;
+  /** Guest display name */
+  name: string;
+  /** Optional guest avatar URL */
+  avatar?: string;
+  /** Current RSVP attendance status */
+  rsvpType: GuestRsvpType;
+  /** Unix timestamp (ms) when RSVP was created */
+  rsvpedAt: number;
+  /** Unix timestamp (ms) when attendance was marked */
+  attendedAt?: number;
+}
+
+/**
+ * Summary payload for event guest-list preview cards.
+ */
+export interface EventGuestListSummary {
+  /** Total RSVP count for the event */
+  totalCount: number;
+  /** Preview guests shown on the card */
+  previewGuests: Array<{
+    rsvpId: string;
+    userId: string;
+    name: string;
+    avatar?: string;
+    rsvpType: GuestRsvpType;
+  }>;
+  /** Whether current viewer can mutate guest attendance/removals */
+  canManage: boolean;
 }
 
 /**

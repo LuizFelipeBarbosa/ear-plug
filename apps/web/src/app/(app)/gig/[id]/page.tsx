@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -12,12 +13,13 @@ import {
   Clock,
   Users,
   DollarSign,
-  ExternalLink,
 } from "lucide-react";
-import { useEvent } from "@/hooks/useEvents";
+import { useEvent, useEventGuestListSummary } from "@/hooks/useEvents";
 import { useProfileContext } from "@/hooks/useProfileContext";
+import { EditGigModal } from "@/components/band/EditGigModal";
+import { GuestListCard } from "@/components/band/GuestListCard";
+import { GuestControlPanelModal } from "@/components/band/GuestControlPanelModal";
 import {
-  formatEventDate,
   formatEventTime,
   formatFullDate,
   formatPrice,
@@ -32,11 +34,22 @@ interface PageProps {
 export default function EventDetailsPage({ params }: PageProps) {
   const { id } = params;
   const router = useRouter();
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isGuestPanelOpen, setIsGuestPanelOpen] = useState(false);
   const eventId = id as Id<"events">;
 
   const { event, hasRsvp, hasLiked, isLoading, rsvp, toggleLike } =
     useEvent(eventId);
   const { mode, bandId, bands } = useProfileContext();
+  const activeBandMembership = bands.find((entry) => entry.band._id === bandId);
+  const canViewGuestList =
+    mode === "band" &&
+    !!bandId &&
+    !!activeBandMembership &&
+    event?.bandId === bandId;
+  const { summary: guestListSummary } = useEventGuestListSummary(
+    canViewGuestList && event ? eventId : undefined
+  );
 
   const handleShare = async () => {
     if (navigator.share) {
@@ -92,7 +105,6 @@ export default function EventDetailsPage({ params }: PageProps) {
   const fillPercentage = Math.min((event.rsvpCount / event.capacity) * 100, 100);
   const isPast = event.dateTime < Date.now();
   const inBandMode = mode === "band";
-  const activeBandMembership = bands.find((entry) => entry.band._id === bandId);
   const canManageEvent =
     inBandMode &&
     bandId === event.bandId &&
@@ -248,6 +260,85 @@ export default function EventDetailsPage({ params }: PageProps) {
           </div>
         </div>
 
+        {/* Description */}
+        {event.description && (
+          <div className="mb-6">
+            <h2 className="text-sm font-bold text-zinc-400 uppercase tracking-wider mb-3">
+              About
+            </h2>
+            <p className="text-zinc-400 leading-relaxed">
+              {event.description}
+            </p>
+          </div>
+        )}
+
+        {canManageEvent && (
+          <button
+            type="button"
+            onClick={() => setIsEditModalOpen(true)}
+            className="block mb-6 w-full py-3 text-center font-bold text-xs uppercase tracking-wider border-2 border-violet text-violet hover:bg-violet hover:text-white transition-colors"
+          >
+            Manage This Event
+          </button>
+        )}
+
+        {canViewGuestList && (
+          guestListSummary ? (
+            <GuestListCard
+              totalCount={guestListSummary.totalCount}
+              previewGuests={guestListSummary.previewGuests}
+              canManage={guestListSummary.canManage}
+              onOpen={() => setIsGuestPanelOpen(true)}
+            />
+          ) : (
+            <div className="mb-6 h-40 bg-night-tertiary border-2 border-zinc-800 animate-shimmer" />
+          )
+        )}
+
+        {/* Venue Info */}
+        {event.venue && (
+          <div className="mb-6">
+            <h2 className="text-sm font-bold text-zinc-400 uppercase tracking-wider mb-3">
+              Venue
+            </h2>
+            <div className="relative overflow-hidden p-4 bg-night-tertiary border-2 border-zinc-800">
+              <div
+                className={cn(
+                  "flex items-start gap-3 transition-all duration-200",
+                  event.isVenueAddressHidden && "blur-md opacity-25 select-none pointer-events-none"
+                )}
+              >
+                <MapPin className="w-5 h-5 text-lime mt-0.5" />
+                <div>
+                  <h3 className="font-bold text-white uppercase tracking-wide">
+                    {event.venue.name}
+                  </h3>
+                  <p
+                    className={cn(
+                      "text-sm",
+                      event.isVenueAddressHidden ? "text-zinc-500 italic" : "text-zinc-400"
+                    )}
+                  >
+                    {event.isVenueAddressHidden
+                      ? "Address revealed after RSVP"
+                      : event.venue.address}
+                  </p>
+                  <p className="text-xs text-zinc-500 mt-1">
+                    {event.venue.city} • Capacity: {event.venue.capacity}
+                  </p>
+                </div>
+              </div>
+              {event.isVenueAddressHidden && (
+                <div className="absolute inset-0 flex items-center justify-center bg-night/80 backdrop-blur-sm">
+                  <p className="px-4 text-center text-xs font-bold uppercase tracking-[0.18em] text-zinc-200">
+                    RSVP to reveal venue details
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* RSVP Button - Fixed Bottom */}
         <div className="mb-6 p-4 bg-night-secondary border-2 border-zinc-800">
           {isPast ? (
@@ -275,54 +366,22 @@ export default function EventDetailsPage({ params }: PageProps) {
             </button>
           )}
         </div>
-
-        {canManageEvent && (
-          <Link
-            href="/calendar"
-            className="block mb-6 w-full py-3 text-center font-bold text-xs uppercase tracking-wider border-2 border-violet text-violet hover:bg-violet hover:text-white transition-colors"
-          >
-            Manage This Event
-          </Link>
-        )}
-
-        {/* Venue Info */}
-        {event.venue && (
-          <div className="mb-6">
-            <h2 className="text-sm font-bold text-zinc-400 uppercase tracking-wider mb-3">
-              Venue
-            </h2>
-            <div className="p-4 bg-night-tertiary border-2 border-zinc-800">
-              <div className="flex items-start gap-3">
-                <MapPin className="w-5 h-5 text-lime mt-0.5" />
-                <div>
-                  <h3 className="font-bold text-white uppercase tracking-wide">
-                    {event.venue.name}
-                  </h3>
-                  <p className="text-sm text-zinc-400">
-                    {event.venue.address}
-                  </p>
-                  <p className="text-xs text-zinc-500 mt-1">
-                    {event.venue.city} • Capacity: {event.venue.capacity}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Description */}
-        {event.description && (
-          <div className="mb-6">
-            <h2 className="text-sm font-bold text-zinc-400 uppercase tracking-wider mb-3">
-              About
-            </h2>
-            <p className="text-zinc-400 leading-relaxed">
-              {event.description}
-            </p>
-          </div>
-        )}
       </div>
 
+      <EditGigModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        event={event}
+      />
+
+      {canViewGuestList && (
+        <GuestControlPanelModal
+          isOpen={isGuestPanelOpen}
+          onClose={() => setIsGuestPanelOpen(false)}
+          eventId={eventId}
+          eventTitle={event.title}
+        />
+      )}
     </div>
   );
 }
