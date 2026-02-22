@@ -14,17 +14,19 @@ Ear-Plug is a mobile-first web and native application that bridges the gap betwe
 - **Calendar View** - See your upcoming RSVPs and liked events
 - **Artist Following** - Save bands and get notified about their new shows
 - **Venue Tracking** - Follow venues to hear about new events
+- **Band Profiles** - Browse band pages with media galleries, bios, and upcoming shows
 
 ### For Musicians
 - **Band Dashboard** - View performance stats, RSVP counts, and fan growth
 - **Show Management** - Create and manage gigs with venue selection via Google Places
+- **Guest List Controls** - Manage attendance lists with check-in tracking and address visibility settings
+- **Media Posts** - Share photos and videos with fans via a band feed (likes, comments)
+- **Band Membership** - Invite members with role-based access (owner, admin, member)
 - **Open Dates Browser** - Find and apply to venue booking opportunities
 - **Venue Messaging** - Direct communication with venues for booking coordination
 - **Analytics** - Charts and insights on your audience engagement
 
 ## Quick Start
-
-Get up and running in 5 minutes:
 
 ### Prerequisites
 
@@ -38,7 +40,7 @@ Get up and running in 5 minutes:
 
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR_ORG/Ear-Plug.git
+git clone https://github.com/LuizFelipeBarbosa/Ear-Plug.git
 cd Ear-Plug
 
 # Use correct Node version (if using nvm)
@@ -103,7 +105,15 @@ Ear-Plug/
 ├── apps/
 │   ├── web/                    # Next.js web application
 │   │   ├── src/app/           # App Router pages and layouts
-│   │   ├── src/components/    # React components (band/, fan/, maps/, ui/)
+│   │   ├── src/components/    # React components
+│   │   │   ├── band/          # Musician dashboard, calendar, posts, guest lists
+│   │   │   ├── fan/           # Map discovery, calendar, profile, notifications
+│   │   │   ├── events/        # Shared event components
+│   │   │   ├── maps/          # Google Maps integration
+│   │   │   ├── navigation/    # Bottom nav
+│   │   │   ├── onboarding/    # Role selection flow
+│   │   │   ├── profile/       # Workspace switcher
+│   │   │   └── ui/            # Reusable UI primitives
 │   │   └── src/hooks/         # Custom hooks wrapping Convex
 │   └── mobile/                 # Expo mobile application
 │       └── app/               # Expo Router screens
@@ -111,12 +121,15 @@ Ear-Plug/
 │   ├── shared/                 # Shared types, validation schemas, utilities
 │   └── tailwind-config/        # Design system tokens (brutalist dark theme)
 ├── convex/                     # Convex backend (schema, queries, mutations)
-│   ├── schema.ts              # 13-table database schema
+│   ├── schema.ts              # Database schema (19 tables)
 │   ├── users.ts               # User operations
 │   ├── events.ts              # Event management
 │   ├── bands.ts               # Band profiles
+│   ├── bandMembers.ts         # Band membership & invites
+│   ├── bandPosts.ts           # Media posts (photos/videos)
 │   ├── venues.ts              # Venue data
 │   ├── messages.ts            # Messaging system
+│   ├── notifications.ts       # Platform notifications
 │   └── seed.ts                # Sample data seeding
 └── docs/                       # Documentation
 ```
@@ -132,8 +145,10 @@ pnpm dev:convex       # Convex backend
 
 # Build & Quality
 pnpm build            # Build all apps
+pnpm build:web        # Build web app only
 pnpm lint             # ESLint across all packages
 pnpm typecheck        # TypeScript checks
+pnpm clean            # Clean build artifacts + node_modules
 
 # Convex
 npx convex dev        # Local development + type generation
@@ -146,20 +161,26 @@ pnpm android          # Android emulator
 
 ## Database Overview
 
-Convex powers the real-time backend with 13 tables:
+Convex powers the real-time backend with 19 tables:
 
 | Table | Purpose |
 |-------|---------|
 | `users` | Clerk-linked profiles (fan or musician role) |
 | `bands` | Musician band profiles with multi-genre support |
+| `bandMemberships` | Shared workspace access with role-based permissions |
+| `bandInvites` | Pending/accepted/declined member invitations |
+| `bandPosts` | Photo and video media posts by bands |
+| `bandPostLikes` | Likes on band posts |
+| `bandPostComments` | Comments on band posts |
 | `venues` | Bay Area venues with coordinates |
-| `events` | Live music shows with status tracking |
-| `rsvps` | User event attendance |
+| `events` | Live music shows with status and address visibility |
+| `rsvps` | User event attendance with check-in tracking |
 | `likes` | User saved events |
 | `savedArtists` | Fan follows for bands |
 | `savedVenues` | Fan saved venues |
 | `conversations` | Band-venue messaging threads |
 | `messages` | Individual messages |
+| `conversationReads` | Per-user read cursors for unread counts |
 | `notifications` | Event reminders and updates |
 | `openDates` | Venue booking opportunities |
 | `applications` | Band applications to open dates |
@@ -191,10 +212,6 @@ For security concerns, please see our [Security Policy](SECURITY.md).
 ## Code of Conduct
 
 Please read and follow our [Code of Conduct](CODE_OF_CONDUCT.md) to maintain a welcoming community.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
