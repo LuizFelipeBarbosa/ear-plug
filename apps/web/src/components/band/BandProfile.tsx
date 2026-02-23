@@ -149,7 +149,7 @@ export function BandProfileView() {
   };
 
   return (
-    <div className="min-h-screen pb-6 bg-night">
+    <div className="min-h-screen pb-6 bg-night overflow-x-hidden">
       {/* Header */}
       <header className="relative bg-night-secondary border-b-2 border-lime/20 p-6 overflow-visible">
         {/* Subtle gradient accent */}

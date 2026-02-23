@@ -223,7 +223,10 @@ export const getBandWithStats = query({
     const monthStartMs = monthStart.getTime();
 
     const showsThisMonth = events.filter(
-      (e) => e.dateTime >= monthStartMs && e.dateTime <= now
+      (e) =>
+        typeof e.dateTime === "number" &&
+        e.dateTime >= monthStartMs &&
+        e.dateTime <= now
     ).length;
 
     const totalRsvps = events.reduce((sum, e) => sum + e.rsvpCount, 0);
@@ -546,6 +549,13 @@ export const getAnalytics = query({
     // Get past events sorted by date (most recent first)
     const now = Date.now();
     const pastEvents = events
+      .filter(
+        (
+          e
+        ): e is typeof e & {
+          dateTime: number;
+        } => typeof e.dateTime === "number"
+      )
       .filter((e) => e.dateTime < now)
       .sort((a, b) => b.dateTime - a.dateTime)
       .slice(0, 8);
@@ -553,7 +563,7 @@ export const getAnalytics = query({
     // Prepare chart data
     const eventComparison = await Promise.all(
       pastEvents.reverse().map(async (event) => {
-        const venue = await ctx.db.get(event.venueId);
+        const venue = event.venueId ? await ctx.db.get(event.venueId) : null;
         return {
           name: new Date(event.dateTime).toLocaleDateString("en-US", {
             month: "short",
@@ -567,9 +577,17 @@ export const getAnalytics = query({
 
     // Calculate traffic rate (simplified)
     const totalRsvps = events.reduce((sum, e) => sum + e.rsvpCount, 0);
+    const eventsWithCapacity = events.filter(
+      (
+        e
+      ): e is typeof e & {
+        capacity: number;
+      } => typeof e.capacity === "number" && Number.isFinite(e.capacity)
+    );
     const avgCapacity =
-      events.length > 0
-        ? events.reduce((sum, e) => sum + e.capacity, 0) / events.length
+      eventsWithCapacity.length > 0
+        ? eventsWithCapacity.reduce((sum, e) => sum + e.capacity, 0) /
+          eventsWithCapacity.length
         : 0;
 
     const newTrafficRate = avgCapacity > 0 ? (totalRsvps / avgCapacity) * 100 : 0;

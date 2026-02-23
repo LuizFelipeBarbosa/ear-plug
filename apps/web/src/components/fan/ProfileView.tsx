@@ -54,6 +54,14 @@ export function FanProfileView() {
   const [showCreateBandForm, setShowCreateBandForm] = useState(false);
   const [processingInviteId, setProcessingInviteId] = useState<Id<"bandInvites"> | null>(null);
 
+  useEffect(() => {
+    return () => {
+      if (workspaceMenuCloseTimeout.current !== null) {
+        window.clearTimeout(workspaceMenuCloseTimeout.current);
+      }
+    };
+  }, []);
+
   if (!user) return null;
 
   if (showCreateBandForm) {
@@ -98,14 +106,6 @@ export function FanProfileView() {
     }
   };
 
-  useEffect(() => {
-    return () => {
-      if (workspaceMenuCloseTimeout.current !== null) {
-        window.clearTimeout(workspaceMenuCloseTimeout.current);
-      }
-    };
-  }, []);
-
   const openWorkspaceMenu = () => {
     if (workspaceMenuCloseTimeout.current !== null) {
       window.clearTimeout(workspaceMenuCloseTimeout.current);
@@ -129,7 +129,7 @@ export function FanProfileView() {
   };
 
   return (
-    <div className="min-h-screen pb-6 bg-night">
+    <div className="min-h-screen pb-6 bg-night overflow-x-hidden">
       <header className="relative bg-night-secondary p-6 overflow-visible">
         <div className="absolute top-0 right-0 w-64 h-64 bg-violet/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
 

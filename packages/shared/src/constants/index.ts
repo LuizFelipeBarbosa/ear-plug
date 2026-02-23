@@ -112,7 +112,7 @@ export const EVENT_STATUS_CONFIG = {
     bgColor: "bg-green-100",
   },
   hold: {
-    label: "Hold",
+    label: "Tentative",
     color: "text-yellow-600",
     bgColor: "bg-yellow-100",
   },

@@ -9,7 +9,11 @@ import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { haversineDistance, coordinatesMatch } from "./utils/geo";
-import { requireAuthenticatedUser, requireBandRole } from "./utils/permissions";
+import {
+  requireAuthenticatedUser,
+  requireBandMember,
+  requireBandRole,
+} from "./utils/permissions";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 
@@ -73,6 +77,93 @@ interface VenueResolutionInput {
     lng: number;
   };
   capacity?: number;
+}
+
+interface EventVenueInput {
+  venueName?: string;
+  venueAddress?: string;
+  venueCity?: string;
+  venueCoordinates?: {
+    lat: number;
+    lng: number;
+  };
+}
+
+interface ConfirmedEventValidationInput extends EventVenueInput {
+  title?: string;
+  dateTime?: number;
+  capacity?: number;
+  genres?: readonly string[];
+  venueId?: Id<"venues">;
+}
+
+type PublicEvent = Doc<"events"> & {
+  status: "confirmed";
+  title: string;
+  venueId: Id<"venues">;
+  dateTime: number;
+  capacity: number;
+};
+
+function isTentative(status: Doc<"events">["status"] | undefined): boolean {
+  return status === "hold";
+}
+
+function isPublic(status: Doc<"events">["status"] | undefined): boolean {
+  return status === "confirmed";
+}
+
+function hasCompleteVenueInput(input: EventVenueInput): input is Required<EventVenueInput> {
+  return (
+    typeof input.venueName === "string" &&
+    input.venueName.trim().length > 0 &&
+    typeof input.venueAddress === "string" &&
+    input.venueAddress.trim().length > 0 &&
+    typeof input.venueCity === "string" &&
+    input.venueCoordinates !== undefined
+  );
+}
+
+function validateConfirmedEventPayload(
+  input: ConfirmedEventValidationInput
+): void {
+  if (!input.title || input.title.trim().length === 0) {
+    throw new Error("Confirmed gigs require an event title.");
+  }
+
+  if (typeof input.dateTime !== "number" || !Number.isFinite(input.dateTime)) {
+    throw new Error("Confirmed gigs require a valid date.");
+  }
+
+  if (typeof input.capacity !== "number" || !Number.isFinite(input.capacity) || input.capacity <= 0) {
+    throw new Error("Confirmed gigs require a positive capacity.");
+  }
+
+  if (!input.genres || input.genres.length === 0) {
+    throw new Error("Confirmed gigs require at least one genre.");
+  }
+
+  if (!input.venueId && !hasCompleteVenueInput(input)) {
+    throw new Error("Confirmed gigs require a complete venue selection.");
+  }
+}
+
+function hasPublicCoreFields(
+  event: Pick<Doc<"events">, "title" | "venueId" | "dateTime" | "capacity">
+): event is Pick<PublicEvent, "title" | "venueId" | "dateTime" | "capacity"> {
+  return (
+    typeof event.title === "string" &&
+    event.title.trim().length > 0 &&
+    event.venueId !== undefined &&
+    typeof event.dateTime === "number" &&
+    Number.isFinite(event.dateTime) &&
+    typeof event.capacity === "number" &&
+    Number.isFinite(event.capacity)
+  );
+}
+
+function isPublicEvent(event: Doc<"events">): event is PublicEvent {
+  return isPublic(event.status) && hasPublicCoreFields(event);
 }
 
 function getAttendanceStatus(
@@ -272,12 +363,16 @@ export const listUpcoming = query({
     const limit = args.limit || 50;
     const viewerContext = await buildViewerContext(ctx);
 
-    const events = await ctx.db
+    const rawEvents = await ctx.db
       .query("events")
       .withIndex("by_date")
       .filter((q) => q.gte(q.field("dateTime"), now))
       .order("asc")
-      .take(limit);
+      .take(limit * 4);
+
+    const events = rawEvents
+      .filter((event): event is PublicEvent => isPublicEvent(event))
+      .slice(0, limit);
 
     // Fetch related band and venue data
     const eventsWithDetails = await Promise.all(
@@ -332,14 +427,17 @@ export const listByGenre = query({
       .take(200);
 
     // Filter events that include the selected genre (check both genres array and legacy genre field)
-    const filteredEvents = events.filter((event) => {
-      // Check genres array first
-      if (event.genres && event.genres.length > 0) {
-        return event.genres.includes(args.genre);
-      }
-      // Fall back to legacy genre field
-      return event.genre === args.genre;
-    }).slice(0, limit);
+    const filteredEvents = events
+      .filter((event): event is PublicEvent => isPublicEvent(event))
+      .filter((event) => {
+        // Check genres array first
+        if (event.genres && event.genres.length > 0) {
+          return event.genres.includes(args.genre);
+        }
+        // Fall back to legacy genre field
+        return event.genre === args.genre;
+      })
+      .slice(0, limit);
 
     const eventsWithDetails = await Promise.all(
       filteredEvents.map(async (event) => {
@@ -375,7 +473,7 @@ export const getById = query({
   args: { eventId: v.id("events") },
   handler: async (ctx, args) => {
     const event = await ctx.db.get(args.eventId);
-    if (!event) return null;
+    if (!event || !isPublicEvent(event)) return null;
     const viewerContext = await buildViewerContext(ctx);
 
     const band = await ctx.db.get(event.bandId);
@@ -420,6 +518,7 @@ export const listByBand = query({
   },
   handler: async (ctx, args) => {
     const now = Date.now();
+    await requireBandMember(ctx, args.bandId);
 
     let events = await ctx.db
       .query("events")
@@ -427,17 +526,21 @@ export const listByBand = query({
       .collect();
 
     if (!args.includesPast) {
-      events = events.filter((e) => e.dateTime >= now);
+      events = events.filter((e) => e.dateTime === undefined || e.dateTime >= now);
     }
 
     const eventsWithDetails = await Promise.all(
       events.map(async (event) => {
-        const venue = await ctx.db.get(event.venueId);
+        const venue = event.venueId ? await ctx.db.get(event.venueId) : null;
         return { ...event, venue };
       })
     );
 
-    return eventsWithDetails.sort((a, b) => a.dateTime - b.dateTime);
+    return eventsWithDetails.sort((a, b) => {
+      const aTime = a.dateTime ?? Number.POSITIVE_INFINITY;
+      const bTime = b.dateTime ?? Number.POSITIVE_INFINITY;
+      return aTime - bTime;
+    });
   },
 });
 
@@ -461,11 +564,15 @@ export const listByVenue = query({
     const events = await ctx.db
       .query("events")
       .withIndex("by_venue", (q) => q.eq("venueId", args.venueId))
-      .filter((q) => q.gte(q.field("dateTime"), now))
       .collect();
 
+    const upcomingPublicEvents = events.filter(
+      (event): event is PublicEvent =>
+        isPublicEvent(event) && event.dateTime >= now
+    );
+
     const eventsWithDetails = await Promise.all(
-      events.map(async (event) => {
+      upcomingPublicEvents.map(async (event) => {
         const band = await ctx.db.get(event.bandId);
         return { ...event, band };
       })
@@ -510,14 +617,16 @@ export const search = query({
 
     // Fetch band and venue data and filter
     const eventsWithDetails = await Promise.all(
-      events.map(async (event) => {
-        const band = await ctx.db.get(event.bandId);
-        const venue = await ctx.db.get(event.venueId);
-        return applyAddressMask(
-          { ...event, band, venue },
-          viewerContext
-        );
-      })
+      events
+        .filter((event): event is PublicEvent => isPublicEvent(event))
+        .map(async (event) => {
+          const band = await ctx.db.get(event.bandId);
+          const venue = await ctx.db.get(event.venueId);
+          return applyAddressMask(
+            { ...event, band, venue },
+            viewerContext
+          );
+        })
     );
 
     // Filter by search query
@@ -566,6 +675,11 @@ export const rsvp = mutation({
       throw new Error("User not found");
     }
 
+    const event = await ctx.db.get(args.eventId);
+    if (!event || !isPublicEvent(event)) {
+      throw new Error("This gig is not available for RSVP.");
+    }
+
     // Check if already RSVP'd
     const existingRsvp = await ctx.db
       .query("rsvps")
@@ -583,12 +697,9 @@ export const rsvp = mutation({
       await ctx.db.delete(existingRsvp._id);
 
       // Decrement RSVP count
-      const event = await ctx.db.get(args.eventId);
-      if (event) {
-        await ctx.db.patch(args.eventId, {
-          rsvpCount: Math.max(0, event.rsvpCount - 1),
-        });
-      }
+      await ctx.db.patch(args.eventId, {
+        rsvpCount: Math.max(0, event.rsvpCount - 1),
+      });
 
       return { action: "removed" };
     }
@@ -602,12 +713,9 @@ export const rsvp = mutation({
     });
 
     // Increment RSVP count
-    const event = await ctx.db.get(args.eventId);
-    if (event) {
-      await ctx.db.patch(args.eventId, {
-        rsvpCount: event.rsvpCount + 1,
-      });
-    }
+    await ctx.db.patch(args.eventId, {
+      rsvpCount: event.rsvpCount + 1,
+    });
 
     return { action: "added" };
   },
@@ -642,6 +750,11 @@ export const toggleLike = mutation({
 
     if (!user) {
       throw new Error("User not found");
+    }
+
+    const event = await ctx.db.get(args.eventId);
+    if (!event || !isPublicEvent(event)) {
+      throw new Error("This gig is not available to save.");
     }
 
     // Check if already liked
@@ -704,6 +817,7 @@ export const getUserRsvps = query({
       rsvps.map(async (rsvp) => {
         const event = await ctx.db.get(rsvp.eventId);
         if (!event) return null;
+        if (!isPublicEvent(event)) return null;
         // Only include upcoming events
         if (event.dateTime < now) return null;
 
@@ -763,6 +877,7 @@ export const getUserPastRsvps = query({
       rsvps.map(async (rsvp) => {
         const event = await ctx.db.get(rsvp.eventId);
         if (!event) return null;
+        if (!isPublicEvent(event)) return null;
         // Only include past events
         if (event.dateTime >= now) return null;
 
@@ -817,6 +932,7 @@ export const getUserLikes = query({
 
         const event = await ctx.db.get(like.eventId);
         if (!event) return null;
+        if (!isPublicEvent(event)) return null;
 
         const band = await ctx.db.get(event.bandId);
         const venue = await ctx.db.get(event.venueId);
@@ -850,6 +966,11 @@ export const getUserLikes = query({
 export const getUserEventStatus = query({
   args: { eventId: v.id("events") },
   handler: async (ctx, args) => {
+    const event = await ctx.db.get(args.eventId);
+    if (!event || !isPublicEvent(event)) {
+      return { hasRsvp: false, hasLiked: false };
+    }
+
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
       return { hasRsvp: false, hasLiked: false };
@@ -1140,6 +1261,8 @@ export const listNearby = query({
       .filter((q) => q.gte(q.field("dateTime"), now))
       .take(200);
 
+    events = events.filter((event): event is PublicEvent => isPublicEvent(event));
+
     // Filter by genre if specified (check both genres array and legacy genre field)
     if (args.genre) {
       events = events.filter((event) => {
@@ -1154,6 +1277,10 @@ export const listNearby = query({
     const eventsWithDistance = await Promise.all(
       events.map(async (event) => {
         const band = await ctx.db.get(event.bandId);
+        if (!event.venueId) {
+          return null;
+        }
+
         const venue = await ctx.db.get(event.venueId);
 
         if (!venue?.coordinates) {
@@ -1173,15 +1300,19 @@ export const listNearby = query({
           return null;
         }
 
-        return applyAddressMask(
+        const maskedEvent = applyAddressMask(
           {
             ...event,
             band,
             venue,
-            distance: Math.round(distance * 10) / 10, // Round to 1 decimal
           },
           viewerContext
         );
+
+        return {
+          ...maskedEvent,
+          distance: Math.round(distance * 10) / 10, // Round to 1 decimal
+        };
       })
     );
 
@@ -1225,15 +1356,15 @@ export const listNearby = query({
  */
 export const create = mutation({
   args: {
-    title: v.string(),
+    title: v.optional(v.string()),
     bandId: v.id("bands"),
-    venueId: v.id("venues"),
-    dateTime: v.number(),
+    venueId: v.optional(v.id("venues")),
+    dateTime: v.optional(v.number()),
     image: v.optional(v.string()),
-    capacity: v.number(),
+    capacity: v.optional(v.number()),
     price: v.optional(v.number()),
     description: v.optional(v.string()),
-    genres: v.array(genreValidator), // Multiple genres
+    genres: v.optional(v.array(genreValidator)), // Multiple genres
     genre: v.optional(genreValidator), // Legacy field for backward compatibility
     status: v.optional(eventStatusValidator),
     addressVisibility: v.optional(eventAddressVisibilityValidator),
@@ -1246,20 +1377,43 @@ export const create = mutation({
 
     await requireBandRole(ctx, args.bandId, ["owner", "admin"]);
 
-    const { genre, status, addressVisibility, ...restArgs } = args;
+    const status = args.status ?? "confirmed";
+    const genres = args.genres ?? (args.genre ? [args.genre] : undefined);
+
+    if (isPublic(status)) {
+      validateConfirmedEventPayload({
+        title: args.title,
+        dateTime: args.dateTime,
+        capacity: args.capacity,
+        genres,
+        venueId: args.venueId,
+      });
+    }
+
     const eventId = await ctx.db.insert("events", {
-      ...restArgs,
+      title: args.title,
+      bandId: args.bandId,
+      venueId: args.venueId,
+      dateTime: args.dateTime,
+      image: args.image,
+      capacity: args.capacity,
+      price: args.price,
+      description: args.description,
+      genres,
+      genre: args.genre ?? genres?.[0],
       rsvpCount: 0,
-      status: status ?? "confirmed",
-      addressVisibility: addressVisibility ?? "public",
+      status,
+      addressVisibility: args.addressVisibility ?? "public",
     });
 
-    // Schedule notifications for fans who saved this venue or band
-    await ctx.scheduler.runAfter(0, internal.notifications.createNearbyEventNotifications, {
-      eventId,
-      venueId: args.venueId,
-      bandId: args.bandId,
-    });
+    // Notify fans only when a gig is publicly confirmed.
+    if (isPublic(status) && args.venueId) {
+      await ctx.scheduler.runAfter(0, internal.notifications.createNearbyEventNotifications, {
+        eventId,
+        venueId: args.venueId,
+        bandId: args.bandId,
+      });
+    }
 
     return eventId;
   },
@@ -1302,18 +1456,20 @@ export const create = mutation({
  */
 export const createWithVenue = mutation({
   args: {
-    title: v.string(),
+    title: v.optional(v.string()),
     bandId: v.id("bands"),
-    dateTime: v.number(),
-    genres: v.array(genreValidator), // Multiple genres
+    dateTime: v.optional(v.number()),
+    genres: v.optional(v.array(genreValidator)), // Multiple genres
     genre: v.optional(genreValidator), // Legacy field for backward compatibility
-    venueName: v.string(),
-    venueAddress: v.string(),
-    venueCity: v.string(),
-    venueCoordinates: v.object({
-      lat: v.number(),
-      lng: v.number(),
-    }),
+    venueName: v.optional(v.string()),
+    venueAddress: v.optional(v.string()),
+    venueCity: v.optional(v.string()),
+    venueCoordinates: v.optional(
+      v.object({
+        lat: v.number(),
+        lng: v.number(),
+      })
+    ),
     venuePlaceId: v.optional(v.string()),
     image: v.optional(v.string()),
     capacity: v.optional(v.number()),
@@ -1330,13 +1486,33 @@ export const createWithVenue = mutation({
 
     await requireBandRole(ctx, args.bandId, ["owner", "admin"]);
 
-    const venueId = await findOrCreateVenueByLocation(ctx, {
-      venueName: args.venueName,
-      venueAddress: args.venueAddress,
-      venueCity: args.venueCity,
-      venueCoordinates: args.venueCoordinates,
-      capacity: args.capacity,
-    });
+    const status = args.status ?? "confirmed";
+    const genres = args.genres ?? (args.genre ? [args.genre] : undefined);
+    const hasVenueInput = hasCompleteVenueInput(args);
+
+    if (isPublic(status)) {
+      validateConfirmedEventPayload({
+        title: args.title,
+        dateTime: args.dateTime,
+        capacity: args.capacity,
+        genres,
+        venueName: args.venueName,
+        venueAddress: args.venueAddress,
+        venueCity: args.venueCity,
+        venueCoordinates: args.venueCoordinates,
+      });
+    }
+
+    let venueId: Id<"venues"> | undefined;
+    if (hasVenueInput) {
+      venueId = await findOrCreateVenueByLocation(ctx, {
+        venueName: args.venueName,
+        venueAddress: args.venueAddress,
+        venueCity: args.venueCity,
+        venueCoordinates: args.venueCoordinates,
+        capacity: args.capacity,
+      });
+    }
 
     // Create the event
     const eventId = await ctx.db.insert("events", {
@@ -1345,21 +1521,24 @@ export const createWithVenue = mutation({
       venueId,
       dateTime: args.dateTime,
       image: args.image,
-      capacity: args.capacity || 100,
+      capacity: args.capacity,
       price: args.price,
       description: args.description,
-      genres: args.genres,
+      genres,
+      genre: args.genre ?? genres?.[0],
       rsvpCount: 0,
-      status: args.status ?? "confirmed",
+      status,
       addressVisibility: args.addressVisibility ?? "public",
     });
 
-    // Schedule notifications for fans who saved this venue or band
-    await ctx.scheduler.runAfter(0, internal.notifications.createNearbyEventNotifications, {
-      eventId,
-      venueId,
-      bandId: args.bandId,
-    });
+    // Notify fans only when a gig is publicly confirmed.
+    if (isPublic(status) && venueId) {
+      await ctx.scheduler.runAfter(0, internal.notifications.createNearbyEventNotifications, {
+        eventId,
+        venueId,
+        bandId: args.bandId,
+      });
+    }
 
     return { eventId, venueId };
   },
@@ -1411,39 +1590,67 @@ export const updateWithVenue = mutation({
       );
     }
 
+    const nextStatus = args.status ?? event.status;
     const hasAnyVenueUpdate =
       args.venueName !== undefined ||
       args.venueAddress !== undefined ||
       args.venueCity !== undefined ||
       args.venueCoordinates !== undefined ||
       args.venuePlaceId !== undefined;
+    const hasCompleteVenueUpdate = hasCompleteVenueInput(args);
 
     let venueId = event.venueId;
 
     if (hasAnyVenueUpdate) {
-      if (
-        !args.venueName ||
-        !args.venueAddress ||
-        !args.venueCity ||
-        !args.venueCoordinates
-      ) {
-        throw new Error(
-          "To update venue, provide venueName, venueAddress, venueCity, and venueCoordinates."
-        );
+      if (hasCompleteVenueUpdate) {
+        venueId = await findOrCreateVenueByLocation(ctx, {
+          venueName: args.venueName,
+          venueAddress: args.venueAddress,
+          venueCity: args.venueCity,
+          venueCoordinates: args.venueCoordinates,
+          capacity: args.capacity ?? event.capacity,
+        });
+      } else if (isPublic(nextStatus)) {
+        throw new Error("Confirmed gigs require a complete venue selection.");
       }
+      // Tentative saves accept partial venue input, but only complete venue
+      // payloads can be persisted as a concrete venue reference.
+    }
 
-      venueId = await findOrCreateVenueByLocation(ctx, {
-        venueName: args.venueName,
-        venueAddress: args.venueAddress,
-        venueCity: args.venueCity,
-        venueCoordinates: args.venueCoordinates,
-        capacity: args.capacity ?? event.capacity,
+    const nextGenres = (() => {
+      if (args.genres !== undefined) {
+        return args.genres;
+      }
+      if (args.genre !== undefined) {
+        return [args.genre];
+      }
+      if (event.genres && event.genres.length > 0) {
+        return event.genres;
+      }
+      if (event.genre) {
+        return [event.genre];
+      }
+      return undefined;
+    })();
+
+    const nextTitle = args.title !== undefined ? args.title : event.title;
+    const nextDateTime = args.dateTime !== undefined ? args.dateTime : event.dateTime;
+    const nextCapacity = args.capacity !== undefined ? args.capacity : event.capacity;
+
+    if (isPublic(nextStatus)) {
+      validateConfirmedEventPayload({
+        title: nextTitle,
+        dateTime: nextDateTime,
+        capacity: nextCapacity,
+        genres: nextGenres,
+        venueId,
       });
     }
 
-    const updates: Partial<Doc<"events">> = {
-      venueId,
-    };
+    const updates: Partial<Doc<"events">> = {};
+    if (venueId !== event.venueId) {
+      updates.venueId = venueId;
+    }
 
     if (args.title !== undefined) updates.title = args.title;
     if (args.dateTime !== undefined) updates.dateTime = args.dateTime;
@@ -1463,8 +1670,61 @@ export const updateWithVenue = mutation({
       updates.addressVisibility = args.addressVisibility;
     }
 
-    await ctx.db.patch(args.eventId, updates);
+    if (Object.keys(updates).length > 0) {
+      await ctx.db.patch(args.eventId, updates);
+    }
+
+    if (isTentative(event.status) && isPublic(nextStatus) && venueId) {
+      await ctx.scheduler.runAfter(0, internal.notifications.createNearbyEventNotifications, {
+        eventId: args.eventId,
+        venueId,
+        bandId: event.bandId,
+      });
+    }
 
     return { eventId: args.eventId, venueId };
+  },
+});
+
+/**
+ * Deletes a tentative gig owned by the current band's owner/admin.
+ * This is intentionally restricted to tentative gigs only.
+ */
+export const deleteTentative = mutation({
+  args: {
+    eventId: v.id("events"),
+  },
+  handler: async (ctx, args) => {
+    const event = await ctx.db.get(args.eventId);
+    if (!event) {
+      throw new Error("Event not found");
+    }
+
+    await requireBandRole(ctx, event.bandId, ["owner", "admin"]);
+
+    if (!isTentative(event.status)) {
+      throw new Error("Only tentative gigs can be deleted.");
+    }
+
+    // Defensive cleanup in case legacy data exists.
+    const [likes, rsvps] = await Promise.all([
+      ctx.db
+        .query("likes")
+        .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
+        .collect(),
+      ctx.db
+        .query("rsvps")
+        .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
+        .collect(),
+    ]);
+
+    await Promise.all([
+      ...likes.map((like) => ctx.db.delete(like._id)),
+      ...rsvps.map((rsvp) => ctx.db.delete(rsvp._id)),
+    ]);
+
+    await ctx.db.delete(args.eventId);
+
+    return { eventId: args.eventId };
   },
 });

@@ -336,20 +336,20 @@ export default defineSchema({
    * - by_status: Filter events by booking status
    */
   events: defineTable({
-    /** Event title/name */
-    title: v.string(),
+    /** Event title/name (optional for tentative drafts) */
+    title: v.optional(v.string()),
     /** Reference to performing band */
     bandId: v.id("bands"),
-    /** Reference to hosting venue */
-    venueId: v.id("venues"),
-    /** Event start time (Unix timestamp) */
-    dateTime: v.number(),
+    /** Reference to hosting venue (optional for tentative drafts) */
+    venueId: v.optional(v.id("venues")),
+    /** Event start time (Unix timestamp, optional for tentative drafts) */
+    dateTime: v.optional(v.number()),
     /** Promotional image URL */
     image: v.optional(v.string()),
     /** Current number of RSVPs */
     rsvpCount: v.number(),
-    /** Maximum attendance */
-    capacity: v.number(),
+    /** Maximum attendance (optional for tentative drafts) */
+    capacity: v.optional(v.number()),
     /** Ticket price in cents (0 = free) */
     price: v.optional(v.number()),
     /** Event description */

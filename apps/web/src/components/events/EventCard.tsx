@@ -13,13 +13,13 @@ import { useProfileContext } from "@/hooks/useProfileContext";
 interface EventCardProps {
   event: {
     _id: Id<"events">;
-    title: string;
-    dateTime: number;
+    title?: string;
+    dateTime?: number;
     image?: string;
     rsvpCount: number;
-    capacity: number;
+    capacity?: number;
     band?: { name: string; image?: string } | null;
-    venue?: { name: string; city: string; address: string } | null;
+    venue?: { name?: string; city?: string; address?: string } | null;
     isVenueAddressHidden?: boolean;
     attendanceStatus?: "on_list" | "attended";
     attendedAt?: number;
@@ -58,7 +58,11 @@ export function EventCard({
 
   const isLiked = allowFanActions ? eventStatus?.hasLiked ?? false : false;
   const hasRsvp = allowFanActions ? eventStatus?.hasRsvp ?? false : false;
-  const isPast = event.dateTime < Date.now();
+  const displayTitle = event.title?.trim() || "Untitled Gig";
+  const eventDateTime = typeof event.dateTime === "number" ? event.dateTime : null;
+  const displayDate = eventDateTime !== null ? formatEventDate(eventDateTime) : "Date TBD";
+  const displayTime = eventDateTime !== null ? formatEventTime(eventDateTime) : "Time TBD";
+  const isPast = eventDateTime !== null ? eventDateTime < Date.now() : false;
 
   if (variant === "compact") {
     return (
@@ -70,14 +74,14 @@ export function EventCard({
           {/* Event Image */}
           <EventImage
             src={event.image}
-            alt={event.title}
+            alt={displayTitle}
             className="w-16 h-16 flex-shrink-0"
           />
 
           {/* Event Info */}
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-white truncate group-hover:text-lime transition-colors">
-              {event.title}
+              {displayTitle}
             </h3>
             {event.venue ? (
               <div className="relative mt-0.5 overflow-hidden rounded-sm">
@@ -104,7 +108,7 @@ export function EventCard({
               "text-xs font-medium mt-1 uppercase tracking-wide",
               isPast ? "text-zinc-500" : "text-lime"
             )}>
-              {formatEventDate(event.dateTime)} • {formatEventTime(event.dateTime)}
+              {displayDate} • {displayTime}
             </p>
             {showAttendanceStatus && (
               <span
@@ -171,7 +175,7 @@ export function EventCard({
         {/* Event Image - Square with rounded corners */}
         <EventImage
           src={event.image}
-          alt={event.title}
+          alt={displayTitle}
           className="w-20 h-20 flex-shrink-0 rounded-lg"
         />
 
@@ -179,7 +183,7 @@ export function EventCard({
         <div className="flex-1 min-w-0">
           {/* Title */}
           <h3 className="font-bold text-white truncate group-hover:text-lime transition-colors">
-            {event.title}
+            {displayTitle}
           </h3>
 
           {/* Venue */}
@@ -222,7 +226,7 @@ export function EventCard({
             "text-sm mt-0.5",
             isPast ? "text-zinc-500" : "text-zinc-400"
           )}>
-            {formatEventDate(event.dateTime)}
+            {displayDate}
           </p>
           {showAttendanceStatus && (
             <span
