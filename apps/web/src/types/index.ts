@@ -29,14 +29,14 @@ export interface VenueLocationData {
  * Event input for creating new events
  */
 export interface CreateEventInput {
-    title: string;
+    title?: string;
     bandId: string;
-    date: string; // ISO date string (YYYY-MM-DD)
-    startTime: string; // HH:MM format
+    date?: string; // ISO date string (YYYY-MM-DD)
+    startTime?: string; // HH:MM format
     endTime?: string; // HH:MM format
-    venue: VenueLocationData;
+    venue?: VenueLocationData;
     image?: string;
-    genres: Genre[]; // Multiple genres supported
+    genres?: Genre[]; // Multiple genres supported
     capacity?: number;
     description?: string;
     price?: number;

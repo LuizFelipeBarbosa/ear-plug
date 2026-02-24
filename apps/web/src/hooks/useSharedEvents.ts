@@ -53,6 +53,8 @@ export function useSharedEvents() {
   const createEventWithVenue = useMutation(api.events.createWithVenue);
   /** Mutation to update an event with optional venue changes */
   const updateEventWithVenue = useMutation(api.events.updateWithVenue);
+  /** Mutation to delete tentative gigs */
+  const deleteTentativeEvent = useMutation(api.events.deleteTentative);
 
   /** Mutation to create a venue from Google Places data */
   const createVenue = useMutation(api.venues.createFromPlace);
@@ -81,9 +83,27 @@ export function useSharedEvents() {
    * });
    */
   const createEvent = useCallback(
-    async (input: CreateEventInput): Promise<{ eventId: Id<"events">; venueId: Id<"venues"> }> => {
-      // Convert date and time to timestamp
-      const dateTime = new Date(`${input.date}T${input.startTime}`).getTime();
+    async (
+      input: CreateEventInput
+    ): Promise<{ eventId: Id<"events">; venueId?: Id<"venues"> }> => {
+      if (!input.date && input.startTime) {
+        throw new Error("Pick a date before setting a start time.");
+      }
+
+      // If start time is omitted, default to midnight for that date.
+      const dateTime = input.date
+        ? new Date(`${input.date}T${input.startTime || "00:00"}`).getTime()
+        : undefined;
+
+      const venueArgs = input.venue
+        ? {
+            venueName: input.venue.name,
+            venueAddress: input.venue.address,
+            venueCity: input.venue.city,
+            venueCoordinates: input.venue.coordinates,
+            venuePlaceId: input.venue.placeId,
+          }
+        : {};
 
       // Create the event with venue in one mutation
       const result = await createEventWithVenue({
@@ -91,11 +111,7 @@ export function useSharedEvents() {
         bandId: input.bandId as Id<"bands">,
         dateTime,
         genres: input.genres,
-        venueName: input.venue.name,
-        venueAddress: input.venue.address,
-        venueCity: input.venue.city,
-        venueCoordinates: input.venue.coordinates,
-        venuePlaceId: input.venue.placeId,
+        ...venueArgs,
         image: input.image,
         capacity: input.capacity,
         price: input.price,
@@ -117,7 +133,13 @@ export function useSharedEvents() {
    * @returns Object containing the updated event ID and venue ID
    */
   const updateEvent = useCallback(
-    async (input: UpdateEventInput): Promise<{ eventId: Id<"events">; venueId: Id<"venues"> }> => {
+    async (
+      input: UpdateEventInput
+    ): Promise<{ eventId: Id<"events">; venueId?: Id<"venues"> }> => {
+      if (!input.date && input.startTime) {
+        throw new Error("Pick a date before setting a start time.");
+      }
+
       const mutationArgs: {
         eventId: Id<"events">;
         title?: string;
@@ -138,11 +160,10 @@ export function useSharedEvents() {
         eventId: input.eventId as Id<"events">,
       };
 
-      if (input.date || input.startTime) {
-        if (!input.date || !input.startTime) {
-          throw new Error("Both date and startTime are required when updating event date/time");
-        }
-        mutationArgs.dateTime = new Date(`${input.date}T${input.startTime}`).getTime();
+      if (input.date) {
+        mutationArgs.dateTime = new Date(
+          `${input.date}T${input.startTime || "00:00"}`
+        ).getTime();
       }
 
       if (input.title !== undefined) mutationArgs.title = input.title;
@@ -167,6 +188,18 @@ export function useSharedEvents() {
       return await updateEventWithVenue(mutationArgs);
     },
     [updateEventWithVenue]
+  );
+
+  /**
+   * Deletes a tentative event.
+   *
+   * @param eventId - Event id to remove
+   */
+  const deleteEvent = useCallback(
+    async (eventId: string): Promise<{ eventId: Id<"events"> }> => {
+      return await deleteTentativeEvent({ eventId: eventId as Id<"events"> });
+    },
+    [deleteTentativeEvent]
   );
 
   /**
@@ -206,6 +239,8 @@ export function useSharedEvents() {
     createEvent,
     /** Updates an event with optional venue handling */
     updateEvent,
+    /** Deletes a tentative event */
+    deleteEvent,
     /** Creates a venue from Google Places data */
     createVenue: createVenueFromPlace,
   };

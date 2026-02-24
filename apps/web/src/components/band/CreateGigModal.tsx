@@ -27,6 +27,7 @@ interface CreateGigModalProps {
   onClose: () => void;
   bandId: string;
   bandName: string;
+  creationKind: "tentative" | "confirmed";
   onSuccess?: () => void;
 }
 
@@ -35,9 +36,11 @@ export function CreateGigModal({
   onClose,
   bandId,
   bandName,
+  creationKind,
   onSuccess,
 }: CreateGigModalProps) {
   const { createEvent } = useSharedEvents();
+  const isTentative = creationKind === "tentative";
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -50,7 +53,6 @@ export function CreateGigModal({
     capacity: "",
     price: "",
     description: "",
-    status: "confirmed" as EventStatus,
     addressVisibility: "public" as EventAddressVisibility,
   });
 
@@ -68,7 +70,6 @@ export function CreateGigModal({
       capacity: "",
       price: "",
       description: "",
-      status: "confirmed",
       addressVisibility: "public",
     });
     setVenue(null);
@@ -130,28 +131,28 @@ export function CreateGigModal({
   const validateForm = (): boolean => {
     const nextErrors: Record<string, string> = {};
 
-    if (!formData.title.trim()) {
+    if (!isTentative && !formData.title.trim()) {
       nextErrors.title = "Event title is required";
     }
 
-    if (!formData.date) {
+    if (!isTentative && !formData.date) {
       nextErrors.date = "Date is required";
     }
 
-    if (!formData.startTime) {
-      nextErrors.startTime = "Start time is required";
-    }
-
-    if (!venue) {
+    if (!isTentative && !venue) {
       nextErrors.venue = "Venue location is required";
     }
 
-    if (formData.genres.length === 0) {
+    if (!isTentative && formData.genres.length === 0) {
       nextErrors.genres = "At least one genre is required";
     }
 
-    const parsedCapacity = Number.parseInt(formData.capacity, 10);
-    if (!Number.isFinite(parsedCapacity) || parsedCapacity <= 0) {
+    if (formData.capacity.trim().length > 0) {
+      const parsedCapacity = Number.parseInt(formData.capacity, 10);
+      if (!Number.isFinite(parsedCapacity) || parsedCapacity <= 0) {
+        nextErrors.capacity = "Capacity must be a positive number";
+      }
+    } else if (!isTentative) {
       nextErrors.capacity = "Capacity must be a positive number";
     }
 
@@ -170,37 +171,44 @@ export function CreateGigModal({
     submitEvent.preventDefault();
     setSubmitError(null);
 
-    if (!validateForm() || !venue) {
+    if (!validateForm()) {
       return;
     }
 
     setIsSubmitting(true);
 
     try {
+      const parsedCapacity =
+        formData.capacity.trim().length > 0
+          ? Number.parseInt(formData.capacity, 10)
+          : undefined;
       const parsedPrice =
         formData.price.trim().length > 0
           ? Math.round(Number.parseFloat(formData.price) * 100)
           : undefined;
+      const targetStatus: EventStatus = isTentative ? "hold" : "confirmed";
 
       await createEvent({
-        title: formData.title.trim(),
+        title: formData.title.trim() || undefined,
         bandId,
-        date: formData.date,
-        startTime: formData.startTime,
-        venue: {
-          name: venue.name,
-          address: venue.address,
-          city: venue.city,
-          coordinates: venue.coordinates,
-          placeId: venue.placeId,
-          capacity: venue.capacity,
-        },
+        date: formData.date || undefined,
+        startTime: formData.startTime || undefined,
+        venue: venue
+          ? {
+              name: venue.name,
+              address: venue.address,
+              city: venue.city,
+              coordinates: venue.coordinates,
+              placeId: venue.placeId,
+              capacity: venue.capacity,
+            }
+          : undefined,
         image: coverImage || undefined,
-        genres: formData.genres,
-        capacity: Number.parseInt(formData.capacity, 10),
+        genres: formData.genres.length > 0 ? formData.genres : undefined,
+        capacity: parsedCapacity,
         description: formData.description.trim() || undefined,
         price: parsedPrice,
-        status: formData.status,
+        status: targetStatus,
         addressVisibility: formData.addressVisibility,
       });
 
@@ -231,7 +239,7 @@ export function CreateGigModal({
         <div className="flex items-center justify-between p-4 border-b-2 border-zinc-800 bg-night-tertiary">
           <div>
             <h2 className="text-lg font-bold uppercase tracking-tight text-white">
-              Create Gig
+              {isTentative ? "Create Tentative Gig" : "Create Confirmed Gig"}
             </h2>
             <p className="text-xs text-zinc-500 mt-0.5">
               Add a new show for {bandName}
@@ -332,7 +340,7 @@ export function CreateGigModal({
 
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">
-              Event Title <span className="text-lime">*</span>
+              Event Title {!isTentative && <span className="text-lime">*</span>}
             </label>
             <input
               type="text"
@@ -356,7 +364,7 @@ export function CreateGigModal({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">
-                Date <span className="text-lime">*</span>
+                Date {!isTentative && <span className="text-lime">*</span>}
               </label>
               <div className="relative">
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
@@ -383,7 +391,7 @@ export function CreateGigModal({
 
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">
-                Start Time <span className="text-lime">*</span>
+                Start Time
               </label>
               <div className="relative">
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
@@ -393,6 +401,7 @@ export function CreateGigModal({
                   type="time"
                   value={formData.startTime}
                   onChange={(inputEvent) => updateField("startTime", inputEvent.target.value)}
+                  placeholder="Optional"
                   className={cn(
                     "w-full pl-12 pr-4 py-3.5 bg-night-tertiary border-2 rounded-none text-white focus:outline-none transition-colors appearance-none",
                     errors.startTime
@@ -442,7 +451,7 @@ export function CreateGigModal({
               }}
               label="Venue Location"
               placeholder="Search for a venue..."
-              required
+              required={!isTentative}
               error={errors.venue}
             />
           </div>
@@ -450,7 +459,7 @@ export function CreateGigModal({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">
-                Capacity <span className="text-lime">*</span>
+                Capacity {!isTentative && <span className="text-lime">*</span>}
               </label>
               <div className="relative">
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
@@ -509,26 +518,6 @@ export function CreateGigModal({
 
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">
-              Status
-            </label>
-            <select
-              value={formData.status}
-              onChange={(inputEvent) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  status: inputEvent.target.value as EventStatus,
-                }))
-              }
-              className="w-full px-4 py-3.5 bg-night-tertiary border-2 border-zinc-800 rounded-none text-white focus:outline-none focus:border-lime transition-colors"
-            >
-              <option value="confirmed">Confirmed</option>
-              <option value="hold">Hold</option>
-              <option value="available">Available</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">
               Address Visibility
             </label>
             <div className="grid grid-cols-2 gap-2">
@@ -576,7 +565,7 @@ export function CreateGigModal({
 
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">
-              Genres <span className="text-lime">*</span>
+              Genres {!isTentative && <span className="text-lime">*</span>}
             </label>
             <div
               className={cn(
@@ -636,12 +625,12 @@ export function CreateGigModal({
               {isSubmitting ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  Creating...
+                  {isTentative ? "Saving..." : "Creating..."}
                 </>
               ) : (
                 <>
                   <Check className="w-5 h-5" />
-                  Create Gig
+                  {isTentative ? "Save Tentative Gig" : "Create Confirmed Gig"}
                 </>
               )}
             </button>

@@ -15,6 +15,7 @@ import {
   DollarSign,
   Eye,
   EyeOff,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PlaceAutocomplete, type VenueLocationData } from "@/components/maps/PlaceAutocomplete";
@@ -24,12 +25,12 @@ import type { EventAddressVisibility, EventStatus, Genre } from "@ear-plug/share
 
 interface EditableEvent {
   _id: string;
-  title: string;
-  dateTime: number;
+  title?: string;
+  dateTime?: number;
   image?: string;
   genres?: Genre[];
   genre?: Genre;
-  capacity: number;
+  capacity?: number;
   price?: number;
   description?: string;
   status?: EventStatus;
@@ -59,8 +60,9 @@ export function EditGigModal({
   event,
   onSuccess,
 }: EditGigModalProps) {
-  const { updateEvent } = useSharedEvents();
+  const { updateEvent, deleteEvent } = useSharedEvents();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -113,14 +115,14 @@ export function EditGigModal({
           : [];
 
     setFormData({
-      title: event.title,
-      date: formatDateInput(event.dateTime),
-      startTime: formatTimeInput(event.dateTime),
+      title: event.title ?? "",
+      date: event.dateTime ? formatDateInput(event.dateTime) : "",
+      startTime: event.dateTime ? formatTimeInput(event.dateTime) : "",
       genres: eventGenres,
-      capacity: String(event.capacity),
+      capacity: event.capacity !== undefined ? String(event.capacity) : "",
       price: event.price !== undefined ? (event.price / 100).toFixed(2) : "",
       description: event.description ?? "",
-      status: event.status ?? "confirmed",
+      status: event.status === "hold" ? "hold" : "confirmed",
       addressVisibility: event.addressVisibility ?? "public",
     });
 
@@ -187,31 +189,32 @@ export function EditGigModal({
     }
   };
 
-  const validateForm = (): boolean => {
+  const validateForm = (targetStatus: EventStatus): boolean => {
     const nextErrors: Record<string, string> = {};
+    const isTentative = targetStatus === "hold";
 
-    if (!formData.title.trim()) {
+    if (!isTentative && !formData.title.trim()) {
       nextErrors.title = "Event title is required";
     }
 
-    if (!formData.date) {
+    if (!isTentative && !formData.date) {
       nextErrors.date = "Date is required";
     }
 
-    if (!formData.startTime) {
-      nextErrors.startTime = "Start time is required";
-    }
-
-    if (!venue) {
+    if (!isTentative && !venue) {
       nextErrors.venue = "Venue location is required";
     }
 
-    if (formData.genres.length === 0) {
+    if (!isTentative && formData.genres.length === 0) {
       nextErrors.genres = "At least one genre is required";
     }
 
-    const parsedCapacity = Number.parseInt(formData.capacity, 10);
-    if (!Number.isFinite(parsedCapacity) || parsedCapacity <= 0) {
+    if (formData.capacity.trim().length > 0) {
+      const parsedCapacity = Number.parseInt(formData.capacity, 10);
+      if (!Number.isFinite(parsedCapacity) || parsedCapacity <= 0) {
+        nextErrors.capacity = "Capacity must be a positive number";
+      }
+    } else if (!isTentative) {
       nextErrors.capacity = "Capacity must be a positive number";
     }
 
@@ -232,13 +235,17 @@ export function EditGigModal({
 
     setSubmitError(null);
 
-    if (!validateForm() || !venue) {
+    if (!validateForm(formData.status)) {
       return;
     }
 
     setIsSubmitting(true);
 
     try {
+      const parsedCapacity =
+        formData.capacity.trim().length > 0
+          ? Number.parseInt(formData.capacity, 10)
+          : undefined;
       const parsedPrice =
         formData.price.trim().length > 0
           ? Math.round(Number.parseFloat(formData.price) * 100)
@@ -247,19 +254,21 @@ export function EditGigModal({
       await updateEvent({
         eventId: event._id,
         title: formData.title.trim(),
-        date: formData.date,
-        startTime: formData.startTime,
-        venue: {
-          name: venue.name,
-          address: venue.address,
-          city: venue.city,
-          coordinates: venue.coordinates,
-          placeId: venue.placeId,
-          capacity: venue.capacity,
-        },
+        date: formData.date || undefined,
+        startTime: formData.startTime || undefined,
+        venue: venue
+          ? {
+              name: venue.name,
+              address: venue.address,
+              city: venue.city,
+              coordinates: venue.coordinates,
+              placeId: venue.placeId,
+              capacity: venue.capacity,
+            }
+          : undefined,
         image: imageWasRemoved ? "" : coverImage || undefined,
         genres: formData.genres,
-        capacity: Number.parseInt(formData.capacity, 10),
+        capacity: parsedCapacity,
         description: formData.description.trim(),
         price: parsedPrice,
         status: formData.status,
@@ -280,7 +289,35 @@ export function EditGigModal({
     }
   };
 
+  const handleDelete = async () => {
+    if (!event || !wasTentative) return;
+    if (!window.confirm("Delete this tentative gig? This cannot be undone.")) {
+      return;
+    }
+
+    setSubmitError(null);
+    setIsDeleting(true);
+
+    try {
+      await deleteEvent(event._id);
+      onSuccess?.();
+      onClose();
+    } catch (error) {
+      console.error("Failed to delete tentative gig:", error);
+      setSubmitError(
+        error instanceof Error
+          ? error.message
+          : "Failed to delete tentative gig. Please try again."
+      );
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   if (!isOpen || !event) return null;
+  const isTentative = formData.status === "hold";
+  const wasTentative = event.status === "hold";
+  const isBusy = isSubmitting || isDeleting;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
@@ -302,7 +339,7 @@ export function EditGigModal({
           <button
             onClick={onClose}
             className="p-2 flex items-center justify-center hover:bg-zinc-800 border border-zinc-800 hover:border-lime/30 transition-colors touch-target"
-            disabled={isSubmitting}
+            disabled={isBusy}
           >
             <X className="w-5 h-5 text-zinc-400" />
           </button>
@@ -394,7 +431,7 @@ export function EditGigModal({
 
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">
-              Event Title <span className="text-lime">*</span>
+              Event Title {!isTentative && <span className="text-lime">*</span>}
             </label>
             <input
               type="text"
@@ -417,7 +454,7 @@ export function EditGigModal({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">
-                Date <span className="text-lime">*</span>
+                Date {!isTentative && <span className="text-lime">*</span>}
               </label>
               <div className="relative">
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
@@ -444,7 +481,7 @@ export function EditGigModal({
 
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">
-                Start Time <span className="text-lime">*</span>
+                Start Time
               </label>
               <div className="relative">
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
@@ -454,6 +491,7 @@ export function EditGigModal({
                   type="time"
                   value={formData.startTime}
                   onChange={(inputEvent) => updateField("startTime", inputEvent.target.value)}
+                  placeholder="Optional"
                   className={cn(
                     "w-full pl-12 pr-4 py-3.5 bg-night-tertiary border-2 rounded-none text-white focus:outline-none transition-colors appearance-none",
                     errors.startTime
@@ -503,7 +541,7 @@ export function EditGigModal({
               }}
               label="Venue Location"
               placeholder="Search for a venue..."
-              required
+              required={!isTentative}
               error={errors.venue}
             />
           </div>
@@ -511,7 +549,7 @@ export function EditGigModal({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">
-                Capacity <span className="text-lime">*</span>
+                Capacity {!isTentative && <span className="text-lime">*</span>}
               </label>
               <div className="relative">
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
@@ -583,8 +621,7 @@ export function EditGigModal({
               className="w-full px-4 py-3.5 bg-night-tertiary border-2 border-zinc-800 rounded-none text-white focus:outline-none focus:border-lime transition-colors"
             >
               <option value="confirmed">Confirmed</option>
-              <option value="hold">Hold</option>
-              <option value="available">Available</option>
+              <option value="hold">Tentative</option>
             </select>
           </div>
 
@@ -637,7 +674,7 @@ export function EditGigModal({
 
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">
-              Genres <span className="text-lime">*</span>
+              Genres {!isTentative && <span className="text-lime">*</span>}
             </label>
             <div
               className={cn(
@@ -684,12 +721,38 @@ export function EditGigModal({
           </div>
 
           <div className="pt-2 pb-4">
+            {wasTentative && (
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={isBusy}
+                className={cn(
+                  "w-full py-3 mb-3 font-bold uppercase tracking-wider text-sm border-2 transition-all touch-target flex items-center justify-center gap-2",
+                  isBusy
+                    ? "bg-zinc-800 text-zinc-500 border-zinc-800 cursor-not-allowed"
+                    : "bg-red-500/10 text-red-400 border-red-500/50 hover:bg-red-500 hover:text-white hover:border-red-500"
+                )}
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-5 h-5" />
+                    Delete Tentative Gig
+                  </>
+                )}
+              </button>
+            )}
+
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isBusy}
               className={cn(
                 "w-full py-4 font-bold uppercase tracking-wider text-sm border-2 transition-all touch-target flex items-center justify-center gap-2",
-                isSubmitting
+                isBusy
                   ? "bg-zinc-800 text-zinc-500 border-zinc-800 cursor-not-allowed"
                   : "bg-lime text-night border-lime hover:bg-transparent hover:text-lime"
               )}
@@ -697,12 +760,16 @@ export function EditGigModal({
               {isSubmitting ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  Saving...
+                  {isTentative ? "Saving..." : wasTentative ? "Publishing..." : "Saving..."}
                 </>
               ) : (
                 <>
                   <Check className="w-5 h-5" />
-                  Save Changes
+                  {isTentative
+                    ? "Save Tentative Gig"
+                    : wasTentative
+                      ? "Publish Confirmed Gig"
+                      : "Save Confirmed Gig"}
                 </>
               )}
             </button>

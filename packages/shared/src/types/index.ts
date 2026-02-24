@@ -277,19 +277,19 @@ export interface Venue extends BaseEntity {
  */
 export interface Event extends BaseEntity {
   /** Event title/name */
-  title: string;
+  title?: string;
   /** ID of the performing band */
   bandId: string;
-  /** ID of the venue hosting the event */
-  venueId: string;
-  /** Unix timestamp (ms) for event start time */
-  dateTime: number;
+  /** ID of the venue hosting the event (optional for tentative drafts) */
+  venueId?: string;
+  /** Unix timestamp (ms) for event start time (optional for tentative drafts) */
+  dateTime?: number;
   /** URL to event promotional image */
   image?: string;
   /** Current number of RSVPs */
   rsvpCount: number;
-  /** Maximum attendance capacity */
-  capacity: number;
+  /** Maximum attendance capacity (optional for tentative drafts) */
+  capacity?: number;
   /** Ticket price in cents (0 = free) */
   price?: number;
   /** Event description */

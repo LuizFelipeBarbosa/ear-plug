@@ -338,6 +338,10 @@ export const createEventReminder = mutation({
       throw new Error("Event not found");
     }
 
+    if (!event.venueId) {
+      return { notifiedCount: 0 };
+    }
+
     const venue = await ctx.db.get(event.venueId);
     const band = await ctx.db.get(event.bandId);
 

@@ -56,10 +56,29 @@ export default function EventDetailsScreen() {
     return `$${(cents / 100).toFixed(2)}`;
   };
 
-  if (!event) {
+  if (event === undefined) {
     return (
       <SafeAreaView className="flex-1 items-center justify-center bg-white">
         <View className="w-12 h-12 rounded-full bg-primary-500 animate-pulse" />
+      </SafeAreaView>
+    );
+  }
+
+  if (event === null) {
+    return (
+      <SafeAreaView className="flex-1 items-center justify-center bg-white px-6">
+        <Text className="text-xl font-semibold text-gray-900 text-center">
+          This gig is not available
+        </Text>
+        <Text className="text-sm text-gray-500 text-center mt-2 mb-6">
+          Tentative gigs are only visible in the band Shows workspace.
+        </Text>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          className="px-5 py-3 rounded-xl bg-primary-600"
+        >
+          <Text className="text-white font-semibold">Go Back</Text>
+        </TouchableOpacity>
       </SafeAreaView>
     );
   }
