@@ -106,7 +106,7 @@ Ear-Plug/
 │   ├── web/                    # Next.js web application
 │   │   ├── src/app/           # App Router pages and layouts
 │   │   ├── src/components/    # React components
-│   │   │   ├── band/          # Musician dashboard, calendar, posts, guest lists
+│   │   │   ├── band/          # Musician dashboard, calendar, slots, guest lists
 │   │   │   ├── fan/           # Map discovery, calendar, profile, notifications
 │   │   │   ├── events/        # Shared event components
 │   │   │   ├── maps/          # Google Maps integration
@@ -121,12 +121,12 @@ Ear-Plug/
 │   ├── shared/                 # Shared types, validation schemas, utilities
 │   └── tailwind-config/        # Design system tokens (brutalist dark theme)
 ├── convex/                     # Convex backend (schema, queries, mutations)
-│   ├── schema.ts              # Database schema (19 tables)
+│   ├── schema.ts              # Database schema (17 tables)
 │   ├── users.ts               # User operations
 │   ├── events.ts              # Event management
 │   ├── bands.ts               # Band profiles
 │   ├── bandMembers.ts         # Band membership & invites
-│   ├── bandPosts.ts           # Media posts (photos/videos)
+│   ├── bandMediaSlots.ts      # Fixed 6-slot band profile media
 │   ├── venues.ts              # Venue data
 │   ├── messages.ts            # Messaging system
 │   ├── notifications.ts       # Platform notifications
@@ -161,7 +161,7 @@ pnpm android          # Android emulator
 
 ## Database Overview
 
-Convex powers the real-time backend with 19 tables:
+Convex powers the real-time backend with 17 tables:
 
 | Table | Purpose |
 |-------|---------|
@@ -169,9 +169,7 @@ Convex powers the real-time backend with 19 tables:
 | `bands` | Musician band profiles with multi-genre support |
 | `bandMemberships` | Shared workspace access with role-based permissions |
 | `bandInvites` | Pending/accepted/declined member invitations |
-| `bandPosts` | Photo and video media posts by bands |
-| `bandPostLikes` | Likes on band posts |
-| `bandPostComments` | Comments on band posts |
+| `bandMediaSlots` | Fixed 6-slot media board for band profiles |
 | `venues` | Bay Area venues with coordinates |
 | `events` | Live music shows with status and address visibility |
 | `rsvps` | User event attendance with check-in tracking |

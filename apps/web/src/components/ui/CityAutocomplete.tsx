@@ -3,7 +3,6 @@
 /// <reference types="google.maps" />
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import usePlacesAutocomplete from "use-places-autocomplete";
 import { MapPin, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ensurePlacesLibrary } from "@/lib/google/ensurePlacesLibrary";
@@ -16,6 +15,59 @@ interface CityAutocompleteProps {
   required?: boolean;
   label?: string;
   error?: string;
+}
+
+interface CitySuggestion {
+  placeId: string;
+  primaryText: string;
+  secondaryText?: string;
+  fullText: string;
+}
+
+const CITY_PRIMARY_TYPES = ["(cities)"];
+const CITY_PRIMARY_TYPES_FALLBACK = ["locality"];
+
+function parseCitySuggestion(rawSuggestion: unknown, index: number): CitySuggestion | null {
+  if (!rawSuggestion || typeof rawSuggestion !== "object") {
+    return null;
+  }
+
+  const suggestionRecord = rawSuggestion as Record<string, unknown>;
+  const rawPrediction = suggestionRecord.placePrediction;
+  if (!rawPrediction || typeof rawPrediction !== "object") {
+    return null;
+  }
+
+  const predictionRecord = rawPrediction as Record<string, unknown>;
+  const predictionText = predictionRecord.text;
+
+  const fullText =
+    predictionText && typeof (predictionText as { toString?: () => string }).toString === "function"
+      ? (predictionText as { toString: () => string }).toString().trim()
+      : "";
+
+  if (!fullText) {
+    return null;
+  }
+
+  const parts = fullText
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  const primaryText = parts[0] ?? fullText;
+  const secondaryText = parts.length > 1 ? parts.slice(1).join(", ") : undefined;
+  const placeId =
+    typeof predictionRecord.placeId === "string" && predictionRecord.placeId.length > 0
+      ? predictionRecord.placeId
+      : `${fullText}-${index}`;
+
+  return {
+    placeId,
+    primaryText,
+    secondaryText,
+    fullText,
+  };
 }
 
 /**
@@ -36,6 +88,7 @@ export function CityAutocomplete({
   label = "Location",
   error,
 }: CityAutocompleteProps) {
+  const controlledValue = value ?? "";
   const [placesStatus, setPlacesStatus] = useState<"loading" | "ready" | "error">(
     "loading"
   );
@@ -44,7 +97,15 @@ export function CityAutocomplete({
   );
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const requestIdRef = useRef(0);
+  const fetchAutocompleteSuggestionsRef = useRef<
+    | ((request: unknown) => Promise<{ suggestions?: unknown[] }>)
+    | null
+  >(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [inputValue, setInputValue] = useState(controlledValue);
+  const [suggestions, setSuggestions] = useState<CitySuggestion[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
 
   useEffect(() => {
     let isCancelled = false;
@@ -87,60 +148,145 @@ export function CityAutocomplete({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Initialize usePlacesAutocomplete with city-only filter
-  const autocompleteHook = usePlacesAutocomplete({
-    debounce: 200,
-    requestOptions: {
-      // Only suggest cities, not addresses or venues
-      types: ["(cities)"],
-    },
-  });
+  const controlledInputValue = inputValue ?? "";
 
-  const {
-    ready,
-    value: inputValue,
-    suggestions: { status, data },
-    setValue,
-    clearSuggestions,
-  } = autocompleteHook;
-
-  // Sync external value with input
+  // Sync external value with local input
   useEffect(() => {
-    setValue(value || "", false);
-  }, [value, setValue]);
+    setInputValue(controlledValue);
+  }, [controlledValue]);
+
+  const getFetchAutocompleteSuggestions = useCallback(async () => {
+    if (fetchAutocompleteSuggestionsRef.current) {
+      return fetchAutocompleteSuggestionsRef.current;
+    }
+
+    const placesLibrary = (await window.google.maps.importLibrary(
+      "places"
+    )) as unknown as {
+      AutocompleteSuggestion?: {
+        fetchAutocompleteSuggestions: (
+          request: unknown
+        ) => Promise<{ suggestions?: unknown[] }>;
+      };
+    };
+
+    const autocompleteSuggestionClass =
+      placesLibrary.AutocompleteSuggestion ??
+      (window.google.maps.places as unknown as {
+        AutocompleteSuggestion?: {
+          fetchAutocompleteSuggestions: (
+            request: unknown
+          ) => Promise<{ suggestions?: unknown[] }>;
+        };
+      }).AutocompleteSuggestion;
+
+    const fetchAutocompleteSuggestions =
+      autocompleteSuggestionClass?.fetchAutocompleteSuggestions;
+
+    if (typeof fetchAutocompleteSuggestions !== "function") {
+      throw new Error(
+        "Google Maps AutocompleteSuggestion is unavailable in the loaded Places library."
+      );
+    }
+
+    const boundFetcher = fetchAutocompleteSuggestions.bind(
+      autocompleteSuggestionClass
+    ) as (request: unknown) => Promise<{ suggestions?: unknown[] }>;
+
+    fetchAutocompleteSuggestionsRef.current = boundFetcher;
+    return boundFetcher;
+  }, []);
+
+  useEffect(() => {
+    if (placesStatus !== "ready") {
+      return;
+    }
+
+    const query = controlledInputValue.trim();
+    if (!showSuggestions || query.length < 2) {
+      setSuggestions([]);
+      setIsSearching(false);
+      return;
+    }
+
+    const requestId = ++requestIdRef.current;
+    const timeoutId = window.setTimeout(async () => {
+      setIsSearching(true);
+
+      try {
+        const fetchAutocompleteSuggestions =
+          await getFetchAutocompleteSuggestions();
+
+        let result: { suggestions?: unknown[] };
+
+        try {
+          result = await fetchAutocompleteSuggestions({
+            input: query,
+            includedPrimaryTypes: CITY_PRIMARY_TYPES,
+          });
+        } catch {
+          result = await fetchAutocompleteSuggestions({
+            input: query,
+            includedPrimaryTypes: CITY_PRIMARY_TYPES_FALLBACK,
+          });
+        }
+
+        if (requestId !== requestIdRef.current) {
+          return;
+        }
+
+        const normalizedSuggestions = (result.suggestions ?? [])
+          .map((item, index) => parseCitySuggestion(item, index))
+          .filter((item): item is CitySuggestion => item !== null);
+
+        setSuggestions(normalizedSuggestions);
+      } catch {
+        if (requestId === requestIdRef.current) {
+          setSuggestions([]);
+        }
+      } finally {
+        if (requestId === requestIdRef.current) {
+          setIsSearching(false);
+        }
+      }
+    }, 200);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [
+    controlledInputValue,
+    getFetchAutocompleteSuggestions,
+    placesStatus,
+    showSuggestions,
+  ]);
 
   // Handle input change
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
-    setValue(newValue);
+    setInputValue(newValue);
     onChange(newValue);
-    if (newValue.length >= 2) {
-      setShowSuggestions(true);
-    }
+    setShowSuggestions(true);
   };
 
   // Clear selection
   const handleClear = () => {
-    setValue("", false);
+    setInputValue("");
     onChange("");
-    clearSuggestions();
+    setSuggestions([]);
+    setShowSuggestions(false);
     inputRef.current?.focus();
   };
 
   // Handle city selection
   const handleSelect = useCallback(
-    async (suggestion: google.maps.places.AutocompletePrediction) => {
-      // Extract just the city name and state/country
-      const cityText = suggestion.structured_formatting.main_text;
-      const secondaryText = suggestion.structured_formatting.secondary_text;
-      const fullCity = secondaryText ? `${cityText}, ${secondaryText}` : cityText;
-      
-      setValue(fullCity, false);
-      onChange(fullCity);
+    (suggestion: CitySuggestion) => {
+      setInputValue(suggestion.fullText);
+      onChange(suggestion.fullText);
       setShowSuggestions(false);
-      clearSuggestions();
+      setSuggestions([]);
     },
-    [clearSuggestions, onChange, setValue]
+    [onChange]
   );
 
   // Render loading state
@@ -159,6 +305,7 @@ export function CityAutocomplete({
           </div>
           <input
             type="text"
+            value=""
             disabled
             placeholder="Loading Google Maps..."
             className="w-full pl-12 pr-4 py-3.5 bg-night-tertiary border-2 border-zinc-800 text-zinc-500 placeholder:text-zinc-600 focus:outline-none"
@@ -184,7 +331,7 @@ export function CityAutocomplete({
           </div>
           <input
             type="text"
-            value={value}
+            value={controlledValue}
             onChange={(e) => onChange(e.target.value)}
             placeholder="Enter city manually"
             className="w-full pl-12 pr-4 py-3.5 bg-night-tertiary border-2 border-zinc-800 text-white placeholder:text-zinc-600 focus:outline-none focus:border-lime"
@@ -212,7 +359,7 @@ export function CityAutocomplete({
           <MapPin
             className={cn(
               "w-5 h-5 transition-colors",
-              value ? "text-violet" : "text-zinc-600"
+              controlledValue ? "text-violet" : "text-zinc-600"
             )}
           />
         </div>
@@ -221,22 +368,22 @@ export function CityAutocomplete({
         <input
           ref={inputRef}
           type="text"
-          value={inputValue}
+          value={controlledInputValue}
           onChange={handleInputChange}
           onFocus={() => setShowSuggestions(true)}
-          disabled={disabled || !ready}
+          disabled={disabled}
           placeholder={placeholder}
           className={cn(
             "w-full pl-12 pr-10 py-3.5 bg-night-tertiary border-2 text-white placeholder:text-zinc-600 focus:outline-none transition-colors",
             error
               ? "border-red-500 focus:border-red-400"
               : "border-zinc-800 focus:border-violet",
-            value && "border-violet/30"
+            controlledValue && "border-violet/30"
           )}
         />
 
         {/* Clear Button */}
-        {inputValue && (
+        {controlledInputValue && (
           <button
             type="button"
             onClick={handleClear}
@@ -256,11 +403,11 @@ export function CityAutocomplete({
       )}
 
       {/* Suggestions Dropdown */}
-      {showSuggestions && inputValue.length >= 2 && status === "OK" && data.length > 0 && (
+      {showSuggestions && controlledInputValue.length >= 2 && suggestions.length > 0 && (
         <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-night-secondary border-2 border-zinc-800 shadow-xl max-h-64 overflow-y-auto">
-          {data.map((suggestion) => (
+          {suggestions.map((suggestion) => (
             <button
-              key={suggestion.place_id}
+              key={suggestion.placeId}
               type="button"
               onClick={() => handleSelect(suggestion)}
               className="w-full px-4 py-3 text-left hover:bg-night-tertiary hover:border-lime/30 transition-colors border-b border-zinc-800/50 last:border-0 group"
@@ -269,11 +416,13 @@ export function CityAutocomplete({
                 <MapPin className="w-4 h-4 text-zinc-500 mt-0.5 flex-shrink-0 group-hover:text-violet transition-colors" />
                 <div className="min-w-0">
                   <p className="text-sm text-white font-medium truncate group-hover:text-violet transition-colors">
-                    {suggestion.structured_formatting.main_text}
+                    {suggestion.primaryText}
                   </p>
-                  <p className="text-xs text-zinc-500 truncate">
-                    {suggestion.structured_formatting.secondary_text}
-                  </p>
+                  {suggestion.secondaryText ? (
+                    <p className="text-xs text-zinc-500 truncate">
+                      {suggestion.secondaryText}
+                    </p>
+                  ) : null}
                 </div>
               </div>
             </button>
@@ -281,15 +430,25 @@ export function CityAutocomplete({
         </div>
       )}
 
+      {/* Searching state */}
+      {showSuggestions && controlledInputValue.length >= 2 && isSearching && (
+        <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-night-secondary border-2 border-zinc-800 shadow-xl p-3 text-center">
+          <p className="text-xs text-zinc-500">Searching cities...</p>
+        </div>
+      )}
+
       {/* No Results */}
-      {showSuggestions && inputValue.length >= 2 && status === "ZERO_RESULTS" && (
+      {showSuggestions &&
+        controlledInputValue.length >= 2 &&
+        !isSearching &&
+        suggestions.length === 0 && (
         <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-night-secondary border-2 border-zinc-800 shadow-xl p-4 text-center">
           <p className="text-sm text-zinc-500">No cities found</p>
         </div>
       )}
 
       {/* Typing hint */}
-      {showSuggestions && inputValue.length === 1 && (
+      {showSuggestions && controlledInputValue.length === 1 && (
         <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-night-secondary border-2 border-zinc-800 shadow-xl p-3 text-center">
           <p className="text-xs text-zinc-500">Keep typing to see city suggestions...</p>
         </div>

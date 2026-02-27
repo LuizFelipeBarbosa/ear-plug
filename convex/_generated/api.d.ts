@@ -8,8 +8,8 @@
  * @module
  */
 
+import type * as bandMediaSlots from "../bandMediaSlots.js";
 import type * as bandMembers from "../bandMembers.js";
-import type * as bandPosts from "../bandPosts.js";
 import type * as bands from "../bands.js";
 import type * as events from "../events.js";
 import type * as http from "../http.js";
@@ -30,8 +30,8 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  bandMediaSlots: typeof bandMediaSlots;
   bandMembers: typeof bandMembers;
-  bandPosts: typeof bandPosts;
   bands: typeof bands;
   events: typeof events;
   http: typeof http;

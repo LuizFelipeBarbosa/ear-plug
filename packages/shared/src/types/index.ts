@@ -395,102 +395,60 @@ export interface Like extends BaseEntity {
 export type BandPostMediaType = "image" | "video";
 
 /**
- * Band post lifecycle status for soft-delete workflows.
+ * Fixed index for one of six profile media slots.
  */
-export type BandPostLifecycleStatus = "active" | "deletion_queued";
+export type BandMediaSlotIndex = 0 | 1 | 2 | 3 | 4 | 5;
 
 /**
- * Band media post entity.
+ * Stored profile media slot row for band workspace profile.
  */
-export interface BandPost extends BaseEntity {
+export interface BandMediaSlot extends BaseEntity {
   /** ID of the owning band */
   bandId: string;
-  /** ID of the user who created the post */
-  authorUserId: string;
+  /** Fixed slot index [0..5] */
+  slotIndex: BandMediaSlotIndex;
   /** Convex storage file ID */
   mediaStorageId: string;
   /** Media type for rendering */
   mediaType: BandPostMediaType;
-  /** Optional caption text */
+  /** Optional short caption */
   caption?: string;
+  /** Optional city-level event location */
+  location?: string;
   /** MIME type for uploaded media */
   mimeType: string;
   /** Uploaded file size in bytes */
   fileSizeBytes: number;
-  /** Optional duration for video posts */
+  /** Optional duration for video media */
   durationSeconds?: number;
-  /** Number of likes */
-  likeCount: number;
-  /** Number of comments */
-  commentCount: number;
-  /** Lifecycle status for active/deletion-queued posts */
-  lifecycleStatus?: BandPostLifecycleStatus;
-  /** Unix timestamp (ms) when deletion was requested */
-  deletedAt?: number;
-  /** User who requested deletion */
-  deletedByUserId?: string;
-  /** Unix timestamp (ms) when post was created */
+  /** Unix timestamp (ms) when slot row was created */
   createdAt: number;
+  /** Unix timestamp (ms) when slot row was last updated */
+  updatedAt: number;
 }
 
 /**
- * Like on a band media post.
+ * Profile-ready slot DTO used by band workspace UI.
  */
-export interface BandPostLike extends BaseEntity {
-  /** ID of the liked post */
-  postId: string;
-  /** ID of the user who liked the post */
-  userId: string;
-  /** Unix timestamp (ms) when like was created */
-  createdAt: number;
-}
-
-/**
- * Comment on a band media post.
- */
-export interface BandPostComment extends BaseEntity {
-  /** ID of the parent post */
-  postId: string;
-  /** ID of the authoring user */
-  userId: string;
-  /** Comment body */
-  content: string;
-  /** Unix timestamp (ms) when comment was created */
-  createdAt: number;
-}
-
-/**
- * Feed-ready band post with presentation and viewer-specific metadata.
- */
-export interface BandPostFeedItem extends BandPost {
-  /** Resolved storage URL for rendering media */
-  mediaUrl: string | null;
-  /** Whether current viewer liked this post */
-  isLikedByCurrentUser: boolean;
-  /** Whether current viewer can delete this post */
-  canDelete: boolean;
-  /** Whether current viewer can moderate comments on this post */
-  canManageComments: boolean;
-  /** Post author summary */
-  author: {
-    _id: string;
-    name: string;
-    avatar?: string;
-  } | null;
-}
-
-/**
- * Feed-ready band post comment with author and permission metadata.
- */
-export interface BandPostCommentFeedItem extends BandPostComment {
-  /** Comment author summary */
-  author: {
-    _id: string;
-    name: string;
-    avatar?: string;
-  } | null;
-  /** Whether current viewer can delete this comment */
-  canDelete: boolean;
+export interface BandProfileMediaSlotView {
+  /** Fixed slot index [0..5] */
+  slotIndex: BandMediaSlotIndex;
+  /** Whether this slot has media assigned */
+  isFilled: boolean;
+  /** Slot media type, if filled */
+  mediaType?: BandPostMediaType;
+  /** Resolved media URL for rendering, if filled */
+  mediaUrl?: string | null;
+  /** Underlying storage ID for caption-only updates */
+  mediaStorageId?: string;
+  /** Optional short caption */
+  caption?: string;
+  /** Optional city-level event location */
+  location?: string;
+  /** Optional duration for video slots */
+  durationSeconds?: number;
+  /** Whether current viewer can edit slot media */
+  canEdit: boolean;
 }
 
 /**

@@ -14,4 +14,4 @@ export { EditBandProfileModal } from "./EditBandProfileModal";
 export { GuestListCard } from "./GuestListCard";
 export { GuestControlPanelModal } from "./GuestControlPanelModal";
 export { MediaGallery, DemoMediaGallery } from "./MediaGallery";
-export { BandFeedSection } from "./posts/BandFeedSection";
+export { BandMediaSlotsSection } from "./slots/BandMediaSlotsSection";

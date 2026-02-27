@@ -27,5 +27,6 @@ export * from "./useLocalStorage";
 export * from "./useGeolocation";
 export * from "./useSharedEvents";
 export * from "./useProfileContext";
-export * from "./useBandPosts";
+export * from "./useBandMediaSlots";
+export * from "./usePublicBandMediaSlots";
 export { useBandEvents } from "./useSharedEvents";
