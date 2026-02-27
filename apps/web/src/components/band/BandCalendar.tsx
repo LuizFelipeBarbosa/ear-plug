@@ -241,27 +241,27 @@ export function BandCalendarView() {
   }, [viewMode]);
 
   return (
-    <div className="min-h-screen bg-night">
+    <div className="min-h-screen bg-night overflow-x-hidden">
       {/* Header */}
       <header className="bg-night-secondary border-b-2 border-lime/20 p-4">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-bold text-white uppercase tracking-tight">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h1 className="text-xl sm:text-2xl font-bold text-white uppercase tracking-tight">
             Shows & Availability
           </h1>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
             <div className="inline-flex border-2 border-zinc-800 bg-night-tertiary p-1">
               <button
                 type="button"
                 onClick={() => setViewMode("list")}
                 aria-pressed={viewMode === "list"}
                 className={cn(
-                  "px-3 py-2 text-[10px] sm:text-xs font-bold uppercase tracking-wider border-2 transition-all flex items-center gap-2",
+                  "px-2.5 sm:px-3 py-1.5 sm:py-2 text-[10px] sm:text-xs font-bold uppercase tracking-wider border-2 transition-all flex items-center gap-1.5 sm:gap-2",
                   viewMode === "list"
                     ? "bg-lime text-night border-lime"
                     : "bg-night border-zinc-700 text-zinc-400 hover:border-lime/40 hover:text-lime"
                 )}
               >
-                <List className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <List className="w-3 h-3 sm:w-4 sm:h-4" />
                 List
               </button>
               <button
@@ -269,13 +269,13 @@ export function BandCalendarView() {
                 onClick={() => setViewMode("month")}
                 aria-pressed={viewMode === "month"}
                 className={cn(
-                  "px-3 py-2 text-[10px] sm:text-xs font-bold uppercase tracking-wider border-2 transition-all flex items-center gap-2 ml-2",
+                  "px-2.5 sm:px-3 py-1.5 sm:py-2 text-[10px] sm:text-xs font-bold uppercase tracking-wider border-2 transition-all flex items-center gap-1.5 sm:gap-2 ml-1.5 sm:ml-2",
                   viewMode === "month"
                     ? "bg-violet text-white border-violet"
                     : "bg-night border-zinc-700 text-zinc-400 hover:border-violet/50 hover:text-violet"
                 )}
               >
-                <CalendarDays className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <CalendarDays className="w-3 h-3 sm:w-4 sm:h-4" />
                 Month
               </button>
             </div>
@@ -283,9 +283,9 @@ export function BandCalendarView() {
             {band && canManageShows && (
               <button
                 onClick={openCreateChooser}
-                className="flex items-center gap-2 px-4 py-2.5 bg-lime text-night font-bold uppercase tracking-wider text-xs border-2 border-lime hover:bg-transparent hover:text-lime transition-all touch-target"
+                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-lime text-night font-bold uppercase tracking-wider text-[10px] sm:text-xs border-2 border-lime hover:bg-transparent hover:text-lime transition-all touch-target"
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 Create Gig
               </button>
             )}
@@ -298,21 +298,21 @@ export function BandCalendarView() {
         )}
 
         {/* Month Navigation */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 sm:gap-3">
           <button
             onClick={prevMonth}
-            className="p-2 hover:bg-night-tertiary border border-zinc-800 hover:border-lime/30 transition-colors touch-target"
+            className="shrink-0 p-2 sm:p-2.5 hover:bg-night-tertiary border border-zinc-800 hover:border-lime/30 transition-colors touch-target"
           >
-            <ChevronLeft className="w-5 h-5 text-zinc-400" />
+            <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-zinc-400" />
           </button>
-          <span className="text-lg font-bold text-white uppercase tracking-wide">
+          <span className="min-w-0 flex-1 text-center truncate text-sm sm:text-lg font-bold text-white uppercase tracking-wide">
             {monthName}
           </span>
           <button
             onClick={nextMonth}
-            className="p-2 hover:bg-night-tertiary border border-zinc-800 hover:border-lime/30 transition-colors touch-target"
+            className="shrink-0 p-2 sm:p-2.5 hover:bg-night-tertiary border border-zinc-800 hover:border-lime/30 transition-colors touch-target"
           >
-            <ChevronRight className="w-5 h-5 text-zinc-400" />
+            <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-zinc-400" />
           </button>
         </div>
 
@@ -331,35 +331,39 @@ export function BandCalendarView() {
           </div>
         ) : viewMode === "month" ? (
           <div className="space-y-4">
-            <div className="grid grid-cols-7 gap-1 sm:gap-2">
+            <div className="grid grid-cols-7 gap-0.5 sm:gap-2">
               {WEEKDAY_LABELS.map((weekday) => (
                 <div
                   key={weekday}
-                  className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-zinc-500 text-center py-2"
+                  className="text-[9px] sm:text-xs font-bold uppercase tracking-wider text-zinc-500 text-center py-1.5 sm:py-2"
                 >
-                  {weekday}
+                  <span className="sm:hidden">{weekday[0]}</span>
+                  <span className="hidden sm:inline">{weekday}</span>
                 </div>
               ))}
             </div>
 
-            <div className="grid grid-cols-7 gap-1 sm:gap-2">
+            <div className="grid grid-cols-7 gap-0.5 sm:gap-2">
               {monthCells.map((cell, index) => {
                 if (!cell.isCurrentMonth || !cell.dateKey || cell.dayNumber === null) {
                   return (
                     <div
                       key={`placeholder-${index}`}
-                      className="h-24 sm:h-28 bg-night-tertiary/40 border border-zinc-900"
+                      className="h-[7.25rem] sm:h-28 bg-night-tertiary/40 border border-zinc-900"
                     />
                   );
                 }
 
                 const dayEvents = eventsByDateKey[cell.dateKey] ?? [];
+                const sortedDayEvents = [...dayEvents].sort(
+                  (a, b) => (a.dateTime as number) - (b.dateTime as number)
+                );
                 const tentativeCount = dayEvents.filter((event) => event.status === "hold").length;
                 const confirmedCount = dayEvents.filter(
                   (event) => event.status === "confirmed"
                 ).length;
-                const previewEvents = dayEvents.slice(0, 2);
-                const hiddenEventCount = dayEvents.length - previewEvents.length;
+                const previewEvents = sortedDayEvents.slice(0, 1);
+                const hiddenEventCount = sortedDayEvents.length - previewEvents.length;
                 const hasDayEvents = tentativeCount + confirmedCount > 0;
                 const hasMixedStatus = tentativeCount > 0 && confirmedCount > 0;
                 const isSelected = selectedDateKey === cell.dateKey;
@@ -370,32 +374,32 @@ export function BandCalendarView() {
                     type="button"
                     onClick={() => setSelectedDateKey(cell.dateKey)}
                     className={cn(
-                      "h-24 sm:h-28 p-2 border-2 text-left transition-all",
+                      "h-16 sm:h-[7.25rem] p-1 sm:p-2 border-2 text-left transition-all overflow-hidden",
                       isSelected
                         ? "border-white bg-night-secondary"
                         : "border-zinc-800 bg-night-tertiary hover:border-zinc-600",
                       hasDayEvents &&
-                        !hasMixedStatus &&
-                        confirmedCount > 0 &&
-                        "border-lime/50 bg-lime/5",
+                      !hasMixedStatus &&
+                      confirmedCount > 0 &&
+                      "border-lime/50 bg-lime/5",
                       hasDayEvents &&
-                        !hasMixedStatus &&
-                        tentativeCount > 0 &&
-                        "border-violet/60 bg-violet/10",
+                      !hasMixedStatus &&
+                      tentativeCount > 0 &&
+                      "border-violet/60 bg-violet/10",
                       hasMixedStatus && "border-zinc-600 bg-zinc-900/60"
                     )}
                   >
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-1">
                       <span
                         className={cn(
-                          "text-sm font-bold",
+                          "text-[11px] sm:text-sm font-bold leading-none",
                           hasDayEvents ? "text-white" : "text-zinc-500"
                         )}
                       >
                         {cell.dayNumber}
                       </span>
                       {hasDayEvents && (
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-300">
+                        <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-zinc-300">
                           {tentativeCount + confirmedCount}
                         </span>
                       )}
@@ -403,12 +407,24 @@ export function BandCalendarView() {
 
                     {hasDayEvents && (
                       <>
-                        <ol className="mt-2 space-y-0.5 list-decimal list-inside">
+                        <div className="mt-1 flex items-center gap-1 flex-wrap">
+                          {confirmedCount > 0 && (
+                            <span className="px-1 py-0.5 text-[8px] sm:text-[9px] font-bold uppercase tracking-wider border border-lime/40 bg-lime/10 text-lime">
+                              {confirmedCount} C
+                            </span>
+                          )}
+                          {tentativeCount > 0 && (
+                            <span className="px-1 py-0.5 text-[8px] sm:text-[9px] font-bold uppercase tracking-wider border border-violet/40 bg-violet/10 text-violet">
+                              {tentativeCount} T
+                            </span>
+                          )}
+                        </div>
+                        <ol className="mt-1 space-y-0.5 list-decimal list-inside overflow-hidden">
                           {previewEvents.map((event) => (
                             <li
                               key={event._id}
                               className={cn(
-                                "text-[10px] font-medium truncate leading-4",
+                                "text-[9px] sm:text-[10px] font-medium truncate leading-4",
                                 event.status === "hold"
                                   ? "text-violet marker:text-violet"
                                   : "text-lime marker:text-lime"
@@ -418,9 +434,9 @@ export function BandCalendarView() {
                             </li>
                           ))}
                         </ol>
-                        <div className="mt-0.5">
+                        <div className="mt-0.5 overflow-hidden">
                           {hiddenEventCount > 0 && (
-                            <p className="text-[10px] uppercase tracking-wider text-zinc-400">
+                            <p className="text-[8px] sm:text-[10px] uppercase tracking-wider text-zinc-400 truncate">
                               +{hiddenEventCount} more
                             </p>
                           )}
@@ -432,23 +448,23 @@ export function BandCalendarView() {
               })}
             </div>
 
-            <div className="bg-night-tertiary border-2 border-zinc-800 p-4">
-              <h3 className="text-xs font-bold uppercase tracking-widest text-lime mb-3">
+            <div className="bg-night-tertiary border-2 border-zinc-800 p-3 sm:p-4">
+              <h3 className="text-[11px] sm:text-xs font-bold uppercase tracking-widest text-lime mb-3">
                 {selectedDateKey
                   ? formatDateHeadingFromKey(selectedDateKey)
                   : `Select A Date In ${monthName}`}
               </h3>
 
               {!hasMonthEvents ? (
-                <p className="text-sm text-zinc-500">
+                <p className="text-xs sm:text-sm text-zinc-500">
                   No scheduled gigs in {monthName}.
                 </p>
               ) : selectedDateKey === null ? (
-                <p className="text-sm text-zinc-500">
+                <p className="text-xs sm:text-sm text-zinc-500">
                   Select a date to view gigs.
                 </p>
               ) : selectedDateEvents.length === 0 ? (
-                <p className="text-sm text-zinc-500">
+                <p className="text-xs sm:text-sm text-zinc-500">
                   No gigs for this date.
                 </p>
               ) : (
@@ -596,11 +612,11 @@ function EventItem({ event, onOpenTentative }: EventItemProps) {
               className={cn(
                 "px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border",
                 event.status === "confirmed" &&
-                  "bg-lime/10 border-lime/30 text-lime",
+                "bg-lime/10 border-lime/30 text-lime",
                 event.status === "hold" &&
-                  "bg-violet/10 border-violet/30 text-violet",
+                "bg-violet/10 border-violet/30 text-violet",
                 event.status === "available" &&
-                  "bg-zinc-800 border-zinc-700 text-zinc-400"
+                "bg-zinc-800 border-zinc-700 text-zinc-400"
               )}
             >
               {statusConfig.label}

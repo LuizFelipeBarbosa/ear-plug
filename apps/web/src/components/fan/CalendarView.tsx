@@ -33,7 +33,7 @@ export function FanCalendarView() {
   });
 
   return (
-    <div className="min-h-screen bg-night pb-6">
+    <div className="min-h-screen bg-night pb-6 overflow-x-hidden">
       {/* Header */}
       <header className="bg-night-secondary border-b-2 border-lime/20 p-4">
         <h1 className="text-2xl font-bold text-white uppercase tracking-tight">
@@ -46,14 +46,14 @@ export function FanCalendarView() {
         <button
           onClick={() => setActiveTab("rsvps")}
           className={cn(
-            "flex-1 py-4 text-sm font-bold uppercase tracking-wider transition-colors relative",
+            "flex-1 py-3 sm:py-4 px-1 text-[11px] sm:text-sm font-bold uppercase tracking-wider transition-colors relative",
             activeTab === "rsvps"
               ? "text-lime"
               : "text-zinc-500 hover:text-zinc-300"
           )}
         >
-          <div className="flex items-center justify-center gap-2">
-            <Ticket className="w-4 h-4" />
+          <div className="flex items-center justify-center gap-1 sm:gap-2 whitespace-nowrap">
+            <Ticket className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             RSVPs
           </div>
           {activeTab === "rsvps" && (
@@ -63,14 +63,14 @@ export function FanCalendarView() {
         <button
           onClick={() => setActiveTab("liked")}
           className={cn(
-            "flex-1 py-4 text-sm font-bold uppercase tracking-wider transition-colors relative",
+            "flex-1 py-3 sm:py-4 px-1 text-[11px] sm:text-sm font-bold uppercase tracking-wider transition-colors relative",
             activeTab === "liked"
               ? "text-lime"
               : "text-zinc-500 hover:text-zinc-300"
           )}
         >
-          <div className="flex items-center justify-center gap-2">
-            <Music className="w-4 h-4" />
+          <div className="flex items-center justify-center gap-1 sm:gap-2 whitespace-nowrap">
+            <Music className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             Liked
           </div>
           {activeTab === "liked" && (
@@ -80,14 +80,14 @@ export function FanCalendarView() {
         <button
           onClick={() => setActiveTab("past")}
           className={cn(
-            "flex-1 py-4 text-sm font-bold uppercase tracking-wider transition-colors relative",
+            "flex-1 py-3 sm:py-4 px-1 text-[11px] sm:text-sm font-bold uppercase tracking-wider transition-colors relative",
             activeTab === "past"
               ? "text-lime"
               : "text-zinc-500 hover:text-zinc-300"
           )}
         >
-          <div className="flex items-center justify-center gap-2">
-            <History className="w-4 h-4" />
+          <div className="flex items-center justify-center gap-1 sm:gap-2 whitespace-nowrap">
+            <History className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             Past
           </div>
           {activeTab === "past" && (
