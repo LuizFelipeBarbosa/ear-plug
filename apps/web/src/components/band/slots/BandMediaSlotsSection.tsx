@@ -95,7 +95,7 @@ export function BandMediaSlotsSection({
       ) : null}
 
       {isLoading ? (
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
           {Array.from({ length: 6 }).map((_, index) => (
             <div
               key={index}

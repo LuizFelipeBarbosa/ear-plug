@@ -15,7 +15,7 @@ const SLOT_PLACEHOLDER_SRC = "/images/band-slot-placeholder.svg";
 export function BandMediaSlotsGrid({ slots, onSelect }: BandMediaSlotsGridProps) {
   if (slots.length === 0) {
     return (
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
         {Array.from({ length: 6 }).map((_, index) => (
           <div
             key={index}
@@ -27,7 +27,7 @@ export function BandMediaSlotsGrid({ slots, onSelect }: BandMediaSlotsGridProps)
   }
 
   return (
-    <div className="grid grid-cols-3 gap-2">
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
       {slots.map((slot) => {
         const canOpen = slot.canEdit || slot.isFilled;
 
