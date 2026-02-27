@@ -7,10 +7,11 @@ import { ArrowLeft, MapPin, Music, UserCheck, UserPlus, Users } from "lucide-rea
 import { api } from "../../../../../../../convex/_generated/api";
 import type { Id } from "../../../../../../../convex/_generated/dataModel";
 import { BandPublicMediaSlotsSection } from "@/components/band/slots/BandPublicMediaSlotsSection";
+import { useProfileContext } from "@/hooks/useProfileContext";
 import { GENRE_COLORS } from "@ear-plug/shared/constants";
 import { getInitials } from "@ear-plug/shared/utils";
 import type { Genre } from "@ear-plug/shared/types";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 interface PageProps {
   params: { id: string };
@@ -19,10 +20,13 @@ interface PageProps {
 export default function BandFeedPage({ params }: PageProps) {
   const router = useRouter();
   const bandId = params.id as Id<"bands">;
+  const { mode } = useProfileContext();
 
   const toggleSave = useMutation(api.bands.toggleSave);
+  const trackProfileView = useMutation(api.bands.trackProfileView);
 
   const publicProfile = useQuery(api.bands.getPublicBandProfile, { bandId });
+  const trackedBandIdRef = useRef<Id<"bands"> | null>(null);
   const [isSavingFollow, setIsSavingFollow] = useState(false);
   const [followError, setFollowError] = useState<string | null>(null);
   const [optimisticFollowState, setOptimisticFollowState] = useState<{
@@ -40,6 +44,28 @@ export default function BandFeedPage({ params }: PageProps) {
       setOptimisticFollowState(null);
     }
   }, [publicProfile?.isFollowing, publicProfile?.followerCount, isSavingFollow]);
+
+  useEffect(() => {
+    if (mode !== "personal") {
+      trackedBandIdRef.current = null;
+    }
+  }, [mode]);
+
+  useEffect(() => {
+    if (mode !== "personal" || !publicProfile?.band) {
+      return;
+    }
+
+    if (trackedBandIdRef.current === bandId) {
+      return;
+    }
+
+    trackedBandIdRef.current = bandId;
+    void trackProfileView({ bandId }).catch(() => {
+      // Allow retry on future renders if tracking call fails.
+      trackedBandIdRef.current = null;
+    });
+  }, [bandId, mode, publicProfile?.band, trackProfileView]);
 
   const band = publicProfile?.band;
   const isViewerMember = Boolean(publicProfile?.viewerMembershipRole);

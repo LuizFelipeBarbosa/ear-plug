@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { X, Search, Users, Clock, Check, Trash2 } from "lucide-react";
 import { AvatarImage } from "@/components/ui/OptimizedImage";
 import { cn } from "@/lib/utils";
@@ -216,22 +217,27 @@ export function GuestControlPanelModal({
                     className="p-4 flex items-center gap-3 justify-between"
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <AvatarImage
-                        src={guest.avatar}
-                        alt={guest.name}
-                        fallbackText={guest.name}
-                        size={44}
-                        className="border border-zinc-700"
-                      />
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-white truncate">
-                          {guest.name}
-                        </p>
-                        <div className="flex items-center gap-2 mt-1 text-[11px] uppercase tracking-wider text-zinc-500">
-                          <Clock className="w-3 h-3" />
-                          <span>{formatGuestDate(guest.rsvpedAt)}</span>
+                      <Link
+                        href={`/fans/${guest.userId}`}
+                        className="flex items-center gap-3 min-w-0 group"
+                      >
+                        <AvatarImage
+                          src={guest.avatar}
+                          alt={guest.name}
+                          fallbackText={guest.name}
+                          size={44}
+                          className="border border-zinc-700 group-hover:border-lime/40 transition-colors"
+                        />
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-white truncate group-hover:text-lime transition-colors">
+                            {guest.name}
+                          </p>
+                          <div className="flex items-center gap-2 mt-1 text-[11px] uppercase tracking-wider text-zinc-500">
+                            <Clock className="w-3 h-3" />
+                            <span>{formatGuestDate(guest.rsvpedAt)}</span>
+                          </div>
                         </div>
-                      </div>
+                      </Link>
                     </div>
 
                     <div className="flex items-center gap-2 flex-wrap justify-end">

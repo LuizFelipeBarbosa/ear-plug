@@ -475,6 +475,34 @@ export default defineSchema({
     .index("by_venue", ["venueId"])
     .index("by_user_venue", ["userId", "venueId"]),
 
+  // ==================== BAND PROFILE ENGAGEMENTS ====================
+  /**
+   * Per-fan engagement records for band public profile views.
+   *
+   * Stores a running, deduplicated personal view counter for each (user, band)
+   * pair to power fan-profile "most viewed/saved artists" insights.
+   *
+   * Indexes:
+   * - by_user: Get all viewed bands for a user
+   * - by_user_band: Read/update one engagement row
+   * - by_band: Aggregate engagement for a band if needed
+   */
+  bandProfileEngagements: defineTable({
+    /** Reference to the fan viewing band profiles */
+    userId: v.id("users"),
+    /** Reference to the viewed band */
+    bandId: v.id("bands"),
+    /** Deduplicated personal profile view count */
+    viewCount: v.number(),
+    /** Unix timestamp when first tracked */
+    firstViewedAt: v.number(),
+    /** Unix timestamp when last tracked */
+    lastViewedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_band", ["userId", "bandId"])
+    .index("by_band", ["bandId"]),
+
   // ==================== BAND MEDIA SLOTS ====================
   /**
    * Fixed profile media slots for band workspace profile.

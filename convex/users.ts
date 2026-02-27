@@ -11,7 +11,60 @@ import {
   internalMutation,
   internalQuery,
 } from "./_generated/server";
+import type { Doc, Id } from "./_generated/dataModel";
 import { normalizeInvitePhone } from "./utils/phone";
+import { requireAuthenticatedUser } from "./utils/permissions";
+
+const GENRE_VALUES = [
+  "indie",
+  "rock",
+  "jazz",
+  "electronic",
+  "folk",
+  "pop",
+  "alternative",
+] as const;
+type GenreValue = (typeof GENRE_VALUES)[number];
+
+const GIG_DNA_NOUN_BY_GENRE: Record<GenreValue, string> = {
+  indie: "Explorer",
+  rock: "Amplifier",
+  jazz: "Night Owl",
+  electronic: "Pulse Chaser",
+  folk: "Campfire Soul",
+  pop: "Hook Hunter",
+  alternative: "Scene Diver",
+};
+
+const MOST_VIEWED_SAVED_ARTISTS_LIMIT = 12;
+const SAVED_ARTISTS_LIMIT = 24;
+
+function isGenreValue(value: string): value is GenreValue {
+  return (GENRE_VALUES as readonly string[]).includes(value);
+}
+
+function getEventGenres(
+  event: Pick<Doc<"events">, "genres" | "genre">
+): GenreValue[] {
+  if (event.genres && event.genres.length > 0) {
+    return event.genres.filter((genre): genre is GenreValue => isGenreValue(genre));
+  }
+  if (event.genre && isGenreValue(event.genre)) {
+    return [event.genre];
+  }
+  return [];
+}
+
+function capitalizeGenre(genre: GenreValue): string {
+  return genre.charAt(0).toUpperCase() + genre.slice(1);
+}
+
+function getGigDnaTier(attendedShows: number): "Headliner" | "Regular" | "Rising" | "Rookie" {
+  if (attendedShows >= 20) return "Headliner";
+  if (attendedShows >= 10) return "Regular";
+  if (attendedShows >= 3) return "Rising";
+  return "Rookie";
+}
 
 /**
  * Gets the currently authenticated user from the database.
@@ -76,6 +129,233 @@ export const getByClerkId = query({
       .query("users")
       .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
       .unique();
+  },
+});
+
+/**
+ * Returns a fan's public profile payload for authenticated viewers.
+ * The response excludes private identity fields (email/phone/clerkId).
+ */
+export const getPublicFanProfile = query({
+  args: { fanId: v.id("users") },
+  handler: async (ctx, args) => {
+    await requireAuthenticatedUser(ctx);
+
+    const fan = await ctx.db.get(args.fanId);
+    if (!fan || fan.role !== "fan") {
+      return null;
+    }
+
+    const now = Date.now();
+    const [rsvps, savedArtists, engagements] = await Promise.all([
+      ctx.db
+        .query("rsvps")
+        .withIndex("by_user", (q) => q.eq("userId", fan._id))
+        .collect(),
+      ctx.db
+        .query("savedArtists")
+        .withIndex("by_user", (q) => q.eq("userId", fan._id))
+        .collect(),
+      ctx.db
+        .query("bandProfileEngagements")
+        .withIndex("by_user", (q) => q.eq("userId", fan._id))
+        .collect(),
+    ]);
+
+    const attendedRsvps = rsvps.filter(
+      (rsvp) => rsvp.attendanceStatus === "attended"
+    );
+
+    const attendedEventRecords = await Promise.all(
+      attendedRsvps.map(async (rsvp) => {
+        const event = await ctx.db.get(rsvp.eventId);
+        if (!event) return null;
+
+        const eventDateTime = event.dateTime;
+        if (typeof eventDateTime !== "number" || !Number.isFinite(eventDateTime)) {
+          return null;
+        }
+
+        return {
+          rsvp,
+          event,
+          eventDateTime,
+        };
+      })
+    );
+
+    const validAttendedEvents = attendedEventRecords.filter(
+      (
+        record
+      ): record is NonNullable<typeof record> => record !== null
+    );
+
+    const genreCounts = new Map<GenreValue, number>();
+    for (const { event } of validAttendedEvents) {
+      const genres = getEventGenres(event);
+      for (const genre of genres) {
+        genreCounts.set(genre, (genreCounts.get(genre) ?? 0) + 1);
+      }
+    }
+
+    const topGenres = Array.from(genreCounts.entries())
+      .map(([genre, attendedCount]) => ({
+        genre,
+        label: capitalizeGenre(genre),
+        attendedCount,
+      }))
+      .sort((a, b) => b.attendedCount - a.attendedCount);
+
+    const savedArtistsWithBand = (
+      await Promise.all(
+        savedArtists.map(async (entry) => {
+          const band = await ctx.db.get(entry.bandId);
+          if (!band) return null;
+          return {
+            bandId: band._id,
+            name: band.name,
+            image: band.image,
+            location: band.location,
+            genres: band.genres && band.genres.length > 0
+              ? band.genres
+              : band.genre
+                ? [band.genre]
+                : [],
+            savedAt: entry.createdAt,
+          };
+        })
+      )
+    )
+      .filter((entry): entry is NonNullable<typeof entry> => entry !== null)
+      .sort((a, b) => b.savedAt - a.savedAt)
+      .slice(0, SAVED_ARTISTS_LIMIT);
+
+    const engagementByBandId = new Map<Id<"bands">, { viewCount: number }>();
+    for (const engagement of engagements) {
+      engagementByBandId.set(engagement.bandId, {
+        viewCount: engagement.viewCount,
+      });
+    }
+
+    const savedArtistsByBandId = new Map<
+      Id<"bands">,
+      {
+        savedAt: number;
+      }
+    >();
+    for (const savedArtist of savedArtists) {
+      savedArtistsByBandId.set(savedArtist.bandId, {
+        savedAt: savedArtist.createdAt,
+      });
+    }
+
+    const rankedBandIds = new Set<Id<"bands">>([
+      ...engagementByBandId.keys(),
+      ...savedArtistsByBandId.keys(),
+    ]);
+
+    const mostViewedSavedArtists = (
+      await Promise.all(
+        Array.from(rankedBandIds).map(async (bandId) => {
+          const band = await ctx.db.get(bandId);
+          if (!band) return null;
+
+          const viewCount = engagementByBandId.get(bandId)?.viewCount ?? 0;
+          const isSaved = savedArtistsByBandId.has(bandId);
+          const score = viewCount + (isSaved ? 3 : 0);
+
+          return {
+            bandId,
+            name: band.name,
+            image: band.image,
+            location: band.location,
+            genres: band.genres && band.genres.length > 0
+              ? band.genres
+              : band.genre
+                ? [band.genre]
+                : [],
+            isSaved,
+            viewCount,
+            score,
+          };
+        })
+      )
+    )
+      .filter((entry): entry is NonNullable<typeof entry> => entry !== null)
+      .sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        if (b.viewCount !== a.viewCount) return b.viewCount - a.viewCount;
+        return a.name.localeCompare(b.name);
+      })
+      .slice(0, MOST_VIEWED_SAVED_ARTISTS_LIMIT);
+
+    const pastShowBaseRows = validAttendedEvents.filter(
+      (record) => record.eventDateTime < now
+    );
+    const pastShows = (
+      await Promise.all(
+        pastShowBaseRows.map(async ({ rsvp, event, eventDateTime }) => {
+          const venue = event.venueId ? await ctx.db.get(event.venueId) : null;
+          const band = await ctx.db.get(event.bandId);
+
+          return {
+            eventId: event._id,
+            title: event.title ?? "Untitled Gig",
+            image: event.image,
+            dateTime: eventDateTime,
+            attendedAt: rsvp.attendedAt,
+            venue: {
+              venueId: venue?._id ?? null,
+              name: venue?.name ?? "Unknown Venue",
+              city: venue?.city ?? "Unknown City",
+              address: venue?.address,
+            },
+            band: band
+              ? {
+                  bandId: band._id,
+                  name: band.name,
+                }
+              : null,
+          };
+        })
+      )
+    )
+      .sort((a, b) => b.dateTime - a.dateTime);
+
+    const attendedShowsCount = pastShowBaseRows.length;
+    const distinctVenueCount = new Set(
+      pastShowBaseRows
+        .map(({ event }) => event.venueId)
+        .filter((venueId): venueId is Id<"venues"> => venueId !== undefined)
+    ).size;
+    const dominantGenre = topGenres[0]?.genre ?? null;
+    const tier = getGigDnaTier(attendedShowsCount);
+    const archetype = dominantGenre
+      ? GIG_DNA_NOUN_BY_GENRE[dominantGenre]
+      : "Listener";
+
+    return {
+      fan: {
+        userId: fan._id,
+        name: fan.name,
+        avatar: fan.avatar,
+        location: fan.location,
+        memberSince: fan.memberSince,
+        showsAttended: fan.showsAttended ?? 0,
+      },
+      topGenres,
+      savedArtists: savedArtistsWithBand,
+      mostViewedSavedArtists,
+      pastShows,
+      gigDna: {
+        label: `${tier} ${archetype}`,
+        tier,
+        archetype,
+        dominantGenre,
+        attendedShows: attendedShowsCount,
+        distinctVenues: distinctVenueCount,
+      },
+    };
   },
 });
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { SignOutButton } from "@clerk/nextjs";
 import { useMutation, useQuery } from "convex/react";
@@ -9,25 +10,28 @@ import { api } from "../../../../../convex/_generated/api";
 import {
   Calendar,
   Check,
+  Eye,
   Edit,
+  Heart,
   LogOut,
   MapPin,
   Music,
   Plus,
   Settings,
+  Sparkles,
   Ticket,
   Users,
   X,
 } from "lucide-react";
 import { useCurrentUser } from "@/hooks/useUser";
 import { useSavedBands } from "@/hooks/useBand";
-import { useSavedVenues } from "@/hooks/useVenues";
 import { useProfileContext } from "@/hooks/useProfileContext";
 import { EditProfileModal } from "@/components/ui/EditProfileModal";
 import { ThemeToggleRow } from "@/components/ui/ThemeToggle";
 import { CreateBandForm } from "@/components/band/CreateBandForm";
 import { ProfileWorkspaceSwitcher } from "@/components/profile/ProfileWorkspaceSwitcher";
-import { GENRE_COLORS } from "@ear-plug/shared/constants";
+import { EventImage } from "@/components/ui/OptimizedImage";
+import { GENRE_COLORS, formatEventDate } from "@ear-plug/shared/constants";
 import { getInitials } from "@ear-plug/shared/utils";
 import type { Genre } from "@ear-plug/shared/types";
 import type { Id } from "../../../../../convex/_generated/dataModel";
@@ -35,12 +39,20 @@ import { cn } from "@/lib/utils";
 
 const PANEL_TRANSITION_MS = 220;
 
+function capitalizeGenre(genre: Genre | null): string {
+  if (!genre) return "No dominant genre yet";
+  return genre.charAt(0).toUpperCase() + genre.slice(1);
+}
+
 export function FanProfileView() {
   const router = useRouter();
   const { user, updateProfile } = useCurrentUser();
   const { savedBands } = useSavedBands();
-  const { savedVenues } = useSavedVenues();
   const { setBandMode } = useProfileContext();
+  const publicProfile = useQuery(
+    api.users.getPublicFanProfile,
+    user ? { fanId: user._id } : "skip"
+  );
 
   const myBands = useQuery(api.bands.listMyBands) ?? [];
   const pendingInvites = useQuery(api.bandMembers.listMyPendingInvites) ?? [];
@@ -209,41 +221,195 @@ export function FanProfileView() {
         </div>
       </div>
 
-      <section className="p-4">
-        <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-3">
-          Top Genres
-        </h3>
-        {user.topGenres && user.topGenres.length > 0 ? (
-          <div className="flex flex-wrap gap-2">
-            {user.topGenres.map((genre) => (
-              <span
-                key={genre}
-                className="px-4 py-2 border-2 text-night text-xs font-bold uppercase tracking-wider"
-                style={{
-                  backgroundColor: GENRE_COLORS[genre],
-                  borderColor: GENRE_COLORS[genre],
-                }}
-              >
-                {genre}
-              </span>
-            ))}
-          </div>
-        ) : (
-          <p className="text-zinc-500 text-sm">
-            Listen to more shows to discover your top genres
-          </p>
-        )}
-      </section>
-
-      <section className="p-4">
-        <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-3">
-          Saved Artists / Venues
-        </h3>
-        <div className="bg-night-tertiary border-2 border-zinc-800 p-4 text-sm text-zinc-400">
-          <p>Saved artists: {savedBands.length}</p>
-          <p>Saved venues: {savedVenues.length}</p>
+      {publicProfile === undefined ? (
+        <div className="p-4 space-y-4">
+          <div className="h-40 bg-night-tertiary border border-zinc-800 animate-shimmer" />
+          <div className="h-48 bg-night-tertiary border border-zinc-800 animate-shimmer" />
+          <div className="h-56 bg-night-tertiary border border-zinc-800 animate-shimmer" />
         </div>
-      </section>
+      ) : publicProfile ? (
+        <main className="p-4 space-y-6">
+          <section>
+            <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-3">
+              Top Genres (Attendance-Based)
+            </h2>
+            {publicProfile.topGenres.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {publicProfile.topGenres.map((entry) => (
+                  <div
+                    key={entry.genre}
+                    className="px-3 py-2 border-2 text-night text-xs font-bold uppercase tracking-wider"
+                    style={{
+                      backgroundColor: GENRE_COLORS[entry.genre as Genre],
+                      borderColor: GENRE_COLORS[entry.genre as Genre],
+                    }}
+                  >
+                    {entry.label} · {entry.attendedCount}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-zinc-500">No attended shows yet.</p>
+            )}
+          </section>
+
+          <section>
+            <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-3">
+              Saved Artists
+            </h2>
+            {publicProfile.savedArtists.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {publicProfile.savedArtists.map((artist) => (
+                  <Link
+                    key={artist.bandId}
+                    href={`/bands/${artist.bandId}`}
+                    className="group border border-zinc-800 bg-night-tertiary p-3 hover:border-lime/40 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-night-secondary border border-zinc-700 overflow-hidden flex items-center justify-center">
+                        {artist.image ? (
+                          <Image
+                            src={artist.image}
+                            alt={artist.name}
+                            width={48}
+                            height={48}
+                            className="object-cover"
+                          />
+                        ) : (
+                          <span className="text-xs font-bold text-lime">
+                            {getInitials(artist.name)}
+                          </span>
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-white truncate group-hover:text-lime transition-colors">
+                          {artist.name}
+                        </p>
+                        <p className="text-xs text-zinc-500 truncate">{artist.location}</p>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-zinc-500">No saved artists yet.</p>
+            )}
+          </section>
+
+          <section>
+            <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-3">
+              Most Viewed / Saved Artists
+            </h2>
+            {publicProfile.mostViewedSavedArtists.length > 0 ? (
+              <div className="space-y-2">
+                {publicProfile.mostViewedSavedArtists.map((artist, index) => (
+                  <Link
+                    key={artist.bandId}
+                    href={`/bands/${artist.bandId}`}
+                    className="flex items-center justify-between gap-3 border border-zinc-800 bg-night-tertiary px-3 py-2 hover:border-lime/40 transition-colors"
+                  >
+                    <div className="min-w-0 flex items-center gap-3">
+                      <span className="text-xs font-bold uppercase tracking-wider text-zinc-500 w-6">
+                        {index + 1}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-white truncate">{artist.name}</p>
+                        <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-zinc-500">
+                          <span className="inline-flex items-center gap-1">
+                            <Eye className="w-3 h-3" />
+                            {artist.viewCount} views
+                          </span>
+                          {artist.isSaved ? (
+                            <span className="inline-flex items-center gap-1 text-lime">
+                              <Heart className="w-3 h-3" />
+                              Saved
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
+                    </div>
+                    <span className="text-xs font-bold uppercase tracking-wider text-lime">
+                      Score {artist.score}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-zinc-500">No artist engagement yet.</p>
+            )}
+          </section>
+
+          <section>
+            <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-3">
+              Past Shows
+            </h2>
+            {publicProfile.pastShows.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {publicProfile.pastShows.map((show) => (
+                  <article
+                    key={show.eventId}
+                    className="border border-zinc-800 bg-night-tertiary overflow-hidden"
+                  >
+                    <div className="h-40">
+                      <EventImage src={show.image} alt={show.title} className="h-full w-full" />
+                    </div>
+                    <div className="p-3 space-y-1">
+                      <p className="text-sm font-bold text-white truncate">{show.title}</p>
+                      <p className="text-xs text-zinc-500">{formatEventDate(show.dateTime)}</p>
+                      <p className="text-xs text-zinc-400 truncate">
+                        {show.venue.name} · {show.venue.city}
+                      </p>
+                      {show.band ? (
+                        <Link
+                          href={`/bands/${show.band.bandId}`}
+                          className="inline-flex text-xs uppercase tracking-wider text-lime hover:text-lime/80"
+                        >
+                          {show.band.name}
+                        </Link>
+                      ) : null}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-zinc-500">No attended past shows yet.</p>
+            )}
+          </section>
+
+          <section>
+            <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-3">
+              Gig DNA
+            </h2>
+            <div className="border-2 border-lime/30 bg-night-tertiary p-4">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 border border-lime/40 bg-lime/10 flex items-center justify-center">
+                  <Sparkles className="w-5 h-5 text-lime" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs uppercase tracking-wider text-zinc-500">Archetype</p>
+                  <p className="text-xl font-bold text-white uppercase tracking-tight">
+                    {publicProfile.gigDna.label}
+                  </p>
+                  <p className="text-sm text-zinc-400 mt-2">
+                    Dominant Genre: {capitalizeGenre(publicProfile.gigDna.dominantGenre)}
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2 text-[11px] uppercase tracking-wider">
+                    <span className="px-2 py-1 border border-zinc-700 text-zinc-300">
+                      {publicProfile.gigDna.attendedShows} attended
+                    </span>
+                    <span className="px-2 py-1 border border-zinc-700 text-zinc-300">
+                      {publicProfile.gigDna.distinctVenues} venues
+                    </span>
+                    <span className="px-2 py-1 border border-zinc-700 text-zinc-300">
+                      Tier {publicProfile.gigDna.tier}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </main>
+      ) : null}
 
       <section className="p-4">
         <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-3">
