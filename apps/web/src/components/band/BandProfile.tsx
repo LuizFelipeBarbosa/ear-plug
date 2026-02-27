@@ -11,38 +11,23 @@ import {
   Music,
   Settings,
   LogOut,
-  BarChart2,
   Edit,
   Instagram,
   Youtube,
   ExternalLink,
-  Calendar,
   Crown,
   Shield,
   X,
 } from "lucide-react";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-} from "recharts";
-import { useCurrentBand, useBandAnalytics } from "@/hooks/useBand";
+import { useCurrentBand } from "@/hooks/useBand";
 import { EditBandProfileModal } from "@/components/band/EditBandProfileModal";
 import { BandMediaSlotsSection } from "@/components/band/slots/BandMediaSlotsSection";
 import { ProfileWorkspaceSwitcher } from "@/components/profile/ProfileWorkspaceSwitcher";
-import { GENRE_COLORS, formatFullDate } from "@ear-plug/shared/constants";
+import { GENRE_COLORS } from "@ear-plug/shared/constants";
 import { getInitials } from "@ear-plug/shared/utils";
 import { cn } from "@/lib/utils";
 import type { Genre } from "@ear-plug/shared/types";
 
-// Electric Indie-Brutalist Chart Colors
-const CHART_COLORS = ["#C2FF00", "#8B5CF6"];
 const PANEL_TRANSITION_MS = 220;
 
 export function BandProfileView() {
@@ -51,7 +36,6 @@ export function BandProfileView() {
   const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false);
   const [isSettingsMenuVisible, setIsSettingsMenuVisible] = useState(false);
   const settingsMenuCloseTimeout = useRef<number | null>(null);
-  const { analytics, isLoading: analyticsLoading } = useBandAnalytics(band?._id);
   const [invitePhoneNumber, setInvitePhoneNumber] = useState("");
   const [inviteRole, setInviteRole] = useState<"admin" | "member">("member");
   const [isInviting, setIsInviting] = useState(false);
@@ -314,193 +298,6 @@ export function BandProfileView() {
           title="Photos & Videos"
           description="Manage six profile media slots for fans to see."
         />
-      </section>
-
-      {/* Analytics Report Section */}
-      <section className="p-4">
-        {/* Section Header */}
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 bg-lime/10 border border-lime/30 flex items-center justify-center">
-            <BarChart2 className="w-5 h-5 text-lime" />
-          </div>
-          <div>
-            <h3 className="font-bold text-white uppercase tracking-wide text-sm">
-              Analytics Report
-            </h3>
-            <p className="text-xs text-zinc-500 uppercase tracking-wider">
-              Your performance metrics
-            </p>
-          </div>
-        </div>
-
-        {/* Analytics Content - Always Displayed */}
-        <div className="space-y-4">
-          {analyticsLoading || !analytics ? (
-            <div className="animate-shimmer space-y-4">
-              <div className="h-24 bg-night-tertiary border-2 border-zinc-800" />
-              <div className="h-48 bg-night-tertiary border-2 border-zinc-800" />
-            </div>
-          ) : (
-            <>
-              {/* Summary Stats */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-night-tertiary border-2 border-zinc-800 p-4 relative overflow-hidden">
-                  <div className="absolute top-0 left-0 right-0 h-0.5 bg-lime" />
-                  <div className="flex items-center gap-2 mb-2">
-                    <Users className="w-5 h-5 text-lime" />
-                    <span className="text-xs text-zinc-500 uppercase tracking-wider">Total RSVPs</span>
-                  </div>
-                  <div className="text-3xl font-bold text-white">
-                    {analytics.totalRsvps}
-                  </div>
-                </div>
-                <div className="bg-night-tertiary border-2 border-zinc-800 p-4 relative overflow-hidden">
-                  <div className="absolute top-0 left-0 right-0 h-0.5 bg-violet" />
-                  <div className="flex items-center gap-2 mb-2">
-                    <Calendar className="w-5 h-5 text-violet" />
-                    <span className="text-xs text-zinc-500 uppercase tracking-wider">Total Shows</span>
-                  </div>
-                  <div className="text-3xl font-bold text-white">
-                    {analytics.eventCount}
-                  </div>
-                </div>
-              </div>
-
-              {/* Bar Chart - Past Event Comparison */}
-              <div className="bg-night-tertiary border-2 border-zinc-800 p-4">
-                <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-4">
-                  Past Event Comparison
-                </h4>
-                {analytics.eventComparison.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={180}>
-                    <BarChart data={analytics.eventComparison.map((e: any, i: number) => ({ ...e, fill: i % 2 === 0 ? CHART_COLORS[0] : CHART_COLORS[1] }))} barSize={32}>
-                      <XAxis
-                        dataKey="name"
-                        tick={{ fontSize: 10, fill: "#71717A", fontWeight: 600 }}
-                        axisLine={false}
-                        tickLine={false}
-                      />
-                      <YAxis
-                        tick={{ fontSize: 11, fill: "#71717A" }}
-                        axisLine={false}
-                        tickLine={false}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "#1A1A1A",
-                          border: "2px solid #C2FF00",
-                          borderRadius: "0",
-                        }}
-                        labelStyle={{ color: "#fff", fontWeight: "bold" }}
-                      />
-                      <Bar
-                        dataKey="rsvps"
-                        radius={[4, 4, 0, 0]}
-                        name="RSVPs"
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <p className="text-center text-zinc-500 py-6">
-                    No past events to compare
-                  </p>
-                )}
-              </div>
-
-              {/* Pie Chart - Traffic Rate */}
-              <div className="bg-night-tertiary border-2 border-zinc-800 p-4">
-                <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-4">
-                  Audience Breakdown
-                </h4>
-                {analytics.trafficData.some((d: any) => d.value > 0) ? (
-                  <div className="flex items-center justify-center">
-                    <ResponsiveContainer width={160} height={160}>
-                      <PieChart>
-                        <Pie
-                          data={analytics.trafficData}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={50}
-                          outerRadius={70}
-                          paddingAngle={5}
-                          dataKey="value"
-                          stroke="none"
-                        >
-                          {analytics.trafficData.map((entry: any, index: number) => (
-                            <Cell
-                              key={`cell-${index}`}
-                              fill={CHART_COLORS[index % CHART_COLORS.length]}
-                            />
-                          ))}
-                        </Pie>
-                        <Tooltip />
-                      </PieChart>
-                    </ResponsiveContainer>
-                    <div className="space-y-3 ml-4">
-                      {analytics.trafficData.map((item: any, index: number) => (
-                        <div key={item.name} className="flex items-center gap-2">
-                          <div
-                            className="w-3 h-3"
-                            style={{
-                              backgroundColor: CHART_COLORS[index % CHART_COLORS.length],
-                            }}
-                          />
-                          <span className="text-xs text-zinc-400 uppercase tracking-wider">
-                            {item.name}
-                          </span>
-                          <span className="font-bold text-white">
-                            {item.value}%
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-center text-zinc-500 py-6">
-                    Not enough data for audience breakdown
-                  </p>
-                )}
-              </div>
-
-              {/* Venue Performance */}
-              {analytics.eventComparison.length > 0 && (
-                <div className="space-y-3">
-                  <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400">
-                    Venue Performance
-                  </h4>
-                  {analytics.eventComparison.map((event: any, index: number) => (
-                    <div
-                      key={index}
-                      className="bg-night-tertiary border-2 border-zinc-800 p-4 flex items-center justify-between hover:border-lime/20 transition-colors"
-                    >
-                      <div>
-                        <h5 className="font-bold text-white uppercase tracking-wide text-sm">
-                          {event.venueName}
-                        </h5>
-                        <p className="text-xs text-zinc-500">
-                          {event.name}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <div className={cn(
-                          "text-lg font-bold",
-                          index % 2 === 0 ? "text-lime" : "text-violet"
-                        )}>
-                          {event.rsvps}
-                        </div>
-                        <div className="text-[10px] text-zinc-500 uppercase tracking-wider">RSVPs</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <p className="text-xs text-zinc-600 text-center uppercase tracking-wider">
-                Generated {formatFullDate(Date.now())}
-              </p>
-            </>
-          )}
-        </div>
       </section>
 
       {/* Sign Out */}
