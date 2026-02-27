@@ -9,6 +9,7 @@ import {
   User,
   LayoutDashboard,
   MessageCircle,
+  BarChart3,
 } from "lucide-react";
 import { useCurrentUser } from "@/hooks/useUser";
 import { useProfileContext } from "@/hooks/useProfileContext";
@@ -67,6 +68,11 @@ export function BottomNav() {
       href: "/calendar",
       label: "Shows",
       icon: <Calendar className="w-6 h-6" strokeWidth={1.5} />,
+    },
+    {
+      href: "/analytics",
+      label: "Analytics",
+      icon: <BarChart3 className="w-6 h-6" strokeWidth={1.5} />,
     },
     {
       href: "/messages",

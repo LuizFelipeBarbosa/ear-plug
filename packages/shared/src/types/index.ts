@@ -570,12 +570,42 @@ export interface AnalyticsData {
   totalRsvps: number;
   /** Total number of events */
   eventCount: number;
+  /** Average checked-in attendance for past shows */
+  averageAttendancePerShow: number;
+  /** Best attendance show (checked-in attendees) */
+  bestAttendanceShow: {
+    /** Event document ID */
+    eventId: string;
+    /** Event title */
+    eventName: string;
+    /** Venue name */
+    venueName: string;
+    /** Event date timestamp (ms) */
+    dateTime: number;
+    /** Checked-in attendee count */
+    attended: number;
+  } | null;
+  /** Lowest attendance show (checked-in attendees) */
+  lowestShow: {
+    /** Event document ID */
+    eventId: string;
+    /** Event title */
+    eventName: string;
+    /** Venue name */
+    venueName: string;
+    /** Event date timestamp (ms) */
+    dateTime: number;
+    /** Checked-in attendee count */
+    attended: number;
+  } | null;
   /** Event-by-event comparison data for charts */
   eventComparison: {
     /** Display name (formatted date) */
     name: string;
     /** Number of RSVPs for this event */
     rsvps: number;
+    /** Number of checked-in attendees for this event */
+    attended: number;
     /** Name of the venue */
     venueName: string;
   }[];

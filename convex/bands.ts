@@ -568,20 +568,13 @@ export const getSavedBands = query({
 });
 
 /**
- * Gets analytics data for a band's dashboard charts.
- * Includes total RSVPs, event count, event comparison data, and traffic breakdown.
- * Requires authentication.
+ * Gets analytics data for a band's dashboard charts and performance KPIs.
+ * Includes total RSVPs, show count, checked-in attendance stats, chart data, and
+ * audience breakdown percentages.
  *
  * @param bandId - The Convex ID of the band
- * @returns Analytics data object with chart-ready data
+ * @returns Analytics data object with chart-ready data and attendance KPI metrics
  * @throws Error if not authenticated or band not found
- *
- * @example
- * const analytics = useQuery(api.bands.getAnalytics, { bandId: "k9x..." });
- * if (analytics) {
- *   // Use analytics.eventComparison for bar chart
- *   // Use analytics.trafficData for pie chart
- * }
  */
 export const getAnalytics = query({
   args: { bandId: v.id("bands") },
@@ -610,20 +603,102 @@ export const getAnalytics = query({
         } => typeof e.dateTime === "number"
       )
       .filter((e) => e.dateTime < now)
-      .sort((a, b) => b.dateTime - a.dateTime)
-      .slice(0, 8);
+      .sort((a, b) => b.dateTime - a.dateTime);
+
+    // Count checked-in attendees for each past event.
+    const attendedByEventId = new Map<string, number>();
+    await Promise.all(
+      pastEvents.map(async (event) => {
+        const eventRsvps = await ctx.db
+          .query("rsvps")
+          .withIndex("by_event", (q) => q.eq("eventId", event._id))
+          .collect();
+
+        const attendedCount = eventRsvps.reduce(
+          (sum, rsvp) => sum + ((rsvp.attendanceStatus ?? "on_list") === "attended" ? 1 : 0),
+          0
+        );
+        attendedByEventId.set(event._id, attendedCount);
+      })
+    );
+
+    const latestPastEvents = [...pastEvents].slice(0, 8);
+
+    const venueNameCache = new Map<string, string>();
+    const getVenueName = async (
+      venueId: (typeof events)[number]["venueId"]
+    ): Promise<string> => {
+      if (!venueId) {
+        return "Unknown Venue";
+      }
+      const cached = venueNameCache.get(venueId);
+      if (cached) {
+        return cached;
+      }
+      const venue = await ctx.db.get(venueId);
+      const resolved = venue?.name || "Unknown Venue";
+      venueNameCache.set(venueId, resolved);
+      return resolved;
+    };
 
     // Prepare chart data
     const eventComparison = await Promise.all(
-      pastEvents.reverse().map(async (event) => {
-        const venue = event.venueId ? await ctx.db.get(event.venueId) : null;
+      latestPastEvents.reverse().map(async (event) => {
         return {
           name: new Date(event.dateTime).toLocaleDateString("en-US", {
             month: "short",
             day: "numeric",
           }),
           rsvps: event.rsvpCount,
-          venueName: venue?.name || "Unknown Venue",
+          attended: attendedByEventId.get(event._id) ?? 0,
+          venueName: await getVenueName(event.venueId),
+        };
+      })
+    );
+
+    const totalCheckedInAcrossPastEvents = pastEvents.reduce(
+      (sum, event) => sum + (attendedByEventId.get(event._id) ?? 0),
+      0
+    );
+    const averageAttendancePerShow =
+      pastEvents.length > 0 ? totalCheckedInAcrossPastEvents / pastEvents.length : 0;
+
+    const bestEvent =
+      pastEvents.length > 0
+        ? [...pastEvents].sort((a, b) => {
+            const attendedDiff =
+              (attendedByEventId.get(b._id) ?? 0) - (attendedByEventId.get(a._id) ?? 0);
+            if (attendedDiff !== 0) {
+              return attendedDiff;
+            }
+            return b.dateTime - a.dateTime;
+          })[0]
+        : null;
+
+    const lowestEvent =
+      pastEvents.length > 0
+        ? [...pastEvents].sort((a, b) => {
+            const attendedDiff =
+              (attendedByEventId.get(a._id) ?? 0) - (attendedByEventId.get(b._id) ?? 0);
+            if (attendedDiff !== 0) {
+              return attendedDiff;
+            }
+            return b.dateTime - a.dateTime;
+          })[0]
+        : null;
+
+    const [bestAttendanceShow, lowestShow] = await Promise.all(
+      [bestEvent, lowestEvent].map(async (event) => {
+        if (!event) {
+          return null;
+        }
+
+        return {
+          eventId: event._id,
+          eventName: event.title || "Untitled Show",
+          venueName: await getVenueName(event.venueId),
+          dateTime: event.dateTime,
+          attended: attendedByEventId.get(event._id) ?? 0,
         };
       })
     );
@@ -648,6 +723,9 @@ export const getAnalytics = query({
     return {
       totalRsvps,
       eventCount: events.length,
+      averageAttendancePerShow,
+      bestAttendanceShow,
+      lowestShow,
       eventComparison,
       trafficData: [
         { name: "Returning", value: Math.round(newTrafficRate * 0.6) },

@@ -1,7 +1,7 @@
 /**
  * Band components barrel export
  */
-export { AnalyticsReport } from "./AnalyticsReport";
+export { BandAnalyticsView } from "./BandAnalyticsView";
 export { BandCalendarView } from "./BandCalendar";
 export { BandDashboard } from "./BandDashboard";
 export { BandMessagesView } from "./BandMessages";
