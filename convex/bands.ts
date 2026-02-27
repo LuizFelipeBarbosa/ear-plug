@@ -12,6 +12,8 @@ import {
   requireBandRole,
 } from "./utils/permissions";
 
+const PROFILE_VIEW_DEDUPE_WINDOW_MS = 6 * 60 * 60 * 1000;
+
 /** Validator for music genre field */
 const genreValidator = v.union(
   v.literal("indie"),
@@ -88,6 +90,57 @@ export const getPublicBandProfile = query({
       isFollowing: Boolean(savedEntry),
       viewerMembershipRole: membership?.role,
     };
+  },
+});
+
+/**
+ * Tracks a fan's personal view engagement for a band public profile.
+ * Uses a 6-hour dedupe window per (user, band) pair to prevent noisy counts.
+ */
+export const trackProfileView = mutation({
+  args: { bandId: v.id("bands") },
+  handler: async (ctx, args) => {
+    const user = await requireAuthenticatedUser(ctx);
+    const band = await ctx.db.get(args.bandId);
+
+    if (!band) {
+      throw new Error("Band not found");
+    }
+
+    const now = Date.now();
+    const existingEngagement = await ctx.db
+      .query("bandProfileEngagements")
+      .withIndex("by_user_band", (q) =>
+        q.eq("userId", user._id).eq("bandId", args.bandId)
+      )
+      .unique();
+
+    if (!existingEngagement) {
+      await ctx.db.insert("bandProfileEngagements", {
+        userId: user._id,
+        bandId: args.bandId,
+        viewCount: 1,
+        firstViewedAt: now,
+        lastViewedAt: now,
+      });
+      return { tracked: true, action: "created", viewCount: 1 };
+    }
+
+    if (now - existingEngagement.lastViewedAt < PROFILE_VIEW_DEDUPE_WINDOW_MS) {
+      return {
+        tracked: false,
+        action: "deduped",
+        viewCount: existingEngagement.viewCount,
+      };
+    }
+
+    const nextViewCount = existingEngagement.viewCount + 1;
+    await ctx.db.patch(existingEngagement._id, {
+      viewCount: nextViewCount,
+      lastViewedAt: now,
+    });
+
+    return { tracked: true, action: "incremented", viewCount: nextViewCount };
   },
 });
 
