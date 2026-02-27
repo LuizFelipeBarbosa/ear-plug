@@ -6,8 +6,7 @@ import { useMutation, useQuery } from "convex/react";
 import { ArrowLeft, MapPin, Music, UserCheck, UserPlus, Users } from "lucide-react";
 import { api } from "../../../../../../../convex/_generated/api";
 import type { Id } from "../../../../../../../convex/_generated/dataModel";
-import { BandFeedSection } from "@/components/band/posts/BandFeedSection";
-import { useCurrentUser } from "@/hooks/useUser";
+import { BandPublicMediaSlotsSection } from "@/components/band/slots/BandPublicMediaSlotsSection";
 import { GENRE_COLORS } from "@ear-plug/shared/constants";
 import { getInitials } from "@ear-plug/shared/utils";
 import type { Genre } from "@ear-plug/shared/types";
@@ -21,7 +20,6 @@ export default function BandFeedPage({ params }: PageProps) {
   const router = useRouter();
   const bandId = params.id as Id<"bands">;
 
-  const { user } = useCurrentUser();
   const toggleSave = useMutation(api.bands.toggleSave);
 
   const publicProfile = useQuery(api.bands.getPublicBandProfile, { bandId });
@@ -45,17 +43,11 @@ export default function BandFeedPage({ params }: PageProps) {
 
   const band = publicProfile?.band;
   const isViewerMember = Boolean(publicProfile?.viewerMembershipRole);
-  const canManagePosts =
-    publicProfile?.viewerMembershipRole === "owner" ||
-    publicProfile?.viewerMembershipRole === "admin";
-
   const isFollowing =
     optimisticFollowState?.isFollowing ?? publicProfile?.isFollowing ?? false;
   const followerCount =
     optimisticFollowState?.followerCount ?? publicProfile?.followerCount ?? 0;
   const canToggleFollow = !isViewerMember;
-  const allowFanInteractions = Boolean(user);
-
   const followButtonLabel = useMemo(() => {
     if (isFollowing) return "Following";
     return "Follow";
@@ -223,12 +215,10 @@ export default function BandFeedPage({ params }: PageProps) {
       </header>
 
       <main className="p-4">
-        <BandFeedSection
+        <BandPublicMediaSlotsSection
           bandId={band._id}
-          canManagePosts={canManagePosts}
-          allowFanInteractions={allowFanInteractions}
-          title="Band Feed"
-          description="Latest photos and videos from this band."
+          title="Band Media"
+          description="Read-only profile media slots."
         />
       </main>
     </div>
