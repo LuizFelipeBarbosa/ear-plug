@@ -17,30 +17,6 @@ import type { Id } from "../../../../../convex/_generated/dataModel";
 
 const VALID_GENRES: Genre[] = ["indie", "rock", "jazz", "electronic", "folk", "pop", "alternative"];
 
-// Dark theme map styles for Google Maps
-const DARK_MAP_STYLES = [
-  { elementType: "geometry", stylers: [{ color: "#0F0F0F" }] },
-  { elementType: "labels.icon", stylers: [{ visibility: "off" }] },
-  { elementType: "labels.text.fill", stylers: [{ color: "#A1A1AA" }] },
-  { elementType: "labels.text.stroke", stylers: [{ color: "#0F0F0F" }] },
-  { featureType: "administrative", elementType: "geometry", stylers: [{ color: "#252525" }] },
-  { featureType: "administrative.country", elementType: "labels.text.fill", stylers: [{ color: "#71717A" }] },
-  { featureType: "administrative.locality", elementType: "labels.text.fill", stylers: [{ color: "#A1A1AA" }] },
-  { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#71717A" }] },
-  { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#1A1A1A" }] },
-  { featureType: "poi.park", elementType: "labels.text.fill", stylers: [{ color: "#52525B" }] },
-  { featureType: "road", elementType: "geometry", stylers: [{ color: "#252525" }] },
-  { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#1A1A1A" }] },
-  { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#71717A" }] },
-  { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#333333" }] },
-  { featureType: "road.highway", elementType: "geometry.stroke", stylers: [{ color: "#0F0F0F" }] },
-  { featureType: "road.highway", elementType: "labels.text.fill", stylers: [{ color: "#A1A1AA" }] },
-  { featureType: "transit", elementType: "geometry", stylers: [{ color: "#1A1A1A" }] },
-  { featureType: "transit", elementType: "labels.text.fill", stylers: [{ color: "#71717A" }] },
-  { featureType: "water", elementType: "geometry", stylers: [{ color: "#1A1A1A" }] },
-  { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#52525B" }] },
-];
-
 export function FanMapView() {
   const searchParams = useSearchParams();
   const genreParam = searchParams.get("genre") as Genre | null;
@@ -196,7 +172,6 @@ export function FanMapView() {
               gestureHandling="greedy"
               disableDefaultUI
               className="w-full h-full"
-              styles={DARK_MAP_STYLES}
             >
               {/* User location marker - Vivid Violet with pulse */}
               {hasLocation && latitude && longitude && (
