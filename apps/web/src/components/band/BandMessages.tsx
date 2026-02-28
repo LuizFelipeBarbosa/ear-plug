@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { MessageCircle, Send, ArrowLeft } from "lucide-react";
+import { MessageCircle, Send, ArrowLeft, Check, X } from "lucide-react";
 import { useBandConversations, useConversation } from "@/hooks/useMessages";
-import { getRelativeTime } from "@ear-plug/shared/constants";
+import { formatEventTime, formatFullDate, getRelativeTime } from "@ear-plug/shared/constants";
 import { cn } from "@/lib/utils";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 
@@ -29,7 +29,25 @@ function ConversationsList({
 }: {
   onSelect: (id: Id<"conversations">) => void;
 }) {
-  const { conversations, isLoading } = useBandConversations();
+  const {
+    conversations,
+    isLoading,
+    pendingCohostInvites,
+    respondToCohostInvite,
+  } = useBandConversations();
+  const [activeInviteId, setActiveInviteId] = useState<string | null>(null);
+
+  const handleInviteAction = async (
+    inviteId: Id<"eventCohostInvites">,
+    action: "accept" | "decline"
+  ) => {
+    setActiveInviteId(inviteId);
+    try {
+      await respondToCohostInvite({ inviteId, action });
+    } finally {
+      setActiveInviteId(null);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-night">
@@ -39,6 +57,67 @@ function ConversationsList({
           Messages
         </h1>
       </header>
+
+      {pendingCohostInvites.length > 0 && (
+        <section className="p-4 border-b-2 border-zinc-800 bg-night-secondary/40">
+          <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-lime mb-3">
+            Co-host Invites
+          </h2>
+          <div className="space-y-2">
+            {pendingCohostInvites.map((invite) => (
+              <div
+                key={invite._id}
+                className="border-2 border-lime/30 bg-night-tertiary p-3"
+              >
+                <p className="text-sm font-bold text-white uppercase tracking-wide truncate">
+                  {invite.event?.title?.trim() || "Untitled Gig"}
+                </p>
+                {typeof invite.event?.dateTime === "number" && (
+                  <p className="text-[11px] uppercase tracking-wider text-zinc-400 mt-1">
+                    {formatFullDate(invite.event.dateTime)} • {formatEventTime(invite.event.dateTime)}
+                  </p>
+                )}
+                <p className="text-[11px] uppercase tracking-wider text-zinc-500 mt-1">
+                  Host: {invite.hostBand?.name ?? "Unknown Band"}
+                </p>
+                <p className="text-[11px] uppercase tracking-wider text-zinc-500 mt-0.5">
+                  Venue: {invite.event?.venue?.name ?? "Venue TBD"}
+                </p>
+                <div className="mt-3 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleInviteAction(invite._id, "accept")}
+                    disabled={activeInviteId === invite._id || !invite.canRespond}
+                    className={cn(
+                      "flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 text-[10px] font-bold uppercase tracking-wider border-2 transition-colors",
+                      activeInviteId === invite._id || !invite.canRespond
+                        ? "border-zinc-700 text-zinc-500"
+                        : "border-lime bg-lime text-night hover:bg-transparent hover:text-lime"
+                    )}
+                  >
+                    <Check className="w-4 h-4" />
+                    Accept
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleInviteAction(invite._id, "decline")}
+                    disabled={activeInviteId === invite._id || !invite.canRespond}
+                    className={cn(
+                      "flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 text-[10px] font-bold uppercase tracking-wider border-2 transition-colors",
+                      activeInviteId === invite._id || !invite.canRespond
+                        ? "border-zinc-700 text-zinc-500"
+                        : "border-zinc-700 text-zinc-300 hover:border-red-500/40 hover:text-red-400"
+                    )}
+                  >
+                    <X className="w-4 h-4" />
+                    Decline
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Conversations List */}
       <div className="divide-y-2 divide-zinc-800">
@@ -112,6 +191,10 @@ function ConversationsList({
               )}
             </button>
           ))
+        ) : pendingCohostInvites.length > 0 ? (
+          <div className="p-4 text-xs uppercase tracking-wider text-zinc-500">
+            No venue conversations yet.
+          </div>
         ) : (
           <EmptyState />
         )}

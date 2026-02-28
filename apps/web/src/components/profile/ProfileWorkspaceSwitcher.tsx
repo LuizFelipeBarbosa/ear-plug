@@ -29,10 +29,6 @@ export function ProfileWorkspaceSwitcher({
     clearNotice,
   } = useProfileContext();
 
-  if (!isHydrated) {
-    return null;
-  }
-
   const currentValue = mode === "band" && bandId ? `band:${bandId}` : "personal";
   const isHeader = variant === "header";
   const [isOpen, setIsOpen] = useState(false);
@@ -90,6 +86,10 @@ export function ProfileWorkspaceSwitcher({
     }
     setIsOpen(false);
   };
+
+  if (!isHydrated) {
+    return null;
+  }
 
   return (
     <div

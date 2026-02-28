@@ -57,6 +57,21 @@ export function useBandConversations(bandIdOverride?: Id<"bands">) {
 
   /** Mutation to start a new conversation or get existing one */
   const startConversation = useMutation(api.messages.startConversation);
+  /** Pending co-host invites for this band workspace */
+  const pendingCohostInvites = useQuery(
+    api.eventCohosts.listBandPendingInvites,
+    resolvedBandId ? { bandId: resolvedBandId } : "skip"
+  );
+  /** Mutation to accept/decline a co-host invite */
+  const respondToInviteMutation = useMutation(api.eventCohosts.respondToInvite);
+
+  const respondToCohostInvite = useCallback(
+    (args: {
+      inviteId: Id<"eventCohostInvites">;
+      action: "accept" | "decline";
+    }) => respondToInviteMutation(args),
+    [respondToInviteMutation]
+  );
 
   return {
     /** Array of conversation documents with venue and unreadCount properties */
@@ -67,8 +82,14 @@ export function useBandConversations(bandIdOverride?: Id<"bands">) {
     isLoading: resolvedBandId !== undefined && conversations === undefined,
     /** Active band id used for this hook */
     bandId: resolvedBandId,
+    /** Pending co-host invites for this band */
+    pendingCohostInvites: pendingCohostInvites ?? [],
+    /** Pending co-host invite count */
+    pendingInviteCount: pendingCohostInvites?.length ?? 0,
     /** Mutation to start or get a conversation with a venue */
     startConversation,
+    /** Mutation to respond to a co-host invite */
+    respondToCohostInvite,
   };
 }
 

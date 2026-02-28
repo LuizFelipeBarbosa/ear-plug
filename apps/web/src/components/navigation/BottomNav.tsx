@@ -30,7 +30,7 @@ export function BottomNav() {
   const { user } = useCurrentUser();
   const { mode } = useProfileContext();
   const { unreadCount: notificationCount } = useNotifications();
-  const { unreadCount: messageCount } = useBandConversations();
+  const { unreadCount: messageCount, pendingInviteCount } = useBandConversations();
 
   if (!user) return null;
 
@@ -78,7 +78,7 @@ export function BottomNav() {
       href: "/messages",
       label: "Messages",
       icon: <MessageCircle className="w-6 h-6" strokeWidth={1.5} />,
-      badge: messageCount,
+      badge: messageCount + pendingInviteCount,
     },
     {
       href: "/profile",

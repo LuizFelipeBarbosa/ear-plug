@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { View, Text, TouchableOpacity, SafeAreaView } from "react-native";
 import { router } from "expo-router";
-import { SignedIn, SignedOut, useAuth, useUser, useSignIn, useSignUp } from "@clerk/clerk-expo";
+import { useAuth, useUser } from "@clerk/clerk-expo";
 import { useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Users, Mic2, ArrowRight, Headphones } from "lucide-react-native";

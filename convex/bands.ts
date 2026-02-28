@@ -6,6 +6,8 @@
 
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
 import {
   requireAuthenticatedUser,
   requireBandMember,
@@ -34,6 +36,37 @@ const socialLinksValidator = v.object({
   youtube: v.optional(v.string()),
   website: v.optional(v.string()),
 });
+
+async function listBandParticipatingEvents(
+  ctx: QueryCtx | MutationCtx,
+  bandId: Id<"bands">
+) {
+  const [hostedEvents, acceptedInvites] = await Promise.all([
+    ctx.db
+      .query("events")
+      .withIndex("by_band", (q) => q.eq("bandId", bandId))
+      .collect(),
+    ctx.db
+      .query("eventCohostInvites")
+      .withIndex("by_invited_band_status", (q) =>
+        q.eq("invitedBandId", bandId).eq("status", "accepted")
+      )
+      .collect(),
+  ]);
+
+  const hostedEventIds = new Set(hostedEvents.map((event) => event._id));
+  const cohostedEventIds = Array.from(
+    new Set(acceptedInvites.map((invite) => invite.eventId))
+  );
+  const cohostedEvents = (
+    await Promise.all(cohostedEventIds.map((eventId) => ctx.db.get(eventId)))
+  ).filter((event): event is NonNullable<typeof event> => event !== null);
+
+  return [
+    ...hostedEvents,
+    ...cohostedEvents.filter((event) => !hostedEventIds.has(event._id)),
+  ];
+}
 
 /**
  * Gets a band by its Convex document ID.
@@ -262,11 +295,8 @@ export const getBandWithStats = query({
       return null;
     }
 
-    // Get events for this band
-    const events = await ctx.db
-      .query("events")
-      .withIndex("by_band", (q) => q.eq("bandId", band._id))
-      .collect();
+    // Get events this band hosts or co-hosts.
+    const events = await listBandParticipatingEvents(ctx, band._id);
 
     // Calculate stats
     const now = Date.now();
@@ -586,11 +616,8 @@ export const getAnalytics = query({
       throw new Error("Band not found");
     }
 
-    // Get all events for this band
-    const events = await ctx.db
-      .query("events")
-      .withIndex("by_band", (q) => q.eq("bandId", args.bandId))
-      .collect();
+    // Get all events this band hosts or co-hosts.
+    const events = await listBandParticipatingEvents(ctx, args.bandId);
 
     // Get past events sorted by date (most recent first)
     const now = Date.now();

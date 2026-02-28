@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import {
   X,
@@ -16,11 +16,15 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
+import { useQuery } from "convex/react";
 import { cn } from "@/lib/utils";
 import { PlaceAutocomplete, type VenueLocationData } from "@/components/maps/PlaceAutocomplete";
 import { useSharedEvents } from "@/hooks/useSharedEvents";
-import { GENRES } from "@ear-plug/shared/constants";
+import { api } from "../../../../../convex/_generated/api";
+import { GENRES, GENRE_COLORS } from "@ear-plug/shared/constants";
 import type { EventAddressVisibility, EventStatus, Genre } from "@ear-plug/shared/types";
+
+const MAX_EVENT_GENRES = 3;
 
 interface CreateGigModalProps {
   isOpen: boolean;
@@ -60,6 +64,28 @@ export function CreateGigModal({
   const [coverImage, setCoverImage] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [cohostSearch, setCohostSearch] = useState("");
+  const [selectedCohostBandIds, setSelectedCohostBandIds] = useState<string[]>([]);
+
+  const allBands = useQuery(api.bands.list, { limit: 100 });
+  const selectedCohostBands = useMemo(
+    () =>
+      (allBands ?? []).filter((candidateBand) =>
+        selectedCohostBandIds.includes(candidateBand._id)
+      ),
+    [allBands, selectedCohostBandIds]
+  );
+  const cohostResults = useMemo(() => {
+    const normalizedQuery = cohostSearch.trim().toLowerCase();
+    if (!normalizedQuery) {
+      return [];
+    }
+    return (allBands ?? [])
+      .filter((candidateBand) => candidateBand._id !== bandId)
+      .filter((candidateBand) => !selectedCohostBandIds.includes(candidateBand._id))
+      .filter((candidateBand) => candidateBand.name.toLowerCase().includes(normalizedQuery))
+      .slice(0, 8);
+  }, [allBands, bandId, cohostSearch, selectedCohostBandIds]);
 
   const resetForm = useCallback(() => {
     setFormData({
@@ -77,6 +103,8 @@ export function CreateGigModal({
     setIsDragging(false);
     setSubmitError(null);
     setErrors({});
+    setCohostSearch("");
+    setSelectedCohostBandIds([]);
   }, []);
 
   const handleClose = useCallback(() => {
@@ -146,6 +174,9 @@ export function CreateGigModal({
     if (!isTentative && formData.genres.length === 0) {
       nextErrors.genres = "At least one genre is required";
     }
+    if (formData.genres.length > MAX_EVENT_GENRES) {
+      nextErrors.genres = `Select up to ${MAX_EVENT_GENRES} genres`;
+    }
 
     if (formData.capacity.trim().length > 0) {
       const parsedCapacity = Number.parseInt(formData.capacity, 10);
@@ -191,6 +222,8 @@ export function CreateGigModal({
       await createEvent({
         title: formData.title.trim() || undefined,
         bandId,
+        cohostBandIds:
+          selectedCohostBandIds.length > 0 ? selectedCohostBandIds : undefined,
         date: formData.date || undefined,
         startTime: formData.startTime || undefined,
         venue: venue
@@ -518,6 +551,69 @@ export function CreateGigModal({
 
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">
+              Invite Co-host Bands
+            </label>
+            <div className="space-y-2 p-3 bg-night-tertiary border-2 border-zinc-800">
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-2">
+                  Co-host roster
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider border border-violet/60 text-violet bg-violet/10">
+                    {bandName}
+                    <span className="text-zinc-400">Host</span>
+                  </span>
+                  {selectedCohostBands.map((candidateBand) => (
+                    <button
+                      key={candidateBand._id}
+                      type="button"
+                      onClick={() =>
+                        setSelectedCohostBandIds((prev) =>
+                          prev.filter((bandIdValue) => bandIdValue !== candidateBand._id)
+                        )
+                      }
+                      className="inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider border border-lime/50 text-lime bg-lime/10 hover:bg-lime/20"
+                    >
+                      {candidateBand.name}
+                      <X className="w-3 h-3" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <input
+                type="text"
+                value={cohostSearch}
+                onChange={(inputEvent) => setCohostSearch(inputEvent.target.value)}
+                placeholder="Search bands to invite..."
+                className="w-full px-3 py-2 bg-night border border-zinc-700 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime"
+              />
+              {cohostResults.length > 0 && (
+                <div className="space-y-1">
+                  {cohostResults.map((candidateBand) => (
+                    <button
+                      key={candidateBand._id}
+                      type="button"
+                      onClick={() =>
+                        setSelectedCohostBandIds((prev) => [...prev, candidateBand._id])
+                      }
+                      className="w-full flex items-center justify-between gap-3 px-3 py-2 text-left border border-zinc-700 bg-night hover:border-lime/40 transition-colors"
+                    >
+                      <span className="text-sm text-white truncate">{candidateBand.name}</span>
+                      <span className="text-[10px] uppercase tracking-wider text-lime font-bold">
+                        Invite
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <p className="text-xs text-zinc-500 mt-2">
+              Invited bands will receive a co-host request in Messages.
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">
               Address Visibility
             </label>
             <div className="grid grid-cols-2 gap-2">
@@ -565,7 +661,7 @@ export function CreateGigModal({
 
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">
-              Genres {!isTentative && <span className="text-lime">*</span>}
+              Genres ({formData.genres.length}/{MAX_EVENT_GENRES}) {!isTentative && <span className="text-lime">*</span>}
             </label>
             <div
               className={cn(
@@ -575,14 +671,20 @@ export function CreateGigModal({
             >
               {GENRES.map((genreOption) => {
                 const isSelected = formData.genres.includes(genreOption.value);
+                const isDisabled =
+                  !isSelected && formData.genres.length >= MAX_EVENT_GENRES;
+                const genreColor = GENRE_COLORS[genreOption.value];
                 return (
                   <button
                     key={genreOption.value}
                     type="button"
+                    disabled={isDisabled}
                     onClick={() => {
                       const nextGenres = isSelected
                         ? formData.genres.filter((genre) => genre !== genreOption.value)
-                        : [...formData.genres, genreOption.value];
+                        : formData.genres.length < MAX_EVENT_GENRES
+                          ? [...formData.genres, genreOption.value]
+                          : formData.genres;
                       setFormData((prev) => ({ ...prev, genres: nextGenres }));
                       if (errors.genres) {
                         setErrors((prev) => {
@@ -595,15 +697,31 @@ export function CreateGigModal({
                     className={cn(
                       "px-3 py-2 text-sm font-medium uppercase tracking-wider border-2 transition-all",
                       isSelected
-                        ? "bg-lime text-night border-lime"
-                        : "bg-night border-zinc-700 text-zinc-400 hover:border-zinc-600"
+                        ? "text-night"
+                        : isDisabled
+                          ? "bg-night border-zinc-800 text-zinc-600 cursor-not-allowed"
+                          : "hover:brightness-110"
                     )}
+                    style={
+                      isSelected
+                        ? { backgroundColor: genreColor, borderColor: genreColor }
+                        : isDisabled
+                          ? undefined
+                          : {
+                              borderColor: `${genreColor}70`,
+                              color: genreColor,
+                              backgroundColor: `${genreColor}14`,
+                            }
+                    }
                   >
                     {genreOption.label}
                   </button>
                 );
               })}
             </div>
+            <p className="text-xs text-zinc-500 mt-2">
+              Select up to {MAX_EVENT_GENRES} genres.
+            </p>
             {errors.genres && (
               <p className="text-xs text-red-500 mt-1.5 flex items-center gap-1">
                 <AlertCircle className="w-3 h-3" /> {errors.genres}

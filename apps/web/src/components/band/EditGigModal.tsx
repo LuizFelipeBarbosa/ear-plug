@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import {
   X,
@@ -17,14 +17,21 @@ import {
   EyeOff,
   Trash2,
 } from "lucide-react";
+import { useMutation, useQuery } from "convex/react";
 import { cn } from "@/lib/utils";
 import { PlaceAutocomplete, type VenueLocationData } from "@/components/maps/PlaceAutocomplete";
 import { useSharedEvents } from "@/hooks/useSharedEvents";
-import { GENRES } from "@ear-plug/shared/constants";
+import { useProfileContext } from "@/hooks/useProfileContext";
+import { api } from "../../../../../convex/_generated/api";
+import type { Id } from "../../../../../convex/_generated/dataModel";
+import { GENRES, GENRE_COLORS } from "@ear-plug/shared/constants";
 import type { EventAddressVisibility, EventStatus, Genre } from "@ear-plug/shared/types";
+
+const MAX_EVENT_GENRES = 3;
 
 interface EditableEvent {
   _id: string;
+  bandId?: string;
   title?: string;
   dateTime?: number;
   image?: string;
@@ -61,6 +68,7 @@ export function EditGigModal({
   onSuccess,
 }: EditGigModalProps) {
   const { updateEvent, deleteEvent } = useSharedEvents();
+  const { mode, bandId } = useProfileContext();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -83,6 +91,25 @@ export function EditGigModal({
   const [imageWasRemoved, setImageWasRemoved] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [cohostSearch, setCohostSearch] = useState("");
+  const [activeInviteMutationId, setActiveInviteMutationId] = useState<string | null>(
+    null
+  );
+  const actingBandId = mode === "band" && bandId ? (bandId as Id<"bands">) : null;
+
+  const allBands = useQuery(api.bands.list, { limit: 100 });
+  const cohostRoster = useQuery(
+    api.eventCohosts.listEventCohostRoster,
+    isOpen && event && actingBandId
+      ? {
+          eventId: event._id as Id<"events">,
+          bandId: actingBandId,
+        }
+      : "skip"
+  );
+
+  const inviteBandsToEvent = useMutation(api.eventCohosts.inviteBandsToEvent);
+  const revokeEventInvite = useMutation(api.eventCohosts.revokeEventInvite);
 
   const formatDateInput = (timestamp: number): string => {
     const date = new Date(timestamp);
@@ -143,6 +170,35 @@ export function EditGigModal({
     resetForm();
   }, [event, isOpen, resetForm]);
 
+  const rosterInvitedBandIds = useMemo(() => {
+    const ids = new Set<string>();
+    if (event?.bandId) {
+      ids.add(event.bandId);
+    }
+    if (cohostRoster?.hostBand?._id) {
+      ids.add(cohostRoster.hostBand._id);
+    }
+    (cohostRoster?.acceptedCohostBands ?? []).forEach((cohostBand) => {
+      ids.add(cohostBand._id);
+    });
+    (cohostRoster?.pendingInvites ?? []).forEach((invite) => {
+      ids.add(invite.invitedBandId);
+    });
+    return ids;
+  }, [cohostRoster, event?.bandId]);
+
+  const cohostSearchResults = useMemo(() => {
+    const normalizedQuery = cohostSearch.trim().toLowerCase();
+    if (!normalizedQuery) {
+      return [];
+    }
+    return (allBands ?? [])
+      .filter((candidateBand) => candidateBand._id !== bandId)
+      .filter((candidateBand) => !rosterInvitedBandIds.has(candidateBand._id))
+      .filter((candidateBand) => candidateBand.name.toLowerCase().includes(normalizedQuery))
+      .slice(0, 8);
+  }, [allBands, bandId, cohostSearch, rosterInvitedBandIds]);
+
   const updateField = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
@@ -151,6 +207,56 @@ export function EditGigModal({
         delete next[field];
         return next;
       });
+    }
+  };
+
+  const handleInviteCohostBand = async (invitedBandId: string) => {
+    if (!event || !actingBandId) {
+      setSubmitError("Select a band workspace to manage co-host invites.");
+      return;
+    }
+
+    setSubmitError(null);
+    setActiveInviteMutationId(`invite-${invitedBandId}`);
+    try {
+      await inviteBandsToEvent({
+        eventId: event._id as Id<"events">,
+        actingBandId,
+        invitedBandIds: [invitedBandId as Id<"bands">],
+      });
+      setCohostSearch("");
+    } catch (inviteError) {
+      setSubmitError(
+        inviteError instanceof Error
+          ? inviteError.message
+          : "Failed to invite co-host band."
+      );
+    } finally {
+      setActiveInviteMutationId(null);
+    }
+  };
+
+  const handleRevokeCohostInvite = async (inviteId: string) => {
+    if (!event || !actingBandId) {
+      setSubmitError("Select a band workspace to manage co-host invites.");
+      return;
+    }
+
+    setSubmitError(null);
+    setActiveInviteMutationId(`revoke-${inviteId}`);
+    try {
+      await revokeEventInvite({
+        inviteId: inviteId as Id<"eventCohostInvites">,
+        actingBandId,
+      });
+    } catch (revokeError) {
+      setSubmitError(
+        revokeError instanceof Error
+          ? revokeError.message
+          : "Failed to update co-host invite."
+      );
+    } finally {
+      setActiveInviteMutationId(null);
     }
   };
 
@@ -208,6 +314,9 @@ export function EditGigModal({
     if (!isTentative && formData.genres.length === 0) {
       nextErrors.genres = "At least one genre is required";
     }
+    if (formData.genres.length > MAX_EVENT_GENRES) {
+      nextErrors.genres = `Select up to ${MAX_EVENT_GENRES} genres`;
+    }
 
     if (formData.capacity.trim().length > 0) {
       const parsedCapacity = Number.parseInt(formData.capacity, 10);
@@ -232,6 +341,10 @@ export function EditGigModal({
   const handleSubmit = async (submitEvent: React.FormEvent) => {
     submitEvent.preventDefault();
     if (!event) return;
+    if (!actingBandId) {
+      setSubmitError("Select a band workspace to manage this event.");
+      return;
+    }
 
     setSubmitError(null);
 
@@ -253,6 +366,7 @@ export function EditGigModal({
 
       await updateEvent({
         eventId: event._id,
+        actingBandId,
         title: formData.title.trim(),
         date: formData.date || undefined,
         startTime: formData.startTime || undefined,
@@ -291,6 +405,10 @@ export function EditGigModal({
 
   const handleDelete = async () => {
     if (!event || !wasTentative) return;
+    if (!actingBandId) {
+      setSubmitError("Select a band workspace to manage this event.");
+      return;
+    }
     if (!window.confirm("Delete this tentative gig? This cannot be undone.")) {
       return;
     }
@@ -299,7 +417,7 @@ export function EditGigModal({
     setIsDeleting(true);
 
     try {
-      await deleteEvent(event._id);
+      await deleteEvent(event._id, actingBandId);
       onSuccess?.();
       onClose();
     } catch (error) {
@@ -320,14 +438,14 @@ export function EditGigModal({
   const isBusy = isSubmitting || isDeleting;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+    <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-6">
       <div
         className="absolute inset-0 bg-black/80 backdrop-blur-sm"
         onClick={onClose}
       />
 
-      <div className="relative w-full max-w-lg max-h-[90vh] bg-night-secondary border-2 border-zinc-800 shadow-2xl overflow-hidden flex flex-col">
-        <div className="flex items-center justify-between p-4 border-b-2 border-zinc-800 bg-night-tertiary">
+      <div className="relative w-full max-w-lg max-h-[100dvh] sm:max-h-[90vh] h-[100dvh] sm:h-auto bg-night-secondary border-2 border-zinc-800 shadow-2xl overflow-hidden flex flex-col rounded-t-xl sm:rounded-none">
+        <div className="sticky top-0 z-10 flex items-center justify-between p-4 border-b-2 border-zinc-800 bg-night-tertiary">
           <div>
             <h2 className="text-lg font-bold uppercase tracking-tight text-white">
               Manage Event
@@ -347,7 +465,7 @@ export function EditGigModal({
 
         <form
           onSubmit={handleSubmit}
-          className="flex-1 overflow-y-auto p-4 space-y-5"
+          className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-5 pb-8"
         >
           {submitError && (
             <div className="p-3 border-2 border-red-500 bg-red-500/10 text-red-300 text-sm flex items-start gap-2">
@@ -451,7 +569,7 @@ export function EditGigModal({
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">
                 Date {!isTentative && <span className="text-lime">*</span>}
@@ -546,7 +664,7 @@ export function EditGigModal({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">
                 Capacity {!isTentative && <span className="text-lime">*</span>}
@@ -674,7 +792,7 @@ export function EditGigModal({
 
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">
-              Genres {!isTentative && <span className="text-lime">*</span>}
+              Genres ({formData.genres.length}/{MAX_EVENT_GENRES}) {!isTentative && <span className="text-lime">*</span>}
             </label>
             <div
               className={cn(
@@ -684,14 +802,20 @@ export function EditGigModal({
             >
               {GENRES.map((genreOption) => {
                 const isSelected = formData.genres.includes(genreOption.value);
+                const isDisabled =
+                  !isSelected && formData.genres.length >= MAX_EVENT_GENRES;
+                const genreColor = GENRE_COLORS[genreOption.value];
                 return (
                   <button
                     key={genreOption.value}
                     type="button"
+                    disabled={isDisabled}
                     onClick={() => {
                       const nextGenres = isSelected
                         ? formData.genres.filter((genre) => genre !== genreOption.value)
-                        : [...formData.genres, genreOption.value];
+                        : formData.genres.length < MAX_EVENT_GENRES
+                          ? [...formData.genres, genreOption.value]
+                          : formData.genres;
                       setFormData((prev) => ({ ...prev, genres: nextGenres }));
                       if (errors.genres) {
                         setErrors((prev) => {
@@ -704,20 +828,156 @@ export function EditGigModal({
                     className={cn(
                       "px-3 py-2 text-sm font-medium uppercase tracking-wider border-2 transition-all",
                       isSelected
-                        ? "bg-lime text-night border-lime"
-                        : "bg-night border-zinc-700 text-zinc-400 hover:border-zinc-600"
+                        ? "text-night"
+                        : isDisabled
+                          ? "bg-night border-zinc-800 text-zinc-600 cursor-not-allowed"
+                          : "hover:brightness-110"
                     )}
+                    style={
+                      isSelected
+                        ? { backgroundColor: genreColor, borderColor: genreColor }
+                        : isDisabled
+                          ? undefined
+                          : {
+                              borderColor: `${genreColor}70`,
+                              color: genreColor,
+                              backgroundColor: `${genreColor}14`,
+                            }
+                    }
                   >
                     {genreOption.label}
                   </button>
                 );
               })}
             </div>
+            <p className="text-xs text-zinc-500 mt-2">
+              Select up to {MAX_EVENT_GENRES} genres.
+            </p>
             {errors.genres && (
               <p className="text-xs text-red-500 mt-1.5 flex items-center gap-1">
                 <AlertCircle className="w-3 h-3" /> {errors.genres}
               </p>
             )}
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">
+              Co-host Bands
+            </label>
+            <div className="space-y-3 p-3 bg-night-tertiary border-2 border-zinc-800">
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-2">
+                  Current lineup
+                </p>
+                <div className="space-y-1">
+                  {cohostRoster?.hostBand && (
+                    <div className="flex items-center justify-between gap-3 border border-violet/40 bg-violet/10 px-3 py-2">
+                      <span className="text-sm text-white truncate">
+                        {cohostRoster.hostBand.name}
+                      </span>
+                      <span className="text-[10px] uppercase tracking-wider text-violet font-bold">
+                        Host
+                      </span>
+                    </div>
+                  )}
+
+                  {(cohostRoster?.acceptedInvites?.length ?? 0) > 0 &&
+                    cohostRoster?.acceptedInvites.map((invite) => (
+                      <div
+                        key={invite._id}
+                        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border border-zinc-700 bg-night px-3 py-2"
+                      >
+                        <span className="text-sm text-white truncate">
+                          {invite.invitedBand?.name ?? "Band"}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleRevokeCohostInvite(invite._id)}
+                          disabled={activeInviteMutationId === `revoke-${invite._id}`}
+                          className="w-full sm:w-auto text-[10px] uppercase tracking-wider text-red-300 border border-red-500/40 px-2 py-1 hover:bg-red-500/10"
+                        >
+                          Revoke
+                        </button>
+                      </div>
+                    ))}
+                </div>
+              </div>
+
+              {(cohostRoster?.pendingInvites?.length ?? 0) > 0 && (
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-2">
+                    Pending invites
+                  </p>
+                  <div className="space-y-1">
+                    {cohostRoster?.pendingInvites.map((invite) => (
+                      <div
+                        key={invite._id}
+                        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border border-zinc-700 bg-night px-3 py-2"
+                      >
+                        <div className="min-w-0">
+                          <p className="text-sm text-white truncate">
+                            {invite.invitedBand?.name ?? "Band"}
+                          </p>
+                          <p className="text-[10px] uppercase tracking-wider text-zinc-500">
+                            Pending
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRevokeCohostInvite(invite._id)}
+                          disabled={activeInviteMutationId === `revoke-${invite._id}`}
+                          className={cn(
+                            "w-full sm:w-auto text-[10px] uppercase tracking-wider border px-2 py-1",
+                            activeInviteMutationId === `revoke-${invite._id}`
+                              ? "text-zinc-500 border-zinc-700 cursor-not-allowed"
+                              : "text-red-300 border-red-500/40 hover:bg-red-500/10"
+                          )}
+                        >
+                          Revoke
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="pt-1 border-t border-zinc-800">
+                <p className="text-[10px] uppercase tracking-wider text-zinc-500 mb-2">
+                  Invite another band
+                </p>
+                <input
+                  type="text"
+                  value={cohostSearch}
+                  onChange={(inputEvent) => setCohostSearch(inputEvent.target.value)}
+                  placeholder="Search bands to invite as co-hosts..."
+                  className="w-full px-3 py-2 bg-night border border-zinc-700 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime"
+                />
+
+                {cohostSearchResults.length > 0 && (
+                  <div className="space-y-1 mt-2">
+                    {cohostSearchResults.map((candidateBand) => (
+                      <button
+                        key={candidateBand._id}
+                        type="button"
+                        onClick={() => handleInviteCohostBand(candidateBand._id)}
+                        disabled={activeInviteMutationId === `invite-${candidateBand._id}`}
+                        className={cn(
+                          "w-full flex items-center justify-between gap-3 px-3 py-2 text-left border border-zinc-700 bg-night transition-colors",
+                          activeInviteMutationId === `invite-${candidateBand._id}`
+                            ? "opacity-60 cursor-not-allowed"
+                            : "hover:border-lime/40"
+                        )}
+                      >
+                        <span className="text-sm text-white truncate">{candidateBand.name}</span>
+                        <span className="text-[10px] uppercase tracking-wider text-lime font-bold">
+                          Invite
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
           <div className="pt-2 pb-4">

@@ -1,12 +1,11 @@
 import { View, Text, ScrollView, TouchableOpacity, SafeAreaView } from "react-native";
-import { useAuth, useUser } from "@clerk/clerk-expo";
+import { useAuth } from "@clerk/clerk-expo";
 import { useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { MapPin, LogOut, Settings, ChevronRight } from "lucide-react-native";
 
 export default function ProfileScreen() {
   const { signOut } = useAuth();
-  const { user: clerkUser } = useUser();
   const user = useQuery(api.users.getCurrentUser);
   const band = useQuery(api.bands.getCurrentUserBand);
 
@@ -88,7 +87,10 @@ export default function ProfileScreen() {
             <View className="mt-6 bg-white/10 rounded-xl p-4">
               <Text className="text-white font-semibold">{band.name}</Text>
               <Text className="text-white/70 text-sm mt-1">
-                {band.genre.charAt(0).toUpperCase() + band.genre.slice(1)} •{" "}
+                {(band.genres?.[0] ?? band.genre ?? "genre tbd")
+                  .charAt(0)
+                  .toUpperCase() +
+                  (band.genres?.[0] ?? band.genre ?? "genre tbd").slice(1)} •{" "}
                 {band.location}
               </Text>
             </View>

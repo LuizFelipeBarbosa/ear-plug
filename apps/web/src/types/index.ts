@@ -31,6 +31,7 @@ export interface VenueLocationData {
 export interface CreateEventInput {
     title?: string;
     bandId: string;
+    cohostBandIds?: string[];
     date?: string; // ISO date string (YYYY-MM-DD)
     startTime?: string; // HH:MM format
     endTime?: string; // HH:MM format
@@ -49,6 +50,7 @@ export interface CreateEventInput {
  */
 export interface UpdateEventInput {
     eventId: string;
+    actingBandId: string;
     title?: string;
     date?: string; // ISO date string (YYYY-MM-DD)
     startTime?: string; // HH:MM format

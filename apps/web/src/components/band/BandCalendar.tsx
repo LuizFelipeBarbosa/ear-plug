@@ -316,6 +316,32 @@ export function BandCalendarView() {
           </button>
         </div>
 
+        <div className="mt-3 sm:mt-4 border border-zinc-800 bg-night-tertiary/70 p-3 sm:p-4">
+          <p className="text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">
+            Calendar Color Key
+          </p>
+          <div className="mt-2 grid gap-2 sm:grid-cols-2">
+            <div className="flex items-center justify-between gap-3 border border-lime/40 bg-lime/10 px-3 py-2">
+              <span className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold uppercase tracking-wide text-lime">
+                <span className="h-2.5 w-2.5 rounded-full bg-lime shadow-[0_0_0_3px_rgba(194,255,0,0.16)]" />
+                Confirmed
+              </span>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                Scheduled Gig
+              </span>
+            </div>
+            <div className="flex items-center justify-between gap-3 border border-violet/40 bg-violet/10 px-3 py-2">
+              <span className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold uppercase tracking-wide text-violet">
+                <span className="h-2.5 w-2.5 rounded-full bg-violet shadow-[0_0_0_3px_rgba(168,85,247,0.18)]" />
+                Tentative
+              </span>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                Hold / Draft Gig
+              </span>
+            </div>
+          </div>
+        </div>
+
       </header>
 
       {/* Events List */}

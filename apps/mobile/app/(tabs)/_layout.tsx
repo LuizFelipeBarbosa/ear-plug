@@ -9,7 +9,6 @@ import {
   LayoutDashboard,
   MessageCircle,
 } from "lucide-react-native";
-import { View, Text } from "react-native";
 
 export default function TabsLayout() {
   const user = useQuery(api.users.getCurrentUser);

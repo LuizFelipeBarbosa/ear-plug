@@ -56,6 +56,17 @@ export const bandInviteStatusSchema = z.enum([
 ]);
 
 /**
+ * Schema for event co-host invite status lifecycle.
+ */
+export const eventCohostInviteStatusSchema = z.enum([
+  "pending",
+  "accepted",
+  "declined",
+  "revoked",
+  "expired",
+]);
+
+/**
  * Schema for validating event status values.
  * Used for band calendar event management.
  *
@@ -390,6 +401,13 @@ export type BandMemberRoleInput = z.infer<typeof bandMemberRoleSchema>;
  * Inferred type for band invite status.
  */
 export type BandInviteStatusInput = z.infer<typeof bandInviteStatusSchema>;
+
+/**
+ * Inferred type for event co-host invite status.
+ */
+export type EventCohostInviteStatusInput = z.infer<
+  typeof eventCohostInviteStatusSchema
+>;
 
 /**
  * Inferred type for user profile update payloads.

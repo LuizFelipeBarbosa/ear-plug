@@ -109,6 +109,7 @@ export function useSharedEvents() {
       const result = await createEventWithVenue({
         title: input.title,
         bandId: input.bandId as Id<"bands">,
+        cohostBandIds: input.cohostBandIds as Id<"bands">[] | undefined,
         dateTime,
         genres: input.genres,
         ...venueArgs,
@@ -142,6 +143,7 @@ export function useSharedEvents() {
 
       const mutationArgs: {
         eventId: Id<"events">;
+        actingBandId: Id<"bands">;
         title?: string;
         dateTime?: number;
         image?: string;
@@ -158,6 +160,7 @@ export function useSharedEvents() {
         venuePlaceId?: string;
       } = {
         eventId: input.eventId as Id<"events">,
+        actingBandId: input.actingBandId as Id<"bands">,
       };
 
       if (input.date) {
@@ -196,8 +199,14 @@ export function useSharedEvents() {
    * @param eventId - Event id to remove
    */
   const deleteEvent = useCallback(
-    async (eventId: string): Promise<{ eventId: Id<"events"> }> => {
-      return await deleteTentativeEvent({ eventId: eventId as Id<"events"> });
+    async (
+      eventId: string,
+      actingBandId: string
+    ): Promise<{ eventId: Id<"events"> }> => {
+      return await deleteTentativeEvent({
+        eventId: eventId as Id<"events">,
+        actingBandId: actingBandId as Id<"bands">,
+      });
     },
     [deleteTentativeEvent]
   );

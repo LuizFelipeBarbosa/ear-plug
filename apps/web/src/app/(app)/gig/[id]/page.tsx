@@ -42,13 +42,17 @@ export default function EventDetailsPage({ params }: PageProps) {
     useEvent(eventId);
   const { mode, bandId, bands } = useProfileContext();
   const activeBandMembership = bands.find((entry) => entry.band._id === bandId);
-  const canViewGuestList =
+  const isBandParticipant =
     mode === "band" &&
     !!bandId &&
-    !!activeBandMembership &&
-    event?.bandId === bandId;
+    !!event &&
+    (event.bandId === bandId ||
+      (event.cohostBands ?? []).some((cohostBand) => cohostBand._id === bandId));
+  const canViewGuestList =
+    !!activeBandMembership && isBandParticipant;
   const { summary: guestListSummary } = useEventGuestListSummary(
-    canViewGuestList && event ? eventId : undefined
+    canViewGuestList && event ? eventId : undefined,
+    canViewGuestList && bandId ? bandId : undefined
   );
 
   const handleShare = async () => {
@@ -107,8 +111,7 @@ export default function EventDetailsPage({ params }: PageProps) {
   const inBandMode = mode === "band";
   const canManageEvent =
     !isPast &&
-    inBandMode &&
-    bandId === event.bandId &&
+    isBandParticipant &&
     (activeBandMembership?.membership.role === "owner" ||
       activeBandMembership?.membership.role === "admin");
 
@@ -199,6 +202,37 @@ export default function EventDetailsPage({ params }: PageProps) {
             >
               View Band Profile
             </Link>
+          </div>
+        )}
+
+        {event.lineupBands && event.lineupBands.length > 0 && (
+          <div className="mb-6 p-4 bg-night-tertiary border-2 border-zinc-800">
+            <h2 className="text-sm font-bold text-zinc-400 uppercase tracking-wider mb-3">
+              Lineup
+            </h2>
+            <div className="space-y-2">
+              {event.lineupBands.map((lineupBand) => (
+                <div
+                  key={lineupBand._id}
+                  className="flex items-center justify-between gap-3 border border-zinc-800 bg-night-secondary px-3 py-2"
+                >
+                  <div className="min-w-0">
+                    <p className="font-bold text-white uppercase tracking-wide truncate">
+                      {lineupBand.name}
+                    </p>
+                    <p className="text-[10px] uppercase tracking-wider text-zinc-500">
+                      {lineupBand._id === event.bandId ? "Host band" : "Co-host band"}
+                    </p>
+                  </div>
+                  <Link
+                    href={`/bands/${lineupBand._id}`}
+                    className="px-3 py-1.5 border border-lime/40 text-lime text-[10px] font-bold uppercase tracking-wider hover:bg-lime hover:text-night transition-colors"
+                  >
+                    View
+                  </Link>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
@@ -378,6 +412,7 @@ export default function EventDetailsPage({ params }: PageProps) {
           isOpen={isGuestPanelOpen}
           onClose={() => setIsGuestPanelOpen(false)}
           eventId={eventId}
+          bandId={bandId!}
           eventTitle={event.title}
         />
       )}
