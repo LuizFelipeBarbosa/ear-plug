@@ -106,6 +106,7 @@ export default function EventDetailsPage({ params }: PageProps) {
   const isPast = event.dateTime < Date.now();
   const inBandMode = mode === "band";
   const canManageEvent =
+    !isPast &&
     inBandMode &&
     bandId === event.bandId &&
     (activeBandMembership?.membership.role === "owner" ||
@@ -339,37 +340,35 @@ export default function EventDetailsPage({ params }: PageProps) {
           </div>
         )}
 
-        {/* RSVP Button - Fixed Bottom */}
-        <div className="mb-6 p-4 bg-night-secondary border-2 border-zinc-800">
-          {isPast ? (
-            <div className="w-full py-4 font-bold text-lg uppercase tracking-wider border-2 border-zinc-700 bg-zinc-800 text-zinc-400 text-center">
-              Event Completed
-            </div>
-          ) : inBandMode ? (
-            <div className="w-full py-4 font-bold text-sm uppercase tracking-wider border-2 border-zinc-700 bg-zinc-800 text-zinc-300 text-center">
-              Band workspace view (RSVP/Like disabled)
-            </div>
-          ) : (
-            <button
-              onClick={() => rsvp()}
-              disabled={spotsLeft <= 0 && !hasRsvp}
-              className={cn(
-                "w-full py-4 font-bold text-lg uppercase tracking-wider transition-all border-2 touch-target",
-                hasRsvp
-                  ? "bg-lime text-night border-lime"
-                  : spotsLeft <= 0
-                    ? "bg-zinc-800 text-zinc-500 border-zinc-800 cursor-not-allowed"
-                    : "bg-lime text-night border-lime hover:bg-transparent hover:text-lime"
-              )}
-            >
-              {hasRsvp ? "You're Going! ✓" : spotsLeft <= 0 ? "Sold Out" : "RSVP to Event"}
-            </button>
-          )}
-        </div>
+        {/* RSVP Button - Hidden for past events */}
+        {!isPast && (
+          <div className="mb-6 p-4 bg-night-secondary border-2 border-zinc-800">
+            {inBandMode ? (
+              <div className="w-full py-4 font-bold text-sm uppercase tracking-wider border-2 border-zinc-700 bg-zinc-800 text-zinc-300 text-center">
+                Band workspace view (RSVP/Like disabled)
+              </div>
+            ) : (
+              <button
+                onClick={() => rsvp()}
+                disabled={spotsLeft <= 0 && !hasRsvp}
+                className={cn(
+                  "w-full py-4 font-bold text-lg uppercase tracking-wider transition-all border-2 touch-target",
+                  hasRsvp
+                    ? "bg-lime text-night border-lime"
+                    : spotsLeft <= 0
+                      ? "bg-zinc-800 text-zinc-500 border-zinc-800 cursor-not-allowed"
+                      : "bg-lime text-night border-lime hover:bg-transparent hover:text-lime"
+                )}
+              >
+                {hasRsvp ? "You're Going! ✓" : spotsLeft <= 0 ? "Sold Out" : "RSVP to Event"}
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       <EditGigModal
-        isOpen={isEditModalOpen}
+        isOpen={canManageEvent && isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
         event={event}
       />
