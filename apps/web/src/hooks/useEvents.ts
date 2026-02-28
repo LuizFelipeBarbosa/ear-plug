@@ -166,15 +166,18 @@ export function useUserEvents() {
 /**
  * Hook for guest-list preview data on band event detail pages.
  */
-export function useEventGuestListSummary(eventId: Id<"events"> | undefined) {
+export function useEventGuestListSummary(
+  eventId: Id<"events"> | undefined,
+  bandId: Id<"bands"> | undefined
+) {
   const summary = useQuery(
     api.events.getEventGuestListSummary,
-    eventId ? { eventId } : "skip"
+    eventId && bandId ? { eventId, bandId } : "skip"
   );
 
   return {
     summary,
-    isLoading: eventId !== undefined && summary === undefined,
+    isLoading: eventId !== undefined && bandId !== undefined && summary === undefined,
   };
 }
 
@@ -183,13 +186,15 @@ export function useEventGuestListSummary(eventId: Id<"events"> | undefined) {
  */
 export function useEventGuestList(
   eventId: Id<"events"> | undefined,
+  bandId: Id<"bands"> | undefined,
   options?: { rsvpType?: GuestFilterType; search?: string }
 ) {
   const guestsResult = useQuery(
     api.events.listEventGuests,
-    eventId
+    eventId && bandId
       ? {
           eventId,
+          bandId,
           rsvpType: options?.rsvpType,
           search: options?.search?.trim() ? options.search : undefined,
         }
@@ -205,13 +210,18 @@ export function useEventGuestList(
     cap: guestsResult?.cap ?? 500,
     totalCount: guestsResult?.totalCount ?? 0,
     canManage: guestsResult?.canManage ?? false,
-    isLoading: eventId !== undefined && guestsResult === undefined,
+    isLoading: eventId !== undefined && bandId !== undefined && guestsResult === undefined,
     setGuestAttendance: (args: {
       eventId: Id<"events">;
+      bandId: Id<"bands">;
       rsvpId: Id<"rsvps">;
       attended: boolean;
     }) => setGuestAttendanceMutation(args),
-    removeGuestRsvp: (args: { eventId: Id<"events">; rsvpId: Id<"rsvps"> }) =>
+    removeGuestRsvp: (args: {
+      eventId: Id<"events">;
+      bandId: Id<"bands">;
+      rsvpId: Id<"rsvps">;
+    }) =>
       removeGuestRsvpMutation(args),
   };
 }

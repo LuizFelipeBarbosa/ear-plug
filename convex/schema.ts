@@ -122,6 +122,17 @@ const bandInviteStatusValidator = v.union(
 );
 
 /**
+ * Validator for event co-host invite lifecycle status.
+ */
+const eventCohostInviteStatusValidator = v.union(
+  v.literal("pending"),
+  v.literal("accepted"),
+  v.literal("declined"),
+  v.literal("revoked"),
+  v.literal("expired")
+);
+
+/**
  * Validator for notification types.
  * Each type triggers different UI handling and display.
  */
@@ -374,6 +385,39 @@ export default defineSchema({
     .index("by_venue", ["venueId"])
     .index("by_date", ["dateTime"])
     .index("by_status", ["status"]),
+
+  // ==================== EVENT CO-HOST INVITES ====================
+  /**
+   * Co-host invitations for events between bands.
+   *
+   * Host band remains canonical owner on `events.bandId`, while accepted co-host
+   * rows grant collaborative access for management and analytics.
+   */
+  eventCohostInvites: defineTable({
+    /** Event being co-hosted */
+    eventId: v.id("events"),
+    /** Canonical host band (matches events.bandId) */
+    hostBandId: v.id("bands"),
+    /** Invited co-host band */
+    invitedBandId: v.id("bands"),
+    /** Band workspace used by inviter */
+    invitedByBandId: v.id("bands"),
+    /** User who sent the invite */
+    invitedByUserId: v.id("users"),
+    /** Current invite lifecycle status */
+    status: eventCohostInviteStatusValidator,
+    /** Unix timestamp when invite was created */
+    createdAt: v.number(),
+    /** Unix timestamp when invite was responded to/revoked/expired */
+    respondedAt: v.optional(v.number()),
+    /** Unix timestamp after which pending invite is invalid */
+    expiresAt: v.number(),
+  })
+    .index("by_event", ["eventId"])
+    .index("by_event_status", ["eventId", "status"])
+    .index("by_invited_band", ["invitedBandId"])
+    .index("by_invited_band_status", ["invitedBandId", "status"])
+    .index("by_event_invited_band", ["eventId", "invitedBandId"]),
 
   // ==================== RSVPs ====================
   /**

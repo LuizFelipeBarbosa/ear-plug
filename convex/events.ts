@@ -14,6 +14,11 @@ import {
   requireBandMember,
   requireBandRole,
 } from "./utils/permissions";
+import {
+  createCohostInvitesForEvent,
+  getAcceptedCohostBandIds,
+  getParticipatingBandIdsForEvent,
+} from "./eventCohosts";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 
@@ -59,6 +64,7 @@ interface ViewerContext {
   userId: Id<"users"> | null;
   memberBandIds: Set<Id<"bands">>;
   rsvpEventIds: Set<Id<"events">>;
+  cohostEventIds: Set<Id<"events">>;
 }
 
 interface EventBandAccess {
@@ -205,6 +211,7 @@ async function buildViewerContext(ctx: QueryCtx): Promise<ViewerContext> {
       userId: null,
       memberBandIds: new Set<Id<"bands">>(),
       rsvpEventIds: new Set<Id<"events">>(),
+      cohostEventIds: new Set<Id<"events">>(),
     };
   }
 
@@ -218,6 +225,7 @@ async function buildViewerContext(ctx: QueryCtx): Promise<ViewerContext> {
       userId: null,
       memberBandIds: new Set<Id<"bands">>(),
       rsvpEventIds: new Set<Id<"events">>(),
+      cohostEventIds: new Set<Id<"events">>(),
     };
   }
 
@@ -232,10 +240,28 @@ async function buildViewerContext(ctx: QueryCtx): Promise<ViewerContext> {
       .collect(),
   ]);
 
+  const memberBandIds = new Set(memberships.map((membership) => membership.bandId));
+  const acceptedCohostInvites = await Promise.all(
+    [...memberBandIds].map((bandId) =>
+      ctx.db
+        .query("eventCohostInvites")
+        .withIndex("by_invited_band_status", (q) =>
+          q.eq("invitedBandId", bandId).eq("status", "accepted")
+        )
+        .collect()
+    )
+  );
+  const cohostEventIds = new Set(
+    acceptedCohostInvites
+      .flat()
+      .map((invite) => invite.eventId)
+  );
+
   return {
     userId: user._id,
-    memberBandIds: new Set(memberships.map((membership) => membership.bandId)),
+    memberBandIds,
     rsvpEventIds: new Set(rsvps.map((rsvp) => rsvp.eventId)),
+    cohostEventIds,
   };
 }
 
@@ -250,6 +276,10 @@ function canViewAddress(
   }
 
   if (viewerContext.memberBandIds.has(event.bandId)) {
+    return true;
+  }
+
+  if (viewerContext.cohostEventIds.has(event._id)) {
     return true;
   }
 
@@ -283,9 +313,9 @@ function applyAddressMask<
 
 async function resolveEventBandAccess(
   ctx: QueryCtx | MutationCtx,
-  eventId: Id<"events">
+  eventId: Id<"events">,
+  bandId: Id<"bands">
 ): Promise<EventBandAccess> {
-  // Event-specific authorization helper; can be generalized in utils/permissions if reused.
   const event = await ctx.db.get(eventId);
   if (!event) {
     throw new Error("Event not found");
@@ -295,12 +325,17 @@ async function resolveEventBandAccess(
   const membership = await ctx.db
     .query("bandMemberships")
     .withIndex("by_band_user", (q) =>
-      q.eq("bandId", event.bandId).eq("userId", user._id)
+      q.eq("bandId", bandId).eq("userId", user._id)
     )
     .unique();
 
   if (!membership) {
-    throw new Error("Not authorized for this band");
+    throw new Error("Not authorized for this active band workspace");
+  }
+
+  const participatingBandIds = await getParticipatingBandIdsForEvent(ctx, event);
+  if (!participatingBandIds.includes(bandId)) {
+    throw new Error("Not authorized for this event");
   }
 
   return {
@@ -476,13 +511,22 @@ export const getById = query({
     if (!event || !isPublicEvent(event)) return null;
     const viewerContext = await buildViewerContext(ctx);
 
-    const band = await ctx.db.get(event.bandId);
+    const [band, acceptedCohostBandIds] = await Promise.all([
+      ctx.db.get(event.bandId),
+      getAcceptedCohostBandIds(ctx, event._id),
+    ]);
+    const cohostBands = (
+      await Promise.all(acceptedCohostBandIds.map((bandId) => ctx.db.get(bandId)))
+    ).filter((cohostBand): cohostBand is NonNullable<typeof cohostBand> => cohostBand !== null);
+    const lineupBands = band ? [band, ...cohostBands] : cohostBands;
     const venue = await ctx.db.get(event.venueId);
 
     return applyAddressMask(
       {
         ...event,
         band,
+        cohostBands,
+        lineupBands,
         venue,
       },
       viewerContext
@@ -520,19 +564,45 @@ export const listByBand = query({
     const now = Date.now();
     await requireBandMember(ctx, args.bandId);
 
-    let events = await ctx.db
-      .query("events")
-      .withIndex("by_band", (q) => q.eq("bandId", args.bandId))
-      .collect();
+    const [hostedEvents, acceptedCohostInvites] = await Promise.all([
+      ctx.db
+        .query("events")
+        .withIndex("by_band", (q) => q.eq("bandId", args.bandId))
+        .collect(),
+      ctx.db
+        .query("eventCohostInvites")
+        .withIndex("by_invited_band_status", (q) =>
+          q.eq("invitedBandId", args.bandId).eq("status", "accepted")
+        )
+        .collect(),
+    ]);
 
+    const hostedById = new Map(hostedEvents.map((event) => [event._id, event]));
+    const cohostedEventIds = Array.from(
+      new Set(acceptedCohostInvites.map((invite) => invite.eventId))
+    );
+    const cohostedEvents = (
+      await Promise.all(cohostedEventIds.map((eventId) => ctx.db.get(eventId)))
+    ).filter((event): event is NonNullable<typeof event> => event !== null);
+
+    const mergedEvents = [
+      ...hostedEvents,
+      ...cohostedEvents.filter((event) => !hostedById.has(event._id)),
+    ];
+
+    let events = mergedEvents;
     if (!args.includesPast) {
-      events = events.filter((e) => e.dateTime === undefined || e.dateTime >= now);
+      events = mergedEvents.filter((e) => e.dateTime === undefined || e.dateTime >= now);
     }
 
     const eventsWithDetails = await Promise.all(
       events.map(async (event) => {
         const venue = event.venueId ? await ctx.db.get(event.venueId) : null;
-        return { ...event, venue };
+        return {
+          ...event,
+          venue,
+          participationRole: event.bandId === args.bandId ? "host" : "cohost",
+        };
       })
     );
 
@@ -1057,9 +1127,10 @@ export const getUserEventStatus = query({
 export const getEventGuestListSummary = query({
   args: {
     eventId: v.id("events"),
+    bandId: v.id("bands"),
   },
   handler: async (ctx, args) => {
-    const access = await resolveEventBandAccess(ctx, args.eventId);
+    const access = await resolveEventBandAccess(ctx, args.eventId, args.bandId);
 
     if (!access.canViewGuestList) {
       throw new Error("Not authorized for this band");
@@ -1104,11 +1175,12 @@ export const getEventGuestListSummary = query({
 export const listEventGuests = query({
   args: {
     eventId: v.id("events"),
+    bandId: v.id("bands"),
     rsvpType: v.optional(guestFilterTypeValidator),
     search: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const access = await resolveEventBandAccess(ctx, args.eventId);
+    const access = await resolveEventBandAccess(ctx, args.eventId, args.bandId);
     if (!access.canViewGuestList) {
       throw new Error("Not authorized for this band");
     }
@@ -1175,11 +1247,12 @@ export const listEventGuests = query({
 export const setEventGuestAttendance = mutation({
   args: {
     eventId: v.id("events"),
+    bandId: v.id("bands"),
     rsvpId: v.id("rsvps"),
     attended: v.boolean(),
   },
   handler: async (ctx, args) => {
-    const access = await resolveEventBandAccess(ctx, args.eventId);
+    const access = await resolveEventBandAccess(ctx, args.eventId, args.bandId);
     if (!access.canManageGuestList) {
       throw new Error("Not authorized for this band");
     }
@@ -1228,10 +1301,11 @@ export const setEventGuestAttendance = mutation({
 export const removeEventGuestRsvp = mutation({
   args: {
     eventId: v.id("events"),
+    bandId: v.id("bands"),
     rsvpId: v.id("rsvps"),
   },
   handler: async (ctx, args) => {
-    const access = await resolveEventBandAccess(ctx, args.eventId);
+    const access = await resolveEventBandAccess(ctx, args.eventId, args.bandId);
     if (!access.canManageGuestList) {
       throw new Error("Not authorized for this band");
     }
@@ -1402,6 +1476,7 @@ export const create = mutation({
   args: {
     title: v.optional(v.string()),
     bandId: v.id("bands"),
+    cohostBandIds: v.optional(v.array(v.id("bands"))),
     venueId: v.optional(v.id("venues")),
     dateTime: v.optional(v.number()),
     image: v.optional(v.string()),
@@ -1419,7 +1494,7 @@ export const create = mutation({
       throw new Error("Band not found");
     }
 
-    await requireBandRole(ctx, args.bandId, ["owner", "admin"]);
+    const { user } = await requireBandRole(ctx, args.bandId, ["owner", "admin"]);
 
     const status = args.status ?? "confirmed";
     const genres = args.genres ?? (args.genre ? [args.genre] : undefined);
@@ -1449,6 +1524,16 @@ export const create = mutation({
       status,
       addressVisibility: args.addressVisibility ?? "public",
     });
+
+    if (args.cohostBandIds && args.cohostBandIds.length > 0) {
+      await createCohostInvitesForEvent(ctx, {
+        eventId,
+        hostBandId: args.bandId,
+        invitedByBandId: args.bandId,
+        invitedByUserId: user._id,
+        invitedBandIds: args.cohostBandIds,
+      });
+    }
 
     // Notify fans only when a gig is publicly confirmed.
     if (isPublic(status) && args.venueId) {
@@ -1502,6 +1587,7 @@ export const createWithVenue = mutation({
   args: {
     title: v.optional(v.string()),
     bandId: v.id("bands"),
+    cohostBandIds: v.optional(v.array(v.id("bands"))),
     dateTime: v.optional(v.number()),
     genres: v.optional(v.array(genreValidator)), // Multiple genres
     genre: v.optional(genreValidator), // Legacy field for backward compatibility
@@ -1528,7 +1614,7 @@ export const createWithVenue = mutation({
       throw new Error("Band not found");
     }
 
-    await requireBandRole(ctx, args.bandId, ["owner", "admin"]);
+    const { user } = await requireBandRole(ctx, args.bandId, ["owner", "admin"]);
 
     const status = args.status ?? "confirmed";
     const genres = args.genres ?? (args.genre ? [args.genre] : undefined);
@@ -1575,6 +1661,16 @@ export const createWithVenue = mutation({
       addressVisibility: args.addressVisibility ?? "public",
     });
 
+    if (args.cohostBandIds && args.cohostBandIds.length > 0) {
+      await createCohostInvitesForEvent(ctx, {
+        eventId,
+        hostBandId: args.bandId,
+        invitedByBandId: args.bandId,
+        invitedByUserId: user._id,
+        invitedBandIds: args.cohostBandIds,
+      });
+    }
+
     // Notify fans only when a gig is publicly confirmed.
     if (isPublic(status) && venueId) {
       await ctx.scheduler.runAfter(0, internal.notifications.createNearbyEventNotifications, {
@@ -1599,6 +1695,7 @@ export const createWithVenue = mutation({
 export const updateWithVenue = mutation({
   args: {
     eventId: v.id("events"),
+    actingBandId: v.id("bands"),
     title: v.optional(v.string()),
     dateTime: v.optional(v.number()),
     image: v.optional(v.string()),
@@ -1626,7 +1723,11 @@ export const updateWithVenue = mutation({
       throw new Error("Event not found");
     }
 
-    await requireBandRole(ctx, event.bandId, ["owner", "admin"]);
+    await requireBandRole(ctx, args.actingBandId, ["owner", "admin"]);
+    const participatingBandIds = await getParticipatingBandIdsForEvent(ctx, event);
+    if (!participatingBandIds.includes(args.actingBandId)) {
+      throw new Error("Not authorized for this event");
+    }
 
     if (args.capacity !== undefined && args.capacity < event.rsvpCount) {
       throw new Error(
@@ -1737,6 +1838,7 @@ export const updateWithVenue = mutation({
 export const deleteTentative = mutation({
   args: {
     eventId: v.id("events"),
+    actingBandId: v.id("bands"),
   },
   handler: async (ctx, args) => {
     const event = await ctx.db.get(args.eventId);
@@ -1744,7 +1846,11 @@ export const deleteTentative = mutation({
       throw new Error("Event not found");
     }
 
-    await requireBandRole(ctx, event.bandId, ["owner", "admin"]);
+    await requireBandRole(ctx, args.actingBandId, ["owner", "admin"]);
+    const participatingBandIds = await getParticipatingBandIdsForEvent(ctx, event);
+    if (!participatingBandIds.includes(args.actingBandId)) {
+      throw new Error("Not authorized for this event");
+    }
 
     if (!isTentative(event.status)) {
       throw new Error("Only tentative gigs can be deleted.");

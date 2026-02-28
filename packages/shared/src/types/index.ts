@@ -35,6 +35,16 @@ export type BandInviteStatus =
   | "expired";
 
 /**
+ * Status for event co-host invites between bands.
+ */
+export type EventCohostInviteStatus =
+  | "pending"
+  | "accepted"
+  | "declined"
+  | "revoked"
+  | "expired";
+
+/**
  * Music genre categories supported by the platform.
  * Used for filtering events, matching bands with venues, and user preferences.
  */
@@ -54,6 +64,11 @@ export type Genre =
  * - "available": Open slot, no event booked yet
  */
 export type EventStatus = "confirmed" | "hold" | "available";
+
+/**
+ * Participation role of a band for a specific event.
+ */
+export type EventParticipationRole = "host" | "cohost";
 
 /**
  * Visibility setting for event street addresses.
@@ -313,6 +328,12 @@ export interface EventWithDetails extends Event {
   band: Band | null;
   /** The hosting venue (null if not found) */
   venue: Venue | null;
+  /** Accepted co-host bands */
+  cohostBands?: Band[];
+  /** Host + accepted co-host lineup */
+  lineupBands?: Band[];
+  /** Viewer band participation role when returned from band-scoped queries */
+  participationRole?: EventParticipationRole;
   /** Whether venue street address is hidden for the current viewer */
   isVenueAddressHidden?: boolean;
   /** RSVP attendance status when returned from RSVP history payloads */
@@ -336,6 +357,30 @@ export interface RSVP extends BaseEntity {
   attendanceStatus?: GuestRsvpType;
   /** Unix timestamp (ms) when RSVP was marked attended */
   attendedAt?: number;
+}
+
+/**
+ * Invitation for one band to co-host a specific event.
+ */
+export interface EventCohostInvite extends BaseEntity {
+  /** Event being co-hosted */
+  eventId: string;
+  /** Canonical host band */
+  hostBandId: string;
+  /** Invited co-host band */
+  invitedBandId: string;
+  /** Band workspace used by inviter */
+  invitedByBandId: string;
+  /** User who sent the invite */
+  invitedByUserId: string;
+  /** Invite lifecycle status */
+  status: EventCohostInviteStatus;
+  /** Unix timestamp (ms) when invite was created */
+  createdAt: number;
+  /** Unix timestamp (ms) when invite was responded to */
+  respondedAt?: number;
+  /** Unix timestamp (ms) when pending invite expires */
+  expiresAt: number;
 }
 
 /**

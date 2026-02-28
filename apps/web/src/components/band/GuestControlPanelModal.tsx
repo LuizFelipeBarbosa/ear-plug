@@ -13,6 +13,7 @@ interface GuestControlPanelModalProps {
   isOpen: boolean;
   onClose: () => void;
   eventId: Id<"events">;
+  bandId: Id<"bands">;
   eventTitle: string;
 }
 
@@ -35,6 +36,7 @@ export function GuestControlPanelModal({
   isOpen,
   onClose,
   eventId,
+  bandId,
   eventTitle,
 }: GuestControlPanelModalProps) {
   const [search, setSearch] = useState("");
@@ -51,7 +53,7 @@ export function GuestControlPanelModal({
     isLoading,
     setGuestAttendance,
     removeGuestRsvp,
-  } = useEventGuestList(isOpen ? eventId : undefined, {
+  } = useEventGuestList(isOpen ? eventId : undefined, isOpen ? bandId : undefined, {
     rsvpType: filter,
     search,
   });
@@ -70,6 +72,7 @@ export function GuestControlPanelModal({
     try {
       await setGuestAttendance({
         eventId,
+        bandId,
         rsvpId: guest.rsvpId as Id<"rsvps">,
         attended: guest.rsvpType !== "attended",
       });
@@ -97,6 +100,7 @@ export function GuestControlPanelModal({
     try {
       await removeGuestRsvp({
         eventId,
+        bandId,
         rsvpId: guest.rsvpId as Id<"rsvps">,
       });
     } catch (removeError) {
