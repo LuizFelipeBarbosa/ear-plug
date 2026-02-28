@@ -545,6 +545,50 @@ export const listByBand = query({
 });
 
 /**
+ * Lists public past events for a specific band for fan-facing surfaces.
+ * Returns confirmed events only, sorted by most recent first.
+ *
+ * @param args.bandId - The Convex ID of the band
+ * @param args.limit - Maximum number of past gigs to return (default: 6, max: 24)
+ */
+export const listPublicPastByBand = query({
+  args: {
+    bandId: v.id("bands"),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    await requireAuthenticatedUser(ctx);
+
+    const now = Date.now();
+    const limit = Math.max(1, Math.min(args.limit ?? 6, 24));
+
+    const events = await ctx.db
+      .query("events")
+      .withIndex("by_band", (q) => q.eq("bandId", args.bandId))
+      .collect();
+
+    const pastEvents = events
+      .filter((event): event is PublicEvent => isPublicEvent(event))
+      .filter((event) => event.dateTime < now)
+      .sort((a, b) => b.dateTime - a.dateTime)
+      .slice(0, limit);
+
+    return Promise.all(
+      pastEvents.map(async (event) => {
+        const venue = await ctx.db.get(event.venueId);
+        return {
+          ...event,
+          venue: {
+            name: venue?.name ?? "Unknown Venue",
+            city: venue?.city ?? "Unknown City",
+          },
+        };
+      })
+    );
+  },
+});
+
+/**
  * Lists upcoming events at a specific venue.
  * Returns events sorted by date ascending.
  *

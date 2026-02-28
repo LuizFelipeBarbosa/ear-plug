@@ -7,6 +7,7 @@ import { ArrowLeft, MapPin, Music, UserCheck, UserPlus, Users } from "lucide-rea
 import { api } from "../../../../../../../convex/_generated/api";
 import type { Id } from "../../../../../../../convex/_generated/dataModel";
 import { BandPublicMediaSlotsSection } from "@/components/band/slots/BandPublicMediaSlotsSection";
+import { PastShowFlyerSection } from "@/components/events/PastShowFlyerSection";
 import { useProfileContext } from "@/hooks/useProfileContext";
 import { GENRE_COLORS } from "@ear-plug/shared/constants";
 import { getInitials } from "@ear-plug/shared/utils";
@@ -26,6 +27,7 @@ export default function BandFeedPage({ params }: PageProps) {
   const trackProfileView = useMutation(api.bands.trackProfileView);
 
   const publicProfile = useQuery(api.bands.getPublicBandProfile, { bandId });
+  const pastGigs = useQuery(api.events.listPublicPastByBand, { bandId, limit: 6 });
   const trackedBandIdRef = useRef<Id<"bands"> | null>(null);
   const [isSavingFollow, setIsSavingFollow] = useState(false);
   const [followError, setFollowError] = useState<string | null>(null);
@@ -139,7 +141,7 @@ export default function BandFeedPage({ params }: PageProps) {
 
   return (
     <div className="min-h-screen bg-night pb-6">
-      <header className="p-4 border-b-2 border-lime/20 bg-night-secondary sticky top-0 z-20">
+      <header className="p-4 border-b-2 border-lime/20 bg-night-secondary">
         <button
           type="button"
           onClick={() => router.back()}
@@ -149,62 +151,64 @@ export default function BandFeedPage({ params }: PageProps) {
           Back
         </button>
 
-        <div className="bg-night-tertiary border-2 border-zinc-800 p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-16 h-16 overflow-hidden bg-night-secondary border border-zinc-700 flex items-center justify-center flex-shrink-0">
+        <div className="bg-night-tertiary border-2 border-zinc-800 p-3 sm:p-4">
+          <div className="flex items-start gap-3">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 overflow-hidden bg-night-secondary border border-zinc-700 flex items-center justify-center flex-shrink-0">
               {band.image ? (
                 <Image
                   src={band.image}
                   alt={band.name}
-                  width={64}
-                  height={64}
+                  width={80}
+                  height={80}
                   className="object-cover"
                 />
               ) : (
-                <span className="text-lg font-bold text-lime">{getInitials(band.name)}</span>
+                <span className="text-lg sm:text-xl font-bold text-lime">{getInitials(band.name)}</span>
               )}
             </div>
 
             <div className="min-w-0 flex-1">
-              <h1 className="text-lg font-bold text-white uppercase tracking-tight truncate">
+              <h1 className="text-lg sm:text-xl font-bold text-white uppercase tracking-tight leading-tight [overflow-wrap:anywhere]">
                 {band.name}
               </h1>
-              <div className="flex flex-wrap gap-1 mt-1.5">
+              <div className="flex flex-wrap gap-1.5 mt-2">
                 {(band.genres || []).map((genre) => (
                   <span
                     key={genre}
-                    className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-night"
+                    className="inline-flex items-center gap-1 px-2 py-1 text-[11px] leading-none font-bold uppercase tracking-wider text-night"
                     style={{ backgroundColor: GENRE_COLORS[genre as Genre] }}
                   >
-                    <Music className="w-3 h-3" />
+                    <Music className="w-2.5 h-2.5" />
                     {genre}
                   </span>
                 ))}
               </div>
-              <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-zinc-400">
-                <span className="inline-flex items-center gap-1">
-                  <MapPin className="w-3.5 h-3.5 text-lime" />
+              <div className="mt-2 grid grid-cols-1 gap-1 sm:flex sm:flex-wrap sm:items-center sm:gap-3 text-sm sm:text-xs text-zinc-300">
+                <span className="inline-flex items-start gap-1 leading-tight">
+                  <MapPin className="w-3.5 h-3.5 text-lime shrink-0 mt-0.5 sm:mt-0" />
                   {band.location}
                 </span>
                 <span className="inline-flex items-center gap-1">
-                  <Users className="w-3.5 h-3.5 text-lime" />
+                  <Users className="w-3.5 h-3.5 text-lime shrink-0" />
                   {followerCount} followers
                 </span>
                 {band.memberCount ? (
                   <span className="inline-flex items-center gap-1">
-                    <Users className="w-3.5 h-3.5 text-violet" />
+                    <Users className="w-3.5 h-3.5 text-violet shrink-0" />
                     {band.memberCount} members
                   </span>
                 ) : null}
               </div>
             </div>
+          </div>
 
+          <div className="mt-3 pt-3 border-t border-zinc-800">
             {canToggleFollow ? (
               <button
                 type="button"
                 onClick={handleToggleFollow}
                 disabled={isSavingFollow}
-                className={`px-3 py-2 border text-[10px] font-bold uppercase tracking-wider transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
+                className={`w-full sm:w-auto px-3 py-2 border text-xs sm:text-[10px] font-bold uppercase tracking-wider transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
                   isFollowing
                     ? "border-lime/50 bg-lime/20 text-lime hover:bg-lime/30"
                     : "border-lime/40 text-lime hover:bg-lime hover:text-night"
@@ -220,7 +224,7 @@ export default function BandFeedPage({ params }: PageProps) {
                 </span>
               </button>
             ) : (
-              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 border border-zinc-700 px-2.5 py-1.5">
+              <span className="inline-flex w-full sm:w-auto justify-center text-[10px] font-bold uppercase tracking-wider text-zinc-400 border border-zinc-700 px-2.5 py-1.5">
                 Band Member
               </span>
             )}
@@ -240,11 +244,25 @@ export default function BandFeedPage({ params }: PageProps) {
         </div>
       </header>
 
-      <main className="p-4">
+      <main className="p-4 space-y-6">
         <BandPublicMediaSlotsSection
           bandId={band._id}
           title="Band Media"
           description="Read-only profile media slots."
+        />
+
+        <PastShowFlyerSection
+          shows={(pastGigs ?? []).map((gig) => ({
+            eventId: gig._id,
+            title: gig.title,
+            dateTime: gig.dateTime,
+            image: gig.image,
+            venueName: gig.venue.name,
+            venueCity: gig.venue.city,
+          }))}
+          emptyMessage="No past gigs yet."
+          isLoading={pastGigs === undefined}
+          title="Past Gigs"
         />
       </main>
     </div>

@@ -15,8 +15,8 @@ import {
 } from "lucide-react";
 import { api } from "../../../../../../../convex/_generated/api";
 import type { Id } from "../../../../../../../convex/_generated/dataModel";
-import { EventImage } from "@/components/ui/OptimizedImage";
-import { GENRE_COLORS, formatEventDate, formatFullDate } from "@ear-plug/shared/constants";
+import { PastShowFlyerSection } from "@/components/events/PastShowFlyerSection";
+import { GENRE_COLORS, formatFullDate } from "@ear-plug/shared/constants";
 import { getInitials } from "@ear-plug/shared/utils";
 import type { Genre } from "@ear-plug/shared/types";
 
@@ -229,42 +229,18 @@ export default function PublicFanProfilePage({ params }: PageProps) {
           )}
         </section>
 
-        <section>
-          <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-3">
-            Past Shows
-          </h2>
-          {pastShows.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {pastShows.map((show) => (
-                <article
-                  key={show.eventId}
-                  className="border border-zinc-800 bg-night-tertiary overflow-hidden"
-                >
-                  <div className="h-40">
-                    <EventImage src={show.image} alt={show.title} className="h-full w-full" />
-                  </div>
-                  <div className="p-3 space-y-1">
-                    <p className="text-sm font-bold text-white truncate">{show.title}</p>
-                    <p className="text-xs text-zinc-500">{formatEventDate(show.dateTime)}</p>
-                    <p className="text-xs text-zinc-400 truncate">
-                      {show.venue.name} · {show.venue.city}
-                    </p>
-                    {show.band ? (
-                      <Link
-                        href={`/bands/${show.band.bandId}`}
-                        className="inline-flex text-xs uppercase tracking-wider text-lime hover:text-lime/80"
-                      >
-                        {show.band.name}
-                      </Link>
-                    ) : null}
-                  </div>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-zinc-500">No attended past shows yet.</p>
-          )}
-        </section>
+        <PastShowFlyerSection
+          shows={pastShows.map((show) => ({
+            eventId: show.eventId,
+            title: show.title,
+            dateTime: show.dateTime,
+            image: show.image,
+            venueName: show.venue.name,
+            venueCity: show.venue.city,
+            bandName: show.band?.name,
+          }))}
+          emptyMessage="No attended past shows yet."
+        />
 
         <section>
           <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-3">

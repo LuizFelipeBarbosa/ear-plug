@@ -112,6 +112,43 @@ export function useBandAnalytics(bandId: Id<"bands"> | undefined) {
 }
 
 /**
+ * Hook for listing a band's past confirmed shows with flyer-ready display fields.
+ */
+export function useBandPastShows(bandId: Id<"bands"> | undefined) {
+  const events = useQuery(
+    api.events.listByBand,
+    bandId ? { bandId, includesPast: true } : "skip"
+  );
+
+  const pastShows = (events ?? [])
+    .filter(
+      (
+        event
+      ): event is typeof event & {
+        dateTime: number;
+      } =>
+        typeof event.dateTime === "number" &&
+        Number.isFinite(event.dateTime) &&
+        event.dateTime < Date.now() &&
+        event.status === "confirmed"
+    )
+    .sort((a, b) => b.dateTime - a.dateTime)
+    .map((event) => ({
+      eventId: event._id,
+      title: event.title?.trim() || "Untitled Gig",
+      dateTime: event.dateTime,
+      image: event.image,
+      venueName: event.venue?.name || "Unknown Venue",
+      venueCity: event.venue?.city || "Unknown City",
+    }));
+
+  return {
+    pastShows,
+    isLoading: bandId !== undefined && events === undefined,
+  };
+}
+
+/**
  * Hook for managing saved/followed bands for the current user.
  * Provides the list of saved bands and toggle functionality.
  *

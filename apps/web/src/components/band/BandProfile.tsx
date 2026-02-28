@@ -19,9 +19,10 @@ import {
   Shield,
   X,
 } from "lucide-react";
-import { useCurrentBand } from "@/hooks/useBand";
+import { useBandPastShows, useCurrentBand } from "@/hooks/useBand";
 import { EditBandProfileModal } from "@/components/band/EditBandProfileModal";
 import { BandMediaSlotsSection } from "@/components/band/slots/BandMediaSlotsSection";
+import { PastShowFlyerSection } from "@/components/events/PastShowFlyerSection";
 import { ProfileWorkspaceSwitcher } from "@/components/profile/ProfileWorkspaceSwitcher";
 import { GENRE_COLORS } from "@ear-plug/shared/constants";
 import { getInitials } from "@ear-plug/shared/utils";
@@ -32,6 +33,7 @@ const PANEL_TRANSITION_MS = 220;
 
 export function BandProfileView() {
   const { band, bandWithStats, isLoading } = useCurrentBand();
+  const { pastShows, isLoading: isPastShowsLoading } = useBandPastShows(band?._id);
   const [showEditModal, setShowEditModal] = useState(false);
   const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false);
   const [isSettingsMenuVisible, setIsSettingsMenuVisible] = useState(false);
@@ -135,12 +137,12 @@ export function BandProfileView() {
   return (
     <div className="min-h-screen pb-6 bg-night overflow-x-hidden">
       {/* Header */}
-      <header className="relative bg-night-secondary border-b-2 border-lime/20 p-6 overflow-visible">
+      <header className="relative bg-night-secondary border-b-2 border-lime/20 p-4 sm:p-6 overflow-visible">
         {/* Subtle gradient accent */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-violet/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
 
         <div className="relative">
-          <div className="flex items-center justify-between mb-6 gap-3">
+          <div className="flex items-center justify-between mb-4 sm:mb-6 gap-3">
             <ProfileWorkspaceSwitcher className="flex-1 min-w-0" variant="header" />
             <button
               type="button"
@@ -153,58 +155,65 @@ export function BandProfileView() {
           </div>
 
           {/* Band Card */}
-          <div className="bg-night-tertiary/80 backdrop-blur-sm border-2 border-zinc-800 p-4">
-            <div className="flex items-center gap-4">
-              <div className="w-20 h-20 overflow-hidden bg-night-secondary border-2 border-lime/30 flex-shrink-0">
+          <div className="bg-night-tertiary/80 backdrop-blur-sm border-2 border-zinc-800 p-3 sm:p-4">
+            <div className="flex items-start gap-3 sm:gap-4">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 overflow-hidden bg-night-secondary border-2 border-lime/30 flex-shrink-0">
                 {band.image ? (
                   <Image
                     src={band.image}
                     alt={band.name}
-                    width={80}
-                    height={80}
+                    width={64}
+                    height={64}
                     className="object-cover"
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-2xl font-bold text-lime">
+                  <div className="w-full h-full flex items-center justify-center text-xl sm:text-2xl font-bold text-lime">
                     {getInitials(band.name)}
                   </div>
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <h2 className="text-xl font-bold text-white uppercase tracking-tight truncate">{band.name}</h2>
-                <div className="flex flex-wrap gap-1 mt-1">
+                <div className="flex items-start gap-2">
+                  <h2 className="flex-1 min-w-0 text-lg sm:text-xl font-bold text-white uppercase tracking-tight leading-tight [overflow-wrap:anywhere]">
+                    {band.name}
+                  </h2>
+                  {canEditBandProfile && (
+                    <button
+                      onClick={() => setShowEditModal(true)}
+                      className="p-2 hover:bg-night-tertiary border border-zinc-800 hover:border-lime/30 transition-colors touch-target shrink-0"
+                      aria-label="Edit band profile"
+                    >
+                      <Edit className="w-4 h-4 sm:w-5 sm:h-5 text-zinc-400" />
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap gap-1.5 mt-2">
                   {(band.genres || []).map((g) => (
                     <span
                       key={g}
-                      className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-night"
+                      className="inline-flex items-center gap-1 px-2 py-1 text-[11px] leading-none font-bold uppercase tracking-wider text-night"
                       style={{ backgroundColor: GENRE_COLORS[g as Genre] }}
                     >
-                      <Music className="w-3 h-3" />
+                      <Music className="w-2.5 h-2.5" />
                       {g.charAt(0).toUpperCase() + g.slice(1)}
                     </span>
                   ))}
                 </div>
-                <div className="flex items-center gap-3 mt-2 text-xs text-zinc-400">
-                  <span className="flex items-center gap-1">
-                    <MapPin className="w-3.5 h-3.5 text-lime" />
+
+                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 mt-2 text-sm sm:text-xs text-zinc-300">
+                  <span className="inline-flex items-start gap-1 leading-tight">
+                    <MapPin className="w-3.5 h-3.5 text-lime shrink-0 mt-0.5 sm:mt-0" />
                     {band.location}
                   </span>
                   {band.memberCount && (
-                    <span className="flex items-center gap-1">
-                      <Users className="w-3.5 h-3.5 text-violet" />
+                    <span className="inline-flex items-center gap-1">
+                      <Users className="w-3.5 h-3.5 text-violet shrink-0" />
                       {band.memberCount} members
                     </span>
                   )}
                 </div>
               </div>
-              {canEditBandProfile && (
-                <button
-                  onClick={() => setShowEditModal(true)}
-                  className="p-2 hover:bg-night-tertiary border border-zinc-800 hover:border-lime/30 transition-colors touch-target"
-                >
-                  <Edit className="w-5 h-5 text-zinc-400" />
-                </button>
-              )}
             </div>
           </div>
         </div>
@@ -297,6 +306,14 @@ export function BandProfileView() {
           canManageSlots={canEditBandProfile}
           title="Photos & Videos"
           description="Manage six profile media slots for fans to see."
+        />
+      </section>
+
+      <section className="p-4">
+        <PastShowFlyerSection
+          shows={pastShows}
+          emptyMessage="No past shows yet."
+          isLoading={isPastShowsLoading}
         />
       </section>
 

@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import {
   Calendar,
   Users,
@@ -13,15 +12,19 @@ import {
   Music,
   ArrowUpRight,
 } from "lucide-react";
-import { useCurrentBand } from "@/hooks/useBand";
+import { useBandPastShows, useCurrentBand } from "@/hooks/useBand";
 import { useProfileContext } from "@/hooks/useProfileContext";
 import { useSuggestedVenues, useOpenDates } from "@/hooks/useVenues";
 import { CreateBandForm } from "@/components/band/CreateBandForm";
+import { PastShowFlyerSection } from "@/components/events/PastShowFlyerSection";
 import { formatEventDate, formatPrice } from "@ear-plug/shared/constants";
 import { cn } from "@/lib/utils";
 
 export function BandDashboard() {
   const { bandWithStats, isLoading } = useCurrentBand();
+  const { pastShows, isLoading: isPastShowsLoading } = useBandPastShows(
+    bandWithStats?._id
+  );
   const { bands } = useProfileContext();
   const { venues: suggestedVenues, isLoading: venuesLoading } = useSuggestedVenues(
     bandWithStats?.genres?.[0] // Use first genre for venue suggestions
@@ -133,6 +136,14 @@ export function BandDashboard() {
           </div>
         </div>
       </header>
+
+      <section className="p-4">
+        <PastShowFlyerSection
+          shows={pastShows}
+          emptyMessage="No past shows yet."
+          isLoading={isPastShowsLoading}
+        />
+      </section>
 
       {/* Suggested Venues */}
       <section className="p-4 mt-2">
