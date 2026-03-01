@@ -5,6 +5,7 @@ const isPublicRoute = createRouteMatcher([
   "/sign-in(.*)",
   "/sign-up(.*)",
   "/sso-callback(.*)",
+  "/api/google/maps-key(.*)",
 ]);
 
 export default clerkMiddleware(async (auth, req) => {

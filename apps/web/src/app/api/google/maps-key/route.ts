@@ -1,10 +1,13 @@
-import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 function resolveGoogleMapsApiKey(): string | null {
-  const key = process.env.GOOGLE_MAPS_API_KEY ?? null;
+  const key =
+    process.env.GOOGLE_MAPS_API_KEY ??
+    globalThis.process?.env?.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ??
+    null;
 
   if (!key) {
     return null;
@@ -15,19 +18,6 @@ function resolveGoogleMapsApiKey(): string | null {
 }
 
 export async function GET() {
-  const { userId } = await auth();
-  if (!userId) {
-    return NextResponse.json(
-      { message: "Unauthorized" },
-      {
-        status: 401,
-        headers: {
-          "Cache-Control": "no-store",
-        },
-      }
-    );
-  }
-
   const apiKey = resolveGoogleMapsApiKey();
   if (!apiKey) {
     return NextResponse.json(

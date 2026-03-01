@@ -97,8 +97,20 @@ function getOrCreatePlacesScript(apiKey: string): HTMLScriptElement {
     return existingScript;
   }
 
+  const existingGoogleMapsScript = document.querySelector(
+    'script[src*="maps.googleapis.com/maps/api/js"]'
+  );
+  if (existingGoogleMapsScript instanceof HTMLScriptElement) {
+    return existingGoogleMapsScript;
+  }
+
   const script = document.createElement("script");
-  script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+  const params = new URLSearchParams({
+    key: apiKey,
+    libraries: "places",
+    loading: "async",
+  });
+  script.src = `https://maps.googleapis.com/maps/api/js?${params.toString()}`;
   script.async = true;
   script.defer = true;
   script.setAttribute(PLACES_SCRIPT_DATA_ATTR, "true");
