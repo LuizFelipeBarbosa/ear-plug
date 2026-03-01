@@ -19,8 +19,58 @@ interface EnsurePlacesLibraryOptions {
 
 const DEFAULT_TIMEOUT_MS = 8000;
 const PLACES_SCRIPT_DATA_ATTR = "data-ear-plug-google-places";
+const GOOGLE_MAPS_API_KEY_ROUTE = "/api/google/maps-key";
 
 let inFlightPromise: Promise<EnsurePlacesLibraryResult> | null = null;
+let apiKeyPromise: Promise<string | null> | null = null;
+
+function normalizeApiKey(apiKey: string | undefined): string | null {
+  if (!apiKey) {
+    return null;
+  }
+
+  const normalized = apiKey.trim();
+  return normalized.length > 0 ? normalized : null;
+}
+
+export async function loadGoogleMapsApiKey(): Promise<string | null> {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  if (apiKeyPromise) {
+    return apiKeyPromise;
+  }
+
+  apiKeyPromise = fetch(GOOGLE_MAPS_API_KEY_ROUTE, {
+    method: "GET",
+    cache: "no-store",
+    credentials: "same-origin",
+    headers: {
+      Accept: "application/json",
+    },
+  })
+    .then(async (response) => {
+      if (!response.ok) {
+        return null;
+      }
+
+      const payload = (await response.json()) as { apiKey?: unknown };
+      if (typeof payload.apiKey !== "string") {
+        return null;
+      }
+
+      return normalizeApiKey(payload.apiKey);
+    })
+    .catch(() => null);
+
+  const apiKey = await apiKeyPromise;
+  if (!apiKey) {
+    apiKeyPromise = null;
+  }
+
+  return apiKey;
+}
 
 function hasPlacesLibrary(): boolean {
   return typeof window !== "undefined" && Boolean(window.google?.maps?.places);
@@ -110,19 +160,21 @@ export async function ensurePlacesLibrary(
     return inFlightPromise;
   }
 
-  const apiKey = options.apiKey ?? process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
-  if (!apiKey) {
-    return {
-      ready: false,
-      reason: "missing_api_key",
-      message:
-        "Missing Google Maps API key. You can enter this field manually.",
-    };
-  }
-
   inFlightPromise = (async () => {
+    const apiKey =
+      normalizeApiKey(options.apiKey) ?? (await loadGoogleMapsApiKey());
+
+    if (!apiKey) {
+      return {
+        ready: false,
+        reason: "missing_api_key",
+        message:
+          "Missing Google Maps API key. You can enter this field manually.",
+      } as const;
+    }
+
     const importLibrary = getImportLibrary();
     if (importLibrary) {
       try {
