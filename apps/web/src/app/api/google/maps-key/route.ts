@@ -4,9 +4,7 @@ import { NextResponse } from "next/server";
 export const runtime = "nodejs";
 
 function resolveGoogleMapsApiKey(): string | null {
-  const legacyPublicKey =
-    globalThis.process?.env?.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? null;
-  const key = process.env.GOOGLE_MAPS_API_KEY ?? legacyPublicKey;
+  const key = process.env.GOOGLE_MAPS_API_KEY ?? null;
 
   if (!key) {
     return null;
