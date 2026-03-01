@@ -504,7 +504,7 @@ export default function EventCheckinPage({ params }: CheckInPageProps) {
                                           {user.name}
                                         </span>
                                         <span className="block text-xs text-zinc-500 truncate">
-                                          {user.email}
+                                          {user.alreadyAssigned ? "Already assigned" : "Available"}
                                         </span>
                                       </span>
                                       {user.alreadyAssigned && (
@@ -537,7 +537,7 @@ export default function EventCheckinPage({ params }: CheckInPageProps) {
 
                       {selectedUser && (
                         <p className="text-xs uppercase tracking-wider text-zinc-400">
-                          Selected: {selectedUser.name} ({selectedUser.email})
+                          Selected: {selectedUser.name}
                         </p>
                       )}
 
@@ -573,7 +573,7 @@ export default function EventCheckinPage({ params }: CheckInPageProps) {
                             />
                             <div className="min-w-0">
                               <p className="text-sm font-semibold text-white truncate">{member.name}</p>
-                              <p className="text-xs text-zinc-500 truncate">{member.email}</p>
+                              <p className="text-xs text-zinc-500 truncate">Door Staff</p>
                             </div>
                           </div>
                           {canManageInActiveBand && (

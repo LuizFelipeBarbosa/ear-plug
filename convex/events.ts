@@ -1039,6 +1039,11 @@ export const rsvp = mutation({
       return { action: "removed" };
     }
 
+    // Check capacity before adding RSVP
+    if (event.capacity && event.rsvpCount >= event.capacity) {
+      throw new Error("This event is at capacity.");
+    }
+
     // Add RSVP
     const rsvpId = await ctx.db.insert("rsvps", {
       userId: user._id,
@@ -1511,7 +1516,6 @@ export const listEventCheckinStaff = query({
           return {
             userId: user._id,
             name: user.name,
-            email: user.email,
             avatar: user.avatar,
             assignedAt: row.createdAt,
             assignedByBandId: row.assignedByBandId,
@@ -1592,7 +1596,6 @@ export const searchAssignableEventCheckinUsers = query({
       .map((user) => ({
         userId: user._id,
         name: user.name,
-        email: user.email,
         avatar: user.avatar,
         alreadyAssigned: activeStaffUserIds.has(user._id),
       }));
@@ -1675,74 +1678,10 @@ export const assignEventCheckinStaffByEmail = mutation({
     bandId: v.id("bands"),
     email: v.string(),
   },
-  handler: async (ctx, args) => {
-    const access = await resolveEventBandAccess(ctx, args.eventId, args.bandId);
-    if (!access.canManageGuestList) {
-      throw new Error("Not authorized for this band");
-    }
-
-    const normalizedEmail = args.email.trim().toLowerCase();
-    if (!normalizedEmail) {
-      throw new Error("Email is required");
-    }
-
-    let targetUser = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q) => q.eq("email", normalizedEmail))
-      .unique();
-
-    if (!targetUser) {
-      const allUsers = await ctx.db.query("users").collect();
-      targetUser =
-        allUsers.find(
-          (candidate) => candidate.email.trim().toLowerCase() === normalizedEmail
-        ) ?? null;
-    }
-
-    if (!targetUser) {
-      throw new Error("No user found with that email");
-    }
-
-    const existing = await ctx.db
-      .query("eventCheckinStaff")
-      .withIndex("by_event_user", (q) =>
-        q.eq("eventId", args.eventId).eq("userId", targetUser._id)
-      )
-      .unique();
-
-    if (existing?.status === "active") {
-      return {
-        action: "already_active",
-        staffUserId: targetUser._id,
-      };
-    }
-
-    if (existing) {
-      await ctx.db.patch(existing._id, {
-        status: "active",
-        assignedByUserId: access.membership.userId,
-        assignedByBandId: args.bandId,
-        revokedAt: undefined,
-      });
-      return {
-        action: "reassigned",
-        staffUserId: targetUser._id,
-      };
-    }
-
-    await ctx.db.insert("eventCheckinStaff", {
-      eventId: args.eventId,
-      userId: targetUser._id,
-      status: "active",
-      assignedByUserId: access.membership.userId,
-      assignedByBandId: args.bandId,
-      createdAt: Date.now(),
-    });
-
-    return {
-      action: "assigned",
-      staffUserId: targetUser._id,
-    };
+  handler: async () => {
+    throw new Error(
+      "Assigning check-in staff by email is disabled. Search and select a user instead."
+    );
   },
 });
 

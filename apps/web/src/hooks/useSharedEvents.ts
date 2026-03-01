@@ -219,7 +219,7 @@ export function useSharedEvents() {
    * @returns The venue's Convex document ID (new or existing)
    *
    * @example
-   * const venueId = await createVenue({
+   * const venueId = await createVenue(band._id, {
    *   name: "Bottom of the Hill",
    *   address: "1233 17th St",
    *   city: "San Francisco",
@@ -228,8 +228,12 @@ export function useSharedEvents() {
    * });
    */
   const createVenueFromPlace = useCallback(
-    async (venueData: VenueLocationData): Promise<Id<"venues">> => {
+    async (
+      bandId: Id<"bands">,
+      venueData: VenueLocationData
+    ): Promise<Id<"venues">> => {
       const venueId = await createVenue({
+        bandId,
         name: venueData.name,
         address: venueData.address,
         city: venueData.city,

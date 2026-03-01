@@ -7,7 +7,6 @@ import { useMutation } from "convex/react";
 import { useCurrentUser } from "@/hooks/useUser";
 import { ProfileContextProvider } from "@/hooks/useProfileContext";
 import { BottomNav } from "@/components/navigation/BottomNav";
-import { ensurePlacesLibrary } from "@/lib/google/ensurePlacesLibrary";
 import { api } from "../../../../../convex/_generated/api";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -17,11 +16,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useCurrentUser();
   const upsertUser = useMutation(api.users.upsertUser);
   const [isCreatingUser, setIsCreatingUser] = useState(false);
-
-  useEffect(() => {
-    // Warm the Google Places script on app load so venue fields are ready sooner.
-    void ensurePlacesLibrary();
-  }, []);
 
   useEffect(() => {
     // Redirect to onboarding if not authenticated

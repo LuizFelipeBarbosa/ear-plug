@@ -66,6 +66,10 @@ function getGigDnaTier(attendedShows: number): "Headliner" | "Regular" | "Rising
   return "Rookie";
 }
 
+function normalizeStoredEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
 /**
  * Gets the currently authenticated user from the database.
  * Uses Clerk authentication identity to look up the user by their Clerk ID.
@@ -108,7 +112,11 @@ export const getCurrentUser = query({
 export const getById = query({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
-    return await ctx.db.get(args.userId);
+    const user = await ctx.db.get(args.userId);
+    if (!user) return null;
+    // Strip PII — return only public fields
+    const { email, phoneNumber, clerkId, ...publicFields } = user;
+    return publicFields;
   },
 });
 
@@ -125,10 +133,14 @@ export const getById = query({
 export const getByClerkId = query({
   args: { clerkId: v.string() },
   handler: async (ctx, args) => {
-    return await ctx.db
+    const user = await ctx.db
       .query("users")
       .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
       .unique();
+    if (!user) return null;
+    // Strip PII — return only public fields
+    const { email, phoneNumber, clerkId: _clerkId, ...publicFields } = user;
+    return publicFields;
   },
 });
 
@@ -387,10 +399,14 @@ export const upsertUser = mutation({
     avatar: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const normalizedPhone =
-      args.phoneNumber && args.phoneNumber.trim().length > 0
-        ? normalizeInvitePhone(args.phoneNumber)
-        : null;
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+    if (identity.subject !== args.clerkId) {
+      throw new Error("Not authorized to modify this user");
+    }
+    const normalizedEmail = normalizeStoredEmail(args.email);
 
     const existingUser = await ctx.db
       .query("users")
@@ -399,22 +415,14 @@ export const upsertUser = mutation({
 
     if (existingUser) {
       const updates: {
-        email?: string;
         name: string;
         avatar?: string;
-        phoneNumber?: string;
       } = {
         name: args.name,
       };
 
-      if (args.email.trim().length > 0) {
-        updates.email = args.email;
-      }
       if (args.avatar !== undefined) {
         updates.avatar = args.avatar;
-      }
-      if (normalizedPhone?.ok) {
-        updates.phoneNumber = normalizedPhone.e164;
       }
 
       await ctx.db.patch(existingUser._id, {
@@ -426,8 +434,7 @@ export const upsertUser = mutation({
     // Create new user with default role (will be updated during onboarding)
     const userId = await ctx.db.insert("users", {
       clerkId: args.clerkId,
-      email: args.email,
-      phoneNumber: normalizedPhone?.ok ? normalizedPhone.e164 : undefined,
+      email: normalizedEmail,
       name: args.name,
       avatar: args.avatar,
       role: "fan", // Default role
@@ -555,19 +562,10 @@ export const updateProfile = mutation({
  * const incrementShows = useMutation(api.users.incrementShowsAttended);
  * await incrementShows();
  */
-export const incrementShowsAttended = mutation({
-  args: {},
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
-      .unique();
-
+export const incrementShowsAttended = internalMutation({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
     if (!user) {
       throw new Error("User not found");
     }
@@ -600,6 +598,7 @@ export const createUserFromClerk = internalMutation({
     avatar: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const normalizedEmail = normalizeStoredEmail(args.email);
     const normalizedPhone =
       args.phoneNumber && args.phoneNumber.trim().length > 0
         ? normalizeInvitePhone(args.phoneNumber)
@@ -621,7 +620,7 @@ export const createUserFromClerk = internalMutation({
       };
 
       if (args.email.trim().length > 0) {
-        updates.email = args.email;
+        updates.email = normalizedEmail;
       }
       if (args.avatar !== undefined) {
         updates.avatar = args.avatar;
@@ -636,7 +635,7 @@ export const createUserFromClerk = internalMutation({
 
     return await ctx.db.insert("users", {
       clerkId: args.clerkId,
-      email: args.email,
+      email: normalizedEmail,
       phoneNumber: normalizedPhone?.ok ? normalizedPhone.e164 : undefined,
       name: args.name,
       avatar: args.avatar,

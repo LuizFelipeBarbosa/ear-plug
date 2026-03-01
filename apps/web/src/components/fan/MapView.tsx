@@ -13,6 +13,7 @@ import { DistanceSlider } from "@/components/ui/DistanceSlider";
 import { DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM, GENRES } from "@ear-plug/shared/constants";
 import type { Genre } from "@ear-plug/shared/types";
 import { cn } from "@/lib/utils";
+import { loadGoogleMapsApiKey } from "@/lib/google/ensurePlacesLibrary";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 
 const VALID_GENRES: Genre[] = ["indie", "rock", "jazz", "electronic", "folk", "pop", "alternative"];
@@ -31,6 +32,8 @@ export function FanMapView() {
   const [distanceRadius, setDistanceRadius] = useState(25); // Default 25 miles
   const [useDistanceFilter, setUseDistanceFilter] = useState(false);
   const [isEventsExpanded, setIsEventsExpanded] = useState(false);
+  const [mapsApiKey, setMapsApiKey] = useState<string | null>(null);
+  const [mapsApiKeyLoading, setMapsApiKeyLoading] = useState(true);
 
   // Geolocation
   const {
@@ -76,6 +79,26 @@ export function FanMapView() {
     }
   }, [genreParam]);
 
+  useEffect(() => {
+    let isCancelled = false;
+
+    async function fetchMapsApiKey() {
+      const apiKey = await loadGoogleMapsApiKey();
+      if (isCancelled) {
+        return;
+      }
+
+      setMapsApiKey(apiKey);
+      setMapsApiKeyLoading(false);
+    }
+
+    void fetchMapsApiKey();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
+
   // Map center - use user location if available
   const mapCenter = useMemo(() => {
     if (hasLocation && latitude && longitude) {
@@ -92,8 +115,6 @@ export function FanMapView() {
   const handleMarkerClick = useCallback((eventId: Id<"events">) => {
     setSelectedEventId(eventId);
   }, []);
-
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
   return (
     <div className="h-screen flex flex-col bg-night overflow-hidden">
@@ -163,8 +184,8 @@ export function FanMapView() {
         className="relative overflow-hidden transition-all duration-500 ease-in-out"
         style={{ height: isEventsExpanded ? 0 : 'calc(65vh - 80px)' }}
       >
-        {apiKey ? (
-          <APIProvider apiKey={apiKey}>
+        {mapsApiKey ? (
+          <APIProvider apiKey={mapsApiKey}>
             <Map
               defaultCenter={mapCenter}
               defaultZoom={DEFAULT_MAP_ZOOM}
@@ -231,6 +252,10 @@ export function FanMapView() {
               )}
             </Map>
           </APIProvider>
+        ) : mapsApiKeyLoading ? (
+          <div className="w-full h-full flex items-center justify-center bg-night-secondary">
+            <p className="text-zinc-500">Loading map configuration...</p>
+          </div>
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-night-secondary">
             <p className="text-zinc-500">Map requires Google Maps API key</p>

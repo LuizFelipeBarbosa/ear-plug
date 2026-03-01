@@ -1,4 +1,4 @@
-import { mutation } from "./_generated/server";
+import { internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 
 // Bay Area Venues
@@ -188,7 +188,7 @@ const BANDS = [
 ];
 
 // Seed function
-export const seedDatabase = mutation({
+export const seedDatabase = internalMutation({
   args: {},
   handler: async (ctx) => {
     // Check if already seeded
@@ -447,7 +447,7 @@ export const seedDatabase = mutation({
 });
 
 // Clear seed data (for development)
-export const clearDatabase = mutation({
+export const clearDatabase = internalMutation({
   args: {},
   handler: async (ctx) => {
     // Delete in reverse order of dependencies

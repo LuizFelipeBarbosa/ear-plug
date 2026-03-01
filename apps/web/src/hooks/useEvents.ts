@@ -405,7 +405,6 @@ export function useEventCheckinStaff(
     eventId && bandId ? { eventId, bandId } : "skip"
   );
   const assignByIdMutation = useMutation(api.events.assignEventCheckinStaff);
-  const assignByEmailMutation = useMutation(api.events.assignEventCheckinStaffByEmail);
   const removeMutation = useMutation(api.events.removeEventCheckinStaff);
   const searchAssignableUsers = useCallback(
     async (query: string, limit = 8) => {
@@ -438,16 +437,6 @@ export function useEventCheckinStaff(
     [assignByIdMutation, bandId, eventId]
   );
 
-  const assignByEmail = useCallback(
-    async (email: string) => {
-      if (!eventId || !bandId) {
-        throw new Error("Event and band context are required");
-      }
-      return await assignByEmailMutation({ eventId, bandId, email });
-    },
-    [assignByEmailMutation, bandId, eventId]
-  );
-
   const removeStaff = useCallback(
     async (staffUserId: Id<"users">) => {
       if (!eventId || !bandId) {
@@ -464,8 +453,6 @@ export function useEventCheckinStaff(
       eventId !== undefined && bandId !== undefined && staffResult === undefined,
     searchAssignableUsers,
     assignByUserId,
-    // Deprecated: compatibility path for older callers.
-    assignByEmail,
     removeStaff,
   };
 }

@@ -436,7 +436,6 @@ export interface MyEventTicketPayload {
 export interface EventCheckinStaff {
   userId: string;
   name: string;
-  email: string;
   avatar?: string;
   assignedAt: number;
   assignedByBandId: string;
@@ -448,7 +447,6 @@ export interface EventCheckinStaff {
 export interface EventCheckinAssignableUser {
   userId: string;
   name: string;
-  email: string;
   avatar?: string;
   alreadyAssigned: boolean;
 }
@@ -467,9 +465,7 @@ export type BandInviteAssignableState =
 export interface BandInviteAssignableUser {
   userId: string;
   name: string;
-  email: string;
   avatar?: string;
-  phoneNumber?: string;
   inviteState: BandInviteAssignableState;
 }
 

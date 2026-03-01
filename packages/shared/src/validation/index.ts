@@ -307,7 +307,7 @@ export const bandMediaSlotUpsertSchema = z.object({
 
 /**
  * Schema for validating message sending inputs.
- * Enforces message length limits.
+ * Enforces message length limits shared with Convex message mutations.
  *
  * @example
  * messageSendSchema.parse({

@@ -150,9 +150,21 @@ export const markAsRead = mutation({
       throw new Error("Not authenticated");
     }
 
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+      .unique();
+    if (!user) {
+      throw new Error("User not found");
+    }
+
     const notification = await ctx.db.get(args.notificationId);
     if (!notification) {
       throw new Error("Notification not found");
+    }
+
+    if (notification.userId !== user._id) {
+      throw new Error("Not authorized");
     }
 
     await ctx.db.patch(args.notificationId, { read: true });
@@ -221,9 +233,21 @@ export const remove = mutation({
       throw new Error("Not authenticated");
     }
 
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
+      .unique();
+    if (!user) {
+      throw new Error("User not found");
+    }
+
     const notification = await ctx.db.get(args.notificationId);
     if (!notification) {
       return;
+    }
+
+    if (notification.userId !== user._id) {
+      throw new Error("Not authorized");
     }
 
     await ctx.db.delete(args.notificationId);
@@ -328,7 +352,7 @@ export const notifyBandMembers = internalMutation({
  * const createReminder = useMutation(api.notifications.createEventReminder);
  * const { notifiedCount } = await createReminder({ eventId: "k9x..." });
  */
-export const createEventReminder = mutation({
+export const createEventReminder = internalMutation({
   args: {
     eventId: v.id("events"),
   },

@@ -18,7 +18,7 @@ We take security seriously at Ear-Plug. If you discover a security vulnerability
 
 ### Do
 
-1. **Email us directly** at **security@earplug.example.com** with:
+1. **Submit a private security advisory** at **https://github.com/LuizFelipeBarbosa/ear-plug/security/advisories/new** with:
    - A description of the vulnerability
    - Steps to reproduce the issue
    - Potential impact assessment
@@ -44,9 +44,11 @@ We take security seriously at Ear-Plug. If you discover a security vulnerability
 
 ### API Security
 
-- All Convex queries and mutations require authentication via JWT
-- Clerk webhooks are verified using SVIX signatures
-- Role-based access control (RBAC) restricts actions based on user roles (fan/musician)
+- Sensitive Convex mutations require authentication via JWT; public discovery queries (events, venues, bands) are intentionally unauthenticated
+- Clerk webhooks are verified using SVIX signatures via the `svix` library
+- Administrative mutations (seed, migrations) are restricted to internal-only (not client-callable)
+- Role-based access control (RBAC) restricts actions based on user roles (fan/musician) and band membership roles (owner/admin/member)
+- Notification and user-specific mutations include ownership verification to prevent IDOR attacks
 
 ### Best Practices
 

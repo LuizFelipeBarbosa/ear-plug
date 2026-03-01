@@ -1,9 +1,9 @@
 import { v } from "convex/values";
 import { makeFunctionReference } from "convex/server";
 import {
-  action,
-  mutation,
-  query,
+  internalAction,
+  internalMutation,
+  internalQuery,
 } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
 import { isE164Phone, normalizeInvitePhone } from "./utils/phone";
@@ -43,7 +43,7 @@ async function generateUniqueTicketToken(ctx: MutationCtx): Promise<string> {
   throw new Error("Unable to generate unique ticket token");
 }
 
-export const backfillEventTicketsBatch = mutation({
+export const backfillEventTicketsBatch = internalMutation({
   args: {
     cursor: v.optional(v.string()),
     limit: v.optional(v.number()),
@@ -96,7 +96,7 @@ export const backfillEventTicketsBatch = mutation({
   },
 });
 
-export const validateEventTicketBackfill = query({
+export const validateEventTicketBackfill = internalQuery({
   args: {},
   handler: async (ctx) => {
     const [rsvps, tickets] = await Promise.all([
@@ -142,7 +142,7 @@ export const validateEventTicketBackfill = query({
   },
 });
 
-export const backfillBandWorkspaceBatch = mutation({
+export const backfillBandWorkspaceBatch = internalMutation({
   args: {
     cursor: v.optional(v.string()),
     limit: v.optional(v.number()),
@@ -275,7 +275,7 @@ export const backfillBandWorkspaceBatch = mutation({
   },
 });
 
-export const validateBandWorkspaceBackfill = query({
+export const validateBandWorkspaceBackfill = internalQuery({
   args: {},
   handler: async (ctx) => {
     const [bands, memberships, reads] = await Promise.all([
@@ -411,7 +411,7 @@ function getPrimaryPhoneFromClerkUser(clerkUser: {
   return phoneNumbers[0]?.phone_number;
 }
 
-export const backfillUserPhonesFromClerkBatch = action({
+export const backfillUserPhonesFromClerkBatch = internalAction({
   args: {
     cursor: v.optional(v.string()),
     limit: v.optional(v.number()),
@@ -512,7 +512,7 @@ export const backfillUserPhonesFromClerkBatch = action({
   },
 });
 
-export const validateUserPhoneBackfill = query({
+export const validateUserPhoneBackfill = internalQuery({
   args: {},
   handler: async (ctx) => {
     const users = await ctx.db.query("users").collect();
