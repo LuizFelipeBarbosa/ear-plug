@@ -14,6 +14,28 @@ import {
   requireBandRole,
 } from "./utils/permissions";
 
+const MAX_MESSAGE_CONTENT_LENGTH = 5000;
+
+function normalizeMessageContent(content: string): string {
+  const normalized = content.trim();
+  if (!normalized) {
+    throw new Error("Message content cannot be blank");
+  }
+  if (normalized.length > MAX_MESSAGE_CONTENT_LENGTH) {
+    throw new Error(
+      `Message content must be ${MAX_MESSAGE_CONTENT_LENGTH} characters or fewer`
+    );
+  }
+  return normalized;
+}
+
+function normalizeOptionalMessageContent(content: string | undefined): string | undefined {
+  if (content === undefined) {
+    return undefined;
+  }
+  return normalizeMessageContent(content);
+}
+
 async function countUnreadMessages(
   ctx: QueryCtx | MutationCtx,
   conversationId: Id<"conversations">,
@@ -125,6 +147,7 @@ export const send = mutation({
   },
   handler: async (ctx, args) => {
     const user = await requireAuthenticatedUser(ctx);
+    const content = normalizeMessageContent(args.content);
 
     const conversation = await ctx.db.get(args.conversationId);
     if (!conversation) {
@@ -137,7 +160,7 @@ export const send = mutation({
     const messageId = await ctx.db.insert("messages", {
       conversationId: args.conversationId,
       senderId: user._id,
-      content: args.content,
+      content,
       timestamp: now,
       read: false, // legacy field retained for compatibility
     });
@@ -145,9 +168,7 @@ export const send = mutation({
     await ctx.db.patch(conversation._id, {
       lastMessageAt: now,
       lastMessagePreview:
-        args.content.length > 50
-          ? `${args.content.substring(0, 47)}...`
-          : args.content,
+        content.length > 50 ? `${content.substring(0, 47)}...` : content,
     });
 
     return messageId;
@@ -220,6 +241,7 @@ export const startConversation = mutation({
   },
   handler: async (ctx, args) => {
     const { user } = await requireBandRole(ctx, args.bandId, ["owner", "admin"]);
+    const initialMessage = normalizeOptionalMessageContent(args.initialMessage);
 
     const existing = await ctx.db
       .query("conversations")
@@ -229,7 +251,7 @@ export const startConversation = mutation({
       .unique();
 
     if (existing) {
-      if (!args.initialMessage) {
+      if (!initialMessage) {
         return existing._id;
       }
 
@@ -237,7 +259,7 @@ export const startConversation = mutation({
       await ctx.db.insert("messages", {
         conversationId: existing._id,
         senderId: user._id,
-        content: args.initialMessage,
+        content: initialMessage,
         timestamp: now,
         read: false,
       });
@@ -245,9 +267,9 @@ export const startConversation = mutation({
       await ctx.db.patch(existing._id, {
         lastMessageAt: now,
         lastMessagePreview:
-          args.initialMessage.length > 50
-            ? `${args.initialMessage.substring(0, 47)}...`
-            : args.initialMessage,
+          initialMessage.length > 50
+            ? `${initialMessage.substring(0, 47)}...`
+            : initialMessage,
       });
 
       return existing._id;
@@ -258,18 +280,18 @@ export const startConversation = mutation({
       bandId: args.bandId,
       venueId: args.venueId,
       lastMessageAt: now,
-      lastMessagePreview: args.initialMessage
-        ? args.initialMessage.length > 50
-          ? `${args.initialMessage.substring(0, 47)}...`
-          : args.initialMessage
+      lastMessagePreview: initialMessage
+        ? initialMessage.length > 50
+          ? `${initialMessage.substring(0, 47)}...`
+          : initialMessage
         : undefined,
     });
 
-    if (args.initialMessage) {
+    if (initialMessage) {
       await ctx.db.insert("messages", {
         conversationId,
         senderId: user._id,
-        content: args.initialMessage,
+        content: initialMessage,
         timestamp: now,
         read: false,
       });

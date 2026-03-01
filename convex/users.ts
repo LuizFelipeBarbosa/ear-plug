@@ -66,6 +66,10 @@ function getGigDnaTier(attendedShows: number): "Headliner" | "Regular" | "Rising
   return "Rookie";
 }
 
+function normalizeStoredEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
 /**
  * Gets the currently authenticated user from the database.
  * Uses Clerk authentication identity to look up the user by their Clerk ID.
@@ -402,11 +406,7 @@ export const upsertUser = mutation({
     if (identity.subject !== args.clerkId) {
       throw new Error("Not authorized to modify this user");
     }
-
-    const normalizedPhone =
-      args.phoneNumber && args.phoneNumber.trim().length > 0
-        ? normalizeInvitePhone(args.phoneNumber)
-        : null;
+    const normalizedEmail = normalizeStoredEmail(args.email);
 
     const existingUser = await ctx.db
       .query("users")
@@ -415,22 +415,14 @@ export const upsertUser = mutation({
 
     if (existingUser) {
       const updates: {
-        email?: string;
         name: string;
         avatar?: string;
-        phoneNumber?: string;
       } = {
         name: args.name,
       };
 
-      if (args.email.trim().length > 0) {
-        updates.email = args.email;
-      }
       if (args.avatar !== undefined) {
         updates.avatar = args.avatar;
-      }
-      if (normalizedPhone?.ok) {
-        updates.phoneNumber = normalizedPhone.e164;
       }
 
       await ctx.db.patch(existingUser._id, {
@@ -442,8 +434,7 @@ export const upsertUser = mutation({
     // Create new user with default role (will be updated during onboarding)
     const userId = await ctx.db.insert("users", {
       clerkId: args.clerkId,
-      email: args.email,
-      phoneNumber: normalizedPhone?.ok ? normalizedPhone.e164 : undefined,
+      email: normalizedEmail,
       name: args.name,
       avatar: args.avatar,
       role: "fan", // Default role
@@ -607,6 +598,7 @@ export const createUserFromClerk = internalMutation({
     avatar: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const normalizedEmail = normalizeStoredEmail(args.email);
     const normalizedPhone =
       args.phoneNumber && args.phoneNumber.trim().length > 0
         ? normalizeInvitePhone(args.phoneNumber)
@@ -628,7 +620,7 @@ export const createUserFromClerk = internalMutation({
       };
 
       if (args.email.trim().length > 0) {
-        updates.email = args.email;
+        updates.email = normalizedEmail;
       }
       if (args.avatar !== undefined) {
         updates.avatar = args.avatar;
@@ -643,7 +635,7 @@ export const createUserFromClerk = internalMutation({
 
     return await ctx.db.insert("users", {
       clerkId: args.clerkId,
-      email: args.email,
+      email: normalizedEmail,
       phoneNumber: normalizedPhone?.ok ? normalizedPhone.e164 : undefined,
       name: args.name,
       avatar: args.avatar,

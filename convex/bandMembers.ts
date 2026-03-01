@@ -6,7 +6,6 @@ import {
   requireBandMember,
   requireBandRole,
 } from "./utils/permissions";
-import { normalizeInvitePhone } from "./utils/phone";
 
 const inviteRoleValidator = v.union(v.literal("admin"), v.literal("member"));
 const memberRoleValidator = v.union(
@@ -216,43 +215,10 @@ export const inviteExistingUserByEmail = mutation({
     email: v.string(),
     role: inviteRoleValidator,
   },
-  handler: async (ctx, args) => {
-    // Deprecated compatibility path. Web UI uses inviteExistingUser.
-    const { user } = await requireBandRole(ctx, args.bandId, ["owner", "admin"]);
-    const normalizedEmail = args.email.trim().toLowerCase();
-
-    const exactMatches = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q) => q.eq("email", normalizedEmail))
-      .collect();
-
-    let targetUsers = exactMatches;
-    if (targetUsers.length === 0) {
-      const users = await ctx.db.query("users").collect();
-      targetUsers = users.filter((candidate) => {
-        return candidate.email.toLowerCase() === normalizedEmail;
-      });
-    }
-
-    if (targetUsers.length === 0) {
-      throw new Error("User with this email was not found");
-    }
-
-    if (targetUsers.length > 1) {
-      throw new Error(
-        "Multiple accounts match this email. Use phone invite instead."
-      );
-    }
-
-    const [targetUser] = targetUsers;
-    return await createInviteForTargetUser(ctx, {
-      bandId: args.bandId,
-      targetUserId: targetUser._id,
-      targetEmail: targetUser.email,
-      targetPhoneNumber: targetUser.phoneNumber,
-      role: args.role,
-      inviterUserId: user._id,
-    });
+  handler: async () => {
+    throw new Error(
+      "Inviting by email is disabled. Search and select a user from the assignable list."
+    );
   },
 });
 
@@ -262,41 +228,10 @@ export const inviteExistingUserByPhone = mutation({
     phoneNumber: v.string(),
     role: inviteRoleValidator,
   },
-  handler: async (ctx, args) => {
-    const { user } = await requireBandRole(ctx, args.bandId, ["owner", "admin"]);
-    const normalizedPhone = normalizeInvitePhone(args.phoneNumber);
-    if (!normalizedPhone.ok) {
-      throw new Error(normalizedPhone.message);
-    }
-
-    const matchingUsers = await ctx.db
-      .query("users")
-      .withIndex("by_phone_number", (q) =>
-        q.eq("phoneNumber", normalizedPhone.e164)
-      )
-      .collect();
-
-    if (matchingUsers.length === 0) {
-      throw new Error(
-        "User with this phone number was not found. Ask them to sign in once so their account syncs."
-      );
-    }
-
-    if (matchingUsers.length > 1) {
-      throw new Error(
-        "Multiple accounts match this phone number. Contact support."
-      );
-    }
-
-    const [targetUser] = matchingUsers;
-    return await createInviteForTargetUser(ctx, {
-      bandId: args.bandId,
-      targetUserId: targetUser._id,
-      targetEmail: targetUser.email,
-      targetPhoneNumber: targetUser.phoneNumber ?? normalizedPhone.e164,
-      role: args.role,
-      inviterUserId: user._id,
-    });
+  handler: async () => {
+    throw new Error(
+      "Inviting by phone is disabled. Search and select a user from the assignable list."
+    );
   },
 });
 
@@ -370,7 +305,6 @@ export const searchAssignableBandInviteUsers = query({
       .map((user) => ({
         userId: user._id,
         name: user.name,
-        email: user.email,
         avatar: user.avatar,
         inviteState: memberUserIds.has(user._id)
           ? ("already_member" as const)
@@ -528,7 +462,13 @@ export const listMyPendingInvites = query({
         return {
           ...invite,
           band,
-          invitedByUser,
+          invitedByUser: invitedByUser
+            ? {
+                _id: invitedByUser._id,
+                name: invitedByUser.name,
+                avatar: invitedByUser.avatar,
+              }
+            : null,
         };
       })
     );

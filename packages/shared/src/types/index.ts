@@ -465,9 +465,7 @@ export type BandInviteAssignableState =
 export interface BandInviteAssignableUser {
   userId: string;
   name: string;
-  email: string;
   avatar?: string;
-  phoneNumber?: string;
   inviteState: BandInviteAssignableState;
 }
 

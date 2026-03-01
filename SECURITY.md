@@ -18,7 +18,7 @@ We take security seriously at Ear-Plug. If you discover a security vulnerability
 
 ### Do
 
-1. **Email us directly** at **security@earplug.example.com** with:
+1. **Submit a private security advisory** at **https://github.com/LuizFelipeBarbosa/ear-plug/security/advisories/new** with:
    - A description of the vulnerability
    - Steps to reproduce the issue
    - Potential impact assessment

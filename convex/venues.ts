@@ -5,8 +5,8 @@
  */
 
 import { v } from "convex/values";
-import { query, mutation } from "./_generated/server";
-import { Id } from "./_generated/dataModel";
+import { query, mutation, internalQuery } from "./_generated/server";
+import { Doc, Id } from "./_generated/dataModel";
 import { haversineDistance, coordinatesMatch, COORDINATE_TOLERANCE } from "./utils/geo";
 import { requireBandMember, requireBandRole } from "./utils/permissions";
 
@@ -21,6 +21,13 @@ const genreValidator = v.union(
   v.literal("alternative")
 );
 
+const OPEN_DATE_PENDING_APPLICATION_CAP = 25;
+
+function toPublicVenue(venue: Doc<"venues">) {
+  const { address, coordinates, ...publicVenue } = venue;
+  return publicVenue;
+}
+
 /**
  * Gets a venue by its Convex document ID.
  *
@@ -31,6 +38,18 @@ const genreValidator = v.union(
  * const venue = useQuery(api.venues.getById, { venueId: "k9x..." });
  */
 export const getById = query({
+  args: { venueId: v.id("venues") },
+  handler: async (ctx, args) => {
+    const venue = await ctx.db.get(args.venueId);
+    if (!venue) {
+      return null;
+    }
+
+    return toPublicVenue(venue);
+  },
+});
+
+export const getByIdInternal = internalQuery({
   args: { venueId: v.id("venues") },
   handler: async (ctx, args) => {
     return await ctx.db.get(args.venueId);
@@ -60,13 +79,15 @@ export const list = query({
     const limit = args.limit || 50;
 
     if (args.city) {
-      return await ctx.db
+      const venues = await ctx.db
         .query("venues")
         .withIndex("by_city", (q) => q.eq("city", args.city!))
         .take(limit);
+      return venues.map((venue) => toPublicVenue(venue));
     }
 
-    return await ctx.db.query("venues").take(limit);
+    const venues = await ctx.db.query("venues").take(limit);
+    return venues.map((venue) => toPublicVenue(venue));
   },
 });
 
@@ -95,10 +116,12 @@ export const getSuggested = query({
       // Prioritize venues that host this genre
       const genreMatches = venues.filter((v) => v.genres?.includes(args.genre!));
       const others = venues.filter((v) => !v.genres?.includes(args.genre!));
-      return [...genreMatches, ...others].slice(0, limit);
+      return [...genreMatches, ...others]
+        .slice(0, limit)
+        .map((venue) => toPublicVenue(venue));
     }
 
-    return venues.slice(0, limit);
+    return venues.slice(0, limit).map((venue) => toPublicVenue(venue));
   },
 });
 
@@ -131,7 +154,8 @@ export const search = query({
           venue.city.toLowerCase().includes(searchQuery) ||
           venue.address.toLowerCase().includes(searchQuery)
       )
-      .slice(0, limit);
+      .slice(0, limit)
+      .map((venue) => toPublicVenue(venue));
   },
 });
 
@@ -176,7 +200,11 @@ export const getNearby = query({
 
     return venuesWithDistance
       .filter((v) => v.distance <= radiusMiles)
-      .sort((a, b) => a.distance - b.distance);
+      .sort((a, b) => a.distance - b.distance)
+      .map((venue) => ({
+        ...toPublicVenue(venue),
+        distance: venue.distance,
+      }));
   },
 });
 
@@ -271,7 +299,9 @@ export const getSavedVenues = query({
       })
     );
 
-    return venues.filter((v) => v !== null);
+    return venues
+      .filter((v): v is NonNullable<typeof v> => v !== null)
+      .map((venue) => toPublicVenue(venue));
   },
 });
 
@@ -337,7 +367,7 @@ export const getOpenDates = query({
     const openDatesWithVenue = await Promise.all(
       openDates.map(async (od) => {
         const venue = await ctx.db.get(od.venueId);
-        return { ...od, venue };
+        return { ...od, venue: venue ? toPublicVenue(venue) : null };
       })
     );
 
@@ -348,8 +378,8 @@ export const getOpenDates = query({
 /**
  * Submits a band's application to an open date.
  * Verifies band ownership and checks for duplicate applications.
- * Updates open date status to "pending" on successful application.
- * Requires authentication.
+ * Keeps the open date in "open" state while applications queue.
+ * Requires band owner/admin authorization.
  *
  * @param openDateId - The Convex ID of the open date
  * @param bandId - The Convex ID of the applying band
@@ -392,6 +422,17 @@ export const applyToOpenDate = mutation({
       throw new Error("This date is no longer available");
     }
 
+    const openDateApplications = await ctx.db
+      .query("applications")
+      .withIndex("by_open_date", (q) => q.eq("openDateId", args.openDateId))
+      .collect();
+    const pendingApplications = openDateApplications.filter(
+      (application) => application.status === "pending"
+    );
+    if (pendingApplications.length >= OPEN_DATE_PENDING_APPLICATION_CAP) {
+      throw new Error("This date has reached the pending application limit");
+    }
+
     // Create application
     const applicationId = await ctx.db.insert("applications", {
       bandId: args.bandId,
@@ -400,9 +441,6 @@ export const applyToOpenDate = mutation({
       message: args.message,
       appliedAt: Date.now(),
     });
-
-    // Update open date status to pending
-    await ctx.db.patch(args.openDateId, { status: "pending" });
 
     return applicationId;
   },
@@ -442,8 +480,9 @@ export const getBandApplications = query({
 /**
  * Creates a venue from Google Places data or returns existing venue ID.
  * Deduplicates by checking coordinates within a small tolerance.
- * Requires authentication.
+ * Requires band owner/admin authorization.
  *
+ * @param bandId - The Convex ID of the band creating/selecting the venue
  * @param name - Venue name
  * @param address - Street address
  * @param city - City name
@@ -453,7 +492,7 @@ export const getBandApplications = query({
  * @param description - Optional description
  * @param genres - Optional array of genres
  * @returns The venue's Convex document ID (new or existing)
- * @throws Error if not authenticated
+ * @throws Error if not authorized for the provided band
  *
  * @example
  * const createVenue = useMutation(api.venues.createFromPlace);
@@ -466,6 +505,7 @@ export const getBandApplications = query({
  */
 export const createFromPlace = mutation({
   args: {
+    bandId: v.id("bands"),
     name: v.string(),
     address: v.string(),
     city: v.string(),
@@ -479,10 +519,7 @@ export const createFromPlace = mutation({
     genres: v.optional(v.array(genreValidator)),
   },
   handler: async (ctx, args): Promise<Id<"venues">> => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
+    await requireBandRole(ctx, args.bandId, ["owner", "admin"]);
 
     // Check if venue already exists by coordinates (within small tolerance)
     // or by placeId if provided - use indexed query by city to avoid full table scan
@@ -565,6 +602,6 @@ export const findByCoordinates = query({
       )
     );
 
-    return match || null;
+    return match ? toPublicVenue(match) : null;
   },
 });

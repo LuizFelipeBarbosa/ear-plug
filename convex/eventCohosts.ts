@@ -207,7 +207,13 @@ export const listBandPendingInvites = query({
           },
           hostBand,
           invitedByBand,
-          invitedByUser,
+          invitedByUser: invitedByUser
+            ? {
+                _id: invitedByUser._id,
+                name: invitedByUser.name,
+                avatar: invitedByUser.avatar,
+              }
+            : null,
           canRespond: isBandManagerRole(membership.role),
         };
       })
@@ -420,7 +426,13 @@ export const listEventCohostRoster = query({
           status,
           invitedBand,
           invitedByBand,
-          invitedByUser,
+          invitedByUser: invitedByUser
+            ? {
+                _id: invitedByUser._id,
+                name: invitedByUser.name,
+                avatar: invitedByUser.avatar,
+              }
+            : null,
         };
       })
     );

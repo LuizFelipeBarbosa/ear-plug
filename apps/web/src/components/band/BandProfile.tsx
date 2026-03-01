@@ -656,9 +656,6 @@ export function BandProfileView() {
                                         <p className="text-sm text-white truncate">
                                           {candidate.name}
                                         </p>
-                                        <p className="text-[11px] text-zinc-400 truncate">
-                                          {candidate.email}
-                                        </p>
                                       </div>
                                       {stateBadge && (
                                         <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 border border-zinc-700 text-zinc-400 shrink-0">
@@ -707,7 +704,7 @@ export function BandProfileView() {
 
                   {selectedInviteUser && (
                     <p className="mt-2 text-[11px] uppercase tracking-wider text-zinc-500">
-                      Selected: {selectedInviteUser.name} ({selectedInviteUser.email})
+                      Selected: {selectedInviteUser.name}
                     </p>
                   )}
 
@@ -738,12 +735,7 @@ export function BandProfileView() {
                           />
                           <div className="min-w-0">
                             <p className="text-sm text-white truncate">
-                              {invite.targetUser?.name ??
-                                invite.phoneNumber ??
-                                invite.email}
-                            </p>
-                            <p className="text-[11px] text-zinc-400 truncate">
-                              {invite.email}
+                              {invite.targetUser?.name ?? "Invited user"}
                             </p>
                             <p className="text-[10px] uppercase tracking-wider text-zinc-500">
                               {invite.role} • {invite.status}
