@@ -1,0 +1,27 @@
+{
+  "legacySurfaceClass": [],
+  "legacyAccentClass": [],
+  "forbiddenEffects": [],
+  "typographyNoise": [
+    {
+      "file": "src/components/onboarding/OnboardingFlow.tsx",
+      "pattern": "tracking-[0.2em]"
+    },
+    {
+      "file": "src/components/band/BandAnalyticsView.tsx",
+      "pattern": "tracking-[0.24em]"
+    },
+    {
+      "file": "src/components/band/BandCalendar.tsx",
+      "pattern": "tracking-[0.2em]"
+    },
+    {
+      "file": "src/components/band/BandMessages.tsx",
+      "pattern": "tracking-[0.2em]"
+    },
+    {
+      "file": "src/app/(app)/gig/[id]/page.tsx",
+      "pattern": "tracking-[0.18em]"
+    }
+  ]
+}

@@ -1,5 +1,4 @@
 "use client";
-
 import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { SignOutButton } from "@clerk/nextjs";
@@ -28,14 +27,16 @@ import { ProfileWorkspaceSwitcher } from "@/components/profile/ProfileWorkspaceS
 import { AvatarImage } from "@/components/ui/OptimizedImage";
 import { GENRE_COLORS } from "@ear-plug/shared/constants";
 import { getInitials } from "@ear-plug/shared/utils";
-import { cn } from "@/lib/utils";
 import type { BandInviteAssignableUser, Genre } from "@ear-plug/shared/types";
+import { cn } from "@/lib/utils";
 
 const PANEL_TRANSITION_MS = 220;
 
 export function BandProfileView() {
   const { band, bandWithStats, isLoading } = useCurrentBand();
-  const { pastShows, isLoading: isPastShowsLoading } = useBandPastShows(band?._id);
+  const { pastShows, isLoading: isPastShowsLoading } = useBandPastShows(
+    band?._id,
+  );
   const [showEditModal, setShowEditModal] = useState(false);
   const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false);
   const [isSettingsMenuVisible, setIsSettingsMenuVisible] = useState(false);
@@ -43,7 +44,9 @@ export function BandProfileView() {
   const [inviteQuery, setInviteQuery] = useState("");
   const [selectedInviteUser, setSelectedInviteUser] =
     useState<BandInviteAssignableUser | null>(null);
-  const [inviteSuggestions, setInviteSuggestions] = useState<BandInviteAssignableUser[]>([]);
+  const [inviteSuggestions, setInviteSuggestions] = useState<
+    BandInviteAssignableUser[]
+  >([]);
   const [showInviteSuggestions, setShowInviteSuggestions] = useState(false);
   const [isSearchingInviteUsers, setIsSearchingInviteUsers] = useState(false);
   const inviteAutocompleteRef = useRef<HTMLDivElement | null>(null);
@@ -52,23 +55,22 @@ export function BandProfileView() {
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [inviteNotice, setInviteNotice] = useState<string | null>(null);
   const convex = useConvex();
-
   const myBands = useQuery(api.bands.listMyBands);
-  const activeMembership = myBands?.find((entry) => entry.band._id === band?._id);
+  const activeMembership = myBands?.find(
+    (entry) => entry.band._id === band?._id,
+  );
   const memberRole = activeMembership?.membership.role;
   const canEditBandProfile = memberRole === "owner" || memberRole === "admin";
   const canManageMembers = memberRole === "owner" || memberRole === "admin";
   const canTransferOwnership = memberRole === "owner";
-
   const members = useQuery(
     api.bandMembers.listMembers,
-    band ? { bandId: band._id } : "skip"
+    band ? { bandId: band._id } : "skip",
   );
   const invites = useQuery(
     api.bandMembers.listBandInvites,
-    band && canManageMembers ? { bandId: band._id } : "skip"
+    band && canManageMembers ? { bandId: band._id } : "skip",
   );
-
   const inviteExistingUser = useMutation(api.bandMembers.inviteExistingUser);
   const updateMemberRole = useMutation(api.bandMembers.updateMemberRole);
   const removeMember = useMutation(api.bandMembers.removeMember);
@@ -106,7 +108,11 @@ export function BandProfileView() {
   };
 
   const handleInvite = async () => {
-    if (!band || !selectedInviteUser || selectedInviteUser.inviteState !== "eligible") {
+    if (
+      !band ||
+      !selectedInviteUser ||
+      selectedInviteUser.inviteState !== "eligible"
+    ) {
       return;
     }
     setIsInviting(true);
@@ -118,17 +124,14 @@ export function BandProfileView() {
         targetUserId: selectedInviteUser.userId as Id<"users">,
         role: inviteRole,
       });
-
       if (result.action === "already_member") {
         setInviteNotice("Selected user is already a band member.");
         return;
       }
-
       if (result.action === "already_pending") {
         setInviteNotice("Selected user already has a pending invite.");
         return;
       }
-
       setInviteNotice("Invite sent.");
       setInviteQuery("");
       setSelectedInviteUser(null);
@@ -146,15 +149,13 @@ export function BandProfileView() {
       if (!band) {
         return [];
       }
-      const result = await convex.query(api.bandMembers.searchAssignableBandInviteUsers, {
-        bandId: band._id,
-        query,
-        limit,
-      });
-
+      const result = await convex.query(
+        api.bandMembers.searchAssignableBandInviteUsers,
+        { bandId: band._id, query, limit },
+      );
       return result.users ?? [];
     },
-    [band, convex]
+    [band, convex],
   );
 
   useEffect(() => {
@@ -171,7 +172,6 @@ export function BandProfileView() {
         setShowInviteSuggestions(false);
       }
     }
-
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
@@ -185,7 +185,6 @@ export function BandProfileView() {
       setIsSearchingInviteUsers(false);
       return;
     }
-
     const normalizedQuery = inviteQuery.trim();
     if (normalizedQuery.length < 2) {
       setInviteSuggestions([]);
@@ -193,7 +192,6 @@ export function BandProfileView() {
       setIsSearchingInviteUsers(false);
       return;
     }
-
     if (
       selectedInviteUser &&
       normalizedQuery.toLowerCase() ===
@@ -204,10 +202,8 @@ export function BandProfileView() {
       setIsSearchingInviteUsers(false);
       return;
     }
-
     let cancelled = false;
     setIsSearchingInviteUsers(true);
-
     const timeoutId = window.setTimeout(() => {
       void searchAssignableUsers(normalizedQuery, 8)
         .then((users) => {
@@ -218,7 +214,7 @@ export function BandProfileView() {
         .catch((error) => {
           if (cancelled) return;
           setInviteError(
-            error instanceof Error ? error.message : "Failed to search users."
+            error instanceof Error ? error.message : "Failed to search users.",
           );
           setInviteSuggestions([]);
           setShowInviteSuggestions(true);
@@ -229,12 +225,17 @@ export function BandProfileView() {
           }
         });
     }, 220);
-
     return () => {
       cancelled = true;
       window.clearTimeout(timeoutId);
     };
-  }, [band, canManageMembers, inviteQuery, searchAssignableUsers, selectedInviteUser]);
+  }, [
+    band,
+    canManageMembers,
+    inviteQuery,
+    searchAssignableUsers,
+    selectedInviteUser,
+  ]);
 
   const handleSelectInviteUser = (user: BandInviteAssignableUser) => {
     setSelectedInviteUser(user);
@@ -247,10 +248,10 @@ export function BandProfileView() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen p-4 bg-night">
+      <div className="min-h-screen p-4 bg-background">
         <div className="animate-shimmer space-y-4">
-          <div className="h-32 bg-night-tertiary border-2 border-zinc-800" />
-          <div className="h-8 bg-night-tertiary w-1/2" />
+          <div className="h-32 bg-muted border border-border rounded-lg" />
+          <div className="h-8 bg-muted w-1/2 rounded" />
         </div>
       </div>
     );
@@ -258,36 +259,37 @@ export function BandProfileView() {
 
   if (!band) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-night">
-        <p className="text-zinc-500">No band profile found</p>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <p className="text-muted-foreground">No band profile found</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen pb-6 bg-night overflow-x-hidden">
+    <div className="min-h-screen pb-6 bg-background overflow-x-hidden">
       {/* Header */}
-      <header className="relative bg-night-secondary border-b-2 border-lime/20 p-4 sm:p-6 overflow-visible">
+      <header className="relative bg-card border-b border-band/20 p-4 sm:p-6 overflow-visible">
         {/* Subtle gradient accent */}
-        <div className="absolute top-0 right-0 w-64 h-64 bg-violet/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-
+        <div className="absolute top-0 right-0 w-64 h-64 bg-band/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
         <div className="relative">
           <div className="flex items-center justify-between mb-4 sm:mb-6 gap-3">
-            <ProfileWorkspaceSwitcher className="flex-1 min-w-0" variant="header" />
+            <ProfileWorkspaceSwitcher
+              className="flex-1 min-w-0"
+              variant="header"
+            />
             <button
               type="button"
               onClick={openSettingsMenu}
-              className="p-2 flex items-center justify-center hover:bg-night-tertiary border border-zinc-800 hover:border-lime/30 transition-colors touch-target"
+              className="p-2 flex items-center justify-center hover:bg-muted border border-border hover:border-band/30 transition-colors touch-target rounded-lg"
               aria-label="Open band settings"
             >
-              <Settings className="w-5 h-5 text-zinc-400" />
+              <Settings className="w-5 h-5 text-muted-foreground" />
             </button>
           </div>
-
           {/* Band Card */}
-          <div className="bg-night-tertiary/80 backdrop-blur-sm border-2 border-zinc-800 p-3 sm:p-4">
+          <div className="bg-muted/80 backdrop-blur-sm border border-border p-3 sm:p-4 rounded-lg">
             <div className="flex items-start gap-3 sm:gap-4">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 overflow-hidden bg-night-secondary border-2 border-lime/30 flex-shrink-0">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 overflow-hidden bg-card border border-band/30 flex-shrink-0 rounded-lg">
                 {band.image ? (
                   <Image
                     src={band.image}
@@ -297,32 +299,31 @@ export function BandProfileView() {
                     className="object-cover"
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-xl sm:text-2xl font-bold text-lime">
+                  <div className="w-full h-full flex items-center justify-center text-xl sm:text-2xl font-semibold text-band">
                     {getInitials(band.name)}
                   </div>
                 )}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-start gap-2">
-                  <h2 className="flex-1 min-w-0 text-lg sm:text-xl font-bold text-white uppercase tracking-tight leading-tight [overflow-wrap:anywhere]">
+                  <h2 className="flex-1 min-w-0 text-lg sm:text-xl font-semibold text-foreground leading-tight [overflow-wrap:anywhere]">
                     {band.name}
                   </h2>
                   {canEditBandProfile && (
                     <button
                       onClick={() => setShowEditModal(true)}
-                      className="p-2 hover:bg-night-tertiary border border-zinc-800 hover:border-lime/30 transition-colors touch-target shrink-0"
+                      className="flex items-center justify-center p-2 hover:bg-card border border-border hover:border-band/30 transition-colors touch-target shrink-0 rounded-lg"
                       aria-label="Edit band profile"
                     >
-                      <Edit className="w-4 h-4 sm:w-5 sm:h-5 text-zinc-400" />
+                      <Edit className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
                     </button>
                   )}
                 </div>
-
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   {(band.genres || []).map((g) => (
                     <span
                       key={g}
-                      className="inline-flex items-center gap-1 px-2 py-1 text-[11px] leading-none font-bold uppercase tracking-wider text-night"
+                      className="inline-flex items-center gap-1 px-2 py-1 text-xs leading-none font-medium text-foreground rounded"
                       style={{ backgroundColor: GENRE_COLORS[g as Genre] }}
                     >
                       <Music className="w-2.5 h-2.5" />
@@ -330,15 +331,14 @@ export function BandProfileView() {
                     </span>
                   ))}
                 </div>
-
-                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 mt-2 text-sm sm:text-xs text-zinc-300">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 mt-2 text-sm sm:text-xs text-muted-foreground">
                   <span className="inline-flex items-start gap-1 leading-tight">
-                    <MapPin className="w-3.5 h-3.5 text-lime shrink-0 mt-0.5 sm:mt-0" />
+                    <MapPin className="w-3.5 h-3.5 text-band shrink-0 mt-0.5 sm:mt-0" />
                     {band.location}
                   </span>
                   {band.memberCount && (
                     <span className="inline-flex items-center gap-1">
-                      <Users className="w-3.5 h-3.5 text-violet shrink-0" />
+                      <Users className="w-3.5 h-3.5 text-band shrink-0" />
                       {band.memberCount} members
                     </span>
                   )}
@@ -352,10 +352,10 @@ export function BandProfileView() {
       {/* Bio */}
       {band.bio && (
         <section className="p-4">
-          <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-2">
+          <h3 className="text-sm font-medium text-muted-foreground mb-2">
             About
           </h3>
-          <p className="text-zinc-400 leading-relaxed">
+          <p className="text-muted-foreground leading-relaxed">
             {band.bio}
           </p>
         </section>
@@ -364,7 +364,7 @@ export function BandProfileView() {
       {/* Social Links */}
       {band.socialLinks && (
         <section className="p-4">
-          <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-3">
+          <h3 className="text-sm font-medium text-muted-foreground mb-3">
             Social Links
           </h3>
           <div className="flex flex-wrap gap-2">
@@ -421,10 +421,18 @@ export function BandProfileView() {
             <StatCard
               label="Shows This Month"
               value={bandWithStats.stats.showsThisMonth}
-              accent="lime"
+              accent="band"
             />
-            <StatCard label="Total RSVPs" value={bandWithStats.stats.totalRsvps} accent="violet" />
-            <StatCard label="Followers" value={bandWithStats.stats.newFans} accent="lime" />
+            <StatCard
+              label="Total RSVPs"
+              value={bandWithStats.stats.totalRsvps}
+              accent="band"
+            />
+            <StatCard
+              label="Followers"
+              value={bandWithStats.stats.newFans}
+              accent="band"
+            />
           </div>
         </section>
       )}
@@ -450,9 +458,9 @@ export function BandProfileView() {
       {/* Sign Out */}
       <div className="p-4 pt-8">
         <SignOutButton>
-          <button className="w-full flex items-center justify-center gap-2 py-4 border-2 border-red-500/30 text-red-400 font-bold uppercase tracking-wider text-sm hover:bg-red-500/10 transition-colors touch-target">
+          <button className="w-full flex items-center justify-center gap-2 py-4 border border-red-500/30 text-red-400 font-medium text-sm hover:bg-red-500/10 transition-colors touch-target rounded-lg">
             <LogOut className="w-5 h-5" />
-            Sign Out
+            <span>Sign Out</span>
           </button>
         </SignOutButton>
       </div>
@@ -461,7 +469,9 @@ export function BandProfileView() {
         <div
           className={cn(
             "fixed inset-0 z-[60] transition-opacity duration-200",
-            isSettingsMenuVisible ? "opacity-100" : "opacity-0 pointer-events-none"
+            isSettingsMenuVisible
+              ? "opacity-100"
+              : "opacity-0 pointer-events-none",
           )}
         >
           <button
@@ -469,111 +479,114 @@ export function BandProfileView() {
             onClick={closeSettingsMenu}
             className={cn(
               "absolute inset-0 bg-black/70 transition-opacity duration-200",
-              isSettingsMenuVisible ? "opacity-100" : "opacity-0"
+              isSettingsMenuVisible ? "opacity-100" : "opacity-0",
             )}
             aria-label="Close band settings menu"
           />
-
           <aside
             className={cn(
-              "absolute right-0 top-0 h-full w-full max-w-xl bg-night-secondary border-l-2 border-lime/20 overflow-y-auto transition-transform duration-200 ease-out will-change-transform",
-              isSettingsMenuVisible ? "translate-x-0" : "translate-x-full"
+              "absolute right-0 top-0 h-full w-full max-w-xl bg-card border-l border-band/20 overflow-y-auto transition-transform duration-200 ease-out will-change-transform",
+              isSettingsMenuVisible ? "translate-x-0" : "translate-x-full",
             )}
           >
-            <div className="sticky top-0 z-10 bg-night-secondary border-b border-zinc-800 p-4 flex items-center justify-between">
-              <h3 className="text-sm font-bold uppercase tracking-widest text-white">
+            <div className="sticky top-0 z-10 bg-card border-b border-border p-4 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-foreground">
                 Band Settings
               </h3>
               <button
                 type="button"
                 onClick={closeSettingsMenu}
-                className="p-2 border border-zinc-700 text-zinc-400 hover:text-white hover:border-lime/30"
+                className="p-2 border border-border text-muted-foreground hover:text-foreground hover:border-band/30 rounded-lg"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             <section className="p-4">
-              <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-3">
+              <h4 className="text-sm font-medium text-muted-foreground mb-3">
                 Members
               </h4>
               {!canManageMembers && (
-                <p className="text-xs uppercase tracking-wider text-zinc-500 mb-3">
+                <p className="text-xs text-muted-foreground mb-3">
                   Member access is read-only.
                 </p>
               )}
-
-              <div className="bg-night-tertiary border-2 border-zinc-800 p-4 space-y-3">
+              <div className="bg-muted border border-border p-4 rounded-lg space-y-3">
                 {members === undefined ? (
-                  <p className="text-zinc-500 text-sm">Loading members...</p>
+                  <p className="text-muted-foreground text-sm">
+                    Loading members...
+                  </p>
                 ) : members.length === 0 ? (
-                  <p className="text-zinc-500 text-sm">No members found.</p>
+                  <p className="text-muted-foreground text-sm">
+                    No members found.
+                  </p>
                 ) : (
                   members.map((entry) => (
                     <div
                       key={entry.membership._id}
-                      className="flex items-center justify-between gap-3 border border-zinc-800 bg-night-secondary px-3 py-2"
+                      className="flex items-center justify-between gap-3 border border-border bg-card px-3 py-2 rounded-lg"
                     >
                       <div>
-                        <p className="text-white text-sm font-semibold">{entry.user.name}</p>
-                        <p className="text-zinc-500 text-xs uppercase tracking-wider">
+                        <p className="text-foreground text-sm font-medium">
+                          {entry.user.name}
+                        </p>
+                        <p className="text-muted-foreground text-xs">
                           {entry.membership.role}
                         </p>
                       </div>
-
                       <div className="flex items-center gap-2">
                         {entry.membership.role === "owner" ? (
-                          <Crown className="w-4 h-4 text-lime" />
+                          <Crown className="w-4 h-4 text-band" />
                         ) : entry.membership.role === "admin" ? (
-                          <Shield className="w-4 h-4 text-violet" />
+                          <Shield className="w-4 h-4 text-band" />
                         ) : null}
-
-                        {canManageMembers && entry.membership.role !== "owner" && (
-                          <>
+                        {canManageMembers &&
+                          entry.membership.role !== "owner" && (
+                            <>
+                              <button
+                                onClick={() =>
+                                  updateMemberRole({
+                                    bandId: band._id,
+                                    memberUserId: entry.user._id,
+                                    role:
+                                      entry.membership.role === "member"
+                                        ? "admin"
+                                        : "member",
+                                  })
+                                }
+                                className="px-2 py-1 text-xs font-medium border border-border text-muted-foreground hover:border-band/30 rounded"
+                              >
+                                {entry.membership.role === "member"
+                                  ? "Make Admin"
+                                  : "Make Member"}
+                              </button>
+                              <button
+                                onClick={() =>
+                                  removeMember({
+                                    bandId: band._id,
+                                    memberUserId: entry.user._id,
+                                  })
+                                }
+                                className="px-2 py-1 text-xs font-medium border border-red-500/40 text-red-400 hover:bg-red-500/10 rounded"
+                              >
+                                Remove
+                              </button>
+                            </>
+                          )}
+                        {canTransferOwnership &&
+                          entry.membership.role !== "owner" && (
                             <button
                               onClick={() =>
-                                updateMemberRole({
+                                transferOwnership({
                                   bandId: band._id,
-                                  memberUserId: entry.user._id,
-                                  role:
-                                    entry.membership.role === "member"
-                                      ? "admin"
-                                      : "member",
+                                  newOwnerUserId: entry.user._id,
                                 })
                               }
-                              className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider border border-zinc-700 text-zinc-300 hover:border-lime/30"
+                              className="px-2 py-1 text-xs font-medium border border-band/40 text-band hover:bg-band/10 rounded"
                             >
-                              {entry.membership.role === "member"
-                                ? "Make Admin"
-                                : "Make Member"}
+                              Transfer Owner
                             </button>
-                            <button
-                              onClick={() =>
-                                removeMember({
-                                  bandId: band._id,
-                                  memberUserId: entry.user._id,
-                                })
-                              }
-                              className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider border border-red-500/40 text-red-400 hover:bg-red-500/10"
-                            >
-                              Remove
-                            </button>
-                          </>
-                        )}
-
-                        {canTransferOwnership && entry.membership.role !== "owner" && (
-                          <button
-                            onClick={() =>
-                              transferOwnership({
-                                bandId: band._id,
-                                newOwnerUserId: entry.user._id,
-                              })
-                            }
-                            className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider border border-violet/40 text-violet hover:bg-violet/10"
-                          >
-                            Transfer Owner
-                          </button>
-                        )}
+                          )}
                       </div>
                     </div>
                   ))
@@ -583,29 +596,40 @@ export function BandProfileView() {
 
             {canManageMembers && (
               <section className="p-4 pt-0">
-                <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-3">
+                <h4 className="text-sm font-medium text-muted-foreground mb-3">
                   Invite Members
                 </h4>
-                <div className="bg-night-tertiary border-2 border-zinc-800 p-4">
+                <div className="bg-muted border border-border p-4 rounded-lg">
                   <div className="flex flex-col sm:flex-row gap-2 items-stretch">
-                    <div className="relative flex-1" ref={inviteAutocompleteRef}>
+                    <div
+                      className="relative flex-1"
+                      ref={inviteAutocompleteRef}
+                    >
                       <input
                         type="text"
                         value={inviteQuery}
                         onChange={(event) => {
                           const nextValue = event.target.value;
                           setInviteQuery(nextValue);
-                          if (selectedInviteUser && nextValue !== selectedInviteUser.name) {
+                          if (
+                            selectedInviteUser &&
+                            nextValue !== selectedInviteUser.name
+                          ) {
                             setSelectedInviteUser(null);
                           }
                           setInviteNotice(null);
                           if (inviteError) {
                             setInviteError(null);
                           }
-                          setShowInviteSuggestions(nextValue.trim().length >= 2);
+                          setShowInviteSuggestions(
+                            nextValue.trim().length >= 2,
+                          );
                         }}
                         onFocus={() => {
-                          if (!selectedInviteUser && inviteQuery.trim().length >= 2) {
+                          if (
+                            !selectedInviteUser &&
+                            inviteQuery.trim().length >= 2
+                          ) {
                             setShowInviteSuggestions(true);
                           }
                         }}
@@ -615,17 +639,16 @@ export function BandProfileView() {
                           }
                         }}
                         placeholder="Search users by name..."
-                        className="w-full bg-night-secondary border-2 border-zinc-800 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime"
+                        className="w-full bg-card border border-border px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-band rounded-lg"
                       />
-
                       {showInviteSuggestions && !selectedInviteUser && (
-                        <div className="absolute left-0 right-0 top-[calc(100%+0.25rem)] z-50 border border-zinc-700 bg-night-secondary shadow-2xl overflow-hidden">
+                        <div className="absolute left-0 right-0 top-[calc(100%+0.25rem)] z-50 border border-border bg-card shadow-lg overflow-hidden rounded-lg">
                           {isSearchingInviteUsers ? (
-                            <p className="px-3 py-2 text-xs uppercase tracking-wider text-zinc-500">
+                            <p className="px-3 py-2 text-xs text-muted-foreground">
                               Searching...
                             </p>
                           ) : inviteSuggestions.length === 0 ? (
-                            <p className="px-3 py-2 text-xs uppercase tracking-wider text-zinc-500">
+                            <p className="px-3 py-2 text-xs text-muted-foreground">
                               No users found
                             </p>
                           ) : (
@@ -641,24 +664,28 @@ export function BandProfileView() {
                                   <button
                                     key={candidate.userId}
                                     type="button"
-                                    onMouseDown={(event) => event.preventDefault()}
-                                    onClick={() => handleSelectInviteUser(candidate)}
-                                    className="w-full px-3 py-2 text-left hover:bg-night-tertiary border-b border-zinc-800 last:border-b-0"
+                                    onMouseDown={(event) =>
+                                      event.preventDefault()
+                                    }
+                                    onClick={() =>
+                                      handleSelectInviteUser(candidate)
+                                    }
+                                    className="w-full px-3 py-2 text-left hover:bg-muted border-b border-border last:border-b-0"
                                   >
                                     <div className="flex items-center gap-2 min-w-0">
                                       <AvatarImage
                                         src={candidate.avatar}
                                         alt={candidate.name}
                                         size={28}
-                                        className="rounded-full border border-zinc-700 shrink-0"
+                                        className="rounded-full border border-border shrink-0"
                                       />
                                       <div className="min-w-0 flex-1">
-                                        <p className="text-sm text-white truncate">
+                                        <p className="text-sm text-foreground truncate">
                                           {candidate.name}
                                         </p>
                                       </div>
                                       {stateBadge && (
-                                        <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 border border-zinc-700 text-zinc-400 shrink-0">
+                                        <span className="text-xs px-2 py-0.5 border border-border text-muted-foreground shrink-0 rounded">
                                           {stateBadge}
                                         </span>
                                       )}
@@ -671,13 +698,12 @@ export function BandProfileView() {
                         </div>
                       )}
                     </div>
-
                     <select
                       value={inviteRole}
                       onChange={(event) =>
                         setInviteRole(event.target.value as "admin" | "member")
                       }
-                      className="bg-night-secondary border-2 border-zinc-800 px-3 py-2 text-sm text-white focus:outline-none focus:border-lime"
+                      className="bg-card border border-border px-3 py-2 text-sm text-foreground focus:outline-none focus:border-band rounded-lg"
                     >
                       <option value="member">Member</option>
                       <option value="admin">Admin</option>
@@ -690,62 +716,60 @@ export function BandProfileView() {
                         selectedInviteUser.inviteState !== "eligible"
                       }
                       className={cn(
-                        "px-4 py-2 text-xs font-bold uppercase tracking-wider border-2 transition-colors",
+                        "px-4 py-2 text-xs font-medium border transition-colors rounded-lg",
                         isInviting ||
                           !selectedInviteUser ||
                           selectedInviteUser.inviteState !== "eligible"
-                          ? "border-zinc-700 text-zinc-500"
-                          : "border-lime bg-lime text-night hover:bg-transparent hover:text-lime"
+                          ? "border-border text-muted-foreground"
+                          : "border-band bg-band text-foreground hover:bg-transparent hover:text-band",
                       )}
                     >
                       {isInviting ? "Inviting..." : "Invite"}
                     </button>
                   </div>
-
                   {selectedInviteUser && (
-                    <p className="mt-2 text-[11px] uppercase tracking-wider text-zinc-500">
+                    <p className="mt-2 text-xs text-muted-foreground">
                       Selected: {selectedInviteUser.name}
                     </p>
                   )}
-
                   {inviteNotice && (
-                    <p className="mt-2 text-xs uppercase tracking-wider text-lime font-semibold">
+                    <p className="mt-2 text-xs text-band font-medium">
                       {inviteNotice}
                     </p>
                   )}
-
                   {inviteError && (
-                    <p className="mt-2 text-xs uppercase tracking-wider text-red-400 font-semibold">
+                    <p className="mt-2 text-xs text-red-400 font-medium">
                       {inviteError}
                     </p>
                   )}
-
                   <div className="mt-4 space-y-2">
                     {(invites ?? []).map((invite) => (
                       <div
                         key={invite._id}
-                        className="flex items-center justify-between border border-zinc-800 bg-night-secondary px-3 py-2"
+                        className="flex items-center justify-between border border-border bg-card px-3 py-2 rounded-lg"
                       >
                         <div className="flex items-center gap-2 min-w-0">
                           <AvatarImage
                             src={invite.targetUser?.avatar}
                             alt={invite.targetUser?.name ?? "Invited user"}
                             size={28}
-                            className="rounded-full border border-zinc-700 shrink-0"
+                            className="rounded-full border border-border shrink-0"
                           />
                           <div className="min-w-0">
-                            <p className="text-sm text-white truncate">
+                            <p className="text-sm text-foreground truncate">
                               {invite.targetUser?.name ?? "Invited user"}
                             </p>
-                            <p className="text-[10px] uppercase tracking-wider text-zinc-500">
+                            <p className="text-xs text-muted-foreground">
                               {invite.role} • {invite.status}
                             </p>
                           </div>
                         </div>
                         {invite.status === "pending" && (
                           <button
-                            onClick={() => revokeInvite({ inviteId: invite._id })}
-                            className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider border border-red-500/40 text-red-400 hover:bg-red-500/10"
+                            onClick={() =>
+                              revokeInvite({ inviteId: invite._id })
+                            }
+                            className="px-2 py-1 text-xs font-medium border border-red-500/40 text-red-400 hover:bg-red-500/10 rounded"
                           >
                             Revoke
                           </button>
@@ -798,34 +822,34 @@ function SocialButton({
         return <ExternalLink className="w-4 h-4" />;
     }
   };
-
   return (
     <a
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex items-center gap-2 px-4 py-2 bg-night-tertiary border-2 border-zinc-800 text-zinc-300 hover:border-lime/30 hover:text-lime transition-colors text-xs font-bold uppercase tracking-wider"
+      className="flex items-center gap-2 px-4 py-2 bg-muted border border-border text-muted-foreground hover:border-band/30 hover:text-band transition-colors text-xs font-medium rounded-lg"
     >
-      {getIcon()}
-      <span>{label}</span>
+      {getIcon()} <span>{label}</span>
     </a>
   );
 }
 
-function StatCard({ label, value, accent = "lime" }: { label: string; value: number; accent?: "lime" | "violet" }) {
+function StatCard({
+  label,
+  value,
+  accent = "band",
+}: {
+  label: string;
+  value: number;
+  accent?: "band";
+}) {
   return (
-    <div className="bg-night-tertiary border-2 border-zinc-800 p-4 text-center relative overflow-hidden hover:border-lime/20 transition-colors">
-      <div className={cn(
-        "absolute top-0 left-0 right-0 h-0.5",
-        accent === "lime" ? "bg-lime" : "bg-violet"
-      )} />
-      <div className={cn(
-        "text-2xl font-bold",
-        accent === "lime" ? "text-lime" : "text-violet"
-      )}>
+    <div className="bg-muted border border-border p-4 text-center relative overflow-hidden hover:border-band/20 transition-colors rounded-lg">
+      <div className="absolute top-0 left-0 right-0 h-0.5 bg-band" />
+      <div className="text-2xl font-semibold text-band">
         {value}
       </div>
-      <div className="text-[10px] text-zinc-500 uppercase tracking-wider mt-1">
+      <div className="text-xs text-muted-foreground mt-1">
         {label}
       </div>
     </div>

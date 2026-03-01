@@ -1,6 +1,4 @@
-/**
- * Band components barrel export
- */
+/** * Band components barrel export */
 export { BandAnalyticsView } from "./BandAnalyticsView";
 export { BandCalendarView } from "./BandCalendar";
 export { BandDashboard } from "./BandDashboard";

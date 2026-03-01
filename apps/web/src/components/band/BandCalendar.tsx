@@ -38,7 +38,15 @@ interface CalendarCell {
   isCurrentMonth: boolean;
 }
 
-const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+const WEEKDAY_LABELS = [
+  "Sun",
+  "Mon",
+  "Tue",
+  "Wed",
+  "Thu",
+  "Fri",
+  "Sat",
+] as const;
 
 function toLocalDateKey(timestamp: number): string {
   const date = new Date(timestamp);
@@ -133,7 +141,7 @@ export function BandCalendarView() {
   // Get events from Convex database
   const events = useQuery(
     api.events.listByBand,
-    band ? { bandId: band._id, includesPast: false } : "skip"
+    band ? { bandId: band._id, includesPast: false } : "skip",
   );
 
   const isLoading = bandLoading || events === undefined;
@@ -141,14 +149,14 @@ export function BandCalendarView() {
   const prevMonth = () => {
     setSelectedDateKey(null);
     setViewMonth(
-      new Date(viewMonth.getFullYear(), viewMonth.getMonth() - 1, 1)
+      new Date(viewMonth.getFullYear(), viewMonth.getMonth() - 1, 1),
     );
   };
 
   const nextMonth = () => {
     setSelectedDateKey(null);
     setViewMonth(
-      new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 1)
+      new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 1),
     );
   };
 
@@ -159,23 +167,23 @@ export function BandCalendarView() {
 
   const scheduledEvents = useMemo<any[]>(
     () => (events ?? []).filter((event) => typeof event.dateTime === "number"),
-    [events]
+    [events],
   );
 
   const scheduledEventsInViewMonth = useMemo(
     () =>
       scheduledEvents.filter((event) =>
-        isInViewMonth(event.dateTime as number, viewMonth)
+        isInViewMonth(event.dateTime as number, viewMonth),
       ),
-    [scheduledEvents, viewMonth]
+    [scheduledEvents, viewMonth],
   );
 
   const unscheduledTentatives = useMemo(
     () =>
       (events ?? []).filter(
-        (event) => event.status === "hold" && event.dateTime === undefined
+        (event) => event.status === "hold" && event.dateTime === undefined,
       ),
-    [events]
+    [events],
   );
 
   const groupedEvents = useMemo(() => {
@@ -214,7 +222,9 @@ export function BandCalendarView() {
     }
 
     const dayEvents = eventsByDateKey[selectedDateKey] ?? [];
-    return [...dayEvents].sort((a, b) => (a.dateTime as number) - (b.dateTime as number));
+    return [...dayEvents].sort(
+      (a, b) => (a.dateTime as number) - (b.dateTime as number),
+    );
   }, [eventsByDateKey, selectedDateKey]);
 
   const hasListEvents =
@@ -241,24 +251,24 @@ export function BandCalendarView() {
   }, [viewMode]);
 
   return (
-    <div className="min-h-screen bg-night overflow-x-hidden">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       {/* Header */}
-      <header className="bg-night-secondary border-b-2 border-lime/20 p-4">
+      <header className="bg-card border-b border-band/20 p-4">
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-xl sm:text-2xl font-bold text-white uppercase tracking-tight">
+          <h1 className="text-lg sm:text-xl font-semibold text-foreground">
             Shows & Availability
           </h1>
           <div className="flex flex-wrap items-center justify-end gap-2">
-            <div className="inline-flex border-2 border-zinc-800 bg-night-tertiary p-1">
+            <div className="inline-flex border border-border bg-muted p-1 rounded-lg">
               <button
                 type="button"
                 onClick={() => setViewMode("list")}
                 aria-pressed={viewMode === "list"}
                 className={cn(
-                  "px-2.5 sm:px-3 py-1.5 sm:py-2 text-[10px] sm:text-xs font-bold uppercase tracking-wider border-2 transition-all flex items-center gap-1.5 sm:gap-2",
+                  "px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs font-medium border transition-all flex items-center gap-1.5 sm:gap-2 rounded-md",
                   viewMode === "list"
-                    ? "bg-lime text-night border-lime"
-                    : "bg-night border-zinc-700 text-zinc-400 hover:border-lime/40 hover:text-lime"
+                    ? "bg-band text-foreground border-band"
+                    : "bg-card border-transparent text-muted-foreground hover:text-band",
                 )}
               >
                 <List className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -269,10 +279,10 @@ export function BandCalendarView() {
                 onClick={() => setViewMode("month")}
                 aria-pressed={viewMode === "month"}
                 className={cn(
-                  "px-2.5 sm:px-3 py-1.5 sm:py-2 text-[10px] sm:text-xs font-bold uppercase tracking-wider border-2 transition-all flex items-center gap-1.5 sm:gap-2 ml-1.5 sm:ml-2",
+                  "px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs font-medium border transition-all flex items-center gap-1.5 sm:gap-2 rounded-md ml-1",
                   viewMode === "month"
-                    ? "bg-violet text-white border-violet"
-                    : "bg-night border-zinc-700 text-zinc-400 hover:border-violet/50 hover:text-violet"
+                    ? "bg-band text-foreground border-band"
+                    : "bg-card border-transparent text-muted-foreground hover:text-band",
                 )}
               >
                 <CalendarDays className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -283,7 +293,7 @@ export function BandCalendarView() {
             {band && canManageShows && (
               <button
                 onClick={openCreateChooser}
-                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-lime text-night font-bold uppercase tracking-wider text-[10px] sm:text-xs border-2 border-lime hover:bg-transparent hover:text-lime transition-all touch-target"
+                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-band text-foreground font-medium text-xs border border-band hover:bg-transparent hover:text-band transition-all touch-target rounded-lg"
               >
                 <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 Create Gig
@@ -292,7 +302,7 @@ export function BandCalendarView() {
           </div>
         </div>
         {band && !canManageShows && (
-          <p className="text-[11px] uppercase tracking-wider text-zinc-500">
+          <p className="text-xs text-muted-foreground">
             Member access: owners/admins create gigs.
           </p>
         )}
@@ -301,47 +311,46 @@ export function BandCalendarView() {
         <div className="flex items-center gap-2 sm:gap-3">
           <button
             onClick={prevMonth}
-            className="shrink-0 p-2 sm:p-2.5 hover:bg-night-tertiary border border-zinc-800 hover:border-lime/30 transition-colors touch-target"
+            className="shrink-0 flex items-center justify-center p-2 sm:p-2.5 hover:bg-muted border border-border hover:border-band/30 transition-colors touch-target rounded-lg"
           >
-            <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-zinc-400" />
+            <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
           </button>
-          <span className="min-w-0 flex-1 text-center truncate text-sm sm:text-lg font-bold text-white uppercase tracking-wide">
+          <span className="min-w-0 flex-1 text-center truncate text-sm sm:text-lg font-semibold text-foreground">
             {monthName}
           </span>
           <button
             onClick={nextMonth}
-            className="shrink-0 p-2 sm:p-2.5 hover:bg-night-tertiary border border-zinc-800 hover:border-lime/30 transition-colors touch-target"
+            className="shrink-0 flex items-center justify-center p-2 sm:p-2.5 hover:bg-muted border border-border hover:border-band/30 transition-colors touch-target rounded-lg"
           >
-            <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-zinc-400" />
+            <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
           </button>
         </div>
 
-        <div className="mt-3 sm:mt-4 border border-zinc-800 bg-night-tertiary/70 p-3 sm:p-4">
-          <p className="text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">
+        <div className="mt-3 sm:mt-4 border border-border bg-muted/70 p-3 sm:p-4 rounded-lg">
+          <p className="text-xs font-medium text-muted-foreground">
             Calendar Color Key
           </p>
           <div className="mt-2 grid gap-2 sm:grid-cols-2">
-            <div className="flex items-center justify-between gap-3 border border-lime/40 bg-lime/10 px-3 py-2">
-              <span className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold uppercase tracking-wide text-lime">
-                <span className="h-2.5 w-2.5 rounded-full bg-lime shadow-[0_0_0_3px_rgba(194,255,0,0.16)]" />
+            <div className="flex items-center justify-between gap-3 border border-band/40 bg-band/10 px-3 py-2 rounded">
+              <span className="inline-flex items-center gap-2 text-xs sm:text-sm font-medium text-band">
+                <span className="h-2.5 w-2.5 rounded-full bg-band" />
                 Confirmed
               </span>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+              <span className="text-xs font-medium text-muted-foreground">
                 Scheduled Gig
               </span>
             </div>
-            <div className="flex items-center justify-between gap-3 border border-violet/40 bg-violet/10 px-3 py-2">
-              <span className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold uppercase tracking-wide text-violet">
-                <span className="h-2.5 w-2.5 rounded-full bg-violet shadow-[0_0_0_3px_rgba(168,85,247,0.18)]" />
+            <div className="flex items-center justify-between gap-3 border border-band/40 bg-band/10 px-3 py-2 rounded">
+              <span className="inline-flex items-center gap-2 text-xs sm:text-sm font-medium text-band">
+                <span className="h-2.5 w-2.5 rounded-full bg-band" />
                 Tentative
               </span>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+              <span className="text-xs font-medium text-muted-foreground">
                 Hold / Draft Gig
               </span>
             </div>
           </div>
         </div>
-
       </header>
 
       {/* Events List */}
@@ -351,7 +360,7 @@ export function BandCalendarView() {
             {[1, 2, 3].map((i) => (
               <div
                 key={i}
-                className="h-24 bg-night-tertiary border-2 border-zinc-800 animate-shimmer"
+                className="h-24 bg-muted border border-border rounded-lg animate-shimmer"
               />
             ))}
           </div>
@@ -361,7 +370,7 @@ export function BandCalendarView() {
               {WEEKDAY_LABELS.map((weekday) => (
                 <div
                   key={weekday}
-                  className="text-[9px] sm:text-xs font-bold uppercase tracking-wider text-zinc-500 text-center py-1.5 sm:py-2"
+                  className="text-xs font-medium text-muted-foreground text-center py-1.5 sm:py-2"
                 >
                   <span className="sm:hidden">{weekday[0]}</span>
                   <span className="hidden sm:inline">{weekday}</span>
@@ -371,25 +380,32 @@ export function BandCalendarView() {
 
             <div className="grid grid-cols-7 gap-0.5 sm:gap-2">
               {monthCells.map((cell, index) => {
-                if (!cell.isCurrentMonth || !cell.dateKey || cell.dayNumber === null) {
+                if (
+                  !cell.isCurrentMonth ||
+                  !cell.dateKey ||
+                  cell.dayNumber === null
+                ) {
                   return (
                     <div
                       key={`placeholder-${index}`}
-                      className="h-[7.25rem] sm:h-28 bg-night-tertiary/40 border border-zinc-900"
+                      className="h-24 sm:h-28 bg-muted/40 border border-border/50 rounded"
                     />
                   );
                 }
 
                 const dayEvents = eventsByDateKey[cell.dateKey] ?? [];
                 const sortedDayEvents = [...dayEvents].sort(
-                  (a, b) => (a.dateTime as number) - (b.dateTime as number)
+                  (a, b) => (a.dateTime as number) - (b.dateTime as number),
                 );
-                const tentativeCount = dayEvents.filter((event) => event.status === "hold").length;
+                const tentativeCount = dayEvents.filter(
+                  (event) => event.status === "hold",
+                ).length;
                 const confirmedCount = dayEvents.filter(
-                  (event) => event.status === "confirmed"
+                  (event) => event.status === "confirmed",
                 ).length;
                 const previewEvents = sortedDayEvents.slice(0, 1);
-                const hiddenEventCount = sortedDayEvents.length - previewEvents.length;
+                const hiddenEventCount =
+                  sortedDayEvents.length - previewEvents.length;
                 const hasDayEvents = tentativeCount + confirmedCount > 0;
                 const hasMixedStatus = tentativeCount > 0 && confirmedCount > 0;
                 const isSelected = selectedDateKey === cell.dateKey;
@@ -400,32 +416,32 @@ export function BandCalendarView() {
                     type="button"
                     onClick={() => setSelectedDateKey(cell.dateKey)}
                     className={cn(
-                      "h-16 sm:h-[7.25rem] p-1 sm:p-2 border-2 text-left transition-all overflow-hidden",
+                      "h-20 sm:h-24 p-1 sm:p-2 border text-left transition-all overflow-hidden rounded",
                       isSelected
-                        ? "border-white bg-night-secondary"
-                        : "border-zinc-800 bg-night-tertiary hover:border-zinc-600",
+                        ? "border-foreground bg-card"
+                        : "border-border bg-muted hover:border-muted-foreground/50",
                       hasDayEvents &&
-                      !hasMixedStatus &&
-                      confirmedCount > 0 &&
-                      "border-lime/50 bg-lime/5",
+                        !hasMixedStatus &&
+                        confirmedCount > 0 &&
+                        "border-band/50 bg-band/5",
                       hasDayEvents &&
-                      !hasMixedStatus &&
-                      tentativeCount > 0 &&
-                      "border-violet/60 bg-violet/10",
-                      hasMixedStatus && "border-zinc-600 bg-zinc-900/60"
+                        !hasMixedStatus &&
+                        tentativeCount > 0 &&
+                        "border-band/60 bg-band/10",
+                      hasMixedStatus && "border-muted-foreground/50 bg-muted/80",
                     )}
                   >
                     <div className="flex items-center justify-between gap-1">
                       <span
                         className={cn(
-                          "text-[11px] sm:text-sm font-bold leading-none",
-                          hasDayEvents ? "text-white" : "text-zinc-500"
+                          "text-xs sm:text-sm font-medium leading-none",
+                          hasDayEvents ? "text-foreground" : "text-muted-foreground",
                         )}
                       >
                         {cell.dayNumber}
                       </span>
                       {hasDayEvents && (
-                        <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-zinc-300">
+                        <span className="text-xs font-medium text-muted-foreground">
                           {tentativeCount + confirmedCount}
                         </span>
                       )}
@@ -435,12 +451,12 @@ export function BandCalendarView() {
                       <>
                         <div className="mt-1 flex items-center gap-1 flex-wrap">
                           {confirmedCount > 0 && (
-                            <span className="px-1 py-0.5 text-[8px] sm:text-[9px] font-bold uppercase tracking-wider border border-lime/40 bg-lime/10 text-lime">
+                            <span className="px-1 py-0.5 text-xs font-medium border border-band/40 bg-band/10 text-band rounded">
                               {confirmedCount} C
                             </span>
                           )}
                           {tentativeCount > 0 && (
-                            <span className="px-1 py-0.5 text-[8px] sm:text-[9px] font-bold uppercase tracking-wider border border-violet/40 bg-violet/10 text-violet">
+                            <span className="px-1 py-0.5 text-xs font-medium border border-band/40 bg-band/10 text-band rounded">
                               {tentativeCount} T
                             </span>
                           )}
@@ -449,12 +465,7 @@ export function BandCalendarView() {
                           {previewEvents.map((event) => (
                             <li
                               key={event._id}
-                              className={cn(
-                                "text-[9px] sm:text-[10px] font-medium truncate leading-4",
-                                event.status === "hold"
-                                  ? "text-violet marker:text-violet"
-                                  : "text-lime marker:text-lime"
-                              )}
+                              className="text-xs font-medium truncate leading-4 text-band"
                             >
                               {getEventDisplayTitle(event)}
                             </li>
@@ -462,7 +473,7 @@ export function BandCalendarView() {
                         </ol>
                         <div className="mt-0.5 overflow-hidden">
                           {hiddenEventCount > 0 && (
-                            <p className="text-[8px] sm:text-[10px] uppercase tracking-wider text-zinc-400 truncate">
+                            <p className="text-xs text-muted-foreground truncate">
                               +{hiddenEventCount} more
                             </p>
                           )}
@@ -474,23 +485,23 @@ export function BandCalendarView() {
               })}
             </div>
 
-            <div className="bg-night-tertiary border-2 border-zinc-800 p-3 sm:p-4">
-              <h3 className="text-[11px] sm:text-xs font-bold uppercase tracking-widest text-lime mb-3">
+            <div className="bg-muted border border-border p-3 sm:p-4 rounded-lg">
+              <h3 className="text-xs sm:text-sm font-medium text-band mb-3">
                 {selectedDateKey
                   ? formatDateHeadingFromKey(selectedDateKey)
                   : `Select A Date In ${monthName}`}
               </h3>
 
               {!hasMonthEvents ? (
-                <p className="text-xs sm:text-sm text-zinc-500">
+                <p className="text-xs sm:text-sm text-muted-foreground">
                   No scheduled gigs in {monthName}.
                 </p>
               ) : selectedDateKey === null ? (
-                <p className="text-xs sm:text-sm text-zinc-500">
+                <p className="text-xs sm:text-sm text-muted-foreground">
                   Select a date to view gigs.
                 </p>
               ) : selectedDateEvents.length === 0 ? (
-                <p className="text-xs sm:text-sm text-zinc-500">
+                <p className="text-xs sm:text-sm text-muted-foreground">
                   No gigs for this date.
                 </p>
               ) : (
@@ -509,18 +520,9 @@ export function BandCalendarView() {
         ) : hasListEvents ? (
           <div className="space-y-6">
             {Object.entries(groupedEvents).map(([date, dateEvents]) => {
-              const isTentativeDate = dateEvents.some(
-                (event) => event.status === "hold"
-              );
-
               return (
                 <div key={date}>
-                  <h3
-                    className={cn(
-                      "text-xs font-bold uppercase tracking-widest mb-3",
-                      isTentativeDate ? "text-violet" : "text-lime"
-                    )}
-                  >
+                  <h3 className="text-xs font-medium text-band mb-3">
                     {formatDateHeadingFromKey(date)}
                   </h3>
                   <div className="space-y-3">
@@ -538,7 +540,7 @@ export function BandCalendarView() {
 
             {unscheduledTentatives.length > 0 && (
               <div>
-                <h3 className="text-xs font-bold uppercase tracking-widest text-violet mb-3">
+                <h3 className="text-xs font-medium text-band mb-3">
                   Unscheduled Tentative
                 </h3>
                 <div className="space-y-3">
@@ -625,7 +627,9 @@ function EventItem({ event, onOpenTentative }: EventItemProps) {
   const isTentative = event.status === "hold";
   const displayTitle = event.title?.trim() || "Untitled Tentative Gig";
   const displayTime =
-    typeof event.dateTime === "number" ? formatEventTime(event.dateTime) : "Time TBD";
+    typeof event.dateTime === "number"
+      ? formatEventTime(event.dateTime)
+      : "Time TBD";
   const displayVenue = event.venue?.name || "Venue TBD";
 
   const content = (
@@ -636,13 +640,13 @@ function EventItem({ event, onOpenTentative }: EventItemProps) {
             {/* Status Badge */}
             <span
               className={cn(
-                "px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border",
+                "px-2 py-0.5 text-xs font-medium border rounded",
                 event.status === "confirmed" &&
-                "bg-lime/10 border-lime/30 text-lime",
+                  "bg-band/10 border-band/30 text-band",
                 event.status === "hold" &&
-                "bg-violet/10 border-violet/30 text-violet",
+                  "bg-band/10 border-band/30 text-band",
                 event.status === "available" &&
-                "bg-zinc-800 border-zinc-700 text-zinc-400"
+                  "bg-muted border-border text-muted-foreground",
               )}
             >
               {statusConfig.label}
@@ -654,7 +658,7 @@ function EventItem({ event, onOpenTentative }: EventItemProps) {
               return (
                 <span
                   key={genre}
-                  className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border"
+                  className="px-2 py-0.5 text-xs font-medium border rounded"
                   style={{
                     color: genreColor,
                     borderColor: `${genreColor}40`,
@@ -666,40 +670,38 @@ function EventItem({ event, onOpenTentative }: EventItemProps) {
               );
             })}
           </div>
-          <h3 className="font-bold text-white uppercase tracking-wide text-sm group-hover:text-lime transition-colors">
+          <h3 className="font-medium text-foreground text-sm group-hover:text-band transition-colors">
             {displayTitle}
           </h3>
-          <div className="flex items-center gap-4 mt-2 text-xs text-zinc-400">
+          <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
-              <Clock className="w-3.5 h-3.5 text-lime" />
+              <Clock className="w-3.5 h-3.5 text-band" />
               {displayTime}
             </span>
             <span className="flex items-center gap-1 truncate">
-              <MapPin className="w-3.5 h-3.5 text-violet flex-shrink-0" />
+              <MapPin className="w-3.5 h-3.5 text-band flex-shrink-0" />
               {displayVenue}
             </span>
           </div>
         </div>
         <div className="text-right flex-shrink-0 ml-4">
-          <div className="text-xl font-bold text-lime">{event.rsvpCount}</div>
-          <div className="text-[10px] text-zinc-500 uppercase tracking-wider">
-            RSVPs
-          </div>
+          <div className="text-xl font-semibold text-band">{event.rsvpCount}</div>
+          <div className="text-xs text-muted-foreground">RSVPs</div>
         </div>
       </div>
       {/* Capacity indicator if available */}
       {event.capacity && (
-        <div className="mt-3 pt-3 border-t border-zinc-800/50 flex items-center gap-2">
-          <Users className="w-3.5 h-3.5 text-zinc-600" />
-          <div className="flex-1 h-1.5 bg-night-secondary rounded-full overflow-hidden">
+        <div className="mt-3 pt-3 border-t border-border/50 flex items-center gap-2">
+          <Users className="w-3.5 h-3.5 text-muted-foreground" />
+          <div className="flex-1 h-1.5 bg-card rounded-full overflow-hidden">
             <div
-              className="h-full bg-violet rounded-full"
+              className="h-full bg-band rounded-full"
               style={{
                 width: `${Math.min((event.rsvpCount / event.capacity) * 100, 100)}%`,
               }}
             />
           </div>
-          <span className="text-[10px] text-zinc-500">
+          <span className="text-xs text-muted-foreground">
             {event.rsvpCount}/{event.capacity}
           </span>
         </div>
@@ -712,7 +714,7 @@ function EventItem({ event, onOpenTentative }: EventItemProps) {
       <button
         type="button"
         onClick={() => onOpenTentative(event)}
-        className="w-full text-left block bg-night-tertiary border-2 border-zinc-800 p-4 hover:border-violet/50 transition-all group"
+        className="w-full text-left block bg-muted border border-border p-4 hover:border-band/50 transition-all group rounded-lg"
       >
         {content}
       </button>
@@ -722,7 +724,7 @@ function EventItem({ event, onOpenTentative }: EventItemProps) {
   return (
     <Link
       href={`/gig/${event._id}`}
-      className="block bg-night-tertiary border-2 border-zinc-800 p-4 hover:border-lime/30 transition-all group"
+      className="block bg-muted border border-border p-4 hover:border-band/30 transition-all group rounded-lg"
     >
       {content}
     </Link>
@@ -739,14 +741,12 @@ function EmptyState({
   canManageShows: boolean;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-center border-2 border-dashed border-zinc-800">
-      <div className="w-16 h-16 bg-night-tertiary border-2 border-zinc-800 flex items-center justify-center mb-4">
-        <Calendar className="w-8 h-8 text-zinc-600" />
+    <div className="flex flex-col items-center justify-center py-16 text-center border border-dashed border-border rounded-lg">
+      <div className="w-16 h-16 bg-muted border border-border flex items-center justify-center mb-4 rounded-lg">
+        <Calendar className="w-8 h-8 text-muted-foreground" />
       </div>
-      <h3 className="text-lg font-bold text-white uppercase tracking-wide mb-2">
-        No upcoming shows
-      </h3>
-      <p className="text-zinc-500 max-w-[250px] text-sm mb-6">
+      <h3 className="text-base font-semibold text-foreground mb-2">No upcoming shows</h3>
+      <p className="text-muted-foreground max-w-[250px] text-sm mb-6">
         {band
           ? "Create your first gig to get started building your calendar"
           : "Create your band profile to start managing shows"}
@@ -754,18 +754,18 @@ function EmptyState({
       {band && canManageShows ? (
         <button
           onClick={onCreateClick}
-          className="flex items-center gap-2 px-6 py-3 bg-lime text-night font-bold uppercase tracking-wider text-sm border-2 border-lime hover:bg-transparent hover:text-lime transition-all"
+          className="flex items-center gap-2 px-6 py-3 bg-band text-foreground font-medium text-sm border border-band hover:bg-transparent hover:text-band transition-all rounded-lg"
         >
           <Plus className="w-4 h-4" />
           Create First Gig
         </button>
       ) : band ? (
-        <div className="flex items-center gap-2 text-zinc-600">
+        <div className="flex items-center gap-2 text-muted-foreground">
           <Users className="w-5 h-5" />
           <span className="text-sm">Only owners/admins can create gigs</span>
         </div>
       ) : (
-        <div className="flex items-center gap-2 text-zinc-600">
+        <div className="flex items-center gap-2 text-muted-foreground">
           <Music className="w-5 h-5" />
           <span className="text-sm">Create your band profile first</span>
         </div>

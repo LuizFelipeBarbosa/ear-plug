@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { SignIn, SignUp, useAuth, useUser } from "@clerk/nextjs";
@@ -7,18 +6,15 @@ import { useMutation } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import { ArrowRight, Headphones } from "lucide-react";
 import { cn } from "@/lib/utils";
-
 export function OnboardingFlow() {
   const router = useRouter();
   const { isSignedIn } = useAuth();
   const { user: clerkUser } = useUser();
   const upsertUser = useMutation(api.users.upsertUser);
   const [authMode, setAuthMode] = useState<"sign-in" | "sign-up">("sign-up");
-
   useEffect(() => {
     async function syncAndRedirect() {
       if (!isSignedIn || !clerkUser) return;
-
       try {
         await upsertUser({
           clerkId: clerkUser.id,
@@ -33,108 +29,89 @@ export function OnboardingFlow() {
         router.push("/home");
       }
     }
-
-    syncAndRedirect();
+    void syncAndRedirect();
   }, [isSignedIn, clerkUser, upsertUser, router]);
-
   return (
-    <div className="min-h-screen relative overflow-hidden bg-night">
-      <VideoBackground />
-
-      <div className="relative z-20 min-h-screen flex flex-col">
-        <header className="p-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-lime flex items-center justify-center">
-              <Headphones className="w-6 h-6 text-night" />
-            </div>
-            <div>
-              <span className="text-2xl font-bold text-white uppercase tracking-tight">
-                Ear-Plug
-              </span>
-              <p className="text-lime text-xs uppercase tracking-widest font-medium">
-                Listen Local
-              </p>
-            </div>
-          </div>
-        </header>
-
-        <main className="flex-1 flex items-center justify-center p-6">
-          <AuthCard mode={authMode} onModeChange={setAuthMode} />
-        </main>
-
-        <footer className="p-6 text-center">
-          <p className="text-zinc-500 text-xs uppercase tracking-widest">
-            Sign in as a fan, then create and manage bands from your profile
-          </p>
-        </footer>
-      </div>
+    <div className="relative min-h-screen overflow-hidden bg-black">
+      {" "}
+      <VideoBackground />{" "}
+      <div className="relative z-20 min-h-screen bg-black/60">
+        {" "}
+        <div className="mx-auto flex min-h-screen max-w-xl flex-col px-6 py-8">
+          {" "}
+          <header className="pt-2 text-center">
+            {" "}
+            <p className="text-[11px] tracking-[0.2em] text-zinc-200/90">
+              Listen Local
+            </p>{" "}
+            <h1 className="mt-1 text-5xl font-semibold text-zinc-50">
+              EAR-PLUG
+            </h1>{" "}
+          </header>{" "}
+          <main className="flex flex-1 items-center justify-center py-6">
+            {" "}
+            <AuthCard mode={authMode} onModeChange={setAuthMode} />{" "}
+          </main>{" "}
+          <footer className="text-center">
+            {" "}
+            <p className="text-xs text-zinc-200/80">
+              {" "}
+              Sign in as a fan, then create and manage bands from your
+              profile.{" "}
+            </p>{" "}
+          </footer>{" "}
+        </div>{" "}
+      </div>{" "}
     </div>
   );
 }
-
 function VideoBackground() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [videoLoaded, setVideoLoaded] = useState(false);
   const [videoError, setVideoError] = useState(false);
-
   useEffect(() => {
     const video = videoRef.current;
-    if (video) {
-      video.play().catch(() => {
-        setVideoError(true);
-      });
-    }
+    if (!video) return;
+    video.play().catch(() => {
+      setVideoError(true);
+    });
   }, []);
-
   return (
     <div className="absolute inset-0 z-0">
-      <div className="absolute inset-0 bg-night/80 z-10" />
-      <div
-        className="absolute inset-0 z-[11] opacity-[0.03] pointer-events-none"
-        style={{
-          backgroundImage:
-            "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E\")",
-        }}
-      />
-
+      {" "}
       {!videoError && (
         <video
           ref={videoRef}
           className={cn(
-            "absolute inset-0 w-full h-full object-cover transition-opacity duration-1000",
-            videoLoaded ? "opacity-100" : "opacity-0"
+            "absolute inset-0 h-full w-full object-cover transition-opacity duration-700",
+            videoLoaded ? "opacity-100" : "opacity-0",
           )}
           autoPlay
           muted
           loop
           playsInline
+          preload="metadata"
           onLoadedData={() => setVideoLoaded(true)}
           onError={() => setVideoError(true)}
-          poster="/images/concert-poster.jpg"
+          poster="/media/onboarding-poster.jpg"
         >
-          <source
-            src="https://assets.mixkit.co/videos/preview/mixkit-people-at-a-concert-seen-from-behind-4684-large.mp4"
-            type="video/mp4"
-          />
-          <source
-            src="https://assets.mixkit.co/videos/preview/mixkit-people-at-a-concert-seen-from-behind-4684-large.webm"
-            type="video/webm"
-          />
+          {" "}
+          <source src="/media/onboarding-loop.mp4" type="video/mp4" />{" "}
         </video>
-      )}
-
+      )}{" "}
       <div
         className={cn(
-          "absolute inset-0 transition-opacity duration-1000",
-          videoLoaded && !videoError ? "opacity-0" : "opacity-100"
+          "absolute inset-0 transition-opacity duration-500",
+          videoLoaded && !videoError ? "opacity-0" : "opacity-100",
         )}
       >
-        <div className="absolute inset-0 bg-gradient-to-br from-violet/20 via-night to-lime/10" />
-      </div>
+        {" "}
+        <div className="absolute inset-0 bg-[url('/media/onboarding-poster.jpg')] bg-cover bg-center" />{" "}
+      </div>{" "}
+      <div className="absolute inset-0 bg-black/60" />{" "}
     </div>
   );
 }
-
 function AuthCard({
   mode,
   onModeChange,
@@ -144,40 +121,43 @@ function AuthCard({
 }) {
   return (
     <div className="w-full max-w-md animate-fade-in">
-      <div className="text-center mb-6">
-        <span className="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-widest border bg-lime/10 border-lime/30 text-lime">
-          <Headphones className="w-4 h-4" />
-          Join as Fan
-        </span>
-      </div>
-
-      <div className="bg-night-tertiary/80 backdrop-blur-xl border-2 border-zinc-800 p-1 shadow-2xl">
+      {" "}
+      <div className="mb-4 text-center">
+        {" "}
+        <span className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/15 px-4 py-1.5 text-xs font-medium text-zinc-50 backdrop-blur-sm">
+          {" "}
+          <Headphones className="h-4 w-4" /> Join as Fan{" "}
+        </span>{" "}
+      </div>{" "}
+      <div className="rounded-xl border border-white/30 bg-white/15 p-1 shadow-soft backdrop-blur-md">
+        {" "}
         {mode === "sign-up" ? (
           <SignUp
             routing="hash"
             appearance={{
+              variables: { colorPrimary: "#7c3aed" },
               elements: {
                 rootBox: "w-full",
                 card: "shadow-none bg-transparent",
-                headerTitle: "text-white uppercase tracking-tight",
-                headerSubtitle: "text-zinc-400",
-                socialButtonsBlockButton:
-                  "bg-night-secondary border-zinc-700 text-white hover:bg-night-tertiary",
-                formFieldLabel: "text-zinc-400 uppercase text-xs tracking-wider",
+                headerTitle: "text-zinc-50",
+                headerSubtitle: "text-zinc-100/90",
+                formFieldLabel: "text-zinc-100",
                 formFieldInput:
-                  "bg-night-secondary border-zinc-700 text-white focus:border-lime",
+                  "bg-white/30 border-white/40 text-zinc-50 placeholder:text-zinc-200 focus:border-zinc-100",
                 formButtonPrimary:
-                  "bg-lime text-night font-bold uppercase tracking-wider hover:bg-lime-dark",
-                footerActionLink: "text-lime hover:text-lime-dark",
-                dividerLine: "bg-zinc-700",
-                dividerText: "text-zinc-500",
-                identityPreview: "bg-night-secondary border-zinc-700",
-                identityPreviewText: "text-white",
-                identityPreviewEditButton: "text-lime",
-                formFieldSuccessText: "text-lime",
-                formFieldErrorText: "text-red-500",
-                alert: "bg-red-500/10 border-red-500/30 text-red-400",
-                alertText: "text-red-400",
+                  "bg-zinc-50 text-zinc-900 font-medium hover:bg-zinc-200",
+                socialButtonsBlockButton:
+                  "bg-white/30 border-white/40 text-zinc-50 hover:bg-white/40",
+                footerActionLink: "text-zinc-50 hover:text-zinc-200",
+                dividerLine: "bg-white/30",
+                dividerText: "text-zinc-200",
+                identityPreview: "bg-white/20 border-white/30",
+                identityPreviewText: "text-zinc-50",
+                identityPreviewEditButton: "text-zinc-50",
+                formFieldSuccessText: "text-green-200",
+                formFieldErrorText: "text-red-200",
+                alert: "bg-red-500/20 border-red-200/40 text-red-100",
+                alertText: "text-red-100",
               },
             }}
             afterSignUpUrl="/home"
@@ -186,46 +166,51 @@ function AuthCard({
           <SignIn
             routing="hash"
             appearance={{
+              variables: { colorPrimary: "#7c3aed" },
               elements: {
                 rootBox: "w-full",
                 card: "shadow-none bg-transparent",
-                headerTitle: "text-white uppercase tracking-tight",
-                headerSubtitle: "text-zinc-400",
-                socialButtonsBlockButton:
-                  "bg-night-secondary border-zinc-700 text-white hover:bg-night-tertiary",
-                formFieldLabel: "text-zinc-400 uppercase text-xs tracking-wider",
+                headerTitle: "text-zinc-50",
+                headerSubtitle: "text-zinc-100/90",
+                formFieldLabel: "text-zinc-100",
                 formFieldInput:
-                  "bg-night-secondary border-zinc-700 text-white focus:border-lime",
+                  "bg-white/30 border-white/40 text-zinc-50 placeholder:text-zinc-200 focus:border-zinc-100",
                 formButtonPrimary:
-                  "bg-lime text-night font-bold uppercase tracking-wider hover:bg-lime-dark",
-                footerActionLink: "text-lime hover:text-lime-dark",
-                dividerLine: "bg-zinc-700",
-                dividerText: "text-zinc-500",
-                identityPreview: "bg-night-secondary border-zinc-700",
-                identityPreviewText: "text-white",
-                identityPreviewEditButton: "text-lime",
-                formFieldSuccessText: "text-lime",
-                formFieldErrorText: "text-red-500",
-                alert: "bg-red-500/10 border-red-500/30 text-red-400",
-                alertText: "text-red-400",
+                  "bg-zinc-50 text-zinc-900 font-medium hover:bg-zinc-200",
+                socialButtonsBlockButton:
+                  "bg-white/30 border-white/40 text-zinc-50 hover:bg-white/40",
+                footerActionLink: "text-zinc-50 hover:text-zinc-200",
+                dividerLine: "bg-white/30",
+                dividerText: "text-zinc-200",
+                identityPreview: "bg-white/20 border-white/30",
+                identityPreviewText: "text-zinc-50",
+                identityPreviewEditButton: "text-zinc-50",
+                formFieldSuccessText: "text-green-200",
+                formFieldErrorText: "text-red-200",
+                alert: "bg-red-500/20 border-red-200/40 text-red-100",
+                alertText: "text-red-100",
               },
             }}
             afterSignInUrl="/home"
           />
-        )}
-      </div>
-
-      <div className="text-center mt-6">
+        )}{" "}
+      </div>{" "}
+      <div className="mt-5 text-center">
+        {" "}
         <button
-          onClick={() => onModeChange(mode === "sign-up" ? "sign-in" : "sign-up")}
-          className="text-zinc-400 hover:text-lime transition-colors text-sm inline-flex items-center gap-1.5"
+          type="button"
+          onClick={() =>
+            onModeChange(mode === "sign-up" ? "sign-in" : "sign-up")
+          }
+          className="inline-flex items-center gap-1.5 text-sm text-zinc-100 hover:text-zinc-50"
         >
+          {" "}
           {mode === "sign-up"
             ? "Already have an account? Sign in"
-            : "Don't have an account? Sign up"}
-          <ArrowRight className="w-4 h-4" />
-        </button>
-      </div>
+            : "Don't have an account? Sign up"}{" "}
+          <ArrowRight className="h-4 w-4" />{" "}
+        </button>{" "}
+      </div>{" "}
     </div>
   );
 }

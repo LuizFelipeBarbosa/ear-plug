@@ -27,7 +27,10 @@ interface CitySuggestion {
 const CITY_PRIMARY_TYPES = ["(cities)"];
 const CITY_PRIMARY_TYPES_FALLBACK = ["locality"];
 
-function parseCitySuggestion(rawSuggestion: unknown, index: number): CitySuggestion | null {
+function parseCitySuggestion(
+  rawSuggestion: unknown,
+  index: number,
+): CitySuggestion | null {
   if (!rawSuggestion || typeof rawSuggestion !== "object") {
     return null;
   }
@@ -42,7 +45,9 @@ function parseCitySuggestion(rawSuggestion: unknown, index: number): CitySuggest
   const predictionText = predictionRecord.text;
 
   const fullText =
-    predictionText && typeof (predictionText as { toString?: () => string }).toString === "function"
+    predictionText &&
+    typeof (predictionText as { toString?: () => string }).toString ===
+      "function"
       ? (predictionText as { toString: () => string }).toString().trim()
       : "";
 
@@ -56,9 +61,11 @@ function parseCitySuggestion(rawSuggestion: unknown, index: number): CitySuggest
     .filter(Boolean);
 
   const primaryText = parts[0] ?? fullText;
-  const secondaryText = parts.length > 1 ? parts.slice(1).join(", ") : undefined;
+  const secondaryText =
+    parts.length > 1 ? parts.slice(1).join(", ") : undefined;
   const placeId =
-    typeof predictionRecord.placeId === "string" && predictionRecord.placeId.length > 0
+    typeof predictionRecord.placeId === "string" &&
+    predictionRecord.placeId.length > 0
       ? predictionRecord.placeId
       : `${fullText}-${index}`;
 
@@ -72,10 +79,10 @@ function parseCitySuggestion(rawSuggestion: unknown, index: number): CitySuggest
 
 /**
  * City Autocomplete Component
- * 
+ *
  * Provides autocomplete functionality that only suggests cities/towns,
  * not street addresses or specific venues.
- * 
+ *
  * Uses Google Places API with type filter set to "(cities)" to ensure
  * only city-level results are shown.
  */
@@ -89,18 +96,17 @@ export function CityAutocomplete({
   error,
 }: CityAutocompleteProps) {
   const controlledValue = value ?? "";
-  const [placesStatus, setPlacesStatus] = useState<"loading" | "ready" | "error">(
-    "loading"
-  );
+  const [placesStatus, setPlacesStatus] = useState<
+    "loading" | "ready" | "error"
+  >("loading");
   const [placesErrorMessage, setPlacesErrorMessage] = useState<string | null>(
-    null
+    null,
   );
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const requestIdRef = useRef(0);
   const fetchAutocompleteSuggestionsRef = useRef<
-    | ((request: unknown) => Promise<{ suggestions?: unknown[] }>)
-    | null
+    ((request: unknown) => Promise<{ suggestions?: unknown[] }>) | null
   >(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [inputValue, setInputValue] = useState(controlledValue);
@@ -161,36 +167,38 @@ export function CityAutocomplete({
     }
 
     const placesLibrary = (await window.google.maps.importLibrary(
-      "places"
+      "places",
     )) as unknown as {
       AutocompleteSuggestion?: {
         fetchAutocompleteSuggestions: (
-          request: unknown
+          request: unknown,
         ) => Promise<{ suggestions?: unknown[] }>;
       };
     };
 
     const autocompleteSuggestionClass =
       placesLibrary.AutocompleteSuggestion ??
-      (window.google.maps.places as unknown as {
-        AutocompleteSuggestion?: {
-          fetchAutocompleteSuggestions: (
-            request: unknown
-          ) => Promise<{ suggestions?: unknown[] }>;
-        };
-      }).AutocompleteSuggestion;
+      (
+        window.google.maps.places as unknown as {
+          AutocompleteSuggestion?: {
+            fetchAutocompleteSuggestions: (
+              request: unknown,
+            ) => Promise<{ suggestions?: unknown[] }>;
+          };
+        }
+      ).AutocompleteSuggestion;
 
     const fetchAutocompleteSuggestions =
       autocompleteSuggestionClass?.fetchAutocompleteSuggestions;
 
     if (typeof fetchAutocompleteSuggestions !== "function") {
       throw new Error(
-        "Google Maps AutocompleteSuggestion is unavailable in the loaded Places library."
+        "Google Maps AutocompleteSuggestion is unavailable in the loaded Places library.",
       );
     }
 
     const boundFetcher = fetchAutocompleteSuggestions.bind(
-      autocompleteSuggestionClass
+      autocompleteSuggestionClass,
     ) as (request: unknown) => Promise<{ suggestions?: unknown[] }>;
 
     fetchAutocompleteSuggestionsRef.current = boundFetcher;
@@ -286,7 +294,7 @@ export function CityAutocomplete({
       setShowSuggestions(false);
       setSuggestions([]);
     },
-    [onChange]
+    [onChange],
   );
 
   // Render loading state
@@ -294,21 +302,21 @@ export function CityAutocomplete({
     return (
       <div className="w-full">
         {label && (
-          <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">
+          <label className="block text-xs font-bold   text-muted-foreground mb-2">
             {label}
-            {required && <span className="text-lime ml-1">*</span>}
+            {required && <span className="text-fan ml-1">*</span>}
           </label>
         )}
         <div className="relative">
           <div className="absolute left-4 top-1/2 -translate-y-1/2">
-            <Loader2 className="w-5 h-5 text-zinc-600 animate-spin" />
+            <Loader2 className="w-5 h-5 text-muted-foreground animate-spin" />
           </div>
           <input
             type="text"
             value=""
             disabled
             placeholder="Loading Google Maps..."
-            className="w-full pl-12 pr-4 py-3.5 bg-night-tertiary border-2 border-zinc-800 text-zinc-500 placeholder:text-zinc-600 focus:outline-none"
+            className="w-full pl-12 pr-4 py-3.5 bg-muted border-2 border-border text-muted-foreground placeholder:text-muted-foreground focus:outline-none"
           />
         </div>
       </div>
@@ -320,9 +328,9 @@ export function CityAutocomplete({
     return (
       <div className="w-full">
         {label && (
-          <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">
+          <label className="block text-xs font-bold   text-muted-foreground mb-2">
             {label}
-            {required && <span className="text-lime ml-1">*</span>}
+            {required && <span className="text-fan ml-1">*</span>}
           </label>
         )}
         <div className="relative">
@@ -334,11 +342,12 @@ export function CityAutocomplete({
             value={controlledValue}
             onChange={(e) => onChange(e.target.value)}
             placeholder="Enter city manually"
-            className="w-full pl-12 pr-4 py-3.5 bg-night-tertiary border-2 border-zinc-800 text-white placeholder:text-zinc-600 focus:outline-none focus:border-lime"
+            className="w-full pl-12 pr-4 py-3.5 bg-muted border-2 border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-fan"
           />
         </div>
-        <p className="text-xs text-zinc-600 mt-1.5">
-          {placesErrorMessage || "Autocomplete unavailable. Type your city name manually."}
+        <p className="text-xs text-muted-foreground mt-1.5">
+          {placesErrorMessage ||
+            "Autocomplete unavailable. Type your city name manually."}
         </p>
       </div>
     );
@@ -347,9 +356,9 @@ export function CityAutocomplete({
   return (
     <div ref={containerRef} className="w-full relative">
       {label && (
-        <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">
+        <label className="block text-xs font-bold   text-muted-foreground mb-2">
           {label}
-          {required && <span className="text-lime ml-1">*</span>}
+          {required && <span className="text-fan ml-1">*</span>}
         </label>
       )}
 
@@ -359,7 +368,7 @@ export function CityAutocomplete({
           <MapPin
             className={cn(
               "w-5 h-5 transition-colors",
-              controlledValue ? "text-violet" : "text-zinc-600"
+              controlledValue ? "text-band" : "text-muted-foreground",
             )}
           />
         </div>
@@ -374,11 +383,11 @@ export function CityAutocomplete({
           disabled={disabled}
           placeholder={placeholder}
           className={cn(
-            "w-full pl-12 pr-10 py-3.5 bg-night-tertiary border-2 text-white placeholder:text-zinc-600 focus:outline-none transition-colors",
+            "w-full pl-12 pr-10 py-3.5 bg-muted border-2 text-foreground placeholder:text-muted-foreground focus:outline-none transition-colors",
             error
               ? "border-red-500 focus:border-red-400"
-              : "border-zinc-800 focus:border-violet",
-            controlledValue && "border-violet/30"
+              : "border-border focus:border-band",
+            controlledValue && "border-band/30",
           )}
         />
 
@@ -387,53 +396,53 @@ export function CityAutocomplete({
           <button
             type="button"
             onClick={handleClear}
-            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 flex items-center justify-center hover:bg-zinc-800 transition-colors touch-target"
+            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 flex items-center justify-center hover:bg-muted transition-colors touch-target"
             tabIndex={-1}
           >
-            <X className="w-4 h-4 text-zinc-500" />
+            <X className="w-4 h-4 text-muted-foreground" />
           </button>
         )}
       </div>
 
       {/* Error Message */}
       {error && (
-        <p className="text-xs text-red-500 mt-1.5 font-medium uppercase tracking-wider">
-          {error}
-        </p>
+        <p className="text-xs text-red-500 mt-1.5 font-medium  ">{error}</p>
       )}
 
       {/* Suggestions Dropdown */}
-      {showSuggestions && controlledInputValue.length >= 2 && suggestions.length > 0 && (
-        <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-night-secondary border-2 border-zinc-800 shadow-xl max-h-64 overflow-y-auto">
-          {suggestions.map((suggestion) => (
-            <button
-              key={suggestion.placeId}
-              type="button"
-              onClick={() => handleSelect(suggestion)}
-              className="w-full px-4 py-3 text-left hover:bg-night-tertiary hover:border-lime/30 transition-colors border-b border-zinc-800/50 last:border-0 group"
-            >
-              <div className="flex items-start gap-3">
-                <MapPin className="w-4 h-4 text-zinc-500 mt-0.5 flex-shrink-0 group-hover:text-violet transition-colors" />
-                <div className="min-w-0">
-                  <p className="text-sm text-white font-medium truncate group-hover:text-violet transition-colors">
-                    {suggestion.primaryText}
-                  </p>
-                  {suggestion.secondaryText ? (
-                    <p className="text-xs text-zinc-500 truncate">
-                      {suggestion.secondaryText}
+      {showSuggestions &&
+        controlledInputValue.length >= 2 &&
+        suggestions.length > 0 && (
+          <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-card border-2 border-border shadow-xl max-h-64 overflow-y-auto">
+            {suggestions.map((suggestion) => (
+              <button
+                key={suggestion.placeId}
+                type="button"
+                onClick={() => handleSelect(suggestion)}
+                className="w-full px-4 py-3 text-left hover:bg-muted hover:border-fan/30 transition-colors border-b border-border/50 last:border-0 group"
+              >
+                <div className="flex items-start gap-3">
+                  <MapPin className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0 group-hover:text-band transition-colors" />
+                  <div className="min-w-0">
+                    <p className="text-sm text-foreground font-medium truncate group-hover:text-band transition-colors">
+                      {suggestion.primaryText}
                     </p>
-                  ) : null}
+                    {suggestion.secondaryText ? (
+                      <p className="text-xs text-muted-foreground truncate">
+                        {suggestion.secondaryText}
+                      </p>
+                    ) : null}
+                  </div>
                 </div>
-              </div>
-            </button>
-          ))}
-        </div>
-      )}
+              </button>
+            ))}
+          </div>
+        )}
 
       {/* Searching state */}
       {showSuggestions && controlledInputValue.length >= 2 && isSearching && (
-        <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-night-secondary border-2 border-zinc-800 shadow-xl p-3 text-center">
-          <p className="text-xs text-zinc-500">Searching cities...</p>
+        <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-card border-2 border-border shadow-xl p-3 text-center">
+          <p className="text-xs text-muted-foreground">Searching cities...</p>
         </div>
       )}
 
@@ -442,15 +451,17 @@ export function CityAutocomplete({
         controlledInputValue.length >= 2 &&
         !isSearching &&
         suggestions.length === 0 && (
-        <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-night-secondary border-2 border-zinc-800 shadow-xl p-4 text-center">
-          <p className="text-sm text-zinc-500">No cities found</p>
-        </div>
-      )}
+          <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-card border-2 border-border shadow-xl p-4 text-center">
+            <p className="text-sm text-muted-foreground">No cities found</p>
+          </div>
+        )}
 
       {/* Typing hint */}
       {showSuggestions && controlledInputValue.length === 1 && (
-        <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-night-secondary border-2 border-zinc-800 shadow-xl p-3 text-center">
-          <p className="text-xs text-zinc-500">Keep typing to see city suggestions...</p>
+        <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-card border-2 border-border shadow-xl p-3 text-center">
+          <p className="text-xs text-muted-foreground">
+            Keep typing to see city suggestions...
+          </p>
         </div>
       )}
     </div>

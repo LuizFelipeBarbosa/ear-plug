@@ -3,7 +3,14 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
-import { ArrowLeft, MapPin, Music, UserCheck, UserPlus, Users } from "lucide-react";
+import {
+  ArrowLeft,
+  MapPin,
+  Music,
+  UserCheck,
+  UserPlus,
+  Users,
+} from "lucide-react";
 import { api } from "../../../../../../../convex/_generated/api";
 import type { Id } from "../../../../../../../convex/_generated/dataModel";
 import { BandPublicMediaSlotsSection } from "@/components/band/slots/BandPublicMediaSlotsSection";
@@ -27,7 +34,10 @@ export default function BandFeedPage({ params }: PageProps) {
   const trackProfileView = useMutation(api.bands.trackProfileView);
 
   const publicProfile = useQuery(api.bands.getPublicBandProfile, { bandId });
-  const pastGigs = useQuery(api.events.listPublicPastByBand, { bandId, limit: 6 });
+  const pastGigs = useQuery(api.events.listPublicPastByBand, {
+    bandId,
+    limit: 6,
+  });
   const trackedBandIdRef = useRef<Id<"bands"> | null>(null);
   const [isSavingFollow, setIsSavingFollow] = useState(false);
   const [followError, setFollowError] = useState<string | null>(null);
@@ -45,7 +55,11 @@ export default function BandFeedPage({ params }: PageProps) {
     if (!isSavingFollow) {
       setOptimisticFollowState(null);
     }
-  }, [publicProfile?.isFollowing, publicProfile?.followerCount, isSavingFollow]);
+  }, [
+    publicProfile?.isFollowing,
+    publicProfile?.followerCount,
+    isSavingFollow,
+  ]);
 
   useEffect(() => {
     if (mode !== "personal") {
@@ -92,7 +106,7 @@ export default function BandFeedPage({ params }: PageProps) {
     const nextIsFollowing = !isFollowing;
     const nextFollowerCount = Math.max(
       0,
-      followerCount + (nextIsFollowing ? 1 : -1)
+      followerCount + (nextIsFollowing ? 1 : -1),
     );
     const snapshot = { isFollowing, followerCount };
     setOptimisticFollowState({
@@ -105,7 +119,9 @@ export default function BandFeedPage({ params }: PageProps) {
     } catch (error) {
       setOptimisticFollowState(snapshot);
       setFollowError(
-        error instanceof Error ? error.message : "Failed to update follow state"
+        error instanceof Error
+          ? error.message
+          : "Failed to update follow state",
       );
     } finally {
       setIsSavingFollow(false);
@@ -114,23 +130,23 @@ export default function BandFeedPage({ params }: PageProps) {
 
   if (publicProfile === undefined) {
     return (
-      <div className="min-h-screen bg-night p-4 space-y-4">
-        <div className="h-11 bg-night-tertiary border border-zinc-800 animate-shimmer" />
-        <div className="h-40 bg-night-tertiary border border-zinc-800 animate-shimmer" />
-        <div className="h-64 bg-night-tertiary border border-zinc-800 animate-shimmer" />
+      <div className="min-h-screen bg-background p-4 space-y-4">
+        <div className="h-11 bg-muted border border-border animate-shimmer" />
+        <div className="h-40 bg-muted border border-border animate-shimmer" />
+        <div className="h-64 bg-muted border border-border animate-shimmer" />
       </div>
     );
   }
 
   if (!band) {
     return (
-      <div className="min-h-screen bg-night flex items-center justify-center p-4">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="text-center">
-          <p className="text-white font-bold uppercase tracking-wide mb-2">Band not found</p>
+          <p className="text-white font-bold   mb-2">Band not found</p>
           <button
             type="button"
             onClick={() => router.push("/home")}
-            className="px-4 py-2 border-2 border-lime text-lime text-xs font-bold uppercase tracking-wider hover:bg-lime hover:text-night transition-colors"
+            className="px-4 py-2 border-2 border-fan text-fan text-xs font-bold   hover:bg-fan hover:text-foreground transition-colors"
           >
             Back to Discover
           </button>
@@ -140,20 +156,20 @@ export default function BandFeedPage({ params }: PageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-night pb-6">
-      <header className="p-4 border-b-2 border-lime/20 bg-night-secondary">
+    <div className="min-h-screen bg-background pb-6">
+      <header className="p-4 border-b-2 border-fan/20 bg-card">
         <button
           type="button"
           onClick={() => router.back()}
-          className="mb-3 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-zinc-400 hover:text-lime transition-colors"
+          className="mb-3 inline-flex items-center gap-2 text-xs font-bold   text-muted-foreground hover:text-fan transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           Back
         </button>
 
-        <div className="bg-night-tertiary border-2 border-zinc-800 p-3 sm:p-4">
+        <div className="bg-muted border-2 border-border p-3 sm:p-4">
           <div className="flex items-start gap-3">
-            <div className="w-16 h-16 sm:w-20 sm:h-20 overflow-hidden bg-night-secondary border border-zinc-700 flex items-center justify-center flex-shrink-0">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 overflow-hidden bg-card border border-border flex items-center justify-center flex-shrink-0">
               {band.image ? (
                 <Image
                   src={band.image}
@@ -163,19 +179,21 @@ export default function BandFeedPage({ params }: PageProps) {
                   className="object-cover"
                 />
               ) : (
-                <span className="text-lg sm:text-xl font-bold text-lime">{getInitials(band.name)}</span>
+                <span className="text-lg sm:text-xl font-bold text-fan">
+                  {getInitials(band.name)}
+                </span>
               )}
             </div>
 
             <div className="min-w-0 flex-1">
-              <h1 className="text-lg sm:text-xl font-bold text-white uppercase tracking-tight leading-tight [overflow-wrap:anywhere]">
+              <h1 className="text-lg sm:text-xl font-bold text-white   leading-tight [overflow-wrap:anywhere]">
                 {band.name}
               </h1>
               <div className="flex flex-wrap gap-1.5 mt-2">
                 {(band.genres || []).map((genre) => (
                   <span
                     key={genre}
-                    className="inline-flex items-center gap-1 px-2 py-1 text-[11px] leading-none font-bold uppercase tracking-wider text-night"
+                    className="inline-flex items-center gap-1 px-2 py-1 text-[11px] leading-none font-bold   text-foreground"
                     style={{ backgroundColor: GENRE_COLORS[genre as Genre] }}
                   >
                     <Music className="w-2.5 h-2.5" />
@@ -183,18 +201,18 @@ export default function BandFeedPage({ params }: PageProps) {
                   </span>
                 ))}
               </div>
-              <div className="mt-2 grid grid-cols-1 gap-1 sm:flex sm:flex-wrap sm:items-center sm:gap-3 text-sm sm:text-xs text-zinc-300">
+              <div className="mt-2 grid grid-cols-1 gap-1 sm:flex sm:flex-wrap sm:items-center sm:gap-3 text-sm sm:text-xs text-muted-foreground">
                 <span className="inline-flex items-start gap-1 leading-tight">
-                  <MapPin className="w-3.5 h-3.5 text-lime shrink-0 mt-0.5 sm:mt-0" />
+                  <MapPin className="w-3.5 h-3.5 text-fan shrink-0 mt-0.5 sm:mt-0" />
                   {band.location}
                 </span>
                 <span className="inline-flex items-center gap-1">
-                  <Users className="w-3.5 h-3.5 text-lime shrink-0" />
+                  <Users className="w-3.5 h-3.5 text-fan shrink-0" />
                   {followerCount} followers
                 </span>
                 {band.memberCount ? (
                   <span className="inline-flex items-center gap-1">
-                    <Users className="w-3.5 h-3.5 text-violet shrink-0" />
+                    <Users className="w-3.5 h-3.5 text-band shrink-0" />
                     {band.memberCount} members
                   </span>
                 ) : null}
@@ -202,16 +220,16 @@ export default function BandFeedPage({ params }: PageProps) {
             </div>
           </div>
 
-          <div className="mt-3 pt-3 border-t border-zinc-800">
+          <div className="mt-3 pt-3 border-t border-border">
             {canToggleFollow ? (
               <button
                 type="button"
                 onClick={handleToggleFollow}
                 disabled={isSavingFollow}
-                className={`w-full sm:w-auto px-3 py-2 border text-xs sm:text-[10px] font-bold uppercase tracking-wider transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
+                className={`w-full sm:w-auto px-3 py-2 border text-xs sm:text-[10px] font-bold   transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
                   isFollowing
-                    ? "border-lime/50 bg-lime/20 text-lime hover:bg-lime/30"
-                    : "border-lime/40 text-lime hover:bg-lime hover:text-night"
+                    ? "border-fan/50 bg-fan/20 text-fan hover:bg-fan/30"
+                    : "border-fan/40 text-fan hover:bg-fan hover:text-foreground"
                 }`}
               >
                 <span className="inline-flex items-center gap-1">
@@ -224,14 +242,14 @@ export default function BandFeedPage({ params }: PageProps) {
                 </span>
               </button>
             ) : (
-              <span className="inline-flex w-full sm:w-auto justify-center text-[10px] font-bold uppercase tracking-wider text-zinc-400 border border-zinc-700 px-2.5 py-1.5">
+              <span className="inline-flex w-full sm:w-auto justify-center text-[10px] font-bold   text-muted-foreground border border-border px-2.5 py-1.5">
                 Band Member
               </span>
             )}
           </div>
 
           {band.bio ? (
-            <p className="mt-3 text-sm text-zinc-300 leading-relaxed border-t border-zinc-800 pt-3">
+            <p className="mt-3 text-sm text-muted-foreground leading-relaxed border-t border-border pt-3">
               {band.bio}
             </p>
           ) : null}

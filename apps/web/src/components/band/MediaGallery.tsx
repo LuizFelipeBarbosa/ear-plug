@@ -99,7 +99,7 @@ export function MediaGallery({
               "text-gray-400 hover:text-gray-500 hover:border-gray-400",
               "dark:hover:text-gray-300 dark:hover:border-gray-600",
               "transition-colors",
-              isUploading && "opacity-50 cursor-not-allowed"
+              isUploading && "opacity-50 cursor-not-allowed",
             )}
           >
             {isUploading ? (
@@ -139,7 +139,10 @@ export function MediaGallery({
                 />
                 <div className="absolute inset-0 flex items-center justify-center bg-black/30">
                   <div className="w-10 h-10 rounded-full bg-white/90 flex items-center justify-center">
-                    <Play className="w-5 h-5 text-gray-900 ml-0.5" fill="currentColor" />
+                    <Play
+                      className="w-5 h-5 text-gray-900 ml-0.5"
+                      fill="currentColor"
+                    />
                   </div>
                 </div>
               </>
@@ -277,7 +280,7 @@ export function DemoMediaGallery() {
   const handleUpload = async (file: File) => {
     // Simulate upload delay
     await new Promise((resolve) => setTimeout(resolve, 1500));
-    
+
     // Create a local URL for the uploaded file
     const url = URL.createObjectURL(file);
     const newItem: MediaItem = {

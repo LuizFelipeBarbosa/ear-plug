@@ -31,12 +31,10 @@ interface ProfileContextValue {
       role: "owner" | "admin" | "member";
     };
   }>;
-  activeBand:
-    | {
-        _id: Id<"bands">;
-        name: string;
-      }
-    | null;
+  activeBand: {
+    _id: Id<"bands">;
+    name: string;
+  } | null;
   isHydrated: boolean;
   isLoadingBands: boolean;
   notice: string | null;
@@ -120,7 +118,9 @@ export function ProfileContextProvider({
     if (!isHydrated || memberships === undefined) return;
 
     if (state.mode === "band") {
-      const stillMember = bands.some((entry) => entry.band._id === state.bandId);
+      const stillMember = bands.some(
+        (entry) => entry.band._id === state.bandId,
+      );
       if (!stillMember) {
         setState(DEFAULT_CONTEXT);
         setNotice("Your active band access changed. Switched to Personal.");
@@ -170,7 +170,7 @@ export function ProfileContextProvider({
       setPersonalMode,
       setBandMode,
       clearNotice,
-    ]
+    ],
   );
 
   return (
@@ -182,7 +182,7 @@ export function useProfileContext() {
   const context = useContext(ProfileContext);
   if (!context) {
     throw new Error(
-      "useProfileContext must be used within a ProfileContextProvider"
+      "useProfileContext must be used within a ProfileContextProvider",
     );
   }
   return context;

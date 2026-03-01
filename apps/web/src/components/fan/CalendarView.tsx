@@ -17,15 +17,24 @@ export function FanCalendarView() {
   const likedEvents = useQuery(api.events.getUserLikes);
   const pastRsvps = useQuery(api.events.getUserPastRsvps);
 
-  const isLoading = rsvps === undefined || likedEvents === undefined || pastRsvps === undefined;
+  const isLoading =
+    rsvps === undefined || likedEvents === undefined || pastRsvps === undefined;
 
-  const events = activeTab === "rsvps" ? rsvps : activeTab === "liked" ? likedEvents : pastRsvps;
+  const events =
+    activeTab === "rsvps"
+      ? rsvps
+      : activeTab === "liked"
+        ? likedEvents
+        : pastRsvps;
 
   // Group events by month
   const groupedEvents: Record<string, typeof events> = {};
   events?.forEach((event: any) => {
     const date = new Date(event.dateTime);
-    const monthKey = date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+    const monthKey = date.toLocaleDateString("en-US", {
+      month: "long",
+      year: "numeric",
+    });
     if (!groupedEvents[monthKey]) {
       groupedEvents[monthKey] = [];
     }
@@ -33,23 +42,21 @@ export function FanCalendarView() {
   });
 
   return (
-    <div className="min-h-screen bg-night pb-6 overflow-x-hidden">
+    <div className="min-h-screen bg-background pb-6 overflow-x-hidden">
       {/* Header */}
-      <header className="bg-night-secondary border-b-2 border-lime/20 p-4">
-        <h1 className="text-2xl font-bold text-white uppercase tracking-tight">
-          My Events
-        </h1>
+      <header className="bg-card border-b border-fan/20 p-4">
+        <h1 className="text-xl font-semibold text-foreground">My Events</h1>
       </header>
 
       {/* Tabs */}
-      <div className="flex border-b-2 border-zinc-800">
+      <div className="flex border-b border-border">
         <button
           onClick={() => setActiveTab("rsvps")}
           className={cn(
-            "flex-1 py-3 sm:py-4 px-1 text-[11px] sm:text-sm font-bold uppercase tracking-wider transition-colors relative",
+            "flex-1 py-3 sm:py-4 px-1 text-xs sm:text-sm font-medium transition-colors relative",
             activeTab === "rsvps"
-              ? "text-lime"
-              : "text-zinc-500 hover:text-zinc-300"
+              ? "text-fan"
+              : "text-muted-foreground hover:text-foreground",
           )}
         >
           <div className="flex items-center justify-center gap-1 sm:gap-2 whitespace-nowrap">
@@ -57,16 +64,16 @@ export function FanCalendarView() {
             RSVPs
           </div>
           {activeTab === "rsvps" && (
-            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-lime" />
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-fan" />
           )}
         </button>
         <button
           onClick={() => setActiveTab("liked")}
           className={cn(
-            "flex-1 py-3 sm:py-4 px-1 text-[11px] sm:text-sm font-bold uppercase tracking-wider transition-colors relative",
+            "flex-1 py-3 sm:py-4 px-1 text-xs sm:text-sm font-medium transition-colors relative",
             activeTab === "liked"
-              ? "text-lime"
-              : "text-zinc-500 hover:text-zinc-300"
+              ? "text-fan"
+              : "text-muted-foreground hover:text-foreground",
           )}
         >
           <div className="flex items-center justify-center gap-1 sm:gap-2 whitespace-nowrap">
@@ -74,16 +81,16 @@ export function FanCalendarView() {
             Liked
           </div>
           {activeTab === "liked" && (
-            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-lime" />
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-fan" />
           )}
         </button>
         <button
           onClick={() => setActiveTab("past")}
           className={cn(
-            "flex-1 py-3 sm:py-4 px-1 text-[11px] sm:text-sm font-bold uppercase tracking-wider transition-colors relative",
+            "flex-1 py-3 sm:py-4 px-1 text-xs sm:text-sm font-medium transition-colors relative",
             activeTab === "past"
-              ? "text-lime"
-              : "text-zinc-500 hover:text-zinc-300"
+              ? "text-fan"
+              : "text-muted-foreground hover:text-foreground",
           )}
         >
           <div className="flex items-center justify-center gap-1 sm:gap-2 whitespace-nowrap">
@@ -91,7 +98,7 @@ export function FanCalendarView() {
             Past
           </div>
           {activeTab === "past" && (
-            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-lime" />
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-fan" />
           )}
         </button>
       </div>
@@ -103,7 +110,7 @@ export function FanCalendarView() {
             {[1, 2, 3].map((i) => (
               <div
                 key={i}
-                className="h-32 bg-night-tertiary border-2 border-zinc-800 animate-shimmer"
+                className="h-32 bg-muted border border-border rounded-lg animate-shimmer"
               />
             ))}
           </div>
@@ -111,7 +118,7 @@ export function FanCalendarView() {
           <div className="space-y-6">
             {Object.entries(groupedEvents).map(([month, monthEvents]) => (
               <div key={month}>
-                <h2 className="text-xs font-bold uppercase tracking-widest text-lime mb-3 sticky top-0 bg-night py-2 z-10">
+                <h2 className="text-xs font-medium text-fan mb-3 sticky top-0 bg-background py-2 z-10">
                   {month}
                 </h2>
                 <div className="space-y-3">
@@ -138,11 +145,11 @@ function EmptyState({ activeTab }: { activeTab: EventTab }) {
   const getIcon = () => {
     switch (activeTab) {
       case "rsvps":
-        return <Ticket className="w-8 h-8 text-zinc-600" />;
+        return <Ticket className="w-8 h-8 text-muted-foreground" />;
       case "liked":
-        return <Music className="w-8 h-8 text-zinc-600" />;
+        return <Music className="w-8 h-8 text-muted-foreground" />;
       case "past":
-        return <History className="w-8 h-8 text-zinc-600" />;
+        return <History className="w-8 h-8 text-muted-foreground" />;
     }
   };
 
@@ -169,20 +176,18 @@ function EmptyState({ activeTab }: { activeTab: EventTab }) {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-center border-2 border-dashed border-zinc-800">
-      <div className="w-16 h-16 bg-night-tertiary border-2 border-zinc-800 flex items-center justify-center mb-4">
+    <div className="flex flex-col items-center justify-center py-16 text-center border border-dashed border-border rounded-lg">
+      <div className="w-16 h-16 bg-muted border border-border rounded-lg flex items-center justify-center mb-4">
         {getIcon()}
       </div>
-      <h3 className="text-lg font-bold text-white uppercase tracking-wide mb-2">
-        {getTitle()}
-      </h3>
-      <p className="text-zinc-500 max-w-[250px] text-sm">
+      <h3 className="text-base font-semibold text-foreground mb-2">{getTitle()}</h3>
+      <p className="text-muted-foreground max-w-[250px] text-sm">
         {getDescription()}
       </p>
       {activeTab !== "past" && (
         <Link
           href="/home"
-          className="mt-6 inline-block px-6 py-3 bg-lime text-night font-bold uppercase tracking-wider text-xs border-2 border-lime hover:bg-transparent hover:text-lime transition-all"
+          className="mt-6 inline-block px-6 py-3 bg-fan text-foreground font-medium text-sm border border-fan rounded-lg hover:bg-transparent hover:text-fan transition-colors"
         >
           Discover Events
         </Link>

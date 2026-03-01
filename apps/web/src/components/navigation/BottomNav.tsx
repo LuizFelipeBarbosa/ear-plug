@@ -1,5 +1,4 @@
 "use client";
-
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -16,131 +15,113 @@ import { useProfileContext } from "@/hooks/useProfileContext";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useBandConversations } from "@/hooks/useMessages";
 import { cn } from "@/lib/utils";
-
 interface NavItem {
   href: string;
   label: string;
   icon: React.ReactNode;
-  activeIcon?: React.ReactNode;
   badge?: number;
 }
-
 export function BottomNav() {
   const pathname = usePathname();
   const { user } = useCurrentUser();
   const { mode } = useProfileContext();
   const { unreadCount: notificationCount } = useNotifications();
-  const { unreadCount: messageCount, pendingInviteCount } = useBandConversations();
-
+  const { unreadCount: messageCount, pendingInviteCount } =
+    useBandConversations();
   if (!user) return null;
-
   const fanNavItems: NavItem[] = [
     {
       href: "/home",
       label: "Discover",
-      icon: <Map className="w-6 h-6" strokeWidth={1.5} />,
+      icon: <Map className="w-5 h-5" strokeWidth={1.75} />,
     },
     {
       href: "/calendar",
-      label: "My Events",
-      icon: <Calendar className="w-6 h-6" strokeWidth={1.5} />,
+      label: "Calendar",
+      icon: <Calendar className="w-5 h-5" strokeWidth={1.75} />,
     },
     {
       href: "/messages",
-      label: "Notifications",
-      icon: <Bell className="w-6 h-6" strokeWidth={1.5} />,
+      label: "Alerts",
+      icon: <Bell className="w-5 h-5" strokeWidth={1.75} />,
       badge: notificationCount,
     },
     {
       href: "/profile",
       label: "Profile",
-      icon: <User className="w-6 h-6" strokeWidth={1.5} />,
+      icon: <User className="w-5 h-5" strokeWidth={1.75} />,
     },
   ];
-
   const bandNavItems: NavItem[] = [
     {
       href: "/home",
       label: "Dashboard",
-      icon: <LayoutDashboard className="w-6 h-6" strokeWidth={1.5} />,
+      icon: <LayoutDashboard className="w-5 h-5" strokeWidth={1.75} />,
     },
     {
       href: "/calendar",
       label: "Shows",
-      icon: <Calendar className="w-6 h-6" strokeWidth={1.5} />,
+      icon: <Calendar className="w-5 h-5" strokeWidth={1.75} />,
     },
     {
       href: "/analytics",
       label: "Analytics",
-      icon: <BarChart3 className="w-6 h-6" strokeWidth={1.5} />,
+      icon: <BarChart3 className="w-5 h-5" strokeWidth={1.75} />,
     },
     {
       href: "/messages",
-      label: "Messages",
-      icon: <MessageCircle className="w-6 h-6" strokeWidth={1.5} />,
+      label: "Inbox",
+      icon: <MessageCircle className="w-5 h-5" strokeWidth={1.75} />,
       badge: messageCount + pendingInviteCount,
     },
     {
       href: "/profile",
       label: "Profile",
-      icon: <User className="w-6 h-6" strokeWidth={1.5} />,
+      icon: <User className="w-5 h-5" strokeWidth={1.75} />,
     },
   ];
-
-  const navItems = mode === "personal" ? fanNavItems : bandNavItems;
-
+  const isFan = mode === "personal";
+  const navItems = isFan ? fanNavItems : bandNavItems;
+  const activeClass = isFan ? "text-fan" : "text-band";
+  const inactiveClass = "text-muted-foreground";
+  const badgeClass = isFan ? "bg-fan" : "bg-band";
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-night-secondary/95 backdrop-blur-lg border-t-2 border-lime/20 safe-area-inset-bottom">
-      <div className="flex items-center justify-around h-16 max-w-lg mx-auto">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card/95 backdrop-blur-md safe-area-inset-bottom">
+      <div className="mx-auto flex h-16 max-w-xl items-center justify-around px-1">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
-
           return (
             <Link
               key={item.href}
               href={item.href}
               className={cn(
-                "flex flex-col items-center justify-center flex-1 h-full relative touch-target",
-                "transition-all duration-200",
-                isActive
-                  ? "text-lime"
-                  : "text-zinc-500 hover:text-zinc-300"
+                "relative flex h-full flex-1 flex-col items-center justify-center gap-1 transition-colors touch-target",
+                isActive ? activeClass : inactiveClass,
               )}
             >
               <div className="relative">
-                {/* Active indicator glow */}
-                {isActive && (
-                  <div className="absolute inset-0 bg-lime/20 blur-xl rounded-full" />
-                )}
-                <div className={cn(
-                  "relative transition-transform duration-200",
-                  isActive && "scale-110"
-                )}>
-                  {item.icon}
-                </div>
-                
-                {/* Badge */}
+                {item.icon}
                 {item.badge !== undefined && item.badge > 0 ? (
-                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-lime text-night text-xs font-bold rounded-full flex items-center justify-center px-1">
+                  <span
+                    className={cn(
+                      "absolute -top-1.5 -right-1.5 min-w-[17px] h-[17px] rounded-full px-1 text-[10px] font-semibold text-white",
+                      "flex items-center justify-center",
+                      badgeClass,
+                    )}
+                  >
                     {item.badge > 9 ? "9+" : item.badge}
                   </span>
                 ) : null}
               </div>
-              
-              {/* Label */}
-              <span
-                className={cn(
-                  "text-[10px] mt-1 font-medium tracking-wide uppercase",
-                  isActive && "font-bold"
-                )}
-              >
-                {item.label}
-              </span>
-              
-              {/* Active indicator bar */}
-              {isActive && (
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-lime rounded-full shadow-glow-lime" />
-              )}
+              <span className="text-[10px] font-medium">{item.label}</span>
+              {isActive ? (
+                <div
+                  className={cn(
+                    "absolute top-0 h-0.5 w-7 rounded-full",
+                    isFan ? "bg-fan" : "bg-band",
+                  )}
+                />
+              ) : null}
             </Link>
           );
         })}

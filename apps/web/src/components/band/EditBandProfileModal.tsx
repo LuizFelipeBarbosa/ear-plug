@@ -95,7 +95,8 @@ export function EditBandProfileModal({
       const cleanedSocialLinks: Partial<typeof formData.socialLinks> = {};
       Object.entries(formData.socialLinks).forEach(([key, value]) => {
         if (value.trim()) {
-          cleanedSocialLinks[key as keyof typeof formData.socialLinks] = value.trim();
+          cleanedSocialLinks[key as keyof typeof formData.socialLinks] =
+            value.trim();
         }
       });
 
@@ -106,7 +107,10 @@ export function EditBandProfileModal({
         location: formData.location.trim(),
         bio: formData.bio.trim() || undefined,
         memberCount: formData.memberCount || undefined,
-        socialLinks: Object.keys(cleanedSocialLinks).length > 0 ? cleanedSocialLinks : undefined,
+        socialLinks:
+          Object.keys(cleanedSocialLinks).length > 0
+            ? cleanedSocialLinks
+            : undefined,
       });
 
       onClose();
@@ -138,34 +142,32 @@ export function EditBandProfileModal({
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-night/80 backdrop-blur-sm"
+        className="absolute inset-0 bg-background/80 backdrop-blur-sm"
         onClick={onClose}
       />
 
       {/* Modal - Brutalist Style */}
-      <div className="relative w-full max-w-lg bg-night-secondary border-2 border-zinc-800 sm:rounded-none max-h-[90vh] overflow-hidden animate-slide-up flex flex-col">
+      <div className="relative w-full max-w-lg bg-card border-2 border-border sm:rounded-none max-h-[90vh] overflow-hidden animate-slide-up flex flex-col">
         {/* Header */}
-        <div className="sticky top-0 bg-night-secondary z-10 flex items-center justify-between p-4 border-b-2 border-zinc-800">
-          <h2 className="text-lg font-bold text-white uppercase tracking-tight">
-            Edit Band Profile
-          </h2>
+        <div className="sticky top-0 bg-card z-10 flex items-center justify-between p-4 border-b-2 border-border">
+          <h2 className="text-lg font-bold text-foreground">Edit Band Profile</h2>
           <button
             onClick={onClose}
-            className="p-2 flex items-center justify-center hover:bg-night-tertiary border border-zinc-800 hover:border-lime/30 transition-colors touch-target"
+            className="p-2 flex items-center justify-center hover:bg-muted border border-border hover:border-band/30 transition-colors touch-target"
           >
-            <X className="w-5 h-5 text-zinc-400" />
+            <X className="w-5 h-5 text-muted-foreground" />
           </button>
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b-2 border-zinc-800">
+        <div className="flex border-b-2 border-border">
           <button
             onClick={() => setActiveTab("info")}
             className={cn(
-              "flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-colors border-b-2",
+              "flex-1 py-3 text-xs font-bold   transition-colors border-b-2",
               activeTab === "info"
-                ? "text-lime border-lime"
-                : "text-zinc-500 border-transparent hover:text-zinc-300"
+                ? "text-band border-band"
+                : "text-muted-foreground border-transparent hover:text-muted-foreground",
             )}
           >
             Basic Info
@@ -173,10 +175,10 @@ export function EditBandProfileModal({
           <button
             onClick={() => setActiveTab("social")}
             className={cn(
-              "flex-1 py-3 text-xs font-bold uppercase tracking-wider transition-colors border-b-2",
+              "flex-1 py-3 text-xs font-bold   transition-colors border-b-2",
               activeTab === "social"
-                ? "text-lime border-lime"
-                : "text-zinc-500 border-transparent hover:text-zinc-300"
+                ? "text-band border-band"
+                : "text-muted-foreground border-transparent hover:text-muted-foreground",
             )}
           >
             Social Links
@@ -189,27 +191,30 @@ export function EditBandProfileModal({
             <div className="space-y-6">
               {/* Band Name */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">
+                <label className="block text-xs font-bold   text-muted-foreground mb-2">
                   Band Name
                 </label>
                 <input
                   type="text"
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
                   placeholder="Your band name"
-                  className="w-full px-4 py-3 bg-night-tertiary border-2 border-zinc-800 text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime transition-colors"
+                  className="w-full px-4 py-3 bg-muted border-2 border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-band transition-colors"
                 />
               </div>
 
               {/* Genres */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-3">
+                <label className="block text-xs font-bold   text-muted-foreground mb-3">
                   Genres ({formData.genres.length}/5)
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {GENRES.map((genre) => {
                     const isSelected = formData.genres.includes(genre.value);
-                    const isDisabled = !isSelected && formData.genres.length >= 5;
+                    const isDisabled =
+                      !isSelected && formData.genres.length >= 5;
                     return (
                       <button
                         key={genre.value}
@@ -217,12 +222,12 @@ export function EditBandProfileModal({
                         onClick={() => toggleGenre(genre.value)}
                         disabled={isDisabled}
                         className={cn(
-                          "px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all border-2 touch-target",
+                          "px-4 py-2 text-xs font-bold   transition-all border-2 touch-target",
                           isSelected
-                            ? "text-night border-transparent"
+                            ? "text-foreground border-transparent"
                             : isDisabled
-                              ? "bg-night-tertiary border-zinc-800 text-zinc-600 cursor-not-allowed"
-                              : "bg-night-tertiary border-zinc-800 text-zinc-400 hover:border-lime/30"
+                              ? "bg-muted border-border text-muted-foreground cursor-not-allowed"
+                              : "bg-muted border-border text-muted-foreground hover:border-band/30",
                         )}
                         style={
                           isSelected
@@ -233,7 +238,9 @@ export function EditBandProfileModal({
                             : undefined
                         }
                       >
-                        {isSelected && <Check className="w-3 h-3 inline mr-1" />}
+                        {isSelected && (
+                          <Check className="w-3 h-3 inline mr-1" />
+                        )}
                         {genre.label}
                       </button>
                     );
@@ -243,35 +250,39 @@ export function EditBandProfileModal({
 
               {/* Location */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">
+                <label className="block text-xs font-bold   text-muted-foreground mb-2">
                   Location
                 </label>
                 <input
                   type="text"
                   value={formData.location}
-                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, location: e.target.value })
+                  }
                   placeholder="e.g., San Francisco, CA"
-                  className="w-full px-4 py-3 bg-night-tertiary border-2 border-zinc-800 text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime transition-colors"
+                  className="w-full px-4 py-3 bg-muted border-2 border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-band transition-colors"
                 />
               </div>
 
               {/* Bio */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">
+                <label className="block text-xs font-bold   text-muted-foreground mb-2">
                   Bio
                 </label>
                 <textarea
                   value={formData.bio}
-                  onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, bio: e.target.value })
+                  }
                   placeholder="Tell fans about your band..."
                   rows={4}
-                  className="w-full px-4 py-3 bg-night-tertiary border-2 border-zinc-800 text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime transition-colors resize-none"
+                  className="w-full px-4 py-3 bg-muted border-2 border-border text-white placeholder:text-muted-foreground focus:outline-none focus:border-band transition-colors resize-none"
                 />
               </div>
 
               {/* Number of Members */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-3">
+                <label className="block text-xs font-bold   text-muted-foreground mb-3">
                   Number of Members
                 </label>
                 <div className="flex items-center gap-4">
@@ -283,11 +294,11 @@ export function EditBandProfileModal({
                         memberCount: Math.max(1, formData.memberCount - 1),
                       })
                     }
-                    className="w-12 h-12 flex items-center justify-center bg-night-tertiary border-2 border-zinc-800 text-zinc-400 hover:border-lime/30 hover:text-lime transition-colors touch-target"
+                    className="w-12 h-12 flex items-center justify-center bg-muted border-2 border-border text-muted-foreground hover:border-band/30 hover:text-band transition-colors touch-target"
                   >
                     <Minus className="w-5 h-5" />
                   </button>
-                  <span className="text-2xl font-bold text-white w-8 text-center">
+                  <span className="text-2xl font-bold text-foreground w-8 text-center">
                     {formData.memberCount}
                   </span>
                   <button
@@ -298,7 +309,7 @@ export function EditBandProfileModal({
                         memberCount: formData.memberCount + 1,
                       })
                     }
-                    className="w-12 h-12 flex items-center justify-center bg-night-tertiary border-2 border-zinc-800 text-zinc-400 hover:border-lime/30 hover:text-lime transition-colors touch-target"
+                    className="w-12 h-12 flex items-center justify-center bg-muted border-2 border-border text-muted-foreground hover:border-band/30 hover:text-band transition-colors touch-target"
                   >
                     <Plus className="w-5 h-5" />
                   </button>
@@ -308,20 +319,48 @@ export function EditBandProfileModal({
           ) : (
             <div className="space-y-4">
               {[
-                { key: "spotify", label: "Spotify", placeholder: "https://open.spotify.com/artist/..." },
-                { key: "appleMusic", label: "Apple Music", placeholder: "https://music.apple.com/..." },
-                { key: "instagram", label: "Instagram", placeholder: "https://instagram.com/..." },
-                { key: "youtube", label: "YouTube", placeholder: "https://youtube.com/..." },
-                { key: "tiktok", label: "TikTok", placeholder: "https://tiktok.com/@..." },
-                { key: "website", label: "Website", placeholder: "https://yourband.com" },
+                {
+                  key: "spotify",
+                  label: "Spotify",
+                  placeholder: "https://open.spotify.com/artist/...",
+                },
+                {
+                  key: "appleMusic",
+                  label: "Apple Music",
+                  placeholder: "https://music.apple.com/...",
+                },
+                {
+                  key: "instagram",
+                  label: "Instagram",
+                  placeholder: "https://instagram.com/...",
+                },
+                {
+                  key: "youtube",
+                  label: "YouTube",
+                  placeholder: "https://youtube.com/...",
+                },
+                {
+                  key: "tiktok",
+                  label: "TikTok",
+                  placeholder: "https://tiktok.com/@...",
+                },
+                {
+                  key: "website",
+                  label: "Website",
+                  placeholder: "https://yourband.com",
+                },
               ].map(({ key, label, placeholder }) => (
                 <div key={key}>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">
+                  <label className="block text-xs font-bold   text-muted-foreground mb-2">
                     {label}
                   </label>
                   <input
                     type="url"
-                    value={formData.socialLinks[key as keyof typeof formData.socialLinks]}
+                    value={
+                      formData.socialLinks[
+                        key as keyof typeof formData.socialLinks
+                      ]
+                    }
                     onChange={(e) =>
                       setFormData({
                         ...formData,
@@ -332,7 +371,7 @@ export function EditBandProfileModal({
                       })
                     }
                     placeholder={placeholder}
-                    className="w-full px-4 py-3 bg-night-tertiary border-2 border-zinc-800 text-white placeholder:text-zinc-500 text-sm focus:outline-none focus:border-lime transition-colors"
+                    className="w-full px-4 py-3 bg-muted border-2 border-border text-white placeholder:text-muted-foreground text-sm focus:outline-none focus:border-band transition-colors"
                   />
                 </div>
               ))}
@@ -348,11 +387,11 @@ export function EditBandProfileModal({
         </form>
 
         {/* Actions */}
-        <div className="p-4 border-t-2 border-zinc-800 flex gap-3">
+        <div className="p-4 border-t-2 border-border flex gap-3">
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 py-3 px-4 bg-night-tertiary border-2 border-zinc-800 text-zinc-300 font-bold uppercase text-xs tracking-wider hover:border-zinc-600 transition-colors touch-target"
+            className="flex-1 py-3 px-4 bg-muted border-2 border-border text-muted-foreground font-bold  text-xs  hover:border-zinc-600 transition-colors touch-target"
           >
             Cancel
           </button>
@@ -360,8 +399,10 @@ export function EditBandProfileModal({
             onClick={handleSubmit}
             disabled={isSaving}
             className={cn(
-              "flex-1 py-3 px-4 bg-lime text-night font-bold uppercase text-xs tracking-wider border-2 border-lime transition-all touch-target",
-              isSaving ? "opacity-50 cursor-not-allowed" : "hover:bg-transparent hover:text-lime"
+              "flex-1 py-3 px-4 bg-band text-foreground font-bold  text-xs  border-2 border-band transition-all touch-target",
+              isSaving
+                ? "opacity-50 cursor-not-allowed"
+                : "hover:bg-transparent hover:text-band",
             )}
           >
             {isSaving ? "Saving..." : "Save Changes"}

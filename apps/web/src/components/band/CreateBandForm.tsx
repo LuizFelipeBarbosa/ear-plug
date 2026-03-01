@@ -68,7 +68,9 @@ export function CreateBandForm() {
   const canProceed = () => {
     switch (currentStep) {
       case "basics":
-        return formData.name.trim().length > 0 && formData.location.trim().length > 0;
+        return (
+          formData.name.trim().length > 0 && formData.location.trim().length > 0
+        );
       case "genre":
         return formData.genres.length > 0;
       case "details":
@@ -109,9 +111,10 @@ export function CreateBandForm() {
         genres: formData.genres,
         bio: formData.bio.trim() || undefined,
         memberCount: formData.memberCount || undefined,
-        socialLinks: Object.keys(formData.socialLinks).length > 0
-          ? formData.socialLinks
-          : undefined,
+        socialLinks:
+          Object.keys(formData.socialLinks).length > 0
+            ? formData.socialLinks
+            : undefined,
       });
 
       setBandMode(bandId);
@@ -124,26 +127,24 @@ export function CreateBandForm() {
   };
 
   return (
-    <div className="min-h-screen bg-night">
+    <div className="min-h-screen bg-background">
       {/* Header - Brutalist Style */}
-      <header className="bg-night-secondary border-b-2 border-lime/20 p-6">
+      <header className="bg-card border-b-2 border-band/20 p-6">
         <button
           onClick={handleBack}
-          className="flex items-center gap-2 text-zinc-400 hover:text-lime mb-4 transition-colors text-sm uppercase tracking-wider"
+          className="flex items-center gap-2 text-muted-foreground hover:text-band mb-4 transition-colors text-sm  "
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Back</span>
         </button>
-        <h1 className="text-2xl font-bold text-white uppercase tracking-tight">
-          Create Your Band
-        </h1>
-        <p className="text-zinc-400 mt-1 text-sm uppercase tracking-widest">
+        <h1 className="text-2xl font-bold text-foreground">Create Your Band</h1>
+        <p className="text-muted-foreground mt-1 text-sm  ">
           Set up your band profile to start booking gigs
         </p>
       </header>
 
       {/* Progress - Brutalist Steps */}
-      <div className="p-4 border-b-2 border-zinc-800 bg-night-secondary/50">
+      <div className="p-4 border-b-2 border-border bg-card/50">
         <div className="flex items-center justify-between max-w-md mx-auto">
           {STEPS.map((step, index) => (
             <div key={step.id} className="flex items-center">
@@ -151,8 +152,8 @@ export function CreateBandForm() {
                 className={cn(
                   "w-10 h-10 flex items-center justify-center font-bold transition-all border-2",
                   index <= currentStepIndex
-                    ? "bg-lime border-lime text-night"
-                    : "bg-night-tertiary border-zinc-700 text-zinc-500"
+                    ? "bg-band border-band text-foreground"
+                    : "bg-muted border-border text-muted-foreground",
                 )}
               >
                 {index < currentStepIndex ? (
@@ -165,22 +166,24 @@ export function CreateBandForm() {
                 <div
                   className={cn(
                     "w-12 h-0.5 mx-1",
-                    index < currentStepIndex ? "bg-lime" : "bg-zinc-800"
+                    index < currentStepIndex ? "bg-band" : "bg-muted",
                   )}
                 />
               )}
             </div>
           ))}
         </div>
-        
+
         {/* Step Labels */}
         <div className="flex items-center justify-between max-w-md mx-auto mt-2">
           {STEPS.map((step, index) => (
             <span
               key={step.id}
               className={cn(
-                "text-[10px] uppercase tracking-wider font-medium",
-                index <= currentStepIndex ? "text-lime" : "text-zinc-600"
+                "text-[10px]   font-medium",
+                index <= currentStepIndex
+                  ? "text-band"
+                  : "text-muted-foreground",
               )}
               style={{ width: "40px", textAlign: "center" }}
             >
@@ -195,15 +198,17 @@ export function CreateBandForm() {
         {currentStep === "basics" && (
           <div className="space-y-6 animate-fade-in">
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-3">
+              <label className="block text-xs font-bold   text-muted-foreground mb-3">
                 Band Name *
               </label>
               <input
                 type="text"
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
                 placeholder="e.g., The Wavelengths"
-                className="w-full px-4 py-3.5 bg-night-tertiary border-2 border-zinc-800 text-white placeholder:text-zinc-600 focus:outline-none focus:border-lime transition-colors"
+                className="w-full px-4 py-3.5 bg-muted border-2 border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-band transition-colors"
               />
             </div>
 
@@ -219,10 +224,10 @@ export function CreateBandForm() {
         {currentStep === "genre" && (
           <div className="space-y-6 animate-fade-in">
             <div>
-              <p className="text-zinc-400 text-sm uppercase tracking-wider">
+              <p className="text-muted-foreground text-sm  ">
                 Select your genres
               </p>
-              <p className="text-xs text-lime font-bold uppercase tracking-wider mt-2">
+              <p className="text-xs text-band font-bold   mt-2">
                 {formData.genres.length}/5 selected
               </p>
             </div>
@@ -237,7 +242,9 @@ export function CreateBandForm() {
                       if (isSelected) {
                         setFormData({
                           ...formData,
-                          genres: formData.genres.filter((g) => g !== genre.value),
+                          genres: formData.genres.filter(
+                            (g) => g !== genre.value,
+                          ),
                         });
                       } else if (!isDisabled) {
                         setFormData({
@@ -250,20 +257,22 @@ export function CreateBandForm() {
                     className={cn(
                       "p-4 border-2 text-left transition-all relative overflow-hidden",
                       isSelected
-                        ? "border-lime bg-lime/10"
+                        ? "border-band bg-band/10"
                         : isDisabled
-                          ? "border-zinc-900 opacity-50 cursor-not-allowed"
-                          : "border-zinc-800 hover:border-zinc-600 bg-night-tertiary"
+                          ? "border-border opacity-50 cursor-not-allowed"
+                          : "border-border hover:border-muted-foreground bg-muted",
                     )}
                   >
                     {/* Selection indicator */}
                     {isSelected && (
-                      <div className="absolute top-0 right-0 w-0 h-0 border-t-[20px] border-t-lime border-l-[20px] border-l-transparent" />
+                      <div className="absolute top-0 right-0 w-0 h-0 border-t-[20px] border-t-fan border-l-[20px] border-l-transparent" />
                     )}
-                    <span className={cn(
-                      "font-bold uppercase tracking-wide text-sm",
-                      isSelected ? "text-lime" : "text-white"
-                    )}>
+                    <span
+                      className={cn(
+                        "font-bold   text-sm",
+                        isSelected ? "text-band" : "text-foreground",
+                      )}
+                    >
                       {genre.label}
                     </span>
                   </button>
@@ -276,35 +285,47 @@ export function CreateBandForm() {
         {currentStep === "details" && (
           <div className="space-y-6 animate-fade-in">
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-3">
-                Bio <span className="text-zinc-600">(Optional)</span>
+              <label className="block text-xs font-bold   text-muted-foreground mb-3">
+                Bio <span className="text-muted-foreground">(Optional)</span>
               </label>
               <textarea
                 value={formData.bio}
-                onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, bio: e.target.value })
+                }
                 placeholder="Tell fans about your band..."
                 rows={4}
-                className="w-full px-4 py-3.5 bg-night-tertiary border-2 border-zinc-800 text-white placeholder:text-zinc-600 focus:outline-none focus:border-lime transition-colors resize-none"
+                className="w-full px-4 py-3.5 bg-muted border-2 border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-band transition-colors resize-none"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-3">
+              <label className="block text-xs font-bold   text-muted-foreground mb-3">
                 Number of Members
               </label>
               <div className="flex items-center gap-4">
                 <button
-                  onClick={() => setFormData({ ...formData, memberCount: Math.max(1, formData.memberCount - 1) })}
-                  className="w-14 h-14 bg-night-tertiary border-2 border-zinc-800 flex items-center justify-center text-xl font-bold text-zinc-400 hover:border-lime hover:text-lime transition-all touch-target"
+                  onClick={() =>
+                    setFormData({
+                      ...formData,
+                      memberCount: Math.max(1, formData.memberCount - 1),
+                    })
+                  }
+                  className="w-14 h-14 bg-muted border-2 border-border flex items-center justify-center text-xl font-bold text-muted-foreground hover:border-band hover:text-band transition-all touch-target"
                 >
                   -
                 </button>
-                <span className="text-3xl font-bold text-white min-w-[4rem] text-center">
+                <span className="text-3xl font-bold text-foreground min-w-[4rem] text-center">
                   {formData.memberCount}
                 </span>
                 <button
-                  onClick={() => setFormData({ ...formData, memberCount: formData.memberCount + 1 })}
-                  className="w-14 h-14 bg-night-tertiary border-2 border-zinc-800 flex items-center justify-center text-xl font-bold text-zinc-400 hover:border-lime hover:text-lime transition-all touch-target"
+                  onClick={() =>
+                    setFormData({
+                      ...formData,
+                      memberCount: formData.memberCount + 1,
+                    })
+                  }
+                  className="w-14 h-14 bg-muted border-2 border-border flex items-center justify-center text-xl font-bold text-muted-foreground hover:border-band hover:text-band transition-all touch-target"
                 >
                   +
                 </button>
@@ -315,8 +336,9 @@ export function CreateBandForm() {
 
         {currentStep === "social" && (
           <div className="space-y-4 animate-fade-in">
-            <p className="text-zinc-400 text-sm uppercase tracking-wider mb-4">
-              Add your social links <span className="text-zinc-600">(Optional)</span>
+            <p className="text-muted-foreground text-sm   mb-4">
+              Add your social links{" "}
+              <span className="text-muted-foreground">(Optional)</span>
             </p>
 
             {[
@@ -328,12 +350,16 @@ export function CreateBandForm() {
               { key: "website", label: "Website" },
             ].map(({ key, label }) => (
               <div key={key}>
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">
+                <label className="block text-xs font-bold   text-muted-foreground mb-2">
                   {label}
                 </label>
                 <input
                   type="url"
-                  value={formData.socialLinks[key as keyof typeof formData.socialLinks] || ""}
+                  value={
+                    formData.socialLinks[
+                      key as keyof typeof formData.socialLinks
+                    ] || ""
+                  }
                   onChange={(e) =>
                     setFormData({
                       ...formData,
@@ -344,7 +370,7 @@ export function CreateBandForm() {
                     })
                   }
                   placeholder={`https://${key === "website" ? "yourband.com" : `${key.toLowerCase()}.com/yourband`}`}
-                  className="w-full px-4 py-3 bg-night-tertiary border-2 border-zinc-800 text-white placeholder:text-zinc-600 text-sm focus:outline-none focus:border-lime transition-colors"
+                  className="w-full px-4 py-3 bg-muted border-2 border-border text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:border-band transition-colors"
                 />
               </div>
             ))}
@@ -354,7 +380,7 @@ export function CreateBandForm() {
         {/* Error */}
         {error && (
           <div className="mt-6 p-4 border-2 border-red-500/30 bg-red-500/10">
-            <p className="text-red-400 text-sm text-center uppercase tracking-wider font-medium">
+            <p className="text-red-400 text-sm text-center   font-medium">
               {error}
             </p>
           </div>
@@ -365,7 +391,7 @@ export function CreateBandForm() {
           {currentStepIndex > 0 && (
             <button
               onClick={handleBack}
-              className="flex-1 py-3.5 px-4 bg-night-tertiary border-2 border-zinc-800 text-zinc-400 font-bold uppercase tracking-wider text-sm hover:border-zinc-600 hover:text-white transition-all touch-target"
+              className="flex-1 py-3.5 px-4 bg-muted border-2 border-border text-muted-foreground font-bold text-sm hover:border-muted-foreground hover:text-foreground transition-all touch-target"
             >
               Back
             </button>
@@ -376,10 +402,10 @@ export function CreateBandForm() {
               onClick={handleNext}
               disabled={!canProceed()}
               className={cn(
-                "flex-1 py-3.5 px-4 font-bold uppercase tracking-wider text-sm transition-all flex items-center justify-center gap-2 border-2 touch-target",
+                "flex-1 py-3.5 px-4 font-bold   text-sm transition-all flex items-center justify-center gap-2 border-2 touch-target",
                 canProceed()
-                  ? "bg-lime border-lime text-night hover:bg-transparent hover:text-lime"
-                  : "bg-zinc-800 border-zinc-800 text-zinc-600 cursor-not-allowed"
+                  ? "bg-band border-band text-foreground hover:bg-transparent hover:text-band"
+                  : "bg-muted border-border text-muted-foreground cursor-not-allowed",
               )}
             >
               Next
@@ -390,10 +416,10 @@ export function CreateBandForm() {
               onClick={handleSubmit}
               disabled={isSubmitting}
               className={cn(
-                "flex-1 py-3.5 px-4 font-bold uppercase tracking-wider text-sm transition-all flex items-center justify-center gap-2 border-2 touch-target",
+                "flex-1 py-3.5 px-4 font-bold   text-sm transition-all flex items-center justify-center gap-2 border-2 touch-target",
                 isSubmitting
-                  ? "bg-zinc-800 border-zinc-800 text-zinc-600 cursor-not-allowed"
-                  : "bg-lime border-lime text-night hover:bg-transparent hover:text-lime"
+                  ? "bg-muted border-border text-muted-foreground cursor-not-allowed"
+                  : "bg-band border-band text-foreground hover:bg-transparent hover:text-band",
               )}
             >
               {isSubmitting ? (

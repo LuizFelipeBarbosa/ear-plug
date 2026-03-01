@@ -1,6 +1,4 @@
-/**
- * Fan components barrel export
- */
+/** * Fan components barrel export */
 export { FanCalendarView } from "./CalendarView";
 export { FanMapView } from "./MapView";
 export { FanNotificationsView } from "./NotificationsView";

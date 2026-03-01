@@ -17,21 +17,23 @@ import { formatFullDate } from "@ear-plug/shared/constants";
 import { cn } from "@/lib/utils";
 
 const CHART_COLORS = {
-  lime: "#C2FF00",
-  violet: "#8B5CF6",
+  fan: "#2563eb",
+  band: "#8B5CF6",
 };
 
 export function BandAnalyticsView() {
   const { band, isLoading: bandLoading } = useCurrentBand();
-  const { analytics, isLoading: analyticsLoading } = useBandAnalytics(band?._id);
+  const { analytics, isLoading: analyticsLoading } = useBandAnalytics(
+    band?._id,
+  );
 
   if (bandLoading || analyticsLoading || !analytics) {
     return (
-      <div className="min-h-screen p-4 bg-night">
+      <div className="min-h-screen p-4 bg-background">
         <div className="animate-shimmer space-y-4">
-          <div className="h-24 bg-night-tertiary border-2 border-zinc-800" />
-          <div className="h-48 bg-night-tertiary border-2 border-zinc-800" />
-          <div className="h-48 bg-night-tertiary border-2 border-zinc-800" />
+          <div className="h-24 bg-muted border border-border rounded-lg" />
+          <div className="h-48 bg-muted border border-border rounded-lg" />
+          <div className="h-48 bg-muted border border-border rounded-lg" />
         </div>
       </div>
     );
@@ -39,8 +41,8 @@ export function BandAnalyticsView() {
 
   if (!band) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-night">
-        <p className="text-zinc-500">No band profile found</p>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <p className="text-muted-foreground">No band profile found</p>
       </div>
     );
   }
@@ -50,17 +52,17 @@ export function BandAnalyticsView() {
     : "0.0";
 
   return (
-    <div className="min-h-screen pb-6 bg-night overflow-x-hidden">
-      <header className="relative bg-night-secondary border-b-2 border-lime/20 p-6 overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-violet/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+    <div className="min-h-screen pb-6 bg-background overflow-x-hidden">
+      <header className="relative bg-card border-b border-band/20 p-6 overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-band/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
         <div className="relative">
-          <p className="text-xs font-bold uppercase tracking-[0.24em] text-zinc-500">
+          <p className="text-xs font-medium text-muted-foreground">
             Band Mode
           </p>
-          <h1 className="text-2xl font-black uppercase tracking-tight text-white mt-2">
+          <h1 className="text-xl font-semibold text-foreground mt-2">
             Analytics
           </h1>
-          <p className="text-xs text-zinc-500 uppercase tracking-wider mt-2">
+          <p className="text-xs text-muted-foreground mt-2">
             Checked-in attendance + RSVP performance
           </p>
         </div>
@@ -69,30 +71,27 @@ export function BandAnalyticsView() {
       <section className="p-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           <MetricCard
-            icon={<Users className="w-4 h-4 text-lime" />}
+            icon={<Users className="w-4 h-4 text-band" />}
             label="Total RSVPs"
             value={analytics.totalRsvps.toLocaleString()}
-            accent="lime"
           />
           <MetricCard
-            icon={<Calendar className="w-4 h-4 text-violet" />}
+            icon={<Calendar className="w-4 h-4 text-band" />}
             label="Total Shows"
             value={analytics.eventCount.toLocaleString()}
-            accent="violet"
           />
           <MetricCard
-            icon={<UserCheck className="w-4 h-4 text-lime" />}
+            icon={<UserCheck className="w-4 h-4 text-band" />}
             label="Avg Attendance / Show"
             value={averageAttendance}
-            accent="lime"
           />
           <ShowMetricCard
-            icon={<Trophy className="w-4 h-4 text-lime" />}
+            icon={<Trophy className="w-4 h-4 text-band" />}
             label="Best Attendance Show"
             show={analytics.bestAttendanceShow}
           />
           <ShowMetricCard
-            icon={<TrendingDown className="w-4 h-4 text-violet" />}
+            icon={<TrendingDown className="w-4 h-4 text-band" />}
             label="Lowest Show"
             show={analytics.lowestShow}
           />
@@ -100,18 +99,18 @@ export function BandAnalyticsView() {
       </section>
 
       <section className="p-4 pt-0">
-        <div className="bg-night-tertiary border-2 border-zinc-800 p-4">
+        <div className="bg-muted border border-border p-4 rounded-lg">
           <div className="flex items-center justify-between gap-4 mb-4">
-            <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-400">
+            <h2 className="text-sm font-medium text-muted-foreground">
               Past Event Comparison
             </h2>
-            <div className="flex items-center gap-4 text-[10px] uppercase tracking-wider text-zinc-500">
+            <div className="flex items-center gap-4 text-xs text-muted-foreground">
               <span className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 bg-lime" />
+                <span className="w-2.5 h-2.5 bg-band rounded" />
                 RSVPs
               </span>
               <span className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 bg-violet" />
+                <span className="w-2.5 h-2.5 bg-fan rounded" />
                 Attended
               </span>
             </div>
@@ -127,7 +126,7 @@ export function BandAnalyticsView() {
                 >
                   <XAxis
                     dataKey="name"
-                    tick={{ fontSize: 10, fill: "#71717A", fontWeight: 600 }}
+                    tick={{ fontSize: 10, fill: "#71717A", fontWeight: 500 }}
                     axisLine={false}
                     tickLine={false}
                     tickMargin={8}
@@ -142,14 +141,14 @@ export function BandAnalyticsView() {
                   <Tooltip content={<EventComparisonTooltip />} />
                   <Bar
                     dataKey="rsvps"
-                    fill={CHART_COLORS.lime}
+                    fill={CHART_COLORS.band}
                     radius={[3, 3, 0, 0]}
                     maxBarSize={16}
                     minPointSize={3}
                   />
                   <Bar
                     dataKey="attended"
-                    fill={CHART_COLORS.violet}
+                    fill={CHART_COLORS.fan}
                     radius={[3, 3, 0, 0]}
                     maxBarSize={16}
                     minPointSize={3}
@@ -158,14 +157,16 @@ export function BandAnalyticsView() {
               </ResponsiveContainer>
             </div>
           ) : (
-            <p className="text-center text-zinc-500 py-10">No past events to compare</p>
+            <p className="text-center text-muted-foreground py-10">
+              No past events to compare
+            </p>
           )}
         </div>
       </section>
 
       <section className="p-4 pt-0">
-        <div className="bg-night-tertiary border-2 border-zinc-800 p-4">
-          <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-4">
+        <div className="bg-muted border border-border p-4 rounded-lg">
+          <h2 className="text-sm font-medium text-muted-foreground mb-4">
             Audience Breakdown
           </h2>
           {analytics.trafficData.some((datum) => datum.value > 0) ? (
@@ -185,7 +186,9 @@ export function BandAnalyticsView() {
                     {analytics.trafficData.map((entry, index) => (
                       <Cell
                         key={`${entry.name}-${index}`}
-                        fill={index % 2 === 0 ? CHART_COLORS.lime : CHART_COLORS.violet}
+                        fill={
+                          index % 2 === 0 ? CHART_COLORS.fan : CHART_COLORS.band
+                        }
                       />
                     ))}
                   </Pie>
@@ -196,22 +199,26 @@ export function BandAnalyticsView() {
                 {analytics.trafficData.map((item, index) => (
                   <div key={item.name} className="flex items-center gap-2">
                     <div
-                      className="w-3 h-3"
+                      className="w-3 h-3 rounded"
                       style={{
                         backgroundColor:
-                          index % 2 === 0 ? CHART_COLORS.lime : CHART_COLORS.violet,
+                          index % 2 === 0
+                            ? CHART_COLORS.fan
+                            : CHART_COLORS.band,
                       }}
                     />
-                    <span className="text-xs text-zinc-400 uppercase tracking-wider">
+                    <span className="text-xs text-muted-foreground">
                       {item.name}
                     </span>
-                    <span className="font-bold text-white">{item.value}%</span>
+                    <span className="font-medium text-foreground">
+                      {item.value}%
+                    </span>
                   </div>
                 ))}
               </div>
             </div>
           ) : (
-            <p className="text-center text-zinc-500 py-10">
+            <p className="text-center text-muted-foreground py-10">
               Not enough data for audience breakdown
             </p>
           )}
@@ -220,24 +227,26 @@ export function BandAnalyticsView() {
 
       {analytics.eventComparison.length > 0 && (
         <section className="p-4 pt-0">
-          <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-3">
+          <h2 className="text-sm font-medium text-muted-foreground mb-3">
             Venue Performance
           </h2>
           <div className="space-y-3">
             {analytics.eventComparison.map((event, index) => (
               <div
                 key={`${event.venueName}-${event.name}-${index}`}
-                className="bg-night-tertiary border-2 border-zinc-800 p-4 flex items-center justify-between hover:border-lime/20 transition-colors"
+                className="bg-muted border border-border p-4 flex items-center justify-between hover:border-band/20 transition-colors rounded-lg"
               >
                 <div>
-                  <h3 className="font-bold text-white uppercase tracking-wide text-sm">
+                  <h3 className="font-medium text-foreground text-sm">
                     {event.venueName}
                   </h3>
-                  <p className="text-xs text-zinc-500">{event.name}</p>
+                  <p className="text-xs text-muted-foreground">{event.name}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-lime text-lg font-bold">{event.rsvps}</p>
-                  <p className="text-violet text-sm font-bold">{event.attended} attended</p>
+                  <p className="text-band text-lg font-semibold">{event.rsvps}</p>
+                  <p className="text-band text-sm font-medium">
+                    {event.attended} attended
+                  </p>
                 </div>
               </div>
             ))}
@@ -245,7 +254,7 @@ export function BandAnalyticsView() {
         </section>
       )}
 
-      <p className="text-xs text-zinc-600 text-center uppercase tracking-wider px-4">
+      <p className="text-xs text-muted-foreground text-center px-4">
         Generated {formatFullDate(Date.now())}
       </p>
     </div>
@@ -256,26 +265,19 @@ function MetricCard({
   icon,
   label,
   value,
-  accent,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string;
-  accent: "lime" | "violet";
 }) {
   return (
-    <div className="bg-night-tertiary border-2 border-zinc-800 p-4 relative overflow-hidden">
-      <div
-        className={cn(
-          "absolute top-0 left-0 right-0 h-0.5",
-          accent === "lime" ? "bg-lime" : "bg-violet"
-        )}
-      />
+    <div className="bg-muted border border-border p-4 relative overflow-hidden rounded-lg">
+      <div className="absolute top-0 left-0 right-0 h-0.5 bg-band" />
       <div className="flex items-center gap-2 mb-2">
         {icon}
-        <p className="text-[10px] uppercase tracking-wider text-zinc-500">{label}</p>
+        <p className="text-xs text-muted-foreground">{label}</p>
       </div>
-      <p className="text-3xl font-black text-white">{value}</p>
+      <p className="text-3xl font-semibold text-foreground">{value}</p>
     </div>
   );
 }
@@ -287,31 +289,36 @@ function ShowMetricCard({
 }: {
   icon: React.ReactNode;
   label: string;
-  show:
-    | {
-        eventName: string;
-        venueName: string;
-        dateTime: number;
-        attended: number;
-      }
-    | null;
+  show: {
+    eventName: string;
+    venueName: string;
+    dateTime: number;
+    attended: number;
+  } | null;
 }) {
   return (
-    <div className="bg-night-tertiary border-2 border-zinc-800 p-4">
+    <div className="bg-muted border border-border p-4 rounded-lg">
       <div className="flex items-center gap-2 mb-2">
         {icon}
-        <p className="text-[10px] uppercase tracking-wider text-zinc-500">{label}</p>
+        <p className="text-xs text-muted-foreground">{label}</p>
       </div>
       {show ? (
         <>
-          <p className="text-xl font-black text-white leading-none">{show.attended}</p>
-          <p className="text-xs text-zinc-300 mt-2 font-semibold truncate">{show.eventName}</p>
-          <p className="text-[10px] text-zinc-500 uppercase tracking-wider truncate">
-            {show.venueName} • {new Date(show.dateTime).toLocaleDateString("en-US")}
+          <p className="text-xl font-semibold text-foreground leading-none">
+            {show.attended}
+          </p>
+          <p className="text-xs text-muted-foreground mt-2 font-medium truncate">
+            {show.eventName}
+          </p>
+          <p className="text-xs text-muted-foreground truncate">
+            {show.venueName} •{" "}
+            {new Date(show.dateTime).toLocaleDateString("en-US")}
           </p>
         </>
       ) : (
-        <p className="text-sm font-semibold text-zinc-500">No past shows</p>
+        <p className="text-sm font-medium text-muted-foreground">
+          No past shows
+        </p>
       )}
     </div>
   );
@@ -334,10 +341,10 @@ function EventComparisonTooltip({
   const attended = payload.find((item) => item.name === "attended")?.value ?? 0;
 
   return (
-    <div className="bg-night-secondary border-2 border-lime/60 p-3">
-      <p className="text-white font-bold text-xs uppercase tracking-wider">{label}</p>
-      <p className="text-lime text-xs uppercase tracking-wider mt-1">RSVPs: {rsvps}</p>
-      <p className="text-violet text-xs uppercase tracking-wider mt-1">Attended: {attended}</p>
+    <div className="bg-card border border-band/40 p-3 rounded-lg">
+      <p className="text-foreground font-medium text-xs">{label}</p>
+      <p className="text-band text-xs mt-1">RSVPs: {rsvps}</p>
+      <p className="text-fan text-xs mt-1">Attended: {attended}</p>
     </div>
   );
 }

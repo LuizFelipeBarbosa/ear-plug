@@ -23,7 +23,7 @@ interface PlaceAutocompleteProps {
 
 /**
  * Google Maps Places Autocomplete Component
- * 
+ *
  * Uses the use-places-autocomplete library to provide a searchable
  * dropdown of venues with automatic extraction of:
  * - Venue Name
@@ -41,11 +41,11 @@ export function PlaceAutocomplete({
   label = "Location",
   error,
 }: PlaceAutocompleteProps) {
-  const [placesStatus, setPlacesStatus] = useState<"loading" | "ready" | "error">(
-    "loading"
-  );
+  const [placesStatus, setPlacesStatus] = useState<
+    "loading" | "ready" | "error"
+  >("loading");
   const [placesErrorMessage, setPlacesErrorMessage] = useState<string | null>(
-    null
+    null,
   );
   const [manualVenueInput, setManualVenueInput] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -150,16 +150,14 @@ export function PlaceAutocomplete({
   };
 
   // Extract city from address components
-  const extractCity = (addressComponents: google.maps.GeocoderAddressComponent[]): string => {
+  const extractCity = (
+    addressComponents: google.maps.GeocoderAddressComponent[],
+  ): string => {
     const cityComponent =
+      addressComponents.find((comp) => comp.types.includes("locality")) ||
+      addressComponents.find((comp) => comp.types.includes("sublocality")) ||
       addressComponents.find((comp) =>
-        comp.types.includes("locality")
-      ) ||
-      addressComponents.find((comp) =>
-        comp.types.includes("sublocality")
-      ) ||
-      addressComponents.find((comp) =>
-        comp.types.includes("administrative_area_level_2")
+        comp.types.includes("administrative_area_level_2"),
       );
     return cityComponent?.long_name || "";
   };
@@ -179,7 +177,7 @@ export function PlaceAutocomplete({
 
       try {
         const placesService = new window.google.maps.places.PlacesService(
-          document.createElement("div")
+          document.createElement("div"),
         );
 
         placesService.getDetails(
@@ -206,20 +204,21 @@ export function PlaceAutocomplete({
                 ? extractCity(place.address_components)
                 : "";
 
-              // Determine name: use place name for establishments, 
+              // Determine name: use place name for establishments,
               // otherwise use the street address or first term
               let name = place.name || "";
               if (!name || name === place.formatted_address) {
                 // For addresses without a specific venue name
-                const streetNumber = place.address_components?.find(c =>
-                  c.types.includes("street_number")
+                const streetNumber = place.address_components?.find((c) =>
+                  c.types.includes("street_number"),
                 )?.long_name;
-                const route = place.address_components?.find(c =>
-                  c.types.includes("route")
+                const route = place.address_components?.find((c) =>
+                  c.types.includes("route"),
                 )?.long_name;
-                name = streetNumber && route
-                  ? `${streetNumber} ${route}`
-                  : suggestion.terms[0]?.value || "Location";
+                name =
+                  streetNumber && route
+                    ? `${streetNumber} ${route}`
+                    : suggestion.terms[0]?.value || "Location";
               }
 
               const venueData: VenueLocationData = {
@@ -237,13 +236,13 @@ export function PlaceAutocomplete({
 
               onChange(venueData);
             }
-          }
+          },
         );
       } catch (err) {
         console.error("Error fetching place details:", err);
       }
     },
-    [clearSuggestions, onChange, setValue]
+    [clearSuggestions, onChange, setValue],
   );
 
   // Render loading state
@@ -251,14 +250,14 @@ export function PlaceAutocomplete({
     return (
       <div className="w-full">
         {label && (
-          <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">
+          <label className="block text-xs font-bold   text-muted-foreground mb-2">
             {label}
-            {required && <span className="text-lime ml-1">*</span>}
+            {required && <span className="text-fan ml-1">*</span>}
           </label>
         )}
         <div className="relative">
           <div className="absolute left-4 top-1/2 -translate-y-1/2">
-            <Loader2 className="w-5 h-5 text-zinc-600 animate-spin" />
+            <Loader2 className="w-5 h-5 text-muted-foreground animate-spin" />
           </div>
           <input
             type="text"
@@ -269,10 +268,10 @@ export function PlaceAutocomplete({
             }}
             disabled={disabled}
             placeholder={placeholder}
-            className="w-full pl-12 pr-4 py-3.5 bg-night-tertiary border-2 border-zinc-800 rounded-none text-white placeholder:text-zinc-600 focus:outline-none focus:border-lime transition-colors"
+            className="w-full pl-12 pr-4 py-3.5 bg-muted border-2 border-border rounded-none text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-fan transition-colors"
           />
         </div>
-        <p className="text-xs text-zinc-600 mt-1.5">
+        <p className="text-xs text-muted-foreground mt-1.5">
           Loading venue suggestions. You can start typing now.
         </p>
       </div>
@@ -284,9 +283,9 @@ export function PlaceAutocomplete({
     return (
       <div className="w-full">
         {label && (
-          <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">
+          <label className="block text-xs font-bold   text-muted-foreground mb-2">
             {label}
-            {required && <span className="text-lime ml-1">*</span>}
+            {required && <span className="text-fan ml-1">*</span>}
           </label>
         )}
         <div className="relative">
@@ -301,10 +300,10 @@ export function PlaceAutocomplete({
               onChange(null);
             }}
             placeholder="Enter venue manually"
-            className="w-full pl-12 pr-4 py-3.5 bg-night-tertiary border-2 border-zinc-800 rounded-none text-white placeholder:text-zinc-600 focus:outline-none focus:border-lime"
+            className="w-full pl-12 pr-4 py-3.5 bg-muted border-2 border-border rounded-none text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-fan"
           />
         </div>
-        <p className="text-xs text-zinc-600 mt-1.5">
+        <p className="text-xs text-muted-foreground mt-1.5">
           {placesErrorMessage ||
             "Venue autocomplete unavailable. Type details manually and retry when maps is available."}
         </p>
@@ -315,9 +314,9 @@ export function PlaceAutocomplete({
   return (
     <div ref={containerRef} className="w-full relative">
       {label && (
-        <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">
+        <label className="block text-xs font-bold   text-muted-foreground mb-2">
           {label}
-          {required && <span className="text-lime ml-1">*</span>}
+          {required && <span className="text-fan ml-1">*</span>}
         </label>
       )}
 
@@ -327,7 +326,7 @@ export function PlaceAutocomplete({
           <MapPin
             className={cn(
               "w-5 h-5 transition-colors",
-              value ? "text-lime" : "text-zinc-600"
+              value ? "text-fan" : "text-muted-foreground",
             )}
           />
         </div>
@@ -342,11 +341,11 @@ export function PlaceAutocomplete({
           disabled={disabled || !ready}
           placeholder={placeholder}
           className={cn(
-            "w-full pl-12 pr-10 py-3.5 bg-night-tertiary border-2 rounded-none text-white placeholder:text-zinc-600 focus:outline-none transition-colors",
+            "w-full pl-12 pr-10 py-3.5 bg-muted border-2 rounded-none text-foreground placeholder:text-muted-foreground focus:outline-none transition-colors",
             error
               ? "border-red-500 focus:border-red-400"
-              : "border-zinc-800 focus:border-lime",
-            value && "border-lime/30"
+              : "border-border focus:border-fan",
+            value && "border-fan/30",
           )}
         />
 
@@ -355,10 +354,10 @@ export function PlaceAutocomplete({
           <button
             type="button"
             onClick={handleClear}
-            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 flex items-center justify-center hover:bg-zinc-800 rounded-full transition-colors"
+            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 flex items-center justify-center hover:bg-muted rounded-full transition-colors"
             tabIndex={-1}
           >
-            <X className="w-4 h-4 text-zinc-500" />
+            <X className="w-4 h-4 text-muted-foreground" />
           </button>
         )}
       </div>
@@ -370,20 +369,23 @@ export function PlaceAutocomplete({
 
       {/* Selected Venue Info */}
       {value && (
-        <div className="mt-3 p-3 bg-lime/5 border border-lime/20">
+        <div className="mt-3 p-3 bg-fan/5 border border-fan/20">
           <div className="flex items-start gap-2">
-            <MapPin className="w-4 h-4 text-lime mt-0.5 flex-shrink-0" />
+            <MapPin className="w-4 h-4 text-fan mt-0.5 flex-shrink-0" />
             <div className="min-w-0">
-              <p className="text-sm font-medium text-white truncate">
+              <p className="text-sm font-medium text-foreground truncate">
                 {value.name}
               </p>
-              <p className="text-xs text-zinc-500 truncate">{value.address}</p>
+              <p className="text-xs text-muted-foreground truncate">
+                {value.address}
+              </p>
               <div className="flex items-center gap-2 mt-1.5">
-                <span className="text-[10px] bg-night-tertiary text-zinc-400 px-2 py-0.5 uppercase tracking-wider">
+                <span className="text-[10px] bg-muted text-muted-foreground px-2 py-0.5  ">
                   {value.city}
                 </span>
-                <span className="text-[10px] text-zinc-600">
-                  {value.coordinates.lat.toFixed(4)}, {value.coordinates.lng.toFixed(4)}
+                <span className="text-[10px] text-muted-foreground">
+                  {value.coordinates.lat.toFixed(4)},{" "}
+                  {value.coordinates.lng.toFixed(4)}
                 </span>
               </div>
             </div>
@@ -392,42 +394,49 @@ export function PlaceAutocomplete({
       )}
 
       {/* Suggestions Dropdown */}
-      {showSuggestions && inputValue.length >= 2 && status === "OK" && data.length > 0 && (
-        <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-night-secondary border-2 border-zinc-800 shadow-xl max-h-64 overflow-y-auto">
-          {data.map((suggestion, index) => (
-            <button
-              key={suggestion.place_id}
-              type="button"
-              onClick={() => handleSelect(suggestion)}
-              className="w-full px-4 py-3 text-left hover:bg-night-tertiary hover:border-lime/30 transition-colors border-b border-zinc-800/50 last:border-0 group"
-            >
-              <div className="flex items-start gap-3">
-                <MapPin className="w-4 h-4 text-zinc-500 mt-0.5 flex-shrink-0 group-hover:text-lime transition-colors" />
-                <div className="min-w-0">
-                  <p className="text-sm text-white font-medium truncate group-hover:text-lime transition-colors">
-                    {suggestion.structured_formatting.main_text}
-                  </p>
-                  <p className="text-xs text-zinc-500 truncate">
-                    {suggestion.structured_formatting.secondary_text}
-                  </p>
+      {showSuggestions &&
+        inputValue.length >= 2 &&
+        status === "OK" &&
+        data.length > 0 && (
+          <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-card border-2 border-border shadow-xl max-h-64 overflow-y-auto">
+            {data.map((suggestion, index) => (
+              <button
+                key={suggestion.place_id}
+                type="button"
+                onClick={() => handleSelect(suggestion)}
+                className="w-full px-4 py-3 text-left hover:bg-muted hover:border-fan/30 transition-colors border-b border-border/50 last:border-0 group"
+              >
+                <div className="flex items-start gap-3">
+                  <MapPin className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0 group-hover:text-fan transition-colors" />
+                  <div className="min-w-0">
+                    <p className="text-sm text-foreground font-medium truncate group-hover:text-fan transition-colors">
+                      {suggestion.structured_formatting.main_text}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {suggestion.structured_formatting.secondary_text}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            </button>
-          ))}
-        </div>
-      )}
+              </button>
+            ))}
+          </div>
+        )}
 
       {/* Loading State */}
-      {showSuggestions && inputValue.length >= 2 && status === "ZERO_RESULTS" && (
-        <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-night-secondary border-2 border-zinc-800 shadow-xl p-4 text-center">
-          <p className="text-sm text-zinc-500">No addresses found</p>
-        </div>
-      )}
+      {showSuggestions &&
+        inputValue.length >= 2 &&
+        status === "ZERO_RESULTS" && (
+          <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-card border-2 border-border shadow-xl p-4 text-center">
+            <p className="text-sm text-muted-foreground">No addresses found</p>
+          </div>
+        )}
 
       {/* Typing hint */}
       {showSuggestions && inputValue.length === 1 && !value && (
-        <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-night-secondary border-2 border-zinc-800 shadow-xl p-3 text-center">
-          <p className="text-xs text-zinc-500">Keep typing to see suggestions...</p>
+        <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-card border-2 border-border shadow-xl p-3 text-center">
+          <p className="text-xs text-muted-foreground">
+            Keep typing to see suggestions...
+          </p>
         </div>
       )}
     </div>

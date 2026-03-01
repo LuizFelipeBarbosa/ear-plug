@@ -117,53 +117,54 @@ export function FanMapView() {
   }, []);
 
   return (
-    <div className="h-screen flex flex-col bg-night overflow-hidden">
-      {/* Search Bar - Brutalist Style */}
-      <div className="relative z-10 p-4 bg-night-secondary border-b-2 border-lime/20">
+    <div className="h-screen flex flex-col bg-background overflow-hidden">
+      {/* Search Bar */}
+      <div className="relative z-10 p-4 bg-card border-b border-border">
         <div className="flex items-center gap-3">
           <div className="flex-1 relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <input
               type="text"
               placeholder="Search events, bands, or venues..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-10 py-3.5 bg-night-tertiary border-2 border-zinc-800 rounded-none text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime transition-colors"
+              className="w-full pl-12 pr-10 py-3.5 bg-muted border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-fan transition-colors"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 flex items-center justify-center hover:bg-zinc-800 rounded-full touch-target"
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 flex items-center justify-center hover:bg-card rounded-full touch-target"
               >
-                <X className="w-4 h-4 text-zinc-500" />
+                <X className="w-4 h-4 text-muted-foreground" />
               </button>
             )}
           </div>
           <button
             onClick={() => setShowFilters(!showFilters)}
             className={cn(
-              "p-3.5 border-2 flex items-center justify-center transition-all touch-target",
+              "p-3.5 border rounded-lg flex items-center justify-center transition-all touch-target",
               showFilters
-                ? "bg-lime border-lime text-night"
-                : "bg-night-tertiary border-zinc-800 text-zinc-400 hover:border-zinc-600"
+                ? "bg-fan border-fan text-foreground"
+                : "bg-card border-border text-muted-foreground hover:border-fan/50"
             )}
           >
             <SlidersHorizontal className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Filters - Glassmorphism */}
+        {/* Filters */}
         {showFilters && (
-          <div className="mt-4 pt-4 border-t-2 border-zinc-800 space-y-4">
+          <div className="mt-4 pt-4 border-t border-border space-y-4">
             {/* Genre Filter */}
             <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-3 block">
+              <span className="text-xs font-medium text-muted-foreground mb-3 block">
                 Genre
               </span>
               <GenreFilter
                 selected={selectedGenre}
                 onSelect={setSelectedGenre}
                 showAll
+                tone="fan"
               />
             </div>
 
@@ -174,6 +175,7 @@ export function FanMapView() {
               hasLocation={hasLocation}
               onRequestLocation={requestPosition}
               loading={locationLoading}
+              tone="fan"
             />
           </div>
         )}
@@ -189,25 +191,25 @@ export function FanMapView() {
             <Map
               defaultCenter={mapCenter}
               defaultZoom={DEFAULT_MAP_ZOOM}
-              mapId="ear-plug-map-dark"
+              mapId="ear-plug-map"
               gestureHandling="greedy"
               disableDefaultUI
               className="w-full h-full"
             >
-              {/* User location marker - Vivid Violet with pulse */}
+              {/* User location marker */}
               {hasLocation && latitude && longitude && (
                 <AdvancedMarker
                   position={{ lat: latitude, lng: longitude }}
                   zIndex={1000}
                 >
                   <div className="relative">
-                    <div className="w-5 h-5 bg-violet border-2 border-white rounded-full shadow-lg animate-pulse-violet" />
-                    <div className="absolute inset-0 bg-violet rounded-full animate-ping opacity-40" />
+                    <div className="w-5 h-5 bg-fan border-2 border-card rounded-full shadow-lg" />
+                    <div className="absolute inset-0 bg-fan rounded-full animate-ping opacity-40" />
                   </div>
                 </AdvancedMarker>
               )}
 
-              {/* Event markers - Electric Lime with black border */}
+              {/* Event markers */}
               {displayEvents?.map((event) => {
                 if (!event.venue?.coordinates) return null;
 
@@ -224,10 +226,10 @@ export function FanMapView() {
                   >
                     <div
                       className={cn(
-                        "w-11 h-11 rounded-full flex items-center justify-center text-night text-sm font-bold border-2 border-night cursor-pointer transition-all duration-200",
+                        "w-10 h-10 rounded-full flex items-center justify-center text-foreground text-sm font-bold border-2 border-background cursor-pointer transition-all duration-200 shadow-lg",
                         isSelected
-                          ? "bg-violet text-white border-lime scale-125 shadow-glow-violet"
-                          : "bg-lime shadow-lg hover:scale-110 hover:shadow-glow-lime"
+                          ? "bg-fan text-foreground scale-110 ring-2 ring-fan ring-offset-2 ring-offset-background"
+                          : "bg-fan/90 hover:bg-fan hover:scale-105"
                       )}
                     >
                       {event.rsvpCount}
@@ -236,7 +238,7 @@ export function FanMapView() {
                 );
               })}
 
-              {/* Info Window - Custom Brutalist */}
+              {/* Info Window */}
               {selectedEvent && selectedEvent.venue?.coordinates && (
                 <MapInfoWindow
                   position={{
@@ -253,40 +255,40 @@ export function FanMapView() {
             </Map>
           </APIProvider>
         ) : mapsApiKeyLoading ? (
-          <div className="w-full h-full flex items-center justify-center bg-night-secondary">
-            <p className="text-zinc-500">Loading map configuration...</p>
+          <div className="w-full h-full flex items-center justify-center bg-muted">
+            <p className="text-muted-foreground">Loading map configuration...</p>
           </div>
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-night-secondary">
-            <p className="text-zinc-500">Map requires Google Maps API key</p>
+          <div className="w-full h-full flex items-center justify-center bg-muted">
+            <p className="text-muted-foreground">Map requires Google Maps API key</p>
           </div>
         )}
       </div>
 
-      {/* Near You List - Brutalist Style */}
+      {/* Near You List */}
       <div
-        className="bg-night-secondary border-t-2 border-lime/20 flex flex-col transition-all duration-500 ease-in-out overflow-hidden"
+        className="bg-card border-t border-border flex flex-col transition-all duration-500 ease-in-out overflow-hidden"
         style={{ height: isEventsExpanded ? 'calc(100vh - 80px)' : '35vh' }}
       >
         {/* Expand/Collapse Toggle */}
         <button
           onClick={() => setIsEventsExpanded(!isEventsExpanded)}
-          className="w-full py-2 flex items-center justify-center hover:bg-night-tertiary transition-colors border-b border-zinc-800/50"
+          className="w-full py-2 flex items-center justify-center hover:bg-muted transition-colors border-b border-border/50"
         >
           {isEventsExpanded ? (
-            <ChevronDown className="w-6 h-6 text-lime" />
+            <ChevronDown className="w-6 h-6 text-fan" />
           ) : (
-            <ChevronUp className="w-6 h-6 text-lime" />
+            <ChevronUp className="w-6 h-6 text-fan" />
           )}
         </button>
 
         <div className="p-4 flex-1 flex flex-col overflow-hidden">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold uppercase tracking-tight text-white">
+            <h2 className="text-base font-semibold text-foreground">
               {useDistanceFilter && hasLocation ? `Within ${distanceRadius} miles` : "Near You"}
             </h2>
             {displayEvents && displayEvents.length > 0 && (
-              <span className="text-xs font-bold uppercase tracking-wider text-lime">
+              <span className="text-xs font-medium text-fan">
                 {displayEvents.length} event{displayEvents.length !== 1 ? 's' : ''}
               </span>
             )}
@@ -296,7 +298,7 @@ export function FanMapView() {
             {isLoading ? (
               <div className="space-y-3">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="h-20 bg-night-tertiary border-2 border-zinc-800 animate-shimmer" />
+                  <div key={i} className="h-20 bg-muted border border-border rounded-lg animate-shimmer" />
                 ))}
               </div>
             ) : displayEvents && displayEvents.length > 0 ? (
@@ -304,7 +306,7 @@ export function FanMapView() {
                 <div key={event._id} className="relative">
                   <EventCard event={event} variant="compact" />
                   {event.distance !== undefined && (
-                    <span className="absolute top-2 right-2 text-xs bg-lime text-night px-2 py-0.5 font-bold uppercase">
+                    <span className="absolute top-2 right-2 text-xs bg-fan text-foreground px-2 py-0.5 font-medium rounded">
                       {event.distance} mi
                     </span>
                   )}
@@ -312,7 +314,7 @@ export function FanMapView() {
               ))
             ) : (
               <div className="text-center py-8">
-                <p className="text-zinc-500 font-medium">
+                <p className="text-muted-foreground font-medium">
                   {useDistanceFilter && hasLocation
                     ? `No events within ${distanceRadius} miles`
                     : "No events found"}

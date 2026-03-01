@@ -85,24 +85,24 @@ export function MapInfoWindow({ position, children, onClose }: MapInfoWindowProp
       className="absolute -translate-x-1/2 -translate-y-full pb-3"
       onClick={(e) => e.stopPropagation()}
     >
-      {/* InfoWindow Container - Brutalist Style */}
-      <div className="relative bg-night-secondary border-2 border-lime shadow-[4px_4px_0px_rgba(194,255,0,0.3)] animate-slide-up">
-        {/* Close Button */}
+      {/* InfoWindow Container - no overflow-hidden so button can overflow */}
+      <div className="relative bg-card border border-fan shadow-soft animate-slide-up rounded-lg">
+        {/* Close Button - positioned outside the container */}
         <button
           onClick={onClose}
-          className="absolute -top-2 -right-2 z-10 w-6 h-6 bg-night-tertiary border border-lime text-lime hover:bg-lime hover:text-night flex items-center justify-center transition-colors"
+          className="absolute -top-2 -right-2 z-10 w-6 h-6 bg-card border border-fan text-fan hover:bg-fan hover:text-foreground flex items-center justify-center transition-colors rounded-full shadow-soft"
           aria-label="Close"
         >
           <X className="w-4 h-4" />
         </button>
         
         {/* Content */}
-        <div className="overflow-hidden">
+        <div>
           {children}
         </div>
         
         {/* Arrow/Tail */}
-        <div className="absolute left-1/2 -translate-x-1/2 -bottom-[10px] w-4 h-4 bg-night-secondary border-r-2 border-b-2 border-lime rotate-45" />
+        <div className="absolute left-1/2 -translate-x-1/2 -bottom-[7px] w-3 h-3 bg-card border-r border-b border-fan rotate-45" />
       </div>
     </div>,
     containerRef.current

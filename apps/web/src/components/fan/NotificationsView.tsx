@@ -10,11 +10,12 @@ import {
   RefreshCw,
   Check,
   Trash2,
-  MessageSquare,
-  Filter,
 } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
-import { getRelativeTime, NOTIFICATION_TYPE_CONFIG } from "@ear-plug/shared/constants";
+import {
+  getRelativeTime,
+  NOTIFICATION_TYPE_CONFIG,
+} from "@ear-plug/shared/constants";
 import { cn } from "@/lib/utils";
 import type { NotificationType } from "@ear-plug/shared/types";
 
@@ -44,7 +45,7 @@ export function FanNotificationsView() {
   // Filter notifications based on active filter
   const filteredNotifications = useMemo(() => {
     if (!notifications) return [];
-    
+
     switch (activeFilter) {
       case "all":
         return notifications;
@@ -73,30 +74,28 @@ export function FanNotificationsView() {
   const getIconBg = (type: NotificationType) => {
     switch (type) {
       case "event_reminder":
-        return "bg-lime/10 text-lime border-lime/30";
+        return "bg-fan/10 text-fan border-fan/30";
       case "new_event_followed_artist":
-        return "bg-violet/10 text-violet border-violet/30";
+        return "bg-band/10 text-band border-band/30";
       case "new_event_nearby":
-        return "bg-lime/10 text-lime border-lime/30";
+        return "bg-fan/10 text-fan border-fan/30";
       case "lineup_change":
-        return "bg-violet/10 text-violet border-violet/30";
+        return "bg-band/10 text-band border-band/30";
       default:
-        return "bg-zinc-800 text-zinc-400 border-zinc-700";
+        return "bg-muted text-muted-foreground border-border";
     }
   };
 
   return (
-    <div className="min-h-screen bg-night">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-night-secondary border-b-2 border-lime/20">
+      <header className="bg-card border-b border-fan/20">
         <div className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-white uppercase tracking-tight">
-                Notifications
-              </h1>
+              <h1 className="text-xl font-semibold text-foreground">Notifications</h1>
               {unreadCount > 0 && (
-                <p className="text-xs text-lime font-bold uppercase tracking-wider mt-1">
+                <p className="text-xs text-fan font-medium mt-1">
                   {unreadCount} unread
                 </p>
               )}
@@ -104,7 +103,7 @@ export function FanNotificationsView() {
             {unreadCount > 0 && (
               <button
                 onClick={() => markAllAsRead()}
-                className="flex items-center gap-1 text-lime text-xs font-bold uppercase tracking-wider hover:text-lime-dark transition-colors touch-target"
+                className="flex items-center gap-1 text-fan text-xs font-medium hover:text-fan/80 transition-colors touch-target"
               >
                 <Check className="w-4 h-4" />
                 Mark all read
@@ -121,15 +120,15 @@ export function FanNotificationsView() {
                 key={option.value}
                 onClick={() => setActiveFilter(option.value)}
                 className={cn(
-                  "px-4 py-2 text-xs font-bold uppercase whitespace-nowrap transition-all border-2 touch-target",
+                  "px-4 py-2 text-xs font-medium whitespace-nowrap transition-all border rounded-lg touch-target",
                   activeFilter === option.value
-                    ? "bg-lime text-night border-lime"
-                    : "bg-night-tertiary border-zinc-800 text-zinc-400 hover:border-lime/30"
+                    ? "bg-fan text-foreground border-fan"
+                    : "bg-muted border-border text-muted-foreground hover:border-fan/30",
                 )}
               >
                 {option.label}
                 {option.value === "unread" && unreadCount > 0 && (
-                  <span className="ml-1.5 px-1.5 py-0.5 text-xs bg-lime text-night">
+                  <span className="ml-1.5 px-1.5 py-0.5 text-xs bg-fan text-foreground rounded">
                     {unreadCount}
                   </span>
                 )}
@@ -146,7 +145,7 @@ export function FanNotificationsView() {
             {[1, 2, 3].map((i) => (
               <div
                 key={i}
-                className="h-20 bg-night-tertiary border-2 border-zinc-800 animate-shimmer"
+                className="h-20 bg-muted border border-border rounded-lg animate-shimmer"
               />
             ))}
           </div>
@@ -156,17 +155,17 @@ export function FanNotificationsView() {
               <div
                 key={notification._id}
                 className={cn(
-                  "relative flex gap-3 p-4 border-2 transition-colors",
+                  "relative flex gap-3 p-4 border rounded-lg transition-colors",
                   notification.read
-                    ? "bg-night-tertiary border-zinc-800"
-                    : "bg-night-tertiary border-lime/50"
+                    ? "bg-muted border-border"
+                    : "bg-card border-fan/50",
                 )}
               >
                 {/* Icon */}
                 <div
                   className={cn(
-                    "w-10 h-10 flex items-center justify-center flex-shrink-0 border",
-                    getIconBg(notification.type)
+                    "w-10 h-10 flex items-center justify-center flex-shrink-0 border rounded-lg",
+                    getIconBg(notification.type),
                   )}
                 >
                   {getIcon(notification.type)}
@@ -174,13 +173,13 @@ export function FanNotificationsView() {
 
                 {/* Content */}
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-bold text-white text-sm uppercase tracking-wide">
+                  <h3 className="font-medium text-foreground text-sm">
                     {notification.title}
                   </h3>
-                  <p className="text-sm text-zinc-400 mt-0.5 line-clamp-2">
+                  <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2">
                     {notification.content}
                   </p>
-                  <p className="text-xs text-zinc-600 mt-1 uppercase tracking-wider">
+                  <p className="text-xs text-muted-foreground mt-1">
                     {getRelativeTime(notification.timestamp)}
                   </p>
                 </div>
@@ -190,7 +189,7 @@ export function FanNotificationsView() {
                   {!notification.read && (
                     <button
                       onClick={() => markAsRead(notification._id)}
-                      className="p-1.5 flex items-center justify-center text-zinc-400 hover:text-lime hover:bg-lime/10 transition-colors touch-target"
+                      className="p-1.5 flex items-center justify-center text-muted-foreground hover:text-fan hover:bg-fan/10 transition-colors touch-target"
                       title="Mark as read"
                     >
                       <Check className="w-4 h-4" />
@@ -198,7 +197,7 @@ export function FanNotificationsView() {
                   )}
                   <button
                     onClick={() => removeNotification(notification._id)}
-                    className="p-1.5 flex items-center justify-center text-zinc-400 hover:text-red-400 hover:bg-red-500/10 transition-colors touch-target"
+                    className="p-1.5 flex items-center justify-center text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors touch-target"
                     title="Delete"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -216,8 +215,8 @@ export function FanNotificationsView() {
             ))}
           </div>
         ) : (
-          <EmptyState 
-            hasNotifications={notifications && notifications.length > 0} 
+          <EmptyState
+            hasNotifications={notifications && notifications.length > 0}
             filter={activeFilter}
           />
         )}
@@ -226,11 +225,11 @@ export function FanNotificationsView() {
   );
 }
 
-function EmptyState({ 
-  hasNotifications, 
-  filter 
-}: { 
-  hasNotifications: boolean; 
+function EmptyState({
+  hasNotifications,
+  filter,
+}: {
+  hasNotifications: boolean;
   filter: FilterOption;
 }) {
   const getMessage = () => {
@@ -240,7 +239,7 @@ function EmptyState({
         description: "We'll notify you about events, updates, and more",
       };
     }
-    
+
     switch (filter) {
       case "unread":
         return {
@@ -278,16 +277,12 @@ function EmptyState({
   const { title, description } = getMessage();
 
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-center border-2 border-dashed border-zinc-800">
-      <div className="w-16 h-16 bg-night-tertiary border-2 border-zinc-800 flex items-center justify-center mb-4">
-        <Bell className="w-8 h-8 text-zinc-600" />
+    <div className="flex flex-col items-center justify-center py-16 text-center border border-dashed border-border rounded-lg">
+      <div className="w-16 h-16 bg-muted border border-border rounded-lg flex items-center justify-center mb-4">
+        <Bell className="w-8 h-8 text-muted-foreground" />
       </div>
-      <h3 className="text-lg font-bold text-white uppercase tracking-wide mb-2">
-        {title}
-      </h3>
-      <p className="text-zinc-500 max-w-[250px]">
-        {description}
-      </p>
+      <h3 className="text-base font-semibold text-foreground mb-2">{title}</h3>
+      <p className="text-muted-foreground max-w-[250px] text-sm">{description}</p>
     </div>
   );
 }

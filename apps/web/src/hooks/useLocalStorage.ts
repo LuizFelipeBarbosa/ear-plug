@@ -35,7 +35,7 @@ import { useState, useEffect, useCallback } from "react";
  */
 export function useLocalStorage<T>(
   key: string,
-  initialValue: T
+  initialValue: T,
 ): [T, (value: T | ((prev: T) => T)) => void, () => void] {
   // State to store our value
   const [storedValue, setStoredValue] = useState<T>(initialValue);
@@ -63,7 +63,8 @@ export function useLocalStorage<T>(
   const setValue = useCallback(
     (value: T | ((prev: T) => T)) => {
       try {
-        const valueToStore = value instanceof Function ? value(storedValue) : value;
+        const valueToStore =
+          value instanceof Function ? value(storedValue) : value;
         setStoredValue(valueToStore);
 
         if (typeof window !== "undefined") {
@@ -73,7 +74,7 @@ export function useLocalStorage<T>(
         console.warn(`Error setting localStorage key "${key}":`, error);
       }
     },
-    [key, storedValue]
+    [key, storedValue],
   );
 
   /**
@@ -128,22 +129,19 @@ export function useLocalStorage<T>(
  */
 export function useRolePersistence() {
   /** User's selected role */
-  const [role, setRole, removeRole] = useLocalStorage<"fan" | "musician" | null>(
-    "ear-plug-user-role",
-    null
-  );
+  const [role, setRole, removeRole] = useLocalStorage<
+    "fan" | "musician" | null
+  >("ear-plug-user-role", null);
 
   /** Array of liked event IDs */
-  const [likedEvents, setLikedEvents, clearLikedEvents] = useLocalStorage<string[]>(
-    "ear-plug-liked-events",
-    []
-  );
+  const [likedEvents, setLikedEvents, clearLikedEvents] = useLocalStorage<
+    string[]
+  >("ear-plug-liked-events", []);
 
   /** Array of RSVP'd event IDs */
-  const [rsvpEvents, setRsvpEvents, clearRsvpEvents] = useLocalStorage<string[]>(
-    "ear-plug-rsvp-events",
-    []
-  );
+  const [rsvpEvents, setRsvpEvents, clearRsvpEvents] = useLocalStorage<
+    string[]
+  >("ear-plug-rsvp-events", []);
 
   /**
    * Adds an event to the liked list.
@@ -158,7 +156,7 @@ export function useRolePersistence() {
         return [...prev, eventId];
       });
     },
-    [setLikedEvents]
+    [setLikedEvents],
   );
 
   /**
@@ -170,7 +168,7 @@ export function useRolePersistence() {
     (eventId: string) => {
       setLikedEvents((prev) => prev.filter((id) => id !== eventId));
     },
-    [setLikedEvents]
+    [setLikedEvents],
   );
 
   /**
@@ -186,7 +184,7 @@ export function useRolePersistence() {
         return [...prev, eventId];
       });
     },
-    [setRsvpEvents]
+    [setRsvpEvents],
   );
 
   /**
@@ -198,7 +196,7 @@ export function useRolePersistence() {
     (eventId: string) => {
       setRsvpEvents((prev) => prev.filter((id) => id !== eventId));
     },
-    [setRsvpEvents]
+    [setRsvpEvents],
   );
 
   /**
@@ -209,7 +207,7 @@ export function useRolePersistence() {
    */
   const isEventLiked = useCallback(
     (eventId: string) => likedEvents.includes(eventId),
-    [likedEvents]
+    [likedEvents],
   );
 
   /**
@@ -220,7 +218,7 @@ export function useRolePersistence() {
    */
   const isEventRsvp = useCallback(
     (eventId: string) => rsvpEvents.includes(eventId),
-    [rsvpEvents]
+    [rsvpEvents],
   );
 
   /**
