@@ -108,7 +108,11 @@ export const getCurrentUser = query({
 export const getById = query({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
-    return await ctx.db.get(args.userId);
+    const user = await ctx.db.get(args.userId);
+    if (!user) return null;
+    // Strip PII — return only public fields
+    const { email, phoneNumber, clerkId, ...publicFields } = user;
+    return publicFields;
   },
 });
 
@@ -125,10 +129,14 @@ export const getById = query({
 export const getByClerkId = query({
   args: { clerkId: v.string() },
   handler: async (ctx, args) => {
-    return await ctx.db
+    const user = await ctx.db
       .query("users")
       .withIndex("by_clerk_id", (q) => q.eq("clerkId", args.clerkId))
       .unique();
+    if (!user) return null;
+    // Strip PII — return only public fields
+    const { email, phoneNumber, clerkId: _clerkId, ...publicFields } = user;
+    return publicFields;
   },
 });
 
@@ -387,6 +395,14 @@ export const upsertUser = mutation({
     avatar: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+    if (identity.subject !== args.clerkId) {
+      throw new Error("Not authorized to modify this user");
+    }
+
     const normalizedPhone =
       args.phoneNumber && args.phoneNumber.trim().length > 0
         ? normalizeInvitePhone(args.phoneNumber)
@@ -555,19 +571,10 @@ export const updateProfile = mutation({
  * const incrementShows = useMutation(api.users.incrementShowsAttended);
  * await incrementShows();
  */
-export const incrementShowsAttended = mutation({
-  args: {},
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
-      .unique();
-
+export const incrementShowsAttended = internalMutation({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
     if (!user) {
       throw new Error("User not found");
     }

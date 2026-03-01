@@ -8,7 +8,7 @@ import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import { haversineDistance, coordinatesMatch, COORDINATE_TOLERANCE } from "./utils/geo";
-import { requireBandRole } from "./utils/permissions";
+import { requireBandMember, requireBandRole } from "./utils/permissions";
 
 /** Validator for music genre field */
 const genreValidator = v.union(
@@ -420,6 +420,8 @@ export const applyToOpenDate = mutation({
 export const getBandApplications = query({
   args: { bandId: v.id("bands") },
   handler: async (ctx, args) => {
+    await requireBandMember(ctx, args.bandId);
+
     const applications = await ctx.db
       .query("applications")
       .withIndex("by_band", (q) => q.eq("bandId", args.bandId))

@@ -1039,6 +1039,11 @@ export const rsvp = mutation({
       return { action: "removed" };
     }
 
+    // Check capacity before adding RSVP
+    if (event.capacity && event.rsvpCount >= event.capacity) {
+      throw new Error("This event is at capacity.");
+    }
+
     // Add RSVP
     const rsvpId = await ctx.db.insert("rsvps", {
       userId: user._id,
@@ -1511,7 +1516,6 @@ export const listEventCheckinStaff = query({
           return {
             userId: user._id,
             name: user.name,
-            email: user.email,
             avatar: user.avatar,
             assignedAt: row.createdAt,
             assignedByBandId: row.assignedByBandId,
@@ -1592,7 +1596,6 @@ export const searchAssignableEventCheckinUsers = query({
       .map((user) => ({
         userId: user._id,
         name: user.name,
-        email: user.email,
         avatar: user.avatar,
         alreadyAssigned: activeStaffUserIds.has(user._id),
       }));

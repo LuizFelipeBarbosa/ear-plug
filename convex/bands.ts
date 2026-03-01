@@ -37,6 +37,27 @@ const socialLinksValidator = v.object({
   website: v.optional(v.string()),
 });
 
+/** Validates that a URL uses a safe protocol (http or https) */
+function isValidSocialUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:" || parsed.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
+/** Validates all non-empty social link URLs use safe protocols */
+function validateSocialLinks(
+  links: Record<string, string | undefined>
+): void {
+  for (const [key, value] of Object.entries(links)) {
+    if (value && !isValidSocialUrl(value)) {
+      throw new Error(`Invalid URL for ${key}: must use http or https protocol`);
+    }
+  }
+}
+
 async function listBandParticipatingEvents(
   ctx: QueryCtx | MutationCtx,
   bandId: Id<"bands">
@@ -366,6 +387,11 @@ export const create = mutation({
   },
   handler: async (ctx, args) => {
     const user = await requireAuthenticatedUser(ctx);
+
+    if (args.socialLinks) {
+      validateSocialLinks(args.socialLinks);
+    }
+
     const now = Date.now();
 
     const bandId = await ctx.db.insert("bands", {
@@ -421,6 +447,10 @@ export const update = mutation({
   },
   handler: async (ctx, args) => {
     await requireBandRole(ctx, args.bandId, ["owner", "admin"]);
+
+    if (args.socialLinks) {
+      validateSocialLinks(args.socialLinks);
+    }
 
     const { bandId, ...updates } = args;
     const filteredUpdates = Object.fromEntries(

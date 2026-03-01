@@ -147,20 +147,20 @@ pnpm web                 # Web preview
 
 ### Root `.env.local`
 ```env
-CONVEX_DEPLOYMENT=dev:brilliant-cardinal-773
-CONVEX_URL=https://brilliant-cardinal-773.convex.cloud
-CONVEX_SITE_URL=https://brilliant-cardinal-773.convex.site
+CONVEX_DEPLOYMENT=dev:your-project-name
+CONVEX_URL=https://your-project.convex.cloud
+CONVEX_SITE_URL=https://your-project.convex.site
 ```
 
 ### Web App `apps/web/.env.local`
 ```env
 # Convex
-NEXT_PUBLIC_CONVEX_URL=https://brilliant-cardinal-773.convex.cloud
+NEXT_PUBLIC_CONVEX_URL=https://your-project.convex.cloud
 
 # Clerk
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
 CLERK_SECRET_KEY=sk_test_...
-CLERK_JWT_ISSUER_DOMAIN=https://premium-sheep-24.clerk.accounts.dev
+CLERK_JWT_ISSUER_DOMAIN=https://your-app.clerk.accounts.dev
 
 # Google Maps
 NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=...
@@ -169,7 +169,7 @@ NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=...
 ### Mobile App `apps/mobile/.env.local`
 ```env
 # Convex
-EXPO_PUBLIC_CONVEX_URL=https://brilliant-cardinal-773.convex.cloud
+EXPO_PUBLIC_CONVEX_URL=https://your-project.convex.cloud
 
 # Clerk
 EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...

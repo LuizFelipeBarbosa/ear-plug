@@ -183,7 +183,14 @@ export const listMembers = query({
 
         return {
           membership,
-          user,
+          user: {
+            _id: user._id,
+            _creationTime: user._creationTime,
+            name: user.name,
+            avatar: user.avatar,
+            role: user.role,
+            location: user.location,
+          },
         };
       })
     );
@@ -365,7 +372,6 @@ export const searchAssignableBandInviteUsers = query({
         name: user.name,
         email: user.email,
         avatar: user.avatar,
-        phoneNumber: user.phoneNumber,
         inviteState: memberUserIds.has(user._id)
           ? ("already_member" as const)
           : activePendingInviteUserIds.has(user._id)
@@ -471,8 +477,12 @@ export const listBandInvites = query({
         return {
           ...invite,
           status: effectiveInviteStatus(invite.status, invite.expiresAt, now),
-          targetUser,
-          invitedByUser,
+          targetUser: targetUser
+            ? { _id: targetUser._id, name: targetUser.name, avatar: targetUser.avatar }
+            : null,
+          invitedByUser: invitedByUser
+            ? { _id: invitedByUser._id, name: invitedByUser.name, avatar: invitedByUser.avatar }
+            : null,
         };
       })
     );

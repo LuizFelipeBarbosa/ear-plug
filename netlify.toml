@@ -10,12 +10,19 @@
   NPM_FLAGS = "--ignore-scripts"
   # Forces pnpm to skip lifecycle scripts during install
   npm_config_ignore_scripts = "true"
-  # Disable Netlify's secrets detection for NEXT_PUBLIC_* vars that are intentionally in build output
-  # These are public keys meant to be exposed to the client
-  SECRETS_SCAN_ENABLED = "false"
 
 [context.production]
   command = "pnpm install --ignore-scripts && pnpm build:web"
 
 [context.deploy-preview]
   command = "pnpm install --ignore-scripts && pnpm build:web"
+
+# Security response headers
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=(self)"

@@ -44,9 +44,11 @@ We take security seriously at Ear-Plug. If you discover a security vulnerability
 
 ### API Security
 
-- All Convex queries and mutations require authentication via JWT
-- Clerk webhooks are verified using SVIX signatures
-- Role-based access control (RBAC) restricts actions based on user roles (fan/musician)
+- Sensitive Convex mutations require authentication via JWT; public discovery queries (events, venues, bands) are intentionally unauthenticated
+- Clerk webhooks are verified using SVIX signatures via the `svix` library
+- Administrative mutations (seed, migrations) are restricted to internal-only (not client-callable)
+- Role-based access control (RBAC) restricts actions based on user roles (fan/musician) and band membership roles (owner/admin/member)
+- Notification and user-specific mutations include ownership verification to prevent IDOR attacks
 
 ### Best Practices
 

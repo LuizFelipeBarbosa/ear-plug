@@ -740,11 +740,10 @@ export function BandProfileView() {
                             <p className="text-sm text-white truncate">
                               {invite.targetUser?.name ??
                                 invite.phoneNumber ??
-                                invite.targetUser?.phoneNumber ??
                                 invite.email}
                             </p>
                             <p className="text-[11px] text-zinc-400 truncate">
-                              {invite.targetUser?.email ?? invite.email}
+                              {invite.email}
                             </p>
                             <p className="text-[10px] uppercase tracking-wider text-zinc-500">
                               {invite.role} • {invite.status}

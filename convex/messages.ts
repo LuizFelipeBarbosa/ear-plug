@@ -105,7 +105,9 @@ export const getConversationMessages = query({
         const sender = await ctx.db.get(message.senderId);
         return {
           ...message,
-          sender,
+          sender: sender
+            ? { _id: sender._id, name: sender.name, avatar: sender.avatar }
+            : null,
         };
       })
     );
