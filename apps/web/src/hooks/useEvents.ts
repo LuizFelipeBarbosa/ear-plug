@@ -6,9 +6,17 @@
 
 "use client";
 
-import { useQuery, useMutation } from "convex/react";
+import { useCallback, useEffect } from "react";
+import { useQuery, useMutation, useConvex } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
-import type { Genre, GuestFilterType } from "@ear-plug/shared/types";
+import type {
+  EventCheckinAssignableUser,
+  EventCheckinStaff,
+  EventTicketScanResult,
+  Genre,
+  GuestFilterType,
+  MyEventTicketPayload,
+} from "@ear-plug/shared/types";
 import type { Id } from "../../../../convex/_generated/dataModel";
 
 /**
@@ -334,5 +342,149 @@ export function useNearbyEvents(options: {
     events: events ?? [],
     /** True while the query is loading (only when coordinates are available) */
     isLoading: shouldQuery && events === undefined,
+  };
+}
+
+/**
+ * Hook for the current fan's RSVP ticket payload.
+ * Auto-bootstraps missing tickets for legacy RSVP rows.
+ */
+export function useMyEventTicket(eventId: Id<"events"> | undefined) {
+  const ticketPayload = useQuery(
+    api.events.getMyEventTicket,
+    eventId ? { eventId } : "skip"
+  );
+  const ensureTicket = useMutation(api.events.ensureMyEventTicket);
+
+  useEffect(() => {
+    if (!eventId || !ticketPayload?.requiresTicketBootstrap) {
+      return;
+    }
+
+    void ensureTicket({ eventId }).catch(() => {
+      // Best-effort bootstrap for legacy data. UI still supports manual retry.
+    });
+  }, [eventId, ticketPayload?.requiresTicketBootstrap, ensureTicket]);
+
+  return {
+    ticket: (ticketPayload ?? null) as MyEventTicketPayload | null,
+    isLoading: eventId !== undefined && ticketPayload === undefined,
+    ensureTicket: () => (eventId ? ensureTicket({ eventId }) : Promise.resolve(null)),
+  };
+}
+
+/**
+ * Hook for check-in capability flags for an event.
+ */
+export function useEventCheckinAccess(eventId: Id<"events"> | undefined) {
+  const access = useQuery(
+    api.events.getEventCheckinAccess,
+    eventId ? { eventId } : "skip"
+  );
+
+  return {
+    access,
+    canScan: access?.canScan ?? false,
+    canManageStaff: access?.canManageStaff ?? false,
+    role: access?.role ?? null,
+    managerBandIds: access?.managerBandIds ?? [],
+    isLoading: eventId !== undefined && access === undefined,
+  };
+}
+
+/**
+ * Hook for manager check-in staff assignment flows.
+ */
+export function useEventCheckinStaff(
+  eventId: Id<"events"> | undefined,
+  bandId: Id<"bands"> | undefined
+) {
+  const convex = useConvex();
+  const staffResult = useQuery(
+    api.events.listEventCheckinStaff,
+    eventId && bandId ? { eventId, bandId } : "skip"
+  );
+  const assignByIdMutation = useMutation(api.events.assignEventCheckinStaff);
+  const assignByEmailMutation = useMutation(api.events.assignEventCheckinStaffByEmail);
+  const removeMutation = useMutation(api.events.removeEventCheckinStaff);
+  const searchAssignableUsers = useCallback(
+    async (query: string, limit = 8) => {
+      if (!eventId || !bandId) {
+        throw new Error("Event and band context are required");
+      }
+
+      const result = await convex.query(
+        api.events.searchAssignableEventCheckinUsers,
+        {
+          eventId,
+          bandId,
+          query,
+          limit,
+        }
+      );
+
+      return (result.users ?? []) as EventCheckinAssignableUser[];
+    },
+    [bandId, convex, eventId]
+  );
+
+  const assignByUserId = useCallback(
+    async (staffUserId: Id<"users">) => {
+      if (!eventId || !bandId) {
+        throw new Error("Event and band context are required");
+      }
+      return await assignByIdMutation({ eventId, bandId, staffUserId });
+    },
+    [assignByIdMutation, bandId, eventId]
+  );
+
+  const assignByEmail = useCallback(
+    async (email: string) => {
+      if (!eventId || !bandId) {
+        throw new Error("Event and band context are required");
+      }
+      return await assignByEmailMutation({ eventId, bandId, email });
+    },
+    [assignByEmailMutation, bandId, eventId]
+  );
+
+  const removeStaff = useCallback(
+    async (staffUserId: Id<"users">) => {
+      if (!eventId || !bandId) {
+        throw new Error("Event and band context are required");
+      }
+      return await removeMutation({ eventId, bandId, staffUserId });
+    },
+    [bandId, eventId, removeMutation]
+  );
+
+  return {
+    staff: (staffResult?.staff ?? []) as EventCheckinStaff[],
+    isLoading:
+      eventId !== undefined && bandId !== undefined && staffResult === undefined,
+    searchAssignableUsers,
+    assignByUserId,
+    // Deprecated: compatibility path for older callers.
+    assignByEmail,
+    removeStaff,
+  };
+}
+
+/**
+ * Hook for submitting scanned ticket payloads.
+ */
+export function useEventTicketScanner(eventId: Id<"events"> | undefined) {
+  const scanMutation = useMutation(api.events.scanEventTicket);
+
+  return {
+    scanTicket: async (qrValue: string) => {
+      if (!eventId) {
+        throw new Error("Event ID is required to scan tickets");
+      }
+      return (await scanMutation({
+        eventId,
+        qrValue,
+      })) as EventTicketScanResult;
+    },
   };
 }

@@ -65,6 +65,15 @@ CLERK_SECRET_KEY=sk_test_...
 NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your-google-maps-api-key
 ```
 
+Create `apps/mobile/.env.local`:
+
+```env
+EXPO_PUBLIC_CONVEX_URL=https://your-app.convex.cloud
+EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
+EXPO_PUBLIC_GOOGLE_MAPS_API_KEY=your-google-maps-api-key
+EXPO_PUBLIC_WEB_APP_URL=https://your-web-app-domain.com
+```
+
 ### Start Development
 
 ```bash
@@ -161,7 +170,7 @@ pnpm android          # Android emulator
 
 ## Database Overview
 
-Convex powers the real-time backend with 17 tables:
+Convex powers the real-time backend with 19 tables:
 
 | Table | Purpose |
 |-------|---------|
@@ -173,6 +182,8 @@ Convex powers the real-time backend with 17 tables:
 | `venues` | Bay Area venues with coordinates |
 | `events` | Live music shows with status and address visibility |
 | `rsvps` | User event attendance with check-in tracking |
+| `eventTickets` | One-time QR tickets issued for RSVPs |
+| `eventCheckinStaff` | Event-scoped door staff scanner access |
 | `likes` | User saved events |
 | `savedArtists` | Fan follows for bands |
 | `savedVenues` | Fan saved venues |

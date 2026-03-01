@@ -60,6 +60,7 @@ NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your-google-maps-api-key
 | Variable | Type | Description | Usage Location |
 |----------|------|-------------|----------------|
 | `EXPO_PUBLIC_GOOGLE_MAPS_API_KEY` | String | Google Maps API key | Environment variable (also requires native config in `app.json`) |
+| `EXPO_PUBLIC_WEB_APP_URL` | String | Web base URL used to open RSVP ticket pages from mobile | `apps/mobile/app/gig/[id].tsx` |
 
 ### Native Configuration (`app.json`)
 
@@ -95,6 +96,9 @@ EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
 
 # Google Maps (also configure in app.json for native)
 EXPO_PUBLIC_GOOGLE_MAPS_API_KEY=your-google-maps-api-key
+
+# Web app base URL for opening ticket pages
+EXPO_PUBLIC_WEB_APP_URL=https://your-web-app-domain.com
 ```
 
 ---

@@ -5,6 +5,7 @@ import {
   mutation,
   query,
 } from "./_generated/server";
+import type { MutationCtx } from "./_generated/server";
 import { isE164Phone, normalizeInvitePhone } from "./utils/phone";
 
 const getUsersForPhoneBackfillPageRef = makeFunctionReference<"query">(
@@ -13,6 +14,133 @@ const getUsersForPhoneBackfillPageRef = makeFunctionReference<"query">(
 const setUserPhoneNumberRef = makeFunctionReference<"mutation">(
   "users:setUserPhoneNumber"
 );
+
+function generateTicketTokenCandidate(): string {
+  if (typeof crypto !== "undefined" && "getRandomValues" in crypto) {
+    const bytes = new Uint8Array(24);
+    crypto.getRandomValues(bytes);
+    return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+  }
+
+  return `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}${Math.random()
+    .toString(36)
+    .slice(2)}`;
+}
+
+async function generateUniqueTicketToken(ctx: MutationCtx): Promise<string> {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const token = generateTicketTokenCandidate();
+    const existing = await ctx.db
+      .query("eventTickets")
+      .withIndex("by_token", (q) => q.eq("token", token))
+      .unique();
+
+    if (!existing) {
+      return token;
+    }
+  }
+
+  throw new Error("Unable to generate unique ticket token");
+}
+
+export const backfillEventTicketsBatch = mutation({
+  args: {
+    cursor: v.optional(v.string()),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const limit = Math.min(Math.max(args.limit ?? 100, 1), 500);
+    const page = await ctx.db.query("rsvps").order("asc").paginate({
+      cursor: args.cursor ?? null,
+      numItems: limit,
+    });
+
+    let created = 0;
+    let skippedExisting = 0;
+    for (const rsvp of page.page) {
+      const existing = await ctx.db
+        .query("eventTickets")
+        .withIndex("by_rsvp", (q) => q.eq("rsvpId", rsvp._id))
+        .unique();
+
+      if (existing) {
+        skippedExisting += 1;
+        continue;
+      }
+
+      const status = rsvp.attendanceStatus === "attended" ? "used" : "active";
+      const token = await generateUniqueTicketToken(ctx);
+      const issuedAt = rsvp.createdAt;
+
+      await ctx.db.insert("eventTickets", {
+        eventId: rsvp.eventId,
+        rsvpId: rsvp._id,
+        userId: rsvp.userId,
+        token,
+        status,
+        issuedAt,
+        usedAt: status === "used" ? (rsvp.attendedAt ?? issuedAt) : undefined,
+      });
+      created += 1;
+    }
+
+    return {
+      nextCursor: page.continueCursor ?? undefined,
+      done: page.isDone,
+      stats: {
+        scanned: page.page.length,
+        created,
+        skippedExisting,
+      },
+    };
+  },
+});
+
+export const validateEventTicketBackfill = query({
+  args: {},
+  handler: async (ctx) => {
+    const [rsvps, tickets] = await Promise.all([
+      ctx.db.query("rsvps").collect(),
+      ctx.db.query("eventTickets").collect(),
+    ]);
+
+    const ticketByRsvpId = new Map(tickets.map((ticket) => [ticket.rsvpId, ticket]));
+    let missingTickets = 0;
+    let mismatchedEventRefs = 0;
+    let mismatchedUserRefs = 0;
+
+    for (const rsvp of rsvps) {
+      const ticket = ticketByRsvpId.get(rsvp._id);
+      if (!ticket) {
+        missingTickets += 1;
+        continue;
+      }
+
+      if (ticket.eventId !== rsvp.eventId) {
+        mismatchedEventRefs += 1;
+      }
+      if (ticket.userId !== rsvp.userId) {
+        mismatchedUserRefs += 1;
+      }
+    }
+
+    return {
+      totals: {
+        rsvps: rsvps.length,
+        tickets: tickets.length,
+      },
+      issues: {
+        missingTickets,
+        mismatchedEventRefs,
+        mismatchedUserRefs,
+      },
+      valid:
+        missingTickets === 0 &&
+        mismatchedEventRefs === 0 &&
+        mismatchedUserRefs === 0,
+    };
+  },
+});
 
 export const backfillBandWorkspaceBatch = mutation({
   args: {

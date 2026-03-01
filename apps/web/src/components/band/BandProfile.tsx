@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { SignOutButton } from "@clerk/nextjs";
-import { useMutation, useQuery } from "convex/react";
+import { useConvex, useMutation, useQuery } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
+import type { Id } from "../../../../../convex/_generated/dataModel";
 import {
   MapPin,
   Users,
@@ -24,10 +25,11 @@ import { EditBandProfileModal } from "@/components/band/EditBandProfileModal";
 import { BandMediaSlotsSection } from "@/components/band/slots/BandMediaSlotsSection";
 import { PastShowFlyerSection } from "@/components/events/PastShowFlyerSection";
 import { ProfileWorkspaceSwitcher } from "@/components/profile/ProfileWorkspaceSwitcher";
+import { AvatarImage } from "@/components/ui/OptimizedImage";
 import { GENRE_COLORS } from "@ear-plug/shared/constants";
 import { getInitials } from "@ear-plug/shared/utils";
 import { cn } from "@/lib/utils";
-import type { Genre } from "@ear-plug/shared/types";
+import type { BandInviteAssignableUser, Genre } from "@ear-plug/shared/types";
 
 const PANEL_TRANSITION_MS = 220;
 
@@ -38,10 +40,18 @@ export function BandProfileView() {
   const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false);
   const [isSettingsMenuVisible, setIsSettingsMenuVisible] = useState(false);
   const settingsMenuCloseTimeout = useRef<number | null>(null);
-  const [invitePhoneNumber, setInvitePhoneNumber] = useState("");
+  const [inviteQuery, setInviteQuery] = useState("");
+  const [selectedInviteUser, setSelectedInviteUser] =
+    useState<BandInviteAssignableUser | null>(null);
+  const [inviteSuggestions, setInviteSuggestions] = useState<BandInviteAssignableUser[]>([]);
+  const [showInviteSuggestions, setShowInviteSuggestions] = useState(false);
+  const [isSearchingInviteUsers, setIsSearchingInviteUsers] = useState(false);
+  const inviteAutocompleteRef = useRef<HTMLDivElement | null>(null);
   const [inviteRole, setInviteRole] = useState<"admin" | "member">("member");
   const [isInviting, setIsInviting] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
+  const [inviteNotice, setInviteNotice] = useState<string | null>(null);
+  const convex = useConvex();
 
   const myBands = useQuery(api.bands.listMyBands);
   const activeMembership = myBands?.find((entry) => entry.band._id === band?._id);
@@ -59,9 +69,7 @@ export function BandProfileView() {
     band && canManageMembers ? { bandId: band._id } : "skip"
   );
 
-  const inviteExistingUserByPhone = useMutation(
-    api.bandMembers.inviteExistingUserByPhone
-  );
+  const inviteExistingUser = useMutation(api.bandMembers.inviteExistingUser);
   const updateMemberRole = useMutation(api.bandMembers.updateMemberRole);
   const removeMember = useMutation(api.bandMembers.removeMember);
   const revokeInvite = useMutation(api.bandMembers.revokeInvite);
@@ -97,6 +105,146 @@ export function BandProfileView() {
     }, PANEL_TRANSITION_MS);
   };
 
+  const handleInvite = async () => {
+    if (!band || !selectedInviteUser || selectedInviteUser.inviteState !== "eligible") {
+      return;
+    }
+    setIsInviting(true);
+    setInviteError(null);
+    setInviteNotice(null);
+    try {
+      const result = await inviteExistingUser({
+        bandId: band._id,
+        targetUserId: selectedInviteUser.userId as Id<"users">,
+        role: inviteRole,
+      });
+
+      if (result.action === "already_member") {
+        setInviteNotice("Selected user is already a band member.");
+        return;
+      }
+
+      if (result.action === "already_pending") {
+        setInviteNotice("Selected user already has a pending invite.");
+        return;
+      }
+
+      setInviteNotice("Invite sent.");
+      setInviteQuery("");
+      setSelectedInviteUser(null);
+      setInviteSuggestions([]);
+      setShowInviteSuggestions(false);
+    } catch (error: any) {
+      setInviteError(error?.message || "Failed to invite user");
+    } finally {
+      setIsInviting(false);
+    }
+  };
+
+  const searchAssignableUsers = useCallback(
+    async (query: string, limit = 8) => {
+      if (!band) {
+        return [];
+      }
+      const result = await convex.query(api.bandMembers.searchAssignableBandInviteUsers, {
+        bandId: band._id,
+        query,
+        limit,
+      });
+
+      return result.users ?? [];
+    },
+    [band, convex]
+  );
+
+  useEffect(() => {
+    if (!isSettingsMenuOpen) {
+      setShowInviteSuggestions(false);
+      setInviteSuggestions([]);
+    }
+  }, [isSettingsMenuOpen]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (!inviteAutocompleteRef.current) return;
+      if (!inviteAutocompleteRef.current.contains(event.target as Node)) {
+        setShowInviteSuggestions(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!band || !canManageMembers) {
+      setInviteSuggestions([]);
+      setShowInviteSuggestions(false);
+      setIsSearchingInviteUsers(false);
+      return;
+    }
+
+    const normalizedQuery = inviteQuery.trim();
+    if (normalizedQuery.length < 2) {
+      setInviteSuggestions([]);
+      setShowInviteSuggestions(false);
+      setIsSearchingInviteUsers(false);
+      return;
+    }
+
+    if (
+      selectedInviteUser &&
+      normalizedQuery.toLowerCase() ===
+        selectedInviteUser.name.trim().toLowerCase()
+    ) {
+      setInviteSuggestions([]);
+      setShowInviteSuggestions(false);
+      setIsSearchingInviteUsers(false);
+      return;
+    }
+
+    let cancelled = false;
+    setIsSearchingInviteUsers(true);
+
+    const timeoutId = window.setTimeout(() => {
+      void searchAssignableUsers(normalizedQuery, 8)
+        .then((users) => {
+          if (cancelled) return;
+          setInviteSuggestions(users as BandInviteAssignableUser[]);
+          setShowInviteSuggestions(true);
+        })
+        .catch((error) => {
+          if (cancelled) return;
+          setInviteError(
+            error instanceof Error ? error.message : "Failed to search users."
+          );
+          setInviteSuggestions([]);
+          setShowInviteSuggestions(true);
+        })
+        .finally(() => {
+          if (!cancelled) {
+            setIsSearchingInviteUsers(false);
+          }
+        });
+    }, 220);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [band, canManageMembers, inviteQuery, searchAssignableUsers, selectedInviteUser]);
+
+  const handleSelectInviteUser = (user: BandInviteAssignableUser) => {
+    setSelectedInviteUser(user);
+    setInviteQuery(user.name);
+    setInviteSuggestions([]);
+    setShowInviteSuggestions(false);
+    setInviteError(null);
+    setInviteNotice(null);
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen p-4 bg-night">
@@ -115,24 +263,6 @@ export function BandProfileView() {
       </div>
     );
   }
-
-  const handleInvite = async () => {
-    if (!invitePhoneNumber.trim()) return;
-    setIsInviting(true);
-    setInviteError(null);
-    try {
-      await inviteExistingUserByPhone({
-        bandId: band._id,
-        phoneNumber: invitePhoneNumber.trim(),
-        role: inviteRole,
-      });
-      setInvitePhoneNumber("");
-    } catch (error: any) {
-      setInviteError(error?.message || "Failed to invite user");
-    } finally {
-      setIsInviting(false);
-    }
-  };
 
   return (
     <div className="min-h-screen pb-6 bg-night overflow-x-hidden">
@@ -457,19 +587,94 @@ export function BandProfileView() {
                   Invite Members
                 </h4>
                 <div className="bg-night-tertiary border-2 border-zinc-800 p-4">
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <input
-                      type="tel"
-                      value={invitePhoneNumber}
-                      onChange={(event) => {
-                        setInvitePhoneNumber(event.target.value);
-                        if (inviteError) {
-                          setInviteError(null);
-                        }
-                      }}
-                      placeholder="+14155551212 or (415) 555-1212"
-                      className="flex-1 bg-night-secondary border-2 border-zinc-800 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime"
-                    />
+                  <div className="flex flex-col sm:flex-row gap-2 items-stretch">
+                    <div className="relative flex-1" ref={inviteAutocompleteRef}>
+                      <input
+                        type="text"
+                        value={inviteQuery}
+                        onChange={(event) => {
+                          const nextValue = event.target.value;
+                          setInviteQuery(nextValue);
+                          if (selectedInviteUser && nextValue !== selectedInviteUser.name) {
+                            setSelectedInviteUser(null);
+                          }
+                          setInviteNotice(null);
+                          if (inviteError) {
+                            setInviteError(null);
+                          }
+                          setShowInviteSuggestions(nextValue.trim().length >= 2);
+                        }}
+                        onFocus={() => {
+                          if (!selectedInviteUser && inviteQuery.trim().length >= 2) {
+                            setShowInviteSuggestions(true);
+                          }
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === "Escape") {
+                            setShowInviteSuggestions(false);
+                          }
+                        }}
+                        placeholder="Search users by name..."
+                        className="w-full bg-night-secondary border-2 border-zinc-800 px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-lime"
+                      />
+
+                      {showInviteSuggestions && !selectedInviteUser && (
+                        <div className="absolute left-0 right-0 top-[calc(100%+0.25rem)] z-50 border border-zinc-700 bg-night-secondary shadow-2xl overflow-hidden">
+                          {isSearchingInviteUsers ? (
+                            <p className="px-3 py-2 text-xs uppercase tracking-wider text-zinc-500">
+                              Searching...
+                            </p>
+                          ) : inviteSuggestions.length === 0 ? (
+                            <p className="px-3 py-2 text-xs uppercase tracking-wider text-zinc-500">
+                              No users found
+                            </p>
+                          ) : (
+                            <div className="max-h-64 overflow-y-auto">
+                              {inviteSuggestions.map((candidate) => {
+                                const stateBadge =
+                                  candidate.inviteState === "already_member"
+                                    ? "Already Member"
+                                    : candidate.inviteState === "pending_invite"
+                                      ? "Pending Invite"
+                                      : null;
+                                return (
+                                  <button
+                                    key={candidate.userId}
+                                    type="button"
+                                    onMouseDown={(event) => event.preventDefault()}
+                                    onClick={() => handleSelectInviteUser(candidate)}
+                                    className="w-full px-3 py-2 text-left hover:bg-night-tertiary border-b border-zinc-800 last:border-b-0"
+                                  >
+                                    <div className="flex items-center gap-2 min-w-0">
+                                      <AvatarImage
+                                        src={candidate.avatar}
+                                        alt={candidate.name}
+                                        size={28}
+                                        className="rounded-full border border-zinc-700 shrink-0"
+                                      />
+                                      <div className="min-w-0 flex-1">
+                                        <p className="text-sm text-white truncate">
+                                          {candidate.name}
+                                        </p>
+                                        <p className="text-[11px] text-zinc-400 truncate">
+                                          {candidate.email}
+                                        </p>
+                                      </div>
+                                      {stateBadge && (
+                                        <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 border border-zinc-700 text-zinc-400 shrink-0">
+                                          {stateBadge}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
                     <select
                       value={inviteRole}
                       onChange={(event) =>
@@ -482,10 +687,16 @@ export function BandProfileView() {
                     </select>
                     <button
                       onClick={handleInvite}
-                      disabled={isInviting}
+                      disabled={
+                        isInviting ||
+                        !selectedInviteUser ||
+                        selectedInviteUser.inviteState !== "eligible"
+                      }
                       className={cn(
                         "px-4 py-2 text-xs font-bold uppercase tracking-wider border-2 transition-colors",
-                        isInviting
+                        isInviting ||
+                          !selectedInviteUser ||
+                          selectedInviteUser.inviteState !== "eligible"
                           ? "border-zinc-700 text-zinc-500"
                           : "border-lime bg-lime text-night hover:bg-transparent hover:text-lime"
                       )}
@@ -493,6 +704,18 @@ export function BandProfileView() {
                       {isInviting ? "Inviting..." : "Invite"}
                     </button>
                   </div>
+
+                  {selectedInviteUser && (
+                    <p className="mt-2 text-[11px] uppercase tracking-wider text-zinc-500">
+                      Selected: {selectedInviteUser.name} ({selectedInviteUser.email})
+                    </p>
+                  )}
+
+                  {inviteNotice && (
+                    <p className="mt-2 text-xs uppercase tracking-wider text-lime font-semibold">
+                      {inviteNotice}
+                    </p>
+                  )}
 
                   {inviteError && (
                     <p className="mt-2 text-xs uppercase tracking-wider text-red-400 font-semibold">
@@ -506,15 +729,27 @@ export function BandProfileView() {
                         key={invite._id}
                         className="flex items-center justify-between border border-zinc-800 bg-night-secondary px-3 py-2"
                       >
-                        <div>
-                          <p className="text-sm text-white">
-                            {invite.phoneNumber ??
-                              invite.targetUser?.phoneNumber ??
-                              invite.email}
-                          </p>
-                          <p className="text-[10px] uppercase tracking-wider text-zinc-500">
-                            {invite.role} • {invite.status}
-                          </p>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <AvatarImage
+                            src={invite.targetUser?.avatar}
+                            alt={invite.targetUser?.name ?? "Invited user"}
+                            size={28}
+                            className="rounded-full border border-zinc-700 shrink-0"
+                          />
+                          <div className="min-w-0">
+                            <p className="text-sm text-white truncate">
+                              {invite.targetUser?.name ??
+                                invite.phoneNumber ??
+                                invite.targetUser?.phoneNumber ??
+                                invite.email}
+                            </p>
+                            <p className="text-[11px] text-zinc-400 truncate">
+                              {invite.targetUser?.email ?? invite.email}
+                            </p>
+                            <p className="text-[10px] uppercase tracking-wider text-zinc-500">
+                              {invite.role} • {invite.status}
+                            </p>
+                          </div>
                         </div>
                         {invite.status === "pending" && (
                           <button
