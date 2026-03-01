@@ -133,6 +133,23 @@ const eventCohostInviteStatusValidator = v.union(
 );
 
 /**
+ * Validator for event ticket lifecycle status.
+ */
+const eventTicketStatusValidator = v.union(
+  v.literal("active"),
+  v.literal("used"),
+  v.literal("revoked")
+);
+
+/**
+ * Validator for event check-in staff assignment status.
+ */
+const eventCheckinStaffStatusValidator = v.union(
+  v.literal("active"),
+  v.literal("revoked")
+);
+
+/**
  * Validator for notification types.
  * Each type triggers different UI handling and display.
  */
@@ -449,6 +466,74 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_event", ["eventId"])
     .index("by_user_event", ["userId", "eventId"]),
+
+  // ==================== EVENT TICKETS ====================
+  /**
+   * Event tickets table - One-time QR tickets issued for RSVPs.
+   *
+   * Each RSVP receives a single ticket token used for door check-in.
+   *
+   * Indexes:
+   * - by_rsvp: Resolve ticket from RSVP
+   * - by_event: List tickets for an event
+   * - by_user: List tickets for a user
+   * - by_token: Resolve scan payload token
+   * - by_event_status: Filter event tickets by status
+   */
+  eventTickets: defineTable({
+    /** Reference to the event */
+    eventId: v.id("events"),
+    /** Reference to the RSVP that owns this ticket */
+    rsvpId: v.id("rsvps"),
+    /** Reference to the attendee */
+    userId: v.id("users"),
+    /** Opaque one-time scan token */
+    token: v.string(),
+    /** Ticket lifecycle status */
+    status: eventTicketStatusValidator,
+    /** Unix timestamp when ticket was issued */
+    issuedAt: v.number(),
+    /** Unix timestamp when ticket was consumed by scan/check-in */
+    usedAt: v.optional(v.number()),
+    /** User who consumed the ticket */
+    usedByUserId: v.optional(v.id("users")),
+    /** Unix timestamp when ticket was revoked */
+    revokedAt: v.optional(v.number()),
+    /** Reason for revocation */
+    revokedReason: v.optional(v.string()),
+  })
+    .index("by_rsvp", ["rsvpId"])
+    .index("by_event", ["eventId"])
+    .index("by_user", ["userId"])
+    .index("by_token", ["token"])
+    .index("by_event_status", ["eventId", "status"]),
+
+  // ==================== EVENT CHECK-IN STAFF ====================
+  /**
+   * Event check-in staff table - Event-scoped scanner access.
+   *
+   * Managers (event band owner/admin) can assign existing users as door staff.
+   */
+  eventCheckinStaff: defineTable({
+    /** Event where the staff user can scan tickets */
+    eventId: v.id("events"),
+    /** Staff user granted scanner access */
+    userId: v.id("users"),
+    /** Assignment lifecycle status */
+    status: eventCheckinStaffStatusValidator,
+    /** Manager user who assigned this staff record */
+    assignedByUserId: v.id("users"),
+    /** Active band workspace used by manager for assignment */
+    assignedByBandId: v.id("bands"),
+    /** Unix timestamp when assignment was created */
+    createdAt: v.number(),
+    /** Unix timestamp when assignment was revoked */
+    revokedAt: v.optional(v.number()),
+  })
+    .index("by_event", ["eventId"])
+    .index("by_user", ["userId"])
+    .index("by_event_user", ["eventId", "userId"])
+    .index("by_event_status", ["eventId", "status"]),
 
   // ==================== LIKES ====================
   /**

@@ -14,11 +14,17 @@ import {
   Users,
   DollarSign,
 } from "lucide-react";
-import { useEvent, useEventGuestListSummary } from "@/hooks/useEvents";
+import {
+  useEvent,
+  useEventCheckinAccess,
+  useEventGuestListSummary,
+  useMyEventTicket,
+} from "@/hooks/useEvents";
 import { useProfileContext } from "@/hooks/useProfileContext";
 import { EditGigModal } from "@/components/band/EditGigModal";
 import { GuestListCard } from "@/components/band/GuestListCard";
 import { GuestControlPanelModal } from "@/components/band/GuestControlPanelModal";
+import { EventTicketPanel } from "@/components/events/EventTicketPanel";
 import {
   formatEventTime,
   formatFullDate,
@@ -41,7 +47,12 @@ export default function EventDetailsPage({ params }: PageProps) {
   const { event, hasRsvp, hasLiked, isLoading, rsvp, toggleLike } =
     useEvent(eventId);
   const { mode, bandId, bands } = useProfileContext();
+  const inBandMode = mode === "band";
   const activeBandMembership = bands.find((entry) => entry.band._id === bandId);
+  const { canScan } = useEventCheckinAccess(eventId);
+  const { ticket, isLoading: isTicketLoading, ensureTicket } = useMyEventTicket(
+    !inBandMode && hasRsvp ? eventId : undefined
+  );
   const isBandParticipant =
     mode === "band" &&
     !!bandId &&
@@ -108,7 +119,6 @@ export default function EventDetailsPage({ params }: PageProps) {
   const spotsLeft = event.capacity - event.rsvpCount;
   const fillPercentage = Math.min((event.rsvpCount / event.capacity) * 100, 100);
   const isPast = event.dateTime < Date.now();
-  const inBandMode = mode === "band";
   const canManageEvent =
     !isPast &&
     isBandParticipant &&
@@ -317,6 +327,15 @@ export default function EventDetailsPage({ params }: PageProps) {
           </button>
         )}
 
+        {canScan && (
+          <Link
+            href={`/gig/${eventId}/check-in`}
+            className="block mb-6 w-full py-3 text-center font-bold text-xs uppercase tracking-wider border-2 border-lime text-lime hover:bg-lime hover:text-night transition-colors"
+          >
+            Open Check-in Scanner
+          </Link>
+        )}
+
         {canViewGuestList && (
           guestListSummary ? (
             <GuestListCard
@@ -328,6 +347,15 @@ export default function EventDetailsPage({ params }: PageProps) {
           ) : (
             <div className="mb-6 h-40 bg-night-tertiary border-2 border-zinc-800 animate-shimmer" />
           )
+        )}
+
+        {!inBandMode && hasRsvp && (
+          <EventTicketPanel
+            eventId={eventId}
+            ticketPayload={ticket}
+            isLoading={isTicketLoading}
+            onEnsureTicket={ensureTicket}
+          />
         )}
 
         {/* Venue Info */}

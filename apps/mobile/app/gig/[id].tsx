@@ -1,4 +1,12 @@
-import { View, Text, ScrollView, TouchableOpacity, SafeAreaView } from "react-native";
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  SafeAreaView,
+  Alert,
+  Linking,
+} from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
@@ -22,6 +30,7 @@ export default function EventDetailsScreen() {
   const eventStatus = useQuery(api.events.getUserEventStatus, { eventId });
   const rsvpMutation = useMutation(api.events.rsvp);
   const toggleLikeMutation = useMutation(api.events.toggleLike);
+  const webAppUrl = process.env.EXPO_PUBLIC_WEB_APP_URL;
 
   const hasRsvp = eventStatus?.hasRsvp ?? false;
   const hasLiked = eventStatus?.hasLiked ?? false;
@@ -32,6 +41,26 @@ export default function EventDetailsScreen() {
 
   const handleToggleLike = async () => {
     await toggleLikeMutation({ eventId });
+  };
+
+  const handleOpenWebTicket = async () => {
+    if (!webAppUrl) {
+      Alert.alert("Ticket link unavailable", "Web ticket URL is not configured.");
+      return;
+    }
+
+    const normalizedBaseUrl = webAppUrl.endsWith("/")
+      ? webAppUrl.slice(0, -1)
+      : webAppUrl;
+    const ticketUrl = `${normalizedBaseUrl}/gig/${eventId}/ticket`;
+
+    const supported = await Linking.canOpenURL(ticketUrl);
+    if (!supported) {
+      Alert.alert("Cannot open ticket", "Your device cannot open this ticket link.");
+      return;
+    }
+
+    await Linking.openURL(ticketUrl);
   };
 
   const formatDate = (timestamp: number) => {
@@ -247,6 +276,17 @@ export default function EventDetailsScreen() {
                 : "RSVP to Event"}
           </Text>
         </TouchableOpacity>
+
+        {hasRsvp && (
+          <TouchableOpacity
+            onPress={handleOpenWebTicket}
+            className="mt-3 py-3 rounded-xl border border-primary-600"
+          >
+            <Text className="text-primary-700 text-center text-sm font-semibold">
+              Open Web Ticket
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
     </SafeAreaView>
   );

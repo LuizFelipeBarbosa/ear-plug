@@ -89,6 +89,38 @@ async function createInviteForTargetUser(
   });
 }
 
+async function resolveActivePendingInvite(
+  ctx: MutationCtx,
+  bandId: Id<"bands">,
+  targetUserId: Id<"users">
+) {
+  const now = Date.now();
+  const pendingInvites = await ctx.db
+    .query("bandInvites")
+    .withIndex("by_band_target_status", (q) =>
+      q
+        .eq("bandId", bandId)
+        .eq("targetUserId", targetUserId)
+        .eq("status", "pending")
+    )
+    .collect();
+
+  let hasActivePending = false;
+  for (const invite of pendingInvites) {
+    if (invite.expiresAt >= now) {
+      hasActivePending = true;
+      continue;
+    }
+
+    await ctx.db.patch(invite._id, {
+      status: "expired",
+      respondedAt: now,
+    });
+  }
+
+  return hasActivePending;
+}
+
 export const listMyBands = query({
   args: {},
   handler: async (ctx) => {
@@ -178,7 +210,7 @@ export const inviteExistingUserByEmail = mutation({
     role: inviteRoleValidator,
   },
   handler: async (ctx, args) => {
-    // Deprecated compatibility path. Use inviteExistingUserByPhone in web UI.
+    // Deprecated compatibility path. Web UI uses inviteExistingUser.
     const { user } = await requireBandRole(ctx, args.bandId, ["owner", "admin"]);
     const normalizedEmail = args.email.trim().toLowerCase();
 
@@ -258,6 +290,163 @@ export const inviteExistingUserByPhone = mutation({
       role: args.role,
       inviterUserId: user._id,
     });
+  },
+});
+
+export const searchAssignableBandInviteUsers = query({
+  args: {
+    bandId: v.id("bands"),
+    query: v.string(),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    await requireBandRole(ctx, args.bandId, ["owner", "admin"]);
+
+    const normalizedQuery = args.query.trim().toLowerCase();
+    if (normalizedQuery.length < 2) {
+      return { users: [] };
+    }
+
+    const limit = Math.min(Math.max(Math.floor(args.limit ?? 8), 1), 20);
+    const now = Date.now();
+    const [users, memberships, invites] = await Promise.all([
+      ctx.db.query("users").collect(),
+      ctx.db
+        .query("bandMemberships")
+        .withIndex("by_band", (q) => q.eq("bandId", args.bandId))
+        .collect(),
+      ctx.db
+        .query("bandInvites")
+        .withIndex("by_band", (q) => q.eq("bandId", args.bandId))
+        .collect(),
+    ]);
+
+    const memberUserIds = new Set(memberships.map((membership) => membership.userId));
+    const activePendingInviteUserIds = new Set(
+      invites
+        .filter(
+          (invite) =>
+            invite.status === "pending" &&
+            effectiveInviteStatus(invite.status, invite.expiresAt, now) ===
+              "pending"
+        )
+        .map((invite) => invite.targetUserId)
+    );
+
+    const matched = users
+      .filter((user) =>
+        user.name.trim().toLowerCase().includes(normalizedQuery)
+      )
+      .sort((a, b) => {
+        const aName = a.name.trim();
+        const bName = b.name.trim();
+        const aLower = aName.toLowerCase();
+        const bLower = bName.toLowerCase();
+        const aStarts = aLower.startsWith(normalizedQuery);
+        const bStarts = bLower.startsWith(normalizedQuery);
+        if (aStarts !== bStarts) {
+          return aStarts ? -1 : 1;
+        }
+
+        const byName = aName.localeCompare(bName, "en-US", {
+          sensitivity: "base",
+        });
+        if (byName !== 0) {
+          return byName;
+        }
+
+        return a.email.localeCompare(b.email, "en-US", {
+          sensitivity: "base",
+        });
+      })
+      .slice(0, limit)
+      .map((user) => ({
+        userId: user._id,
+        name: user.name,
+        email: user.email,
+        avatar: user.avatar,
+        phoneNumber: user.phoneNumber,
+        inviteState: memberUserIds.has(user._id)
+          ? ("already_member" as const)
+          : activePendingInviteUserIds.has(user._id)
+            ? ("pending_invite" as const)
+            : ("eligible" as const),
+      }));
+
+    return { users: matched };
+  },
+});
+
+export const inviteExistingUser = mutation({
+  args: {
+    bandId: v.id("bands"),
+    targetUserId: v.id("users"),
+    role: inviteRoleValidator,
+  },
+  handler: async (ctx, args) => {
+    const { user } = await requireBandRole(ctx, args.bandId, ["owner", "admin"]);
+
+    const targetUser = await ctx.db.get(args.targetUserId);
+    if (!targetUser) {
+      throw new Error("User not found");
+    }
+
+    if (targetUser._id === user._id) {
+      throw new Error("You cannot invite yourself");
+    }
+
+    const existingMembership = await ctx.db
+      .query("bandMemberships")
+      .withIndex("by_band_user", (q) =>
+        q.eq("bandId", args.bandId).eq("userId", args.targetUserId)
+      )
+      .unique();
+    if (existingMembership) {
+      return {
+        action: "already_member" as const,
+      };
+    }
+
+    const hasActivePendingInvite = await resolveActivePendingInvite(
+      ctx,
+      args.bandId,
+      args.targetUserId
+    );
+    if (hasActivePendingInvite) {
+      return {
+        action: "already_pending" as const,
+      };
+    }
+
+    try {
+      const inviteId = await createInviteForTargetUser(ctx, {
+        bandId: args.bandId,
+        targetUserId: args.targetUserId,
+        targetEmail: targetUser.email,
+        targetPhoneNumber: targetUser.phoneNumber,
+        role: args.role,
+        inviterUserId: user._id,
+      });
+
+      return {
+        action: "invited" as const,
+        inviteId,
+      };
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.message === "User is already a band member") {
+          return {
+            action: "already_member" as const,
+          };
+        }
+        if (error.message === "User already has a pending invite") {
+          return {
+            action: "already_pending" as const,
+          };
+        }
+      }
+      throw error;
+    }
   },
 });
 
