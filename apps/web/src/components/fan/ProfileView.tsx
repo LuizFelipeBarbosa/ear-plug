@@ -1,20 +1,20 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { SignOutButton } from "@clerk/nextjs";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
+import type { Id } from "../../../../../convex/_generated/dataModel";
 import {
-  Calendar,
   Check,
-  Eye,
-  Edit,
+  ChevronRight,
+  Clock,
+  Edit3,
   Heart,
   LogOut,
-  MapPin,
   Music,
   Plus,
   Settings,
@@ -22,7 +22,9 @@ import {
   Ticket,
   Users,
   X,
+  Zap,
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useCurrentUser } from "@/hooks/useUser";
 import { useSavedBands } from "@/hooks/useBand";
 import { useProfileContext } from "@/hooks/useProfileContext";
@@ -30,17 +32,26 @@ import { EditProfileModal } from "@/components/ui/EditProfileModal";
 import { ThemeToggleRow } from "@/components/ui/ThemeToggle";
 import { CreateBandForm } from "@/components/band/CreateBandForm";
 import { PastShowFlyerSection } from "@/components/events/PastShowFlyerSection";
+import {
+  FanBadge,
+  FanEmptyState,
+  FanProfileHeaderCard,
+  FanSectionTitle,
+} from "@/components/fan/profile/FanProfilePrimitives";
 import { ProfileWorkspaceSwitcher } from "@/components/profile/ProfileWorkspaceSwitcher";
 import { GENRE_COLORS } from "@ear-plug/shared/constants";
 import { getInitials } from "@ear-plug/shared/utils";
 import type { Genre } from "@ear-plug/shared/types";
-import type { Id } from "../../../../../convex/_generated/dataModel";
 import { cn } from "@/lib/utils";
+import { panelFade, presenceSyncNoInitial } from "@/lib/motion/presets";
+import { uploadToConvexStorage } from "@/lib/convexUpload";
 
-const PANEL_TRANSITION_MS = 220;
+const PANEL_TRANSITION_MS = 250;
+
+type TabType = "overview" | "saved" | "activity" | "settings";
 
 function capitalizeGenre(genre: Genre | null): string {
-  if (!genre) return "No dominant genre yet";
+  if (!genre) return "Explorer";
   return genre.charAt(0).toUpperCase() + genre.slice(1);
 }
 
@@ -53,18 +64,58 @@ export function FanProfileView() {
     api.users.getPublicFanProfile,
     user ? { fanId: user._id } : "skip"
   );
-
   const myBands = useQuery(api.bands.listMyBands) ?? [];
   const pendingInvites = useQuery(api.bandMembers.listMyPendingInvites) ?? [];
   const acceptInvite = useMutation(api.bandMembers.acceptInvite);
   const declineInvite = useMutation(api.bandMembers.declineInvite);
+  const generateAvatarUploadUrl = useMutation(api.users.generateAvatarUploadUrl);
+  const setAvatarFromStorage = useMutation(api.users.setAvatarFromStorage);
+  const clearAvatar = useMutation(api.users.clearAvatar);
 
+  const [activeTab, setActiveTab] = useState<TabType>("overview");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isWorkspaceMenuOpen, setIsWorkspaceMenuOpen] = useState(false);
   const [isWorkspaceMenuVisible, setIsWorkspaceMenuVisible] = useState(false);
   const workspaceMenuCloseTimeout = useRef<number | null>(null);
   const [showCreateBandForm, setShowCreateBandForm] = useState(false);
   const [processingInviteId, setProcessingInviteId] = useState<Id<"bandInvites"> | null>(null);
+  const openEditModal = useCallback(() => setIsEditModalOpen(true), []);
+  const closeEditModal = useCallback(() => setIsEditModalOpen(false), []);
+
+  const handleSaveProfile = useCallback(
+    async (data: {
+      name: string;
+      location?: string;
+      topGenres?: Genre[];
+      avatarFile?: File;
+      removeAvatar?: boolean;
+    }) => {
+      if (data.avatarFile) {
+        const { uploadUrl } = await generateAvatarUploadUrl({});
+        const uploadData = await uploadToConvexStorage(uploadUrl, data.avatarFile);
+        await setAvatarFromStorage({ storageId: uploadData.storageId as Id<"_storage"> });
+      } else if (data.removeAvatar) {
+        await clearAvatar({});
+      }
+
+      await updateProfile({
+        name: data.name,
+        location: data.location,
+        topGenres: data.topGenres,
+      });
+    },
+    [clearAvatar, generateAvatarUploadUrl, setAvatarFromStorage, updateProfile]
+  );
+
+  const editModalInitialData = useMemo(
+    () => ({
+      name: user?.name ?? "",
+      location: user?.location,
+      avatar: user?.avatar,
+      topGenres: (user?.topGenres as Genre[] | undefined) ?? undefined,
+    }),
+    [user?.avatar, user?.location, user?.name, user?.topGenres]
+  );
 
   useEffect(() => {
     return () => {
@@ -81,18 +132,9 @@ export function FanProfileView() {
   }
 
   const memberSinceDate = new Date(user.memberSince).toLocaleDateString("en-US", {
-    month: "long",
+    month: "short",
     year: "numeric",
   });
-
-  const handleSaveProfile = async (data: {
-    name: string;
-    location?: string;
-    avatar?: string;
-    topGenres?: Genre[];
-  }) => {
-    await updateProfile(data);
-  };
 
   const handleAcceptInvite = async (
     inviteId: Id<"bandInvites">,
@@ -140,207 +182,353 @@ export function FanProfileView() {
     }, PANEL_TRANSITION_MS);
   };
 
+  // Calculate stats
+  const stats = {
+    showsAttended: user.showsAttended || 0,
+    savedArtists: savedBands.length,
+    memberSince: memberSinceDate,
+  };
+
   return (
-    <div className="min-h-screen pb-6 bg-night overflow-x-hidden">
-      <header className="relative bg-night-secondary p-6 overflow-visible">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-violet/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+    <div className="min-h-screen pb-24 bg-background overflow-x-hidden">
+      {/* Header Background */}
+      <div className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-fan/5 via-fan/2 to-transparent h-64" />
+        <div className="absolute top-0 right-0 w-64 h-64 sm:w-96 sm:h-96 bg-fan/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4" />
+      </div>
 
-        <div className="relative">
-          <div className="flex items-center justify-between mb-6 gap-3">
-            <ProfileWorkspaceSwitcher className="flex-1 min-w-0" variant="header" />
-            <button
-              type="button"
-              onClick={openWorkspaceMenu}
-              className="p-2 flex items-center justify-center hover:bg-night-tertiary border border-zinc-800 hover:border-lime/30 transition-colors touch-target"
-              aria-label="Open personal workspace menu"
-            >
-              <Settings className="w-5 h-5 text-zinc-400" />
-            </button>
-          </div>
+      {/* Profile Header */}
+      <header className="relative px-4 pt-6 pb-4">
+        {/* Top Actions */}
+        <div className="flex items-center justify-between mb-6">
+          <ProfileWorkspaceSwitcher className="flex-1 min-w-0" variant="header" />
+          <motion.button
 
-          <div className="bg-night-tertiary/80 backdrop-blur-sm border-2 border-zinc-800 p-4">
-            <div className="flex items-center gap-4">
-              <div className="w-20 h-20 overflow-hidden bg-night-secondary border-2 border-lime/30 flex items-center justify-center flex-shrink-0">
-                {user.avatar ? (
-                  <Image
-                    src={user.avatar}
-                    alt={user.name}
-                    width={80}
-                    height={80}
-                    className="object-cover"
-                  />
-                ) : (
-                  <span className="text-2xl font-bold text-lime">{getInitials(user.name)}</span>
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <h2 className="text-xl font-bold text-white uppercase tracking-tight truncate">
-                  {user.name}
-                </h2>
-                {user.location && (
-                  <div className="flex items-center gap-1 text-zinc-400 text-sm mt-1">
-                    <MapPin className="w-4 h-4 text-lime" />
-                    <span>{user.location}</span>
-                  </div>
-                )}
-              </div>
-              <button
-                onClick={() => setIsEditModalOpen(true)}
-                className="p-2 flex items-center justify-center hover:bg-night-secondary border border-zinc-800 hover:border-lime/30 transition-colors touch-target"
-                aria-label="Edit profile"
-              >
-                <Edit className="w-5 h-5 text-zinc-400" />
-              </button>
-            </div>
-          </div>
+            onClick={openWorkspaceMenu}
+            className="ml-3 p-2.5 bg-card border border-border rounded-xl hover:border-fan/30 hover:bg-fan/5 transition-colors touch-target shadow-sm"
+            aria-label="Open workspace menu"
+          >
+            <Settings className="w-5 h-5 text-muted-foreground" />
+          </motion.button>
         </div>
+
+        <FanProfileHeaderCard
+          name={user.name}
+          avatar={user.avatar}
+          location={user.location}
+          gigLabel={publicProfile?.gigDna?.label}
+          stats={stats}
+          avatarAction={
+            <motion.button
+              onClick={openEditModal}
+              className="absolute -bottom-1 -right-1 p-1.5 bg-fan text-white rounded-lg shadow-lg shadow-fan/30 hover:bg-fan/90 transition-colors"
+            >
+              <Edit3 className="w-3.5 h-3.5" />
+            </motion.button>
+          }
+        />
       </header>
 
-      <div className="px-4 relative z-10">
-        <div className="bg-night-tertiary border-2 border-zinc-800 p-4">
-          <div className="flex items-center justify-around text-center">
-            <StatItem
-              icon={<Ticket className="w-5 h-5 text-lime" />}
-              value={user.showsAttended || 0}
-              label="Shows Attended"
+      {/* Tab Navigation */}
+      <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-xl border-b border-border">
+        <div className="flex items-center px-4">
+          {[
+            { id: "overview" as const, label: "Overview", icon: Users },
+            { id: "saved" as const, label: "Saved", icon: Heart },
+            { id: "activity" as const, label: "Activity", icon: Zap },
+            { id: "settings" as const, label: "Settings", icon: Settings },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={cn(
+                "relative flex items-center gap-1.5 px-4 py-3 text-sm font-medium transition-colors touch-target-sm",
+                activeTab === tab.id ? "text-fan" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <tab.icon className="w-4 h-4" />
+              <span className="hidden sm:inline">{tab.label}</span>
+              <span className="sm:hidden">{tab.label.slice(0, 4)}</span>
+              {activeTab === tab.id && (
+                <motion.div
+                  layoutId="activeTabIndicator"
+                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-fan rounded-full"
+                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                />
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Tab Content */}
+      <main className="px-4 pt-4">
+        <AnimatePresence {...presenceSyncNoInitial}>
+          {activeTab === "overview" && (
+            <OverviewTab
+              key="overview"
+              publicProfile={publicProfile}
             />
-            <div className="w-px h-12 bg-zinc-800" />
-            <StatItem
-              icon={<Music className="w-5 h-5 text-violet" />}
-              value={savedBands.length}
-              label="Saved Artists"
+          )}
+          {activeTab === "saved" && (
+            <SavedTab
+              key="saved"
+              publicProfile={publicProfile}
             />
-            <div className="w-px h-12 bg-zinc-800" />
-            <StatItem
-              icon={<Calendar className="w-5 h-5 text-lime" />}
-              value={memberSinceDate}
-              label="Member Since"
-              isText
+          )}
+          {activeTab === "activity" && (
+            <ActivityTab
+              key="activity"
+              publicProfile={publicProfile}
             />
+          )}
+          {activeTab === "settings" && (
+            <SettingsTab
+              key="settings"
+              onOpenWorkspaceMenu={openWorkspaceMenu}
+              pendingInvitesCount={pendingInvites.length}
+            />
+          )}
+        </AnimatePresence>
+      </main>
+
+      {/* Workspace Menu Overlay */}
+      <AnimatePresence>
+        {isWorkspaceMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60]"
+          >
+            <motion.button
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={closeWorkspaceMenu}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              aria-label="Close menu"
+            />
+            <motion.aside
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              className="absolute right-0 top-0 h-full w-full max-w-md bg-card border-l border-border overflow-y-auto"
+            >
+              {/* Workspace Menu Header */}
+              <div className="sticky top-0 z-10 bg-card/95 backdrop-blur-xl border-b border-border p-4 flex items-center justify-between">
+                <h3 className="text-base font-semibold text-foreground">Workspace</h3>
+                <button
+                  onClick={closeWorkspaceMenu}
+                  className="p-2 border border-border text-muted-foreground hover:text-foreground hover:border-fan/30 rounded-lg transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="p-4 space-y-6">
+                {/* Band Creation Section */}
+                <section>
+                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                    Your Bands
+                  </h4>
+                  {myBands.length === 0 ? (
+                    <div className="bg-muted/50 border border-dashed border-border rounded-xl p-4 text-center">
+                      <Music className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Create your first band workspace
+                      </p>
+                      <button
+                        onClick={() => {
+                          closeWorkspaceMenu();
+                          setShowCreateBandForm(true);
+                        }}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-fan text-white text-sm font-medium rounded-lg hover:bg-fan/90 transition-colors"
+                      >
+                        <Plus className="w-4 h-4" /> Create Band
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {myBands.map((entry) => (
+                        <div
+                          key={entry.band._id}
+                          className="flex items-center gap-3 p-3 bg-muted/50 border border-border rounded-xl"
+                        >
+                          <div className="w-10 h-10 bg-band/10 border border-band/20 rounded-lg flex items-center justify-center">
+                            <Music className="w-5 h-5 text-band" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-foreground truncate">
+                              {entry.band.name}
+                            </p>
+                            <p className="text-xs text-muted-foreground capitalize">
+                              {entry.membership.role}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                      <button
+                        onClick={() => {
+                          closeWorkspaceMenu();
+                          setShowCreateBandForm(true);
+                        }}
+                        className="w-full py-3 border border-dashed border-fan/30 text-fan text-sm font-medium rounded-xl hover:bg-fan/5 transition-colors"
+                      >
+                        + Create Another Band
+                      </button>
+                    </div>
+                  )}
+                </section>
+
+                {/* Pending Invites */}
+                {pendingInvites.length > 0 && (
+                  <section>
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                      Pending Invites ({pendingInvites.length})
+                    </h4>
+                    <div className="space-y-2">
+                      {pendingInvites.map((invite) => (
+                        <div
+                          key={invite._id}
+                          className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-4"
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="w-10 h-10 bg-amber-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                              <Users className="w-5 h-5 text-amber-500" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-foreground">
+                                {invite.band?.name || "Band Invite"}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                Invited as {invite.role}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex gap-2 mt-3">
+                            <button
+                              onClick={() => handleAcceptInvite(invite._id, invite.bandId)}
+                              disabled={processingInviteId === invite._id}
+                              className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-fan text-white text-sm font-medium rounded-lg hover:bg-fan/90 transition-colors disabled:opacity-50"
+                            >
+                              <Check className="w-4 h-4" /> Accept
+                            </button>
+                            <button
+                              onClick={() => handleDeclineInvite(invite._id)}
+                              disabled={processingInviteId === invite._id}
+                              className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 border border-border text-muted-foreground text-sm font-medium rounded-lg hover:border-red-500/30 hover:text-red-400 transition-colors disabled:opacity-50"
+                            >
+                              <X className="w-4 h-4" /> Decline
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+              </div>
+            </motion.aside>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Edit Profile Modal */}
+      <EditProfileModal
+        isOpen={isEditModalOpen}
+        onClose={closeEditModal}
+        onSave={handleSaveProfile}
+        initialData={editModalInitialData}
+      />
+    </div>
+  );
+}
+
+// Overview Tab
+function OverviewTab({
+  publicProfile,
+}: {
+  publicProfile: any;
+}) {
+  if (!publicProfile) {
+    return (
+      <motion.div variants={panelFade} initial="hidden" animate="visible" className="space-y-4">
+        <div className="h-32 bg-muted rounded-xl animate-shimmer" />
+        <div className="h-48 bg-muted rounded-xl animate-shimmer" />
+        <div className="h-40 bg-muted rounded-xl animate-shimmer" />
+      </motion.div>
+    );
+  }
+
+  return (
+    <motion.div
+      variants={panelFade}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+      className="space-y-5"
+    >
+      {/* Gig DNA Card */}
+      <div>
+        <FanSectionTitle icon={Sparkles} title="Your Gig DNA" />
+        <div className="bg-gradient-to-br from-fan/10 via-fan/5 to-transparent border border-fan/20 rounded-2xl p-4">
+          <div className="flex items-start gap-4">
+            <div className="w-14 h-14 bg-fan/15 border border-fan/25 rounded-xl flex items-center justify-center flex-shrink-0">
+              <Sparkles className="w-7 h-7 text-fan" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-0.5">
+                Archetype
+              </p>
+              <p className="text-xl font-bold text-foreground">
+                {publicProfile.gigDna.label}
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Dominant: {capitalizeGenre(publicProfile.gigDna.dominantGenre)}
+              </p>
+              <div className="flex flex-wrap gap-2 mt-3">
+                <FanBadge variant="default">{publicProfile.gigDna.attendedShows} shows</FanBadge>
+                <FanBadge variant="default">{publicProfile.gigDna.distinctVenues} venues</FanBadge>
+                <FanBadge variant="highlight">Tier {publicProfile.gigDna.tier}</FanBadge>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {publicProfile === undefined ? (
-        <div className="p-4 space-y-4">
-          <div className="h-40 bg-night-tertiary border border-zinc-800 animate-shimmer" />
-          <div className="h-48 bg-night-tertiary border border-zinc-800 animate-shimmer" />
-          <div className="h-56 bg-night-tertiary border border-zinc-800 animate-shimmer" />
+      {/* Top Genres */}
+      {publicProfile.topGenres.length > 0 && (
+        <div>
+          <FanSectionTitle icon={Music} title="Top Genres" />
+          <div className="flex flex-wrap gap-2">
+            {publicProfile.topGenres.map((entry: any) => (
+              <div
+                key={entry.genre}
+                className="px-3 py-2 rounded-xl text-sm font-medium text-white shadow-sm"
+                style={{
+                  backgroundColor: GENRE_COLORS[entry.genre as Genre],
+                }}
+              >
+                {entry.label}
+                <span className="opacity-80 ml-1.5 text-xs">({entry.attendedCount})</span>
+              </div>
+            ))}
+          </div>
         </div>
-      ) : publicProfile ? (
-        <main className="p-4 space-y-6">
-          <section>
-            <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-3">
-              Top Genres (Attendance-Based)
-            </h2>
-            {publicProfile.topGenres.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {publicProfile.topGenres.map((entry) => (
-                  <div
-                    key={entry.genre}
-                    className="px-3 py-2 border-2 text-night text-xs font-bold uppercase tracking-wider"
-                    style={{
-                      backgroundColor: GENRE_COLORS[entry.genre as Genre],
-                      borderColor: GENRE_COLORS[entry.genre as Genre],
-                    }}
-                  >
-                    {entry.label} · {entry.attendedCount}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-zinc-500">No attended shows yet.</p>
-            )}
-          </section>
+      )}
 
-          <section>
-            <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-3">
-              Saved Artists
-            </h2>
-            {publicProfile.savedArtists.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {publicProfile.savedArtists.map((artist) => (
-                  <Link
-                    key={artist.bandId}
-                    href={`/bands/${artist.bandId}`}
-                    className="group border border-zinc-800 bg-night-tertiary p-3 hover:border-lime/40 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-night-secondary border border-zinc-700 overflow-hidden flex items-center justify-center">
-                        {artist.image ? (
-                          <Image
-                            src={artist.image}
-                            alt={artist.name}
-                            width={48}
-                            height={48}
-                            className="object-cover"
-                          />
-                        ) : (
-                          <span className="text-xs font-bold text-lime">
-                            {getInitials(artist.name)}
-                          </span>
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-bold text-white truncate group-hover:text-lime transition-colors">
-                          {artist.name}
-                        </p>
-                        <p className="text-xs text-zinc-500 truncate">{artist.location}</p>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-zinc-500">No saved artists yet.</p>
-            )}
-          </section>
-
-          <section>
-            <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-3">
-              Most Viewed / Saved Artists
-            </h2>
-            {publicProfile.mostViewedSavedArtists.length > 0 ? (
-              <div className="space-y-2">
-                {publicProfile.mostViewedSavedArtists.map((artist, index) => (
-                  <Link
-                    key={artist.bandId}
-                    href={`/bands/${artist.bandId}`}
-                    className="flex items-center justify-between gap-3 border border-zinc-800 bg-night-tertiary px-3 py-2 hover:border-lime/40 transition-colors"
-                  >
-                    <div className="min-w-0 flex items-center gap-3">
-                      <span className="text-xs font-bold uppercase tracking-wider text-zinc-500 w-6">
-                        {index + 1}
-                      </span>
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-white truncate">{artist.name}</p>
-                        <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-zinc-500">
-                          <span className="inline-flex items-center gap-1">
-                            <Eye className="w-3 h-3" />
-                            {artist.viewCount} views
-                          </span>
-                          {artist.isSaved ? (
-                            <span className="inline-flex items-center gap-1 text-lime">
-                              <Heart className="w-3 h-3" />
-                              Saved
-                            </span>
-                          ) : null}
-                        </div>
-                      </div>
-                    </div>
-                    <span className="text-xs font-bold uppercase tracking-wider text-lime">
-                      Score {artist.score}
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-zinc-500">No artist engagement yet.</p>
-            )}
-          </section>
-
+      {/* Recent Past Shows */}
+      {publicProfile.pastShows.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <FanSectionTitle icon={Ticket} title="Recent Shows" className="mb-0" />
+            <span className="text-xs text-muted-foreground">
+              {publicProfile.pastShows.length} total
+            </span>
+          </div>
           <PastShowFlyerSection
-            shows={publicProfile.pastShows.map((show) => ({
+            shows={publicProfile.pastShows.slice(0, 4).map((show: any) => ({
               eventId: show.eventId,
               title: show.title,
               dateTime: show.dateTime,
@@ -349,242 +537,251 @@ export function FanProfileView() {
               venueCity: show.venue.city,
               bandName: show.band?.name,
             }))}
-            emptyMessage="No attended past shows yet."
+            emptyMessage="No shows attended yet."
+            maxItems={4}
+            tone="fan"
           />
-
-          <section>
-            <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-3">
-              Gig DNA
-            </h2>
-            <div className="border-2 border-lime/30 bg-night-tertiary p-4">
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 border border-lime/40 bg-lime/10 flex items-center justify-center">
-                  <Sparkles className="w-5 h-5 text-lime" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs uppercase tracking-wider text-zinc-500">Archetype</p>
-                  <p className="text-xl font-bold text-white uppercase tracking-tight">
-                    {publicProfile.gigDna.label}
-                  </p>
-                  <p className="text-sm text-zinc-400 mt-2">
-                    Dominant Genre: {capitalizeGenre(publicProfile.gigDna.dominantGenre)}
-                  </p>
-                  <div className="mt-3 flex flex-wrap gap-2 text-[11px] uppercase tracking-wider">
-                    <span className="px-2 py-1 border border-zinc-700 text-zinc-300">
-                      {publicProfile.gigDna.attendedShows} attended
-                    </span>
-                    <span className="px-2 py-1 border border-zinc-700 text-zinc-300">
-                      {publicProfile.gigDna.distinctVenues} venues
-                    </span>
-                    <span className="px-2 py-1 border border-zinc-700 text-zinc-300">
-                      Tier {publicProfile.gigDna.tier}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-        </main>
-      ) : null}
-
-      <section className="p-4">
-        <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-3">
-          Settings
-        </h3>
-        <div className="bg-night-tertiary border-2 border-zinc-800 p-4">
-          <ThemeToggleRow />
-        </div>
-      </section>
-
-      <div className="p-4 pt-4">
-        <SignOutButton>
-          <button className="w-full flex items-center justify-center gap-2 py-4 border-2 border-red-500/30 text-red-400 font-bold uppercase tracking-wider text-sm hover:bg-red-500/10 transition-colors touch-target">
-            <LogOut className="w-5 h-5" />
-            Sign Out
-          </button>
-        </SignOutButton>
-      </div>
-
-      {isWorkspaceMenuOpen && (
-        <div
-          className={cn(
-            "fixed inset-0 z-[60] transition-opacity duration-200",
-            isWorkspaceMenuVisible ? "opacity-100" : "opacity-0 pointer-events-none"
-          )}
-        >
-          <button
-            type="button"
-            onClick={closeWorkspaceMenu}
-            className={cn(
-              "absolute inset-0 bg-black/70 transition-opacity duration-200",
-              isWorkspaceMenuVisible ? "opacity-100" : "opacity-0"
-            )}
-            aria-label="Close personal workspace menu"
-          />
-
-          <aside
-            className={cn(
-              "absolute right-0 top-0 h-full w-full max-w-xl bg-night-secondary border-l-2 border-lime/20 overflow-y-auto transition-transform duration-200 ease-out will-change-transform",
-              isWorkspaceMenuVisible ? "translate-x-0" : "translate-x-full"
-            )}
-          >
-            <div className="sticky top-0 z-10 bg-night-secondary border-b border-zinc-800 p-4 flex items-center justify-between">
-              <h3 className="text-sm font-bold uppercase tracking-widest text-white">
-                Workspace
-              </h3>
-              <button
-                type="button"
-                onClick={closeWorkspaceMenu}
-                className="p-2 border border-zinc-700 text-zinc-400 hover:text-white hover:border-lime/30"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <section className="p-4">
-              <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-3">
-                Band Creation
-              </h4>
-
-              {myBands.length === 0 ? (
-                <div className="bg-night-tertiary border-2 border-zinc-800 p-4">
-                  <p className="text-zinc-400 text-sm mb-3">
-                    Create your first band workspace to unlock band tools.
-                  </p>
-                  <button
-                    onClick={() => {
-                      closeWorkspaceMenu();
-                      setShowCreateBandForm(true);
-                    }}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-lime text-night border-2 border-lime font-bold uppercase tracking-wider text-xs hover:bg-transparent hover:text-lime transition-colors"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Create Band
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <p className="text-xs uppercase tracking-wider text-zinc-500 px-1 pb-1">
-                    Use the profile dropdown to switch between personal and band workspaces.
-                  </p>
-                  <button
-                    onClick={() => {
-                      closeWorkspaceMenu();
-                      setShowCreateBandForm(true);
-                    }}
-                    className="w-full bg-night-tertiary border-2 border-dashed border-lime/40 px-4 py-3 text-lime text-xs font-bold uppercase tracking-wider hover:border-lime"
-                  >
-                    + Create Another Band
-                  </button>
-                  {myBands.map((entry) => (
-                    <div
-                      key={entry.band._id}
-                      className="w-full bg-night-tertiary border-2 border-zinc-800 px-4 py-3 text-left"
-                    >
-                      <p className="text-white font-bold uppercase tracking-wide text-sm">
-                        {entry.band.name}
-                      </p>
-                      <p className="text-zinc-500 text-xs uppercase tracking-wider mt-1">
-                        Role: {entry.membership.role}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
-
-            {pendingInvites.length > 0 && (
-              <section className="p-4 pt-0">
-                <h4 className="text-sm font-bold uppercase tracking-widest text-zinc-400 mb-3">
-                  Pending Invites
-                </h4>
-                <div className="space-y-2">
-                  {pendingInvites.map((invite) => (
-                    <div
-                      key={invite._id}
-                      className="bg-night-tertiary border-2 border-zinc-800 p-4"
-                    >
-                      <p className="text-white font-bold uppercase tracking-wide text-sm">
-                        {invite.band?.name || "Band"}
-                      </p>
-                      <p className="text-zinc-500 text-xs uppercase tracking-wider mt-1">
-                        Invited as {invite.role}
-                      </p>
-                      <div className="flex gap-2 mt-3">
-                        <button
-                          onClick={() => handleAcceptInvite(invite._id, invite.bandId)}
-                          disabled={processingInviteId === invite._id}
-                          className={cn(
-                            "flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 border-2 text-xs font-bold uppercase tracking-wider transition-colors",
-                            processingInviteId === invite._id
-                              ? "border-zinc-700 text-zinc-500"
-                              : "border-lime bg-lime text-night hover:bg-transparent hover:text-lime"
-                          )}
-                        >
-                          <Check className="w-4 h-4" />
-                          Accept
-                        </button>
-                        <button
-                          onClick={() => handleDeclineInvite(invite._id)}
-                          disabled={processingInviteId === invite._id}
-                          className={cn(
-                            "flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 border-2 text-xs font-bold uppercase tracking-wider transition-colors",
-                            processingInviteId === invite._id
-                              ? "border-zinc-700 text-zinc-500"
-                              : "border-zinc-700 text-zinc-300 hover:border-red-500/40 hover:text-red-400"
-                          )}
-                        >
-                          <X className="w-4 h-4" />
-                          Decline
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
-          </aside>
         </div>
       )}
-
-      <EditProfileModal
-        isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
-        onSave={handleSaveProfile}
-        initialData={{
-          name: user.name,
-          location: user.location,
-          avatar: user.avatar,
-          topGenres: user.topGenres as Genre[] | undefined,
-        }}
-      />
-    </div>
+    </motion.div>
   );
 }
 
-function StatItem({
-  icon,
-  value,
-  label,
-  isText = false,
+// Saved Tab
+function SavedTab({ publicProfile }: { publicProfile: any }) {
+  if (!publicProfile) {
+    return (
+      <motion.div variants={panelFade} initial="hidden" animate="visible" className="space-y-4">
+        <div className="h-32 bg-muted rounded-xl animate-shimmer" />
+        <div className="h-48 bg-muted rounded-xl animate-shimmer" />
+      </motion.div>
+    );
+  }
+
+  return (
+    <motion.div
+      variants={panelFade}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+      className="space-y-5"
+    >
+      {/* Saved Artists */}
+      <div>
+        <FanSectionTitle icon={Heart} title={`Saved Artists (${publicProfile.savedArtists.length})`} />
+        {publicProfile.savedArtists.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {publicProfile.savedArtists.map((artist: any) => (
+              <div
+                key={artist.bandId}
+              >
+                <Link
+                  href={`/bands/${artist.bandId}`}
+                  className="group flex items-center gap-3 p-3 bg-card border border-border rounded-xl hover:border-fan/30 transition-colors transition-shadow hover:shadow-sm"
+                >
+                  <div className="w-12 h-12 bg-muted border border-border rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0">
+                    {artist.image ? (
+                      <Image
+                        src={artist.image}
+                        alt={artist.name}
+                        width={48}
+                        height={48}
+                        className="object-cover w-full h-full"
+                      />
+                    ) : (
+                      <span className="text-sm font-bold text-fan">
+                        {getInitials(artist.name)}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate group-hover:text-fan transition-colors">
+                      {artist.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {artist.location}
+                    </p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                </Link>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <FanEmptyState
+            icon={Heart}
+            title="No saved artists"
+            description="Save your favorite bands to see them here"
+          />
+        )}
+      </div>
+
+      {/* Most Viewed */}
+      {publicProfile.mostViewedSavedArtists.length > 0 && (
+        <div>
+          <FanSectionTitle icon={Zap} title="Most Engaged" />
+          <div className="space-y-2">
+            {publicProfile.mostViewedSavedArtists.map((artist: any, index: number) => (
+              <div
+                key={artist.bandId}
+              >
+                <Link
+                  href={`/bands/${artist.bandId}`}
+                  className="flex items-center gap-3 p-3 bg-card border border-border rounded-xl hover:border-fan/30 transition-colors"
+                >
+                  <span className="w-6 text-center text-sm font-bold text-muted-foreground">
+                    {index + 1}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">
+                      {artist.name}
+                    </p>
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                      <span className="inline-flex items-center gap-1">
+                        <Clock className="w-3 h-3" /> {artist.viewCount} views
+                      </span>
+                      {artist.isSaved && (
+                        <span className="inline-flex items-center gap-1 text-fan">
+                          <Heart className="w-3 h-3 fill-current" /> Saved
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <span className="text-xs font-semibold text-fan bg-fan/10 px-2 py-1 rounded-full">
+                    {artist.score} pts
+                  </span>
+                </Link>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
+// Activity Tab
+function ActivityTab({ publicProfile }: { publicProfile: any }) {
+  if (!publicProfile) {
+    return (
+      <motion.div variants={panelFade} initial="hidden" animate="visible" className="space-y-4">
+        <div className="h-48 bg-muted rounded-xl animate-shimmer" />
+      </motion.div>
+    );
+  }
+
+  return (
+    <motion.div
+      variants={panelFade}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+      className="space-y-5"
+    >
+      {/* All Past Shows */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <FanSectionTitle icon={Ticket} title="Show History" className="mb-0" />
+          {publicProfile.pastShows.length > 0 && (
+            <FanBadge variant="highlight">{publicProfile.pastShows.length} shows</FanBadge>
+          )}
+        </div>
+        <PastShowFlyerSection
+          shows={publicProfile.pastShows.map((show: any) => ({
+            eventId: show.eventId,
+            title: show.title,
+            dateTime: show.dateTime,
+            image: show.image,
+            venueName: show.venue.name,
+            venueCity: show.venue.city,
+            bandName: show.band?.name,
+          }))}
+          emptyMessage="No shows attended yet. Start exploring events near you!"
+          tone="fan"
+        />
+      </div>
+    </motion.div>
+  );
+}
+
+// Settings Tab
+function SettingsTab({
+  onOpenWorkspaceMenu,
+  pendingInvitesCount,
 }: {
-  icon: React.ReactNode;
-  value: string | number;
-  label: string;
-  isText?: boolean;
+  onOpenWorkspaceMenu: () => void;
+  pendingInvitesCount: number;
 }) {
   return (
-    <div className="flex flex-col items-center">
-      {icon}
-      <span
-        className={cn(
-          "font-bold text-white mt-1",
-          isText ? "text-xs" : "text-xl"
-        )}
-      >
-        {value}
-      </span>
-      <span className="text-[10px] text-zinc-500 uppercase tracking-wider">{label}</span>
-    </div>
+    <motion.div
+      variants={panelFade}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+      className="space-y-5"
+    >
+      {/* Appearance */}
+      <div>
+        <FanSectionTitle icon={Settings} title="Appearance" />
+        <div className="bg-card border border-border rounded-xl p-4">
+          <ThemeToggleRow />
+        </div>
+      </div>
+
+      {/* Workspace */}
+      <div>
+        <FanSectionTitle icon={Users} title="Workspace" />
+        <div className="space-y-2">
+          <button
+            onClick={onOpenWorkspaceMenu}
+            className="w-full flex items-center justify-between p-4 bg-card border border-border rounded-xl hover:border-fan/30 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-fan/10 rounded-lg flex items-center justify-center">
+                <Music className="w-5 h-5 text-fan" />
+              </div>
+              <div className="text-left">
+                <p className="text-sm font-medium text-foreground">Manage Bands</p>
+                <p className="text-xs text-muted-foreground">Create or switch workspaces</p>
+              </div>
+            </div>
+            <ChevronRight className="w-5 h-5 text-muted-foreground" />
+          </button>
+
+          {pendingInvitesCount > 0 && (
+            <button
+              onClick={onOpenWorkspaceMenu}
+              className="w-full flex items-center justify-between p-4 bg-amber-500/5 border border-amber-500/20 rounded-xl hover:bg-amber-500/10 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-amber-500/10 rounded-lg flex items-center justify-center">
+                  <Users className="w-5 h-5 text-amber-500" />
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-medium text-foreground">
+                    Pending Invites
+                    <span className="ml-2 px-2 py-0.5 bg-amber-500 text-white text-[10px] font-bold rounded-full">
+                      {pendingInvitesCount}
+                    </span>
+                  </p>
+                  <p className="text-xs text-muted-foreground">View and respond to invites</p>
+                </div>
+              </div>
+              <ChevronRight className="w-5 h-5 text-muted-foreground" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Sign Out */}
+      <div>
+        <SignOutButton>
+          <button className="w-full flex items-center justify-center gap-2 py-4 border border-red-500/20 text-red-500 font-medium text-sm bg-red-500/5 hover:bg-red-500/10 transition-colors rounded-xl">
+            <LogOut className="w-4 h-4" />
+            <span>Sign Out</span>
+          </button>
+        </SignOutButton>
+      </div>
+    </motion.div>
   );
 }

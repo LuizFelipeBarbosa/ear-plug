@@ -43,13 +43,13 @@ export function useEvents(options?: { genre?: Genre; limit?: number }) {
   /** All upcoming events (when no genre filter) */
   const events = useQuery(
     api.events.listUpcoming,
-    options?.limit ? { limit: options.limit } : {}
+    options?.limit ? { limit: options.limit } : {},
   );
 
   /** Events filtered by genre (when genre is specified) */
   const eventsByGenre = useQuery(
     api.events.listByGenre,
-    options?.genre ? { genre: options.genre, limit: options.limit } : "skip"
+    options?.genre ? { genre: options.genre, limit: options.limit } : "skip",
   );
 
   return {
@@ -88,15 +88,12 @@ export function useEvents(options?: { genre?: Genre; limit?: number }) {
  */
 export function useEvent(eventId: Id<"events"> | undefined) {
   /** Event document with band and venue data */
-  const event = useQuery(
-    api.events.getById,
-    eventId ? { eventId } : "skip"
-  );
+  const event = useQuery(api.events.getById, eventId ? { eventId } : "skip");
 
   /** User's RSVP and like status for this event */
   const eventStatus = useQuery(
     api.events.getUserEventStatus,
-    eventId ? { eventId } : "skip"
+    eventId ? { eventId } : "skip",
   );
 
   /** Mutation to toggle RSVP status */
@@ -167,7 +164,8 @@ export function useUserEvents() {
     /** Array of past RSVP'd events */
     pastRsvps: pastRsvps ?? [],
     /** True while any query is loading */
-    isLoading: rsvps === undefined || likes === undefined || pastRsvps === undefined,
+    isLoading:
+      rsvps === undefined || likes === undefined || pastRsvps === undefined,
   };
 }
 
@@ -176,16 +174,17 @@ export function useUserEvents() {
  */
 export function useEventGuestListSummary(
   eventId: Id<"events"> | undefined,
-  bandId: Id<"bands"> | undefined
+  bandId: Id<"bands"> | undefined,
 ) {
   const summary = useQuery(
     api.events.getEventGuestListSummary,
-    eventId && bandId ? { eventId, bandId } : "skip"
+    eventId && bandId ? { eventId, bandId } : "skip",
   );
 
   return {
     summary,
-    isLoading: eventId !== undefined && bandId !== undefined && summary === undefined,
+    isLoading:
+      eventId !== undefined && bandId !== undefined && summary === undefined,
   };
 }
 
@@ -195,7 +194,7 @@ export function useEventGuestListSummary(
 export function useEventGuestList(
   eventId: Id<"events"> | undefined,
   bandId: Id<"bands"> | undefined,
-  options?: { rsvpType?: GuestFilterType; search?: string }
+  options?: { rsvpType?: GuestFilterType; search?: string },
 ) {
   const guestsResult = useQuery(
     api.events.listEventGuests,
@@ -206,10 +205,12 @@ export function useEventGuestList(
           rsvpType: options?.rsvpType,
           search: options?.search?.trim() ? options.search : undefined,
         }
-      : "skip"
+      : "skip",
   );
 
-  const setGuestAttendanceMutation = useMutation(api.events.setEventGuestAttendance);
+  const setGuestAttendanceMutation = useMutation(
+    api.events.setEventGuestAttendance,
+  );
   const removeGuestRsvpMutation = useMutation(api.events.removeEventGuestRsvp);
 
   return {
@@ -218,7 +219,10 @@ export function useEventGuestList(
     cap: guestsResult?.cap ?? 500,
     totalCount: guestsResult?.totalCount ?? 0,
     canManage: guestsResult?.canManage ?? false,
-    isLoading: eventId !== undefined && bandId !== undefined && guestsResult === undefined,
+    isLoading:
+      eventId !== undefined &&
+      bandId !== undefined &&
+      guestsResult === undefined,
     setGuestAttendance: (args: {
       eventId: Id<"events">;
       bandId: Id<"bands">;
@@ -229,8 +233,7 @@ export function useEventGuestList(
       eventId: Id<"events">;
       bandId: Id<"bands">;
       rsvpId: Id<"rsvps">;
-    }) =>
-      removeGuestRsvpMutation(args),
+    }) => removeGuestRsvpMutation(args),
   };
 }
 
@@ -260,7 +263,7 @@ export function useEventGuestList(
 export function useSearchEvents(query: string) {
   const results = useQuery(
     api.events.search,
-    query.length >= 2 ? { query, limit: 20 } : "skip"
+    query.length >= 2 ? { query, limit: 20 } : "skip",
   );
 
   return {
@@ -320,7 +323,14 @@ export function useNearbyEvents(options: {
   limit?: number;
   enabled?: boolean;
 }) {
-  const { latitude, longitude, radiusMiles, genre, limit, enabled = true } = options;
+  const {
+    latitude,
+    longitude,
+    radiusMiles,
+    genre,
+    limit,
+    enabled = true,
+  } = options;
 
   const shouldQuery = enabled && latitude !== null && longitude !== null;
 
@@ -334,7 +344,7 @@ export function useNearbyEvents(options: {
           genre,
           limit,
         }
-      : "skip"
+      : "skip",
   );
 
   return {
@@ -352,7 +362,7 @@ export function useNearbyEvents(options: {
 export function useMyEventTicket(eventId: Id<"events"> | undefined) {
   const ticketPayload = useQuery(
     api.events.getMyEventTicket,
-    eventId ? { eventId } : "skip"
+    eventId ? { eventId } : "skip",
   );
   const ensureTicket = useMutation(api.events.ensureMyEventTicket);
 
@@ -369,7 +379,8 @@ export function useMyEventTicket(eventId: Id<"events"> | undefined) {
   return {
     ticket: (ticketPayload ?? null) as MyEventTicketPayload | null,
     isLoading: eventId !== undefined && ticketPayload === undefined,
-    ensureTicket: () => (eventId ? ensureTicket({ eventId }) : Promise.resolve(null)),
+    ensureTicket: () =>
+      eventId ? ensureTicket({ eventId }) : Promise.resolve(null),
   };
 }
 
@@ -379,7 +390,7 @@ export function useMyEventTicket(eventId: Id<"events"> | undefined) {
 export function useEventCheckinAccess(eventId: Id<"events"> | undefined) {
   const access = useQuery(
     api.events.getEventCheckinAccess,
-    eventId ? { eventId } : "skip"
+    eventId ? { eventId } : "skip",
   );
 
   return {
@@ -397,12 +408,12 @@ export function useEventCheckinAccess(eventId: Id<"events"> | undefined) {
  */
 export function useEventCheckinStaff(
   eventId: Id<"events"> | undefined,
-  bandId: Id<"bands"> | undefined
+  bandId: Id<"bands"> | undefined,
 ) {
   const convex = useConvex();
   const staffResult = useQuery(
     api.events.listEventCheckinStaff,
-    eventId && bandId ? { eventId, bandId } : "skip"
+    eventId && bandId ? { eventId, bandId } : "skip",
   );
   const assignByIdMutation = useMutation(api.events.assignEventCheckinStaff);
   const removeMutation = useMutation(api.events.removeEventCheckinStaff);
@@ -419,12 +430,12 @@ export function useEventCheckinStaff(
           bandId,
           query,
           limit,
-        }
+        },
       );
 
       return (result.users ?? []) as EventCheckinAssignableUser[];
     },
-    [bandId, convex, eventId]
+    [bandId, convex, eventId],
   );
 
   const assignByUserId = useCallback(
@@ -434,7 +445,7 @@ export function useEventCheckinStaff(
       }
       return await assignByIdMutation({ eventId, bandId, staffUserId });
     },
-    [assignByIdMutation, bandId, eventId]
+    [assignByIdMutation, bandId, eventId],
   );
 
   const removeStaff = useCallback(
@@ -444,13 +455,15 @@ export function useEventCheckinStaff(
       }
       return await removeMutation({ eventId, bandId, staffUserId });
     },
-    [bandId, eventId, removeMutation]
+    [bandId, eventId, removeMutation],
   );
 
   return {
     staff: (staffResult?.staff ?? []) as EventCheckinStaff[],
     isLoading:
-      eventId !== undefined && bandId !== undefined && staffResult === undefined,
+      eventId !== undefined &&
+      bandId !== undefined &&
+      staffResult === undefined,
     searchAssignableUsers,
     assignByUserId,
     removeStaff,

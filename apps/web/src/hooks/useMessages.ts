@@ -41,18 +41,19 @@ import { useProfileContext } from "./useProfileContext";
 export function useBandConversations(bandIdOverride?: Id<"bands">) {
   const { mode, bandId } = useProfileContext();
   const resolvedBandId =
-    bandIdOverride ?? (mode === "band" ? (bandId as Id<"bands"> | undefined) : undefined);
+    bandIdOverride ??
+    (mode === "band" ? (bandId as Id<"bands"> | undefined) : undefined);
 
   /** Array of conversations with venue data and unread counts */
   const conversations = useQuery(
     api.messages.getBandConversations,
-    resolvedBandId ? { bandId: resolvedBandId } : "skip"
+    resolvedBandId ? { bandId: resolvedBandId } : "skip",
   );
 
   /** Total unread message count across all conversations */
   const unreadCount = useQuery(
     api.messages.getUnreadCount,
-    resolvedBandId ? { bandId: resolvedBandId } : "skip"
+    resolvedBandId ? { bandId: resolvedBandId } : "skip",
   );
 
   /** Mutation to start a new conversation or get existing one */
@@ -60,7 +61,7 @@ export function useBandConversations(bandIdOverride?: Id<"bands">) {
   /** Pending co-host invites for this band workspace */
   const pendingCohostInvites = useQuery(
     api.eventCohosts.listBandPendingInvites,
-    resolvedBandId ? { bandId: resolvedBandId } : "skip"
+    resolvedBandId ? { bandId: resolvedBandId } : "skip",
   );
   /** Mutation to accept/decline a co-host invite */
   const respondToInviteMutation = useMutation(api.eventCohosts.respondToInvite);
@@ -70,7 +71,7 @@ export function useBandConversations(bandIdOverride?: Id<"bands">) {
       inviteId: Id<"eventCohostInvites">;
       action: "accept" | "decline";
     }) => respondToInviteMutation(args),
-    [respondToInviteMutation]
+    [respondToInviteMutation],
   );
 
   return {
@@ -133,11 +134,13 @@ export function useBandConversations(bandIdOverride?: Id<"bands">) {
  *   );
  * }
  */
-export function useConversation(conversationId: Id<"conversations"> | undefined) {
+export function useConversation(
+  conversationId: Id<"conversations"> | undefined,
+) {
   /** Array of messages in the conversation with sender data */
   const messages = useQuery(
     api.messages.getConversationMessages,
-    conversationId ? { conversationId } : "skip"
+    conversationId ? { conversationId } : "skip",
   );
 
   /** Mutation to send a new message */
@@ -153,7 +156,7 @@ export function useConversation(conversationId: Id<"conversations"> | undefined)
       }
       return sendMessageMutation({ conversationId, content });
     },
-    [conversationId, sendMessageMutation]
+    [conversationId, sendMessageMutation],
   );
 
   const markAsRead = useCallback(() => {

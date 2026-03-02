@@ -1,8 +1,10 @@
 "use client";
 
-import { ArrowRight } from "lucide-react";
+import { Users, ChevronRight, Crown } from "lucide-react";
+import { motion } from "framer-motion";
 import { AvatarImage } from "@/components/ui/OptimizedImage";
 import type { GuestRsvpType } from "@ear-plug/shared/types";
+import { cn } from "@/lib/utils";
 
 interface GuestListCardProps {
   totalCount: number;
@@ -26,48 +28,82 @@ export function GuestListCard({
   const overflowCount = Math.max(0, totalCount - previewGuests.length);
 
   return (
-    <button
-      type="button"
+    <motion.button
+
       onClick={onOpen}
-      className="mb-6 w-full text-left p-4 bg-night-tertiary border-2 border-zinc-800 hover:border-lime/40 transition-colors"
+      className="w-full text-left bg-card border border-border rounded-2xl p-4 hover:border-band/30 transition-colors group"
     >
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-bold text-white uppercase tracking-wide">
-            Guest List
-          </h2>
-          <p className="text-sm text-zinc-400 mt-1">
-            {totalCount} On The List
-          </p>
-          <p className="text-[11px] uppercase tracking-wider mt-2 text-zinc-500">
-            {canManage ? "Owner/Admin controls enabled" : "Read-only access"}
-          </p>
+      {/* Header */}
+      <div className="flex items-start justify-between gap-3 mb-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-band/10 border border-band/20 rounded-xl flex items-center justify-center">
+            <Users className="w-5 h-5 text-band" />
+          </div>
+          <div>
+            <h2 className="font-semibold text-foreground">Guest List</h2>
+            <p className="text-sm text-muted-foreground">
+              {totalCount} confirmed
+            </p>
+          </div>
         </div>
-        <span className="inline-flex items-center gap-1 px-3 py-2 border border-zinc-700 text-xs font-bold uppercase tracking-wider text-zinc-200">
-          View all
-          <ArrowRight className="w-3.5 h-3.5" />
-        </span>
+        <div className="flex items-center gap-1 text-muted-foreground">
+          {canManage && (
+            <span className="text-[10px] font-medium px-2 py-1 bg-band/10 text-band rounded-full">
+              Admin
+            </span>
+          )}
+          <ChevronRight className="w-4 h-4 transition-transform" />
+        </div>
       </div>
 
-      <div className="mt-4 flex items-center gap-2 overflow-x-auto pb-1">
-        {previewGuests.map((guest) => (
-          <div key={guest.rsvpId} className="shrink-0">
-            <AvatarImage
-              src={guest.avatar}
-              alt={guest.name}
-              fallbackText={guest.name}
-              size={56}
-              className="border border-zinc-700"
-            />
-          </div>
-        ))}
+      {/* Preview Avatars */}
+      <div className="flex items-center">
+        <div className="flex -space-x-2">
+          {previewGuests.slice(0, 5).map((guest, index) => (
+            <motion.div
+              key={guest.rsvpId}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: index * 0.05 }}
+              className="relative"
+            >
+              <div
+                className={cn(
+                  "w-10 h-10 rounded-full border-2 overflow-hidden",
+                  guest.rsvpType === "attended"
+                    ? "border-success bg-success/10"
+                    : "border-card bg-muted"
+                )}
+              >
+                <AvatarImage
+                  src={guest.avatar}
+                  alt={guest.name}
+                  fallbackText={guest.name}
+                  size={40}
+                  className="w-full h-full"
+                />
+              </div>
+              {guest.rsvpType === "attended" && (
+                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-success rounded-full border-2 border-card flex items-center justify-center">
+                  <Crown className="w-2 h-2 text-white" />
+                </div>
+              )}
+            </motion.div>
+          ))}
+        </div>
 
         {overflowCount > 0 && (
-          <div className="shrink-0 w-14 h-14 rounded-full border border-zinc-700 bg-night-secondary flex items-center justify-center">
-            <span className="text-sm font-bold text-zinc-200">+{overflowCount}</span>
+          <div className="ml-3 w-10 h-10 rounded-full border-2 border-dashed border-muted-foreground/30 bg-card flex items-center justify-center">
+            <span className="text-xs font-semibold text-muted-foreground">
+              +{overflowCount > 99 ? "99" : overflowCount}
+            </span>
           </div>
         )}
+
+        {previewGuests.length === 0 && (
+          <p className="text-sm text-muted-foreground">No guests yet</p>
+        )}
       </div>
-    </button>
+    </motion.button>
   );
 }

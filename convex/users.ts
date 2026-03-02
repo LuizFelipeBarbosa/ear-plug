@@ -13,7 +13,10 @@ import {
 } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { normalizeInvitePhone } from "./utils/phone";
-import { requireAuthenticatedUser } from "./utils/permissions";
+import {
+  getAuthenticatedUserOrNull,
+  requireAuthenticatedUser,
+} from "./utils/permissions";
 
 const GENRE_VALUES = [
   "indie",
@@ -38,6 +41,8 @@ const GIG_DNA_NOUN_BY_GENRE: Record<GenreValue, string> = {
 
 const MOST_VIEWED_SAVED_ARTISTS_LIMIT = 12;
 const SAVED_ARTISTS_LIMIT = 24;
+const IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
 
 function isGenreValue(value: string): value is GenreValue {
   return (GENRE_VALUES as readonly string[]).includes(value);
@@ -86,17 +91,7 @@ function normalizeStoredEmail(email: string): string {
 export const getCurrentUser = query({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      return null;
-    }
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
-      .unique();
-
-    return user;
+    return await getAuthenticatedUserOrNull(ctx);
   },
 });
 
@@ -463,19 +458,7 @@ export const updateRole = mutation({
     role: v.union(v.literal("fan"), v.literal("musician")),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
-      .unique();
-
-    if (!user) {
-      throw new Error("User not found");
-    }
+    const user = await requireAuthenticatedUser(ctx);
 
     // Web is fan-first. Keep this mutation for backward compatibility, but
     // clamp to "fan" so legacy clients cannot switch auth mode.
@@ -525,19 +508,7 @@ export const updateProfile = mutation({
     ),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
-      .unique();
-
-    if (!user) {
-      throw new Error("User not found");
-    }
+    const user = await requireAuthenticatedUser(ctx);
 
     const updates: Partial<typeof args> = {};
     if (args.name !== undefined) updates.name = args.name;
@@ -546,6 +517,91 @@ export const updateProfile = mutation({
     if (args.topGenres !== undefined) updates.topGenres = args.topGenres;
 
     await ctx.db.patch(user._id, updates);
+
+    return user._id;
+  },
+});
+
+/**
+ * Generates a short-lived Convex upload URL for user avatar uploads.
+ */
+export const generateAvatarUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    await requireAuthenticatedUser(ctx);
+    const uploadUrl = await ctx.storage.generateUploadUrl();
+    return { uploadUrl };
+  },
+});
+
+/**
+ * Commits a previously uploaded storage object as the current user's avatar.
+ * Enforces image MIME/type limits and replaces any prior avatar storage object.
+ */
+export const setAvatarFromStorage = mutation({
+  args: {
+    storageId: v.id("_storage"),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireAuthenticatedUser(ctx);
+
+    const metadata = await ctx.storage.getMetadata(args.storageId);
+    if (!metadata) {
+      throw new Error("Uploaded avatar file not found.");
+    }
+
+    const mimeType = metadata.contentType ?? "";
+    if (!IMAGE_MIME_TYPES.has(mimeType)) {
+      throw new Error("Unsupported image format. Use JPEG, PNG, or WEBP.");
+    }
+    if (metadata.size > MAX_IMAGE_SIZE_BYTES) {
+      throw new Error("Image file exceeds the 10 MB size limit.");
+    }
+
+    const avatarUrl = await ctx.storage.getUrl(args.storageId);
+    if (!avatarUrl) {
+      throw new Error("Unable to resolve avatar URL from storage.");
+    }
+
+    const previousStorageId = user.avatarStorageId;
+    await ctx.db.patch(user._id, {
+      avatar: avatarUrl,
+      avatarStorageId: args.storageId,
+    });
+
+    if (previousStorageId && previousStorageId !== args.storageId) {
+      try {
+        await ctx.storage.delete(previousStorageId);
+      } catch {
+        // Storage object may already be missing.
+      }
+    }
+
+    return user._id;
+  },
+});
+
+/**
+ * Clears the current user's avatar and deletes the linked storage object if present.
+ */
+export const clearAvatar = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const user = await requireAuthenticatedUser(ctx);
+    const previousStorageId = user.avatarStorageId;
+
+    await ctx.db.patch(user._id, {
+      avatar: undefined,
+      avatarStorageId: undefined,
+    });
+
+    if (previousStorageId) {
+      try {
+        await ctx.storage.delete(previousStorageId);
+      } catch {
+        // Storage object may already be missing.
+      }
+    }
 
     return user._id;
   },

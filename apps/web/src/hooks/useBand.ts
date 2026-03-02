@@ -43,13 +43,13 @@ export function useCurrentBand() {
   /** Basic band document for the active workspace */
   const band = useQuery(
     api.bands.getById,
-    activeBandId ? { bandId: activeBandId } : "skip"
+    activeBandId ? { bandId: activeBandId } : "skip",
   );
 
   /** Band document with aggregated statistics */
   const bandWithStats = useQuery(
     api.bands.getBandWithStats,
-    activeBandId ? { bandId: activeBandId } : "skip"
+    activeBandId ? { bandId: activeBandId } : "skip",
   );
 
   /** Mutation to create a new band */
@@ -100,7 +100,7 @@ export function useBandAnalytics(bandId: Id<"bands"> | undefined) {
   /** Analytics data including event comparison and traffic breakdown */
   const analytics = useQuery(
     api.bands.getAnalytics,
-    bandId ? { bandId } : "skip"
+    bandId ? { bandId } : "skip",
   );
 
   return {
@@ -117,20 +117,20 @@ export function useBandAnalytics(bandId: Id<"bands"> | undefined) {
 export function useBandPastShows(bandId: Id<"bands"> | undefined) {
   const events = useQuery(
     api.events.listByBand,
-    bandId ? { bandId, includesPast: true } : "skip"
+    bandId ? { bandId, includesPast: true } : "skip",
   );
 
   const pastShows = (events ?? [])
     .filter(
       (
-        event
+        event,
       ): event is typeof event & {
         dateTime: number;
       } =>
         typeof event.dateTime === "number" &&
         Number.isFinite(event.dateTime) &&
         event.dateTime < Date.now() &&
-        event.status === "confirmed"
+        event.status === "confirmed",
     )
     .sort((a, b) => b.dateTime - a.dateTime)
     .map((event) => ({

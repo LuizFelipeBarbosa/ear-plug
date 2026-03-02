@@ -1,15 +1,12 @@
 "use client";
-
 import { useState } from "react";
 import Image, { ImageProps } from "next/image";
 import { cn } from "@/lib/utils";
-
 interface OptimizedImageProps extends Omit<ImageProps, "onLoadingComplete"> {
   fallback?: React.ReactNode;
   showLoadingState?: boolean;
   aspectRatio?: "square" | "video" | "portrait" | "wide";
 }
-
 export function OptimizedImage({
   className,
   fallback,
@@ -20,44 +17,43 @@ export function OptimizedImage({
 }: OptimizedImageProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
-
-  const aspectRatioClass = aspectRatio ? {
-    square: "aspect-square",
-    video: "aspect-video",
-    portrait: "aspect-[3/4]",
-    wide: "aspect-[16/9]",
-  }[aspectRatio] || "" : "";
-
+  const aspectRatioClass = aspectRatio
+    ? {
+        square: "aspect-square",
+        video: "aspect-video",
+        portrait: "aspect-[3/4]",
+        wide: "aspect-[16/9]",
+      }[aspectRatio] || ""
+    : "";
   if (hasError && fallback) {
     return <>{fallback}</>;
   }
-
   return (
-    <div className={cn("relative overflow-hidden", aspectRatioClass, className)}>
-      {/* Loading skeleton */}
+    <div
+      className={cn("relative overflow-hidden", aspectRatioClass, className)}
+    >
+      {" "}
+      {/* Loading skeleton */}{" "}
       {showLoadingState && isLoading && (
-        <div className="absolute inset-0 bg-night-tertiary animate-shimmer" />
-      )}
-
+        <div className="absolute inset-0 bg-muted animate-shimmer" />
+      )}{" "}
       <Image
         {...props}
         alt={alt}
         className={cn(
           "object-cover transition-opacity duration-300",
           isLoading ? "opacity-0" : "opacity-100",
-          props.fill ? "" : "w-full h-full"
+          props.fill ? "" : "w-full h-full",
         )}
         onLoad={() => setIsLoading(false)}
         onError={() => {
           setIsLoading(false);
           setHasError(true);
         }}
-      />
+      />{" "}
     </div>
   );
-}
-
-// Avatar with fallback initials
+} // Avatar with fallback initials
 interface AvatarImageProps {
   src?: string | null;
   alt: string;
@@ -65,7 +61,6 @@ interface AvatarImageProps {
   fallbackText?: string;
   className?: string;
 }
-
 export function AvatarImage({
   src,
   alt,
@@ -75,7 +70,6 @@ export function AvatarImage({
 }: AvatarImageProps) {
   const [hasError, setHasError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-
   const initials = fallbackText
     ? fallbackText
         .split(" ")
@@ -84,26 +78,27 @@ export function AvatarImage({
         .toUpperCase()
         .slice(0, 2)
     : alt.charAt(0).toUpperCase();
-
   const showFallback = !src || hasError;
-
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-full bg-gradient-to-br from-primary-400 to-accent-400",
-        className
+        "relative overflow-hidden rounded-full bg-muted",
+        className,
       )}
       style={{ width: size, height: size }}
     >
+      {" "}
       {showFallback ? (
-        <div className="w-full h-full flex items-center justify-center text-white font-bold">
-          <span style={{ fontSize: size * 0.4 }}>{initials}</span>
+        <div className="w-full h-full flex items-center justify-center text-foreground font-bold">
+          {" "}
+          <span style={{ fontSize: size * 0.4 }}>{initials}</span>{" "}
         </div>
       ) : (
         <>
+          {" "}
           {isLoading && (
-            <div className="absolute inset-0 bg-night-tertiary animate-shimmer" />
-          )}
+            <div className="absolute inset-0 bg-muted animate-shimmer" />
+          )}{" "}
           <Image
             src={src}
             alt={alt}
@@ -111,28 +106,25 @@ export function AvatarImage({
             height={size}
             className={cn(
               "object-cover w-full h-full transition-opacity duration-300",
-              isLoading ? "opacity-0" : "opacity-100"
+              isLoading ? "opacity-0" : "opacity-100",
             )}
             onLoad={() => setIsLoading(false)}
             onError={() => {
               setIsLoading(false);
               setHasError(true);
             }}
-          />
+          />{" "}
         </>
-      )}
+      )}{" "}
     </div>
   );
-}
-
-// Event image with gradient fallback
+} // Event image with gradient fallback
 interface EventImageProps {
   src?: string | null;
   alt: string;
   className?: string;
   priority?: boolean;
 }
-
 export function EventImage({
   src,
   alt,
@@ -141,20 +133,18 @@ export function EventImage({
 }: EventImageProps) {
   const [hasError, setHasError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-
   return (
     <div className={cn("relative overflow-hidden", className)}>
-      {/* Fallback gradient */}
+      {" "}
+      {/* Fallback gradient */}{" "}
       {(!src || hasError) && (
-        <div className="absolute inset-0 bg-gradient-to-br from-violet/30 to-lime/30" />
-      )}
-
-      {/* Loading state */}
+        <div className="absolute inset-0 bg-gradient-to-br from-zinc-200 to-zinc-400 dark:from-zinc-700 dark:to-zinc-500" />
+      )}{" "}
+      {/* Loading state */}{" "}
       {src && !hasError && isLoading && (
-        <div className="absolute inset-0 bg-night-tertiary animate-shimmer" />
-      )}
-
-      {/* Actual image */}
+        <div className="absolute inset-0 bg-muted animate-shimmer" />
+      )}{" "}
+      {/* Actual image */}{" "}
       {src && !hasError && (
         <Image
           src={src}
@@ -163,7 +153,7 @@ export function EventImage({
           priority={priority}
           className={cn(
             "object-cover transition-opacity duration-300",
-            isLoading ? "opacity-0" : "opacity-100"
+            isLoading ? "opacity-0" : "opacity-100",
           )}
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           onLoad={() => setIsLoading(false)}
@@ -172,7 +162,7 @@ export function EventImage({
             setHasError(true);
           }}
         />
-      )}
+      )}{" "}
     </div>
   );
 }

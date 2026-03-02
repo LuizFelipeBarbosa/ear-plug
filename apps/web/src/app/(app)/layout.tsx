@@ -55,14 +55,22 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
 
     createUser();
-  }, [isLoaded, isSignedIn, clerkUser, isLoading, user, isCreatingUser, upsertUser]);
+  }, [
+    isLoaded,
+    isSignedIn,
+    clerkUser,
+    isLoading,
+    user,
+    isCreatingUser,
+    upsertUser,
+  ]);
 
   // Show loading state while auth loads, Convex loads, or user is being created
   if (!isLoaded || isLoading || isCreatingUser) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-night">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-pulse">
-          <div className="w-12 h-12 bg-lime animate-pulse-lime" />
+          <div className="w-12 h-12 bg-fan animate-pulse-fan" />
         </div>
       </div>
     );
@@ -76,9 +84,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   // Still waiting for user to be created (query hasn't returned yet)
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-night">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-pulse">
-          <div className="w-12 h-12 bg-lime animate-pulse-lime" />
+          <div className="w-12 h-12 bg-fan animate-pulse-fan" />
         </div>
       </div>
     );
@@ -86,7 +94,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <ProfileContextProvider>
-      <div className="min-h-screen bg-night">
+      <div className="min-h-screen bg-background">
         {children}
         {/* Reserve vertical space for fixed bottom navigation */}
         <div aria-hidden className="h-16 safe-area-inset-bottom" />

@@ -181,7 +181,7 @@ export function useGeolocation(options: GeolocationOptions = {}) {
         enableHighAccuracy: mergedOptions.enableHighAccuracy,
         timeout: mergedOptions.timeout,
         maximumAge: mergedOptions.maximumAge,
-      }
+      },
     );
 
     return () => {
@@ -224,7 +224,7 @@ export function useGeolocation(options: GeolocationOptions = {}) {
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
       return R * c;
     },
-    [state.latitude, state.longitude]
+    [state.latitude, state.longitude],
   );
 
   return {

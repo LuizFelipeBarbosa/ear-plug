@@ -1,5 +1,4 @@
 "use client";
-
 import Link from "next/link";
 import { Heart, Check } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
@@ -7,9 +6,9 @@ import { api } from "../../../../../convex/_generated/api";
 import { EventImage } from "@/components/ui/OptimizedImage";
 import { formatEventDate, formatEventTime } from "@ear-plug/shared/constants";
 import { cn } from "@/lib/utils";
+import type { RoleTone } from "@/lib/ui/roleTone";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { useProfileContext } from "@/hooks/useProfileContext";
-
 interface EventCardProps {
   event: {
     _id: Id<"events">;
@@ -25,244 +24,175 @@ interface EventCardProps {
     attendedAt?: number;
   };
   variant?: "default" | "compact";
+  density?: "comfortable" | "dense";
+  tone?: RoleTone;
   showLikeButton?: boolean;
   showAttendanceStatus?: boolean;
 }
-
 export function EventCard({
   event,
   variant = "default",
+  density = "comfortable",
+  tone,
   showLikeButton = true,
   showAttendanceStatus = false,
 }: EventCardProps) {
   const { mode } = useProfileContext();
+  const resolvedTone: RoleTone = tone ?? (mode === "personal" ? "fan" : "band");
   const allowFanActions = mode === "personal";
   const eventStatus = useQuery(
     api.events.getUserEventStatus,
-    allowFanActions ? { eventId: event._id } : "skip"
+    allowFanActions ? { eventId: event._id } : "skip",
   );
   const toggleLike = useMutation(api.events.toggleLike);
   const rsvp = useMutation(api.events.rsvp);
-
   const handleLikeClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     await toggleLike({ eventId: event._id });
   };
-
   const handleRsvpClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     await rsvp({ eventId: event._id });
   };
-
-  const isLiked = allowFanActions ? eventStatus?.hasLiked ?? false : false;
-  const hasRsvp = allowFanActions ? eventStatus?.hasRsvp ?? false : false;
+  const isLiked = allowFanActions ? (eventStatus?.hasLiked ?? false) : false;
+  const hasRsvp = allowFanActions ? (eventStatus?.hasRsvp ?? false) : false;
   const displayTitle = event.title?.trim() || "Untitled Gig";
-  const eventDateTime = typeof event.dateTime === "number" ? event.dateTime : null;
-  const displayDate = eventDateTime !== null ? formatEventDate(eventDateTime) : "Date TBD";
-  const displayTime = eventDateTime !== null ? formatEventTime(eventDateTime) : "Time TBD";
+  const eventDateTime =
+    typeof event.dateTime === "number" ? event.dateTime : null;
+  const displayDate =
+    eventDateTime !== null ? formatEventDate(eventDateTime) : "Date TBD";
+  const displayTime =
+    eventDateTime !== null ? formatEventTime(eventDateTime) : "Time TBD";
   const isPast = eventDateTime !== null ? eventDateTime < Date.now() : false;
-
-  if (variant === "compact") {
-    return (
-      <Link href={`/gig/${event._id}`} className="block group">
-        <div className={cn(
-          "flex items-center gap-3 p-3 bg-night-tertiary/80 backdrop-blur-sm border border-zinc-800 hover:border-lime/50 transition-all duration-200",
-          isPast && "opacity-75"
-        )}>
-          {/* Event Image */}
-          <EventImage
-            src={event.image}
-            alt={displayTitle}
-            className="w-16 h-16 flex-shrink-0"
-          />
-
-          {/* Event Info */}
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-white truncate group-hover:text-lime transition-colors">
-              {displayTitle}
-            </h3>
-            {event.venue ? (
-              <div className="relative mt-0.5 overflow-hidden rounded-sm">
-                <p
-                  className={cn(
-                    "text-sm truncate transition-all duration-200",
-                    event.isVenueAddressHidden
-                      ? "text-zinc-500 blur-sm opacity-20 select-none"
-                      : "text-zinc-400"
-                  )}
-                >
-                  {event.venue.name}
-                </p>
-                {event.isVenueAddressHidden && (
-                  <div className="absolute inset-0 flex items-center bg-night/80 backdrop-blur-sm px-2">
-                    <p className="w-full truncate text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-200">
-                      RSVP to reveal location
-                    </p>
-                  </div>
-                )}
-              </div>
-            ) : null}
-            <p className={cn(
-              "text-xs font-medium mt-1 uppercase tracking-wide",
-              isPast ? "text-zinc-500" : "text-lime"
-            )}>
-              {displayDate} • {displayTime}
-            </p>
-            {showAttendanceStatus && (
-              <span
-                className={cn(
-                  "inline-flex mt-2 px-2 py-1 text-[10px] font-bold uppercase tracking-wider border",
-                  event.attendanceStatus === "attended"
-                    ? "border-lime/50 text-lime bg-lime/10"
-                    : "border-zinc-700 text-zinc-400 bg-night-secondary"
-                )}
-              >
-                {event.attendanceStatus === "attended" ? "Attended" : "No check-in"}
-              </span>
-            )}
-          </div>
-
-          {/* RSVP & Like Buttons */}
-          <div className="flex items-center gap-1">
-            {isPast || !allowFanActions ? (
-              <span className="px-3 py-1.5 text-xs font-bold uppercase tracking-wider bg-zinc-800 text-zinc-400 border border-zinc-700">
-                {isPast ? "Completed" : "View only"}
-              </span>
-            ) : (
-              <button
-                onClick={handleRsvpClick}
-                className={cn(
-                  "p-2 flex items-center justify-center transition-colors touch-target",
-                  hasRsvp
-                    ? "bg-lime text-night"
-                    : "hover:bg-zinc-800 text-zinc-500"
-                )}
-                title={hasRsvp ? "Cancel RSVP" : "RSVP to event"}
-              >
-                <Check className={cn("w-5 h-5", hasRsvp && "stroke-[3]")} />
-              </button>
-            )}
-            {showLikeButton && !isPast && allowFanActions && (
-              <button
-                onClick={handleLikeClick}
-                className="p-2 flex items-center justify-center hover:bg-zinc-800 transition-colors touch-target"
-              >
-                <Heart
-                  className={cn(
-                    "w-5 h-5 transition-colors",
-                    isLiked
-                      ? "fill-lime text-lime"
-                      : "text-zinc-500"
-                  )}
-                />
-              </button>
-            )}
-          </div>
-        </div>
-      </Link>
-    );
-  }
-
-  // Default horizontal layout (matches screenshot design)
+  const accentTextClass = resolvedTone === "fan" ? "text-fan" : "text-band";
+  const compact = variant === "compact";
+  const paddingClass = compact
+    ? density === "dense"
+      ? "p-2.5"
+      : "p-3"
+    : "p-4";
+  const imageSizeClass = compact ? "w-16 h-16" : "w-20 h-20";
   return (
     <Link href={`/gig/${event._id}`} className="block group">
-      <div className={cn(
-        "flex items-center gap-4 p-4 bg-night-tertiary/80 backdrop-blur-sm border border-zinc-800 rounded-xl hover:border-lime/50 transition-all duration-200",
-        isPast && "opacity-75"
-      )}>
-        {/* Event Image - Square with rounded corners */}
+      {" "}
+      <div
+        className={cn(
+          "flex items-center gap-3 rounded-lg border bg-card transition-colors",
+          paddingClass,
+          isPast
+            ? "opacity-75 border-border"
+            : resolvedTone === "fan"
+              ? "border-border hover:border-fan/40"
+              : "border-border hover:border-band/40",
+        )}
+      >
+        {" "}
         <EventImage
           src={event.image}
           alt={displayTitle}
-          className="w-20 h-20 flex-shrink-0 rounded-lg"
-        />
-
-        {/* Event Info */}
+          className={cn(imageSizeClass, "flex-shrink-0 rounded-md")}
+        />{" "}
         <div className="flex-1 min-w-0">
-          {/* Title */}
-          <h3 className="font-bold text-white truncate group-hover:text-lime transition-colors">
+          {" "}
+          <h3
+            className={cn(
+              "truncate text-sm font-medium",
+              compact ? "mb-0.5" : "mb-1",
+              "text-foreground",
+            )}
+          >
             {displayTitle}
-          </h3>
-
-          {/* Venue */}
-          {event.venue && (
+          </h3>{" "}
+          {event.venue ? (
             <div className="relative mt-0.5 overflow-hidden rounded-sm">
-              <div
+              {" "}
+              <p
                 className={cn(
-                  "transition-all duration-200",
-                  event.isVenueAddressHidden && "blur-sm opacity-20 select-none pointer-events-none"
+                  "text-xs truncate transition-all duration-200",
+                  event.isVenueAddressHidden
+                    ? "text-muted-foreground blur-[2px] opacity-30 select-none"
+                    : "text-muted-foreground",
                 )}
               >
-                <p className="text-sm text-zinc-300 truncate">
-                  {event.venue.name}
-                </p>
-                {event.venue.address && (
-                  <p
-                    className={cn(
-                      "text-sm truncate",
-                      event.isVenueAddressHidden ? "text-zinc-500 italic" : "text-zinc-500"
-                    )}
-                  >
-                    {event.isVenueAddressHidden
-                      ? "Address revealed after RSVP"
-                      : event.venue.address}
-                  </p>
-                )}
-              </div>
+                {" "}
+                {event.venue.name}{" "}
+              </p>{" "}
               {event.isVenueAddressHidden && (
-                <div className="absolute inset-0 flex items-center bg-night/80 backdrop-blur-sm px-2">
-                  <p className="w-full truncate text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-200">
-                    RSVP to reveal location
-                  </p>
+                <div className="absolute inset-0 flex items-center bg-background/80 backdrop-blur-sm px-2">
+                  {" "}
+                  <p className="w-full truncate text-[10px] font-medium text-foreground">
+                    {" "}
+                    RSVP to reveal location{" "}
+                  </p>{" "}
                 </div>
-              )}
+              )}{" "}
             </div>
-          )}
-
-          {/* Date */}
-          <p className={cn(
-            "text-sm mt-0.5",
-            isPast ? "text-zinc-500" : "text-zinc-400"
-          )}>
-            {displayDate}
-          </p>
+          ) : null}{" "}
+          <p
+            className={cn(
+              "text-xs mt-1",
+              isPast ? "text-muted-foreground" : accentTextClass,
+            )}
+          >
+            {" "}
+            {displayDate} • {displayTime}{" "}
+          </p>{" "}
           {showAttendanceStatus && (
             <span
               className={cn(
-                "inline-flex mt-2 px-2 py-1 text-[10px] font-bold uppercase tracking-wider border",
+                "inline-flex mt-2 rounded-md px-2 py-1 text-[10px] font-medium border",
                 event.attendanceStatus === "attended"
-                  ? "border-lime/50 text-lime bg-lime/10"
-                  : "border-zinc-700 text-zinc-400 bg-night-secondary"
+                  ? "border-success/40 text-success bg-success/10"
+                  : "border-border text-muted-foreground bg-muted",
               )}
             >
-              {event.attendanceStatus === "attended" ? "Attended" : "No check-in"}
+              {" "}
+              {event.attendanceStatus === "attended"
+                ? "Attended"
+                : "No check-in"}{" "}
             </span>
-          )}
-        </div>
-
-        {/* Completed badge or Like Button */}
-        {isPast || !allowFanActions ? (
-          <span className="px-3 py-1.5 text-xs font-bold uppercase tracking-wider bg-zinc-800 text-zinc-400 border border-zinc-700 flex-shrink-0">
-            {isPast ? "Completed" : "View only"}
-          </span>
-        ) : showLikeButton ? (
-          <button
-            onClick={handleLikeClick}
-            className="p-2 flex items-center justify-center hover:bg-zinc-800/50 rounded-full transition-colors touch-target flex-shrink-0"
-          >
-            <Heart
+          )}{" "}
+        </div>{" "}
+        <div className="flex items-center gap-1">
+          {" "}
+          {isPast || !allowFanActions ? (
+            <span className="px-2.5 py-1 text-[10px] font-medium rounded-md bg-muted text-muted-foreground border border-border">
+              {" "}
+              {isPast ? "Completed" : "View only"}{" "}
+            </span>
+          ) : (
+            <button
+              onClick={handleRsvpClick}
               className={cn(
-                "w-6 h-6 transition-colors",
-                isLiked
-                  ? "fill-lime text-lime"
-                  : "text-zinc-500 hover:text-zinc-300"
+                "flex items-center justify-center p-2 rounded-md border transition-colors touch-target",
+                hasRsvp
+                  ? "bg-success border-success text-white"
+                  : cn("bg-transparent border-border", accentTextClass),
               )}
-            />
-          </button>
-        ) : null}
-      </div>
+              title={hasRsvp ? "Cancel RSVP" : "RSVP to event"}
+            >
+              <Check className={cn("w-4 h-4", hasRsvp && "stroke-[3]")} />
+            </button>
+          )}{" "}
+          {showLikeButton && !isPast && allowFanActions && (
+            <button
+              onClick={handleLikeClick}
+              className="flex items-center justify-center p-2 rounded-md border border-border hover:border-like/50 transition-colors touch-target"
+            >
+              <Heart
+                className={cn(
+                  "w-4 h-4 transition-colors",
+                  isLiked
+                    ? "fill-like text-like"
+                    : "text-muted-foreground hover:text-like",
+                )}
+              />
+            </button>
+          )}{" "}
+        </div>{" "}
+      </div>{" "}
     </Link>
   );
 }

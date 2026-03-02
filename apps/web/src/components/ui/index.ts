@@ -1,6 +1,4 @@
-/**
- * UI components barrel export
- */
+/** * UI components barrel export */
 export { CityAutocomplete } from "./CityAutocomplete";
 export { DistanceSlider } from "./DistanceSlider";
 export { EditProfileModal } from "./EditProfileModal";

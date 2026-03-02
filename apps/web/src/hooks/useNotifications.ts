@@ -58,7 +58,10 @@ import type { Id } from "../../../../convex/_generated/dataModel";
  *   ) : null;
  * }
  */
-export function useNotifications(options?: { limit?: number; unreadOnly?: boolean }) {
+export function useNotifications(options?: {
+  limit?: number;
+  unreadOnly?: boolean;
+}) {
   /** Array of notifications with related entity data */
   const notifications = useQuery(api.notifications.list, {
     limit: options?.limit,

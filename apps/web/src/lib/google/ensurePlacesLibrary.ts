@@ -83,11 +83,9 @@ function getImportLibrary():
     return undefined;
   }
 
-  return (
-    window.google?.maps?.importLibrary as
-      | ((libraryName: string) => Promise<unknown>)
-      | undefined
-  );
+  return window.google?.maps?.importLibrary as
+    | ((libraryName: string) => Promise<unknown>)
+    | undefined;
 }
 
 function getOrCreatePlacesScript(apiKey: string): HTMLScriptElement {
@@ -98,7 +96,7 @@ function getOrCreatePlacesScript(apiKey: string): HTMLScriptElement {
   }
 
   const existingGoogleMapsScript = document.querySelector(
-    'script[src*="maps.googleapis.com/maps/api/js"]'
+    'script[src*="maps.googleapis.com/maps/api/js"]',
   );
   if (existingGoogleMapsScript instanceof HTMLScriptElement) {
     return existingGoogleMapsScript;
@@ -121,7 +119,7 @@ function getOrCreatePlacesScript(apiKey: string): HTMLScriptElement {
 
 function waitForPlacesOrTimeout(
   timeoutMs: number,
-  script: HTMLScriptElement
+  script: HTMLScriptElement,
 ): Promise<"ready" | "error" | "timeout"> {
   if (hasPlacesLibrary()) {
     return Promise.resolve("ready");
@@ -154,7 +152,7 @@ function waitForPlacesOrTimeout(
 }
 
 export async function ensurePlacesLibrary(
-  options: EnsurePlacesLibraryOptions = {}
+  options: EnsurePlacesLibraryOptions = {},
 ): Promise<EnsurePlacesLibraryResult> {
   if (typeof window === "undefined") {
     return {

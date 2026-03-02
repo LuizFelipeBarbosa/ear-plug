@@ -1,9 +1,8 @@
 "use client";
-
 import { useState } from "react";
 import { MapPin, Navigation } from "lucide-react";
 import { cn } from "@/lib/utils";
-
+import type { RoleTone } from "@/lib/ui/roleTone";
 interface DistanceSliderProps {
   value: number;
   onChange: (value: number) => void;
@@ -14,10 +13,9 @@ interface DistanceSliderProps {
   hasLocation?: boolean;
   onRequestLocation?: () => void;
   loading?: boolean;
+  tone?: RoleTone;
 }
-
 const DISTANCE_PRESETS = [5, 10, 25, 50];
-
 export function DistanceSlider({
   value,
   onChange,
@@ -28,57 +26,68 @@ export function DistanceSlider({
   hasLocation = false,
   onRequestLocation,
   loading = false,
+  tone = "fan",
 }: DistanceSliderProps) {
   const [isDragging, setIsDragging] = useState(false);
-
+  const accent = tone === "fan" ? "#2563eb" : "#7c3aed";
+  const accentClass =
+    tone === "fan" ? "bg-fan border-fan" : "bg-band border-band";
   if (!hasLocation) {
     return (
       <div className="space-y-3">
+        {" "}
         <div className="flex items-center justify-between">
-          <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+          {" "}
+          <span className="text-xs font-medium text-muted-foreground">
             Distance Filter
-          </span>
-        </div>
+          </span>{" "}
+        </div>{" "}
         <button
           onClick={onRequestLocation}
           disabled={loading}
           className={cn(
-            "w-full flex items-center justify-center gap-2 py-3 px-4",
-            "bg-night-tertiary border-2 border-lime/30 text-lime",
-            "hover:bg-lime/10 transition-colors",
+            "w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-md",
+            "bg-muted border border-border text-foreground",
+            "hover:bg-muted/80 transition-colors",
             "disabled:opacity-50 disabled:cursor-not-allowed",
-            "font-bold uppercase text-xs tracking-wider touch-target"
+            "text-sm font-medium touch-target",
           )}
+          style={{ color: "oklch(var(--foreground))" }}
         >
+          {" "}
           {loading ? (
             <>
-              <div className="w-4 h-4 border-2 border-lime border-t-transparent animate-spin" />
-              <span>Getting location...</span>
+              {" "}
+              <div className="w-4 h-4 border-2 border-fan border-t-transparent rounded-full animate-spin" />{" "}
+              <span>Getting location...</span>{" "}
             </>
           ) : (
             <>
-              <Navigation className="w-4 h-4" />
-              <span>Enable location for distance filter</span>
+              {" "}
+              <Navigation className="w-4 h-4" />{" "}
+              <span>Enable location for distance filtering</span>{" "}
             </>
-          )}
-        </button>
+          )}{" "}
+        </button>{" "}
       </div>
     );
   }
-
+  const progress = ((value - min) / (max - min)) * 100;
   return (
     <div className="space-y-3">
+      {" "}
       <div className="flex items-center justify-between">
-        <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+        {" "}
+        <span className="text-xs font-medium text-muted-foreground">
           Distance
-        </span>
-        <span className="text-sm font-bold text-lime">
-          {value} {value === 1 ? "mile" : "miles"}
-        </span>
-      </div>
-
-      {/* Slider - Brutalist Style */}
+        </span>{" "}
+        <span className="text-sm font-medium" style={{ color: accent }}>
+          {" "}
+          {value} {value === 1 ? "mile" : "miles"}{" "}
+        </span>{" "}
+      </div>{" "}
       <div className="relative">
+        {" "}
         <input
           type="range"
           min={min}
@@ -92,51 +101,47 @@ export function DistanceSlider({
           onTouchEnd={() => setIsDragging(false)}
           disabled={disabled}
           className={cn(
-            "w-full h-2 appearance-none cursor-pointer bg-zinc-800",
+            "w-full h-2 appearance-none cursor-pointer rounded-md bg-zinc-300 dark:bg-zinc-700",
             "[&::-webkit-slider-thumb]:appearance-none",
             "[&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5",
-            "[&::-webkit-slider-thumb]:bg-lime",
-            "[&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-night",
+            "[&::-webkit-slider-thumb]:rounded-full",
+            "[&::-webkit-slider-thumb]:bg-fan",
+            "[&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white",
             "[&::-webkit-slider-thumb]:cursor-pointer",
             "[&::-webkit-slider-thumb]:transition-transform",
-            isDragging && "[&::-webkit-slider-thumb]:scale-125",
-            "[&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5",
-            "[&::-moz-range-thumb]:bg-lime",
-            "[&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-night",
-            "[&::-moz-range-thumb]:cursor-pointer",
-            "disabled:opacity-50 disabled:cursor-not-allowed"
+            isDragging && "[&::-webkit-slider-thumb]:scale-110",
+            "disabled:opacity-50 disabled:cursor-not-allowed",
           )}
           style={{
-            background: `linear-gradient(to right, #C2FF00 ${((value - min) / (max - min)) * 100}%, #27272a ${((value - min) / (max - min)) * 100}%)`,
+            background: `linear-gradient(to right, ${accent} ${progress}%, rgb(161 161 170) ${progress}%)`,
           }}
-        />
-      </div>
-
-      {/* Preset buttons */}
+        />{" "}
+      </div>{" "}
       <div className="flex gap-2">
+        {" "}
         {DISTANCE_PRESETS.map((preset) => (
           <button
             key={preset}
             onClick={() => onChange(preset)}
             disabled={disabled}
             className={cn(
-              "flex-1 py-2 px-2 text-xs font-bold uppercase tracking-wider transition-all border-2 touch-target",
+              "flex-1 py-1.5 px-2 text-xs font-medium transition-all border rounded-md touch-target",
               value === preset
-                ? "bg-lime text-night border-lime"
-                : "bg-night-tertiary border-zinc-800 text-zinc-400 hover:border-lime/30",
-              "disabled:opacity-50 disabled:cursor-not-allowed"
+                ? cn("text-foreground", accentClass)
+                : "bg-muted border-border text-muted-foreground hover:border-muted-foreground",
+              "disabled:opacity-50 disabled:cursor-not-allowed",
             )}
           >
-            {preset}mi
+            {" "}
+            {preset}mi{" "}
           </button>
-        ))}
-      </div>
-
-      {/* Location indicator */}
-      <div className="flex items-center gap-1.5 text-xs text-zinc-500">
-        <MapPin className="w-3 h-3 text-violet" />
-        <span>Showing events within {value} miles of your location</span>
-      </div>
+        ))}{" "}
+      </div>{" "}
+      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        {" "}
+        <MapPin className="w-3 h-3" />{" "}
+        <span>Showing events within {value} miles of your location</span>{" "}
+      </div>{" "}
     </div>
   );
 }

@@ -221,6 +221,8 @@ export default defineSchema({
     location: v.optional(v.string()),
     /** Avatar image URL */
     avatar: v.optional(v.string()),
+    /** Convex storage ID for avatar image (if uploaded via storage) */
+    avatarStorageId: v.optional(v.id("_storage")),
     /** Preferred music genres (up to 5) */
     topGenres: v.optional(v.array(genreValidator)),
     /** Unix timestamp when user joined */
@@ -257,6 +259,8 @@ export default defineSchema({
     location: v.string(),
     /** Profile/promo image URL */
     image: v.optional(v.string()),
+    /** Convex storage ID for band image (if uploaded via storage) */
+    imageStorageId: v.optional(v.id("_storage")),
     /** Band biography */
     bio: v.optional(v.string()),
     /** Number of members */
@@ -401,7 +405,10 @@ export default defineSchema({
     .index("by_band", ["bandId"])
     .index("by_venue", ["venueId"])
     .index("by_date", ["dateTime"])
-    .index("by_status", ["status"]),
+    .index("by_status", ["status"])
+    .index("by_status_date", ["status", "dateTime"])
+    .index("by_band_date", ["bandId", "dateTime"])
+    .index("by_venue_date", ["venueId", "dateTime"]),
 
   // ==================== EVENT CO-HOST INVITES ====================
   /**
@@ -433,6 +440,8 @@ export default defineSchema({
     .index("by_event", ["eventId"])
     .index("by_event_status", ["eventId", "status"])
     .index("by_invited_band", ["invitedBandId"])
+    .index("by_host_band", ["hostBandId"])
+    .index("by_invited_by_band", ["invitedByBandId"])
     .index("by_invited_band_status", ["invitedBandId", "status"])
     .index("by_event_invited_band", ["eventId", "invitedBandId"]),
 
@@ -532,6 +541,7 @@ export default defineSchema({
   })
     .index("by_event", ["eventId"])
     .index("by_user", ["userId"])
+    .index("by_assigned_by_band", ["assignedByBandId"])
     .index("by_event_user", ["eventId", "userId"])
     .index("by_event_status", ["eventId", "status"]),
 
@@ -769,6 +779,8 @@ export default defineSchema({
   })
     .index("by_user", ["userId"])
     .index("by_user_read", ["userId", "read"])
+    .index("by_band", ["bandId"])
+    .index("by_event", ["eventId"])
     .index("by_timestamp", ["timestamp"]),
 
   // ==================== OPEN DATES ====================

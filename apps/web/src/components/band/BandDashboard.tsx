@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Image from "next/image";
+import Link from "next/link";
+import { motion } from "framer-motion";
 import {
   Calendar,
   Users,
@@ -11,39 +13,114 @@ import {
   DollarSign,
   Music,
   ArrowUpRight,
+  Sparkles,
+  Plus,
+  MessageCircle,
+  Mail,
+  BarChart3,
+  Clock,
+  CheckCircle2,
+  HelpCircle,
+  UserPlus,
+  ArrowRight,
+  Bell,
 } from "lucide-react";
-import { useBandPastShows, useCurrentBand } from "@/hooks/useBand";
+import { useBandPastShows, useCurrentBand, useBandAnalytics } from "@/hooks/useBand";
 import { useProfileContext } from "@/hooks/useProfileContext";
+import { useBandConversations } from "@/hooks/useMessages";
 import { useSuggestedVenues, useOpenDates } from "@/hooks/useVenues";
 import { CreateBandForm } from "@/components/band/CreateBandForm";
 import { PastShowFlyerSection } from "@/components/events/PastShowFlyerSection";
-import { formatEventDate, formatPrice } from "@ear-plug/shared/constants";
+import { formatEventDate, formatPrice, formatEventTime } from "@ear-plug/shared/constants";
 import { cn } from "@/lib/utils";
+import { useQuery } from "convex/react";
+import { api } from "../../../../../convex/_generated/api";
+import type { Id } from "../../../../../convex/_generated/dataModel";
+import { panelFade } from "@/lib/motion/presets";
+
+const STATUS_COLORS = {
+  confirmed: {
+    bg: "bg-emerald-500",
+    bgLight: "bg-emerald-500/10",
+    border: "border-emerald-500/30",
+    text: "text-emerald-500",
+    textDark: "text-emerald-600",
+  },
+  tentative: {
+    bg: "bg-amber-500",
+    bgLight: "bg-amber-500/10",
+    border: "border-amber-500/30",
+    text: "text-amber-500",
+    textDark: "text-amber-600",
+  },
+};
 
 export function BandDashboard() {
   const { bandWithStats, isLoading } = useCurrentBand();
-  const { pastShows, isLoading: isPastShowsLoading } = useBandPastShows(
-    bandWithStats?._id
-  );
   const { bands } = useProfileContext();
-  const { venues: suggestedVenues, isLoading: venuesLoading } = useSuggestedVenues(
-    bandWithStats?.genres?.[0] // Use first genre for venue suggestions
-  );
-  const { openDates, isLoading: datesLoading, applyToOpenDate } = useOpenDates({
-    genre: bandWithStats?.genres?.[0], // Use first genre for open dates
-    limit: 5,
-  });
-
-  const [applyingTo, setApplyingTo] = useState<string | null>(null);
   const activeMembership = bands.find(
-    (entry) => entry.band._id === bandWithStats?._id
+    (entry) => entry.band._id === bandWithStats?._id,
   );
-  const canApplyToOpenDates =
+  const canManageShows =
     activeMembership?.membership.role === "owner" ||
     activeMembership?.membership.role === "admin";
 
+  const { pastShows, isLoading: isPastShowsLoading } = useBandPastShows(
+    bandWithStats?._id,
+  );
+
+  // Get upcoming shows for the band (from calendar tab data)
+  const upcomingEvents = useQuery(
+    api.events.listByBand,
+    bandWithStats?._id ? { bandId: bandWithStats._id, includesPast: false } : "skip",
+  );
+
+  // Get conversations data for notifications
+  const { conversations, unreadCount, pendingCohostInvites, isLoading: conversationsLoading } = 
+    useBandConversations(bandWithStats?._id);
+
+  // Get analytics data
+  const { analytics, isLoading: analyticsLoading } = useBandAnalytics(bandWithStats?._id);
+
+  // Get suggested venues
+  const { venues: suggestedVenues, isLoading: venuesLoading } = useSuggestedVenues(
+    bandWithStats?.genres?.[0],
+  );
+
+  // Get open dates
+  const { openDates, isLoading: datesLoading, applyToOpenDate } = useOpenDates({
+    genre: bandWithStats?.genres?.[0],
+    limit: 3,
+  });
+
+  const [applyingTo, setApplyingTo] = useState<string | null>(null);
+
+  // Process upcoming events
+  const { confirmedShows, tentativeShows, nextShow } = useMemo(() => {
+    if (!upcomingEvents) {
+      return { confirmedShows: [], tentativeShows: [], nextShow: null };
+    }
+
+    const scheduled = upcomingEvents.filter((e) => typeof e.dateTime === "number");
+    const confirmed = scheduled.filter((e) => e.status === "confirmed");
+    const tentative = scheduled.filter((e) => e.status === "hold");
+
+    // Sort by date
+    confirmed.sort((a, b) => (a.dateTime as number) - (b.dateTime as number));
+    tentative.sort((a, b) => (a.dateTime as number) - (b.dateTime as number));
+
+    // Next show is the earliest confirmed or tentative
+    const next = confirmed[0] || tentative[0] || null;
+
+    return {
+      confirmedShows: confirmed.slice(0, 3),
+      tentativeShows: tentative.slice(0, 2),
+      nextShow: next,
+    };
+  }, [upcomingEvents]);
+
   const handleApply = async (openDateId: string) => {
-    if (!bandWithStats || !canApplyToOpenDates) return;
+    if (!bandWithStats || !canManageShows) return;
 
     setApplyingTo(openDateId);
     try {
@@ -58,162 +135,530 @@ export function BandDashboard() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen p-4 bg-night">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-night-tertiary w-1/2" />
-          <div className="grid grid-cols-3 gap-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-24 bg-night-tertiary border-2 border-zinc-800" />
-            ))}
-          </div>
-        </div>
-      </div>
-    );
+  const isPageLoading = 
+    isLoading || 
+    conversationsLoading || 
+    analyticsLoading;
+
+  if (isPageLoading) {
+    return <DashboardSkeleton />;
   }
 
   if (!bandWithStats) {
     return <CreateBandPrompt />;
   }
 
+  const hasNotifications = unreadCount > 0 || pendingCohostInvites.length > 0;
+  const totalNotifications = unreadCount + pendingCohostInvites.length;
+
   return (
-    <div className="min-h-screen pb-6 bg-night">
-      {/* Header - Dark with Gradient Accent */}
-      <header className="relative bg-night-secondary border-b-2 border-lime/20 p-6 overflow-hidden">
-        {/* Subtle gradient accent */}
-        <div className="absolute top-0 right-0 w-64 h-64 bg-violet/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-        
-        <div className="relative">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="w-16 h-16 overflow-hidden bg-night-tertiary border-2 border-lime/30">
-              {bandWithStats.image ? (
-                <Image
-                  src={bandWithStats.image}
-                  alt={bandWithStats.name}
-                  width={64}
-                  height={64}
-                  className="object-cover"
-                />
-              ) : (
-                <div className="w-full h-full bg-gradient-to-br from-violet/30 to-lime/30 flex items-center justify-center">
-                  <Music className="w-8 h-8 text-lime" />
+    <div className="min-h-screen pb-24 bg-background">
+      {/* Header Background */}
+      <div className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-band/10 via-band/5 to-transparent h-64" />
+        <div className="absolute top-0 right-0 w-96 h-96 bg-band/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
+        <div className="absolute top-0 left-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl -translate-y-1/2 -translate-x-1/3" />
+      </div>
+
+      {/* Main Content */}
+      <motion.main
+        variants={panelFade}
+        initial="hidden"
+        animate="visible"
+        className="relative px-4 -mt-56"
+      >
+        {/* Band Header Card */}
+        <motion.div
+          variants={panelFade}
+          className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm"
+        >
+          <div className="p-5">
+            <div className="flex items-start gap-4">
+              {/* Band Image */}
+              <div className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-gradient-to-br from-band/20 to-fan/20 border border-band/20">
+                {bandWithStats.image ? (
+                  <Image
+                    src={bandWithStats.image}
+                    alt={bandWithStats.name}
+                    width={64}
+                    height={64}
+                    className="object-cover w-full h-full"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <Music className="w-8 h-8 text-band/50" />
+                  </div>
+                )}
+              </div>
+
+              {/* Band Info */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <h1 className="text-xl font-bold text-foreground truncate">
+                      {bandWithStats.name}
+                    </h1>
+                    <p className="text-sm text-muted-foreground mt-0.5">
+                      {bandWithStats.genres
+                        ?.map((g) => g.charAt(0).toUpperCase() + g.slice(1))
+                        .join(" • ") || "No genre"}
+                      {bandWithStats.location && ` • ${bandWithStats.location}`}
+                    </p>
+                  </div>
+
+                  {/* Role Badge */}
+                  <span className={cn(
+                    "text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full flex-shrink-0",
+                    activeMembership?.membership.role === "owner"
+                      ? "bg-band/10 text-band border border-band/20"
+                      : "bg-muted text-muted-foreground border border-border"
+                  )}>
+                    {activeMembership?.membership.role}
+                  </span>
                 </div>
+
+                {/* Quick Stats Row */}
+                <div className="flex items-center gap-4 mt-4">
+                  <div className="flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
+                    <span className="text-sm font-medium text-foreground">
+                      {bandWithStats.stats.showsThisMonth}
+                    </span>
+                    <span className="text-xs text-muted-foreground">shows</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Users className="w-3.5 h-3.5 text-muted-foreground" />
+                    <span className="text-sm font-medium text-foreground">
+                      {bandWithStats.stats.totalRsvps}
+                    </span>
+                    <span className="text-xs text-muted-foreground">RSVPs</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <TrendingUp className="w-3.5 h-3.5 text-muted-foreground" />
+                    <span className="text-sm font-medium text-foreground">
+                      +{bandWithStats.stats.newFans}
+                    </span>
+                    <span className="text-xs text-muted-foreground">fans</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Action Bar */}
+          <div className="border-t border-border/50 px-5 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {hasNotifications && (
+                <Link
+                  href="/messages"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-band/10 text-band text-xs font-medium rounded-lg hover:bg-band/20 transition-colors"
+                >
+                  <Bell className="w-3.5 h-3.5" />
+                  {totalNotifications} new
+                </Link>
+              )}
+              {confirmedShows.length > 0 && (
+                <span className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 text-emerald-600 text-xs font-medium rounded-lg">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  {confirmedShows.length} confirmed
+                </span>
               )}
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-white uppercase tracking-tight">
-                {bandWithStats.name}
-              </h1>
-              <p className="text-zinc-400 text-sm">
-                {bandWithStats.genres?.map((g) => g.charAt(0).toUpperCase() + g.slice(1)).join(" • ") || "No genre"} •{" "}
-                {bandWithStats.location}
-              </p>
+
+            {canManageShows && (
+              <Link
+                href="/calendar"
+                className="flex items-center gap-1.5 text-xs font-medium text-band hover:text-band/80 transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Create Gig
+              </Link>
+            )}
+          </div>
+        </motion.div>
+
+        {/* Next Show Highlight */}
+        {nextShow && (
+          <motion.div variants={panelFade} className="mt-5">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-band" />
+                <h2 className="text-sm font-semibold text-foreground">Next Up</h2>
+              </div>
+              <Link
+                href="/calendar"
+                className="text-xs text-muted-foreground hover:text-band transition-colors flex items-center gap-1"
+              >
+                View Calendar
+                <ChevronRight className="w-3.5 h-3.5" />
+              </Link>
             </div>
-          </div>
 
-          {/* Stats Grid - Clean with Violet Accents */}
-          <div className="grid grid-cols-3 gap-3">
-            <StatCard
-              icon={<Calendar className="w-5 h-5 text-lime" />}
-              value={bandWithStats.stats.showsThisMonth}
-              label="Shows This Month"
-              accent="lime"
-            />
-            <StatCard
-              icon={<Users className="w-5 h-5 text-violet" />}
-              value={bandWithStats.stats.totalRsvps}
-              label="Total RSVPs"
-              accent="violet"
-            />
-            <StatCard
-              icon={<TrendingUp className="w-5 h-5 text-lime" />}
-              value={bandWithStats.stats.newFans}
-              label="New Fans"
-              accent="lime"
-              trend="up"
-            />
-          </div>
-        </div>
-      </header>
-
-      <section className="p-4">
-        <PastShowFlyerSection
-          shows={pastShows}
-          emptyMessage="No past shows yet."
-          isLoading={isPastShowsLoading}
-        />
-      </section>
-
-      {/* Suggested Venues */}
-      <section className="p-4 mt-2">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold uppercase tracking-tight text-white">
-            Suggested Venues
-          </h2>
-          <button className="text-lime text-sm font-bold uppercase tracking-wider flex items-center gap-1 hover:underline">
-            See All <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
-
-        <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2">
-          {venuesLoading
-            ? [1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="w-48 h-32 bg-night-tertiary border-2 border-zinc-800 animate-shimmer flex-shrink-0"
-              />
-            ))
-            : suggestedVenues.map((venue) => (
-              <VenueCard key={venue._id} venue={venue} />
-            ))}
-        </div>
-      </section>
-
-      {/* Open Dates */}
-      <section className="p-4">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold uppercase tracking-tight text-white">
-            Open Dates
-          </h2>
-          <button className="text-lime text-sm font-bold uppercase tracking-wider flex items-center gap-1 hover:underline">
-            See All <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
-        {!canApplyToOpenDates && (
-          <p className="text-[11px] uppercase tracking-wider text-zinc-500 mb-3">
-            Member access: owners/admins can apply.
-          </p>
+            <NextShowCard show={nextShow} />
+          </motion.div>
         )}
 
-        <div className="space-y-3">
-          {datesLoading ? (
-            [1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="h-24 bg-night-tertiary border-2 border-zinc-800 animate-shimmer"
-              />
-            ))
-          ) : openDates.length > 0 ? (
-            openDates.map((openDate) => (
-              <OpenDateCard
-                key={openDate._id}
-                openDate={openDate}
-                onApply={() => handleApply(openDate._id)}
-                isApplying={applyingTo === openDate._id}
-                canApply={canApplyToOpenDates}
-              />
-            ))
-          ) : (
-            <div className="text-center py-8 border-2 border-dashed border-zinc-800">
-              <p className="text-zinc-500">
-                No open dates matching your genre right now
-              </p>
+        {/* Stats Overview */}
+        <motion.div variants={panelFade} className="mt-5">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-band" />
+              <h2 className="text-sm font-semibold text-foreground">Performance</h2>
             </div>
+            <Link
+              href="/analytics"
+              className="text-xs text-muted-foreground hover:text-band transition-colors flex items-center gap-1"
+            >
+              Full Analytics
+              <ChevronRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <StatCard
+              icon={<Users className="w-4 h-4" />}
+              value={analytics?.totalRsvps ?? 0}
+              label="Total RSVPs"
+              trend={analytics?.totalRsvps && analytics.totalRsvps > 10 ? "up" : undefined}
+              color="primary"
+            />
+            <StatCard
+              icon={<Calendar className="w-4 h-4" />}
+              value={analytics?.eventCount ?? bandWithStats.stats.showsThisMonth}
+              label="Total Shows"
+              color="secondary"
+            />
+            <StatCard
+              icon={<TrendingUp className="w-4 h-4" />}
+              value={Number.isFinite(analytics?.averageAttendancePerShow)
+                ? analytics!.averageAttendancePerShow.toFixed(1)
+                : "0.0"}
+              suffix=""
+              label="Avg Attendance"
+              color="accent"
+            />
+            <StatCard
+              icon={<Mail className="w-4 h-4" />}
+              value={unreadCount}
+              label="Unread Messages"
+              color="muted"
+              highlight={unreadCount > 0}
+            />
+          </div>
+        </motion.div>
+
+        {/* Upcoming Shows Preview */}
+        {(confirmedShows.length > 0 || tentativeShows.length > 0) && (
+          <motion.div variants={panelFade} className="mt-5">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-band" />
+                <h2 className="text-sm font-semibold text-foreground">Upcoming Shows</h2>
+              </div>
+              <Link
+                href="/calendar"
+                className="text-xs text-muted-foreground hover:text-band transition-colors flex items-center gap-1"
+              >
+                See All
+                <ChevronRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+
+            <div className="space-y-2">
+              {confirmedShows.slice(0, 2).map((show) => (
+                <div key={show._id}>
+                  <UpcomingShowCard show={show} status="confirmed" />
+                </div>
+              ))}
+              {tentativeShows.slice(0, 1).map((show) => (
+                <div key={show._id}>
+                  <UpcomingShowCard show={show} status="tentative" />
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
+        {/* Messages & Invites Preview */}
+        {(hasNotifications || conversations.length > 0) && (
+          <motion.div variants={panelFade} className="mt-5">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <MessageCircle className="w-4 h-4 text-band" />
+                <h2 className="text-sm font-semibold text-foreground">Messages</h2>
+              </div>
+              <Link
+                href="/messages"
+                className="text-xs text-muted-foreground hover:text-band transition-colors flex items-center gap-1"
+              >
+                View All
+                <ChevronRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+
+            <div className="space-y-2">
+              {/* Pending Invites */}
+              {pendingCohostInvites.slice(0, 1).map((invite) => (
+                <Link key={invite._id} href="/messages">
+                  <div className="bg-card border border-band/20 p-3 rounded-xl flex items-center gap-3 hover:bg-muted/50 transition-colors">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-band/20 to-fan/20 flex items-center justify-center flex-shrink-0">
+                      <UserPlus className="w-5 h-5 text-band" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">
+                        Co-host invite from {invite.hostBand?.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {invite.event?.title || "Untitled Gig"}
+                      </p>
+                    </div>
+                    <span className="w-2 h-2 rounded-full bg-band flex-shrink-0" />
+                  </div>
+                </Link>
+              ))}
+
+              {/* Recent Conversations */}
+              {conversations.slice(0, hasNotifications ? 1 : 2).map((conv) => (
+                <Link key={conv._id} href="/messages">
+                  <div className={cn(
+                    "bg-card border p-3 rounded-xl flex items-center gap-3 hover:bg-muted/50 transition-colors",
+                    conv.unreadCount > 0 ? "border-band/20" : "border-border"
+                  )}>
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-band/20 to-fan/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                      {conv.venue?.images?.[0] ? (
+                        <Image
+                          src={conv.venue.images[0]}
+                          alt={conv.venue.name}
+                          width={40}
+                          height={40}
+                          className="object-cover w-full h-full"
+                        />
+                      ) : (
+                        <MapPin className="w-4 h-4 text-band/50" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={cn(
+                        "text-sm font-medium truncate",
+                        conv.unreadCount > 0 ? "text-band" : "text-foreground"
+                      )}>
+                        {conv.venue?.name || "Unknown Venue"}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {conv.lastMessagePreview || "No messages yet"}
+                      </p>
+                    </div>
+                    {conv.unreadCount > 0 && (
+                      <span className="min-w-[20px] h-5 bg-band text-white text-[10px] font-semibold flex items-center justify-center px-1.5 rounded-full flex-shrink-0">
+                        {conv.unreadCount}
+                      </span>
+                    )}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
+        {/* Open Dates */}
+        {openDates.length > 0 && canManageShows && (
+          <motion.div variants={panelFade} className="mt-5">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <DollarSign className="w-4 h-4 text-emerald-500" />
+                <h2 className="text-sm font-semibold text-foreground">Open Dates</h2>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              {openDates.slice(0, 2).map((openDate) => (
+                <OpenDateCard
+                  key={openDate._id}
+                  openDate={openDate}
+                  onApply={() => handleApply(openDate._id)}
+                  isApplying={applyingTo === openDate._id}
+                />
+              ))}
+            </div>
+          </motion.div>
+        )}
+
+        {/* Suggested Venues */}
+        {suggestedVenues.length > 0 && (
+          <motion.div variants={panelFade} className="mt-5">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <MapPin className="w-4 h-4 text-band" />
+                <h2 className="text-sm font-semibold text-foreground">Suggested Venues</h2>
+              </div>
+            </div>
+
+            <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 -mx-4 px-4">
+              {suggestedVenues.slice(0, 4).map((venue) => (
+                <VenueCard key={venue._id} venue={venue} />
+              ))}
+            </div>
+          </motion.div>
+        )}
+
+        {/* Past Shows */}
+        {pastShows.length > 0 && (
+          <motion.div variants={panelFade} className="mt-5">
+            <PastShowFlyerSection
+              shows={pastShows}
+              emptyMessage="No past shows yet."
+              maxItems={4}
+              isLoading={isPastShowsLoading}
+              title="Recent Shows"
+            />
+          </motion.div>
+        )}
+
+        {/* Quick Actions Footer */}
+        <motion.div variants={panelFade} className="mt-6">
+          <div className="grid grid-cols-2 gap-3">
+            <QuickActionCard
+              href="/calendar"
+              icon={<Calendar className="w-5 h-5" />}
+              title="Manage Shows"
+              description="View and edit your gigs"
+              color="band"
+            />
+            <QuickActionCard
+              href="/analytics"
+              icon={<BarChart3 className="w-5 h-5" />}
+              title="View Analytics"
+              description="Track performance"
+              color="emerald"
+            />
+          </div>
+        </motion.div>
+      </motion.main>
+    </div>
+  );
+}
+
+// Sub-components
+
+function NextShowCard({ show }: { show: any }) {
+  const isConfirmed = show.status === "confirmed";
+  const colors = isConfirmed ? STATUS_COLORS.confirmed : STATUS_COLORS.tentative;
+  const displayTitle = show.title?.trim() || (isConfirmed ? "Untitled Gig" : "Untitled Tentative");
+
+  return (
+    <Link href={`/gig/${show._id}`}>
+      <div className={cn(
+        "bg-card border p-4 rounded-xl transition-colors transition-shadow hover:shadow-md",
+        colors.border
+      )}>
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-2">
+              <span className={cn(
+                "flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full",
+                colors.bgLight,
+                colors.text
+              )}>
+                {isConfirmed ? (
+                  <CheckCircle2 className="w-3 h-3" />
+                ) : (
+                  <HelpCircle className="w-3 h-3" />
+                )}
+                {isConfirmed ? "Confirmed" : "Tentative"}
+              </span>
+            </div>
+
+            <h3 className="font-semibold text-foreground truncate">
+              {displayTitle}
+            </h3>
+
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1.5">
+                <Calendar className={cn("w-3.5 h-3.5", colors.text)} />
+                {formatEventDate(show.dateTime)}
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Clock className={cn("w-3.5 h-3.5", colors.text)} />
+                {formatEventTime(show.dateTime)}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground">
+              <MapPin className={cn("w-3.5 h-3.5", colors.text)} />
+              <span className="truncate">{show.venue?.name || "Venue TBD"}</span>
+            </div>
+          </div>
+
+          <div className={cn(
+            "w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0",
+            colors.bgLight
+          )}>
+            <span className={cn("text-lg font-bold", colors.text)}>
+              {new Date(show.dateTime).getDate()}
+            </span>
+          </div>
+        </div>
+
+        {/* RSVP Progress */}
+        {show.capacity && (
+          <div className="mt-4 pt-3 border-t border-border/50">
+            <div className="flex items-center justify-between text-xs mb-1.5">
+              <span className="text-muted-foreground">
+                {show.rsvpCount || 0} / {show.capacity} RSVPs
+              </span>
+              <span className={colors.textDark}>
+                {Math.round(((show.rsvpCount || 0) / show.capacity) * 100)}%
+              </span>
+            </div>
+            <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${Math.min(((show.rsvpCount || 0) / show.capacity) * 100, 100)}%` }}
+                transition={{ duration: 0.8, delay: 0.3 }}
+                className={cn("h-full rounded-full", colors.bg)}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+    </Link>
+  );
+}
+
+function UpcomingShowCard({ show, status }: { show: any; status: "confirmed" | "tentative" }) {
+  const colors = status === "confirmed" ? STATUS_COLORS.confirmed : STATUS_COLORS.tentative;
+  const displayTitle = show.title?.trim() || (status === "confirmed" ? "Untitled Gig" : "Untitled Tentative");
+
+  return (
+    <Link href={`/gig/${show._id}`}>
+      <div className={cn(
+        "bg-card border p-3 rounded-xl flex items-center gap-3 transition-colors hover:bg-muted/50",
+        colors.border
+      )}>
+        <div className={cn(
+          "w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0",
+          colors.bgLight
+        )}>
+          {status === "confirmed" ? (
+            <CheckCircle2 className={cn("w-5 h-5", colors.text)} />
+          ) : (
+            <HelpCircle className={cn("w-5 h-5", colors.text)} />
           )}
         </div>
-      </section>
-    </div>
+
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-foreground truncate">
+            {displayTitle}
+          </p>
+          <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
+            <span>{formatEventDate(show.dateTime)}</span>
+            <span className="truncate">{show.venue?.name || "Venue TBD"}</span>
+          </div>
+        </div>
+
+        <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+      </div>
+    </Link>
   );
 }
 
@@ -221,44 +666,109 @@ function StatCard({
   icon,
   value,
   label,
-  accent = "lime",
+  suffix = "",
   trend,
+  color = "primary",
+  highlight = false,
 }: {
   icon: React.ReactNode;
-  value: number;
+  value: string | number;
   label: string;
-  accent?: "lime" | "violet";
+  suffix?: string;
   trend?: "up" | "down";
+  color?: "primary" | "secondary" | "accent" | "muted";
+  highlight?: boolean;
 }) {
+  const colorClasses = {
+    primary: "from-band/20 to-band/5 text-band",
+    secondary: "from-blue-500/20 to-blue-500/5 text-blue-500",
+    accent: "from-emerald-500/20 to-emerald-500/5 text-emerald-500",
+    muted: "from-muted to-muted/50 text-muted-foreground",
+  };
+
   return (
-    <div className="bg-night-tertiary border-2 border-zinc-800 p-3 text-center relative overflow-hidden group hover:border-lime/30 transition-colors">
-      {/* Subtle accent line */}
-      <div className={cn(
-        "absolute top-0 left-0 right-0 h-0.5",
-        accent === "lime" ? "bg-lime" : "bg-violet"
-      )} />
-      
-      <div className="flex justify-center mb-2">{icon}</div>
-      <div className="text-2xl font-bold text-white flex items-center justify-center gap-1">
-        {value}
-        {trend && (
-          <ArrowUpRight className={cn(
-            "w-4 h-4",
-            accent === "lime" ? "text-lime" : "text-violet"
-          )} />
+    <div
+      className={cn(
+        "relative bg-card border p-4 rounded-xl overflow-hidden group",
+        highlight ? "border-band/30" : "border-border"
+      )}
+    >
+      {/* Background gradient on hover */}
+      <div
+        className={cn(
+          "absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-100 transition-opacity",
+          colorClasses[color],
         )}
-      </div>
-      <div className="text-[10px] uppercase tracking-wider text-zinc-500 font-medium">
-        {label}
+      />
+
+      <div className="relative">
+        <div className="flex items-center justify-between mb-2">
+          <div
+            className={cn(
+              "w-8 h-8 rounded-lg bg-gradient-to-br flex items-center justify-center",
+              colorClasses[color],
+            )}
+          >
+            {icon}
+          </div>
+          {trend && <ArrowUpRight className="w-4 h-4 text-band" />}
+        </div>
+        <p className="text-2xl font-bold text-foreground">
+          {value}
+          {suffix && <span className="text-base text-muted-foreground ml-0.5">{suffix}</span>}
+        </p>
+        <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
       </div>
     </div>
   );
 }
 
+function QuickActionCard({
+  href,
+  icon,
+  title,
+  description,
+  color,
+}: {
+  href: string;
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  color: "band" | "emerald" | "blue";
+}) {
+  const colorClasses = {
+    band: "bg-band/10 text-band border-band/20 hover:bg-band/20",
+    emerald: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 hover:bg-emerald-500/20",
+    blue: "bg-blue-500/10 text-blue-600 border-blue-500/20 hover:bg-blue-500/20",
+  };
+
+  return (
+    <Link href={href}>
+      <div
+        className={cn(
+          "p-4 rounded-xl border transition-colors",
+          colorClasses[color]
+        )}
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-white/50 flex items-center justify-center">
+            {icon}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-foreground">{title}</p>
+            <p className="text-xs text-muted-foreground">{description}</p>
+          </div>
+          <ArrowRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+        </div>
+      </div>
+    </Link>
+  );
+}
+
 function VenueCard({ venue }: { venue: any }) {
   return (
-    <div className="w-48 flex-shrink-0 bg-night-tertiary border-2 border-zinc-800 overflow-hidden group hover:border-lime/30 transition-all">
-      <div className="h-24 relative bg-zinc-800">
+    <div className="w-36 flex-shrink-0 bg-card border border-border rounded-xl overflow-hidden hover:border-band/30 transition-colors">
+      <div className="h-20 relative bg-muted">
         {venue.images?.[0] ? (
           <Image
             src={venue.images[0]}
@@ -267,21 +777,17 @@ function VenueCard({ venue }: { venue: any }) {
             className="object-cover"
           />
         ) : (
-          <div className="w-full h-full bg-gradient-to-br from-violet/20 to-lime/20 flex items-center justify-center">
-            <MapPin className="w-8 h-8 text-zinc-600" />
+          <div className="w-full h-full bg-gradient-to-br from-muted to-card flex items-center justify-center">
+            <MapPin className="w-6 h-6 text-muted-foreground" />
           </div>
         )}
       </div>
-      <div className="p-3">
-        <h3 className="font-bold text-white truncate text-sm uppercase tracking-wide">
+      <div className="p-2.5">
+        <h3 className="font-medium text-foreground truncate text-xs">
           {venue.name}
         </h3>
-        <div className="flex items-center gap-1 text-zinc-500 text-xs mt-1">
-          <MapPin className="w-3 h-3" />
-          <span className="truncate">{venue.city}</span>
-        </div>
-        <p className="text-xs text-violet font-medium mt-1 uppercase">
-          Cap: {venue.capacity}
+        <p className="text-[10px] text-muted-foreground truncate mt-0.5">
+          {venue.city}
         </p>
       </div>
     </div>
@@ -292,47 +798,44 @@ function OpenDateCard({
   openDate,
   onApply,
   isApplying,
-  canApply,
 }: {
   openDate: any;
   onApply: () => void;
   isApplying: boolean;
-  canApply: boolean;
 }) {
   return (
-    <div className="bg-night-tertiary border-2 border-zinc-800 p-4 flex items-center justify-between group hover:border-lime/20 transition-colors">
+    <div className="bg-card border border-border p-3 rounded-xl flex items-center justify-between hover:border-emerald-500/30 transition-colors">
       <div className="flex-1 min-w-0">
-        <h3 className="font-bold text-white uppercase tracking-wide text-sm">
+        <h3 className="font-medium text-foreground text-sm truncate">
           {openDate.venue?.name || "Unknown Venue"}
         </h3>
-        <div className="flex items-center gap-4 mt-2 text-xs text-zinc-400">
+        <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
           <span className="flex items-center gap-1">
-            <Calendar className="w-3.5 h-3.5 text-lime" />
+            <Calendar className="w-3 h-3 text-emerald-500" />
             {formatEventDate(openDate.date)}
           </span>
           <span className="flex items-center gap-1">
-            <MapPin className="w-3.5 h-3.5 text-violet" />
+            <MapPin className="w-3 h-3 text-emerald-500" />
             {openDate.venue?.city || "Unknown"}
           </span>
         </div>
         {openDate.offeredPay && (
-          <div className="flex items-center gap-1 text-lime text-xs mt-2 font-medium">
-            <DollarSign className="w-3.5 h-3.5" />
-            <span>{formatPrice(openDate.offeredPay)}</span>
-          </div>
+          <p className="text-xs text-emerald-600 font-medium mt-1">
+            {formatPrice(openDate.offeredPay)}
+          </p>
         )}
       </div>
       <button
         onClick={onApply}
-        disabled={isApplying || !canApply}
+        disabled={isApplying}
         className={cn(
-          "px-5 py-2.5 font-bold uppercase text-xs tracking-wider transition-all touch-target",
-          isApplying || !canApply
-            ? "bg-zinc-800 text-zinc-500 border-2 border-zinc-800"
-            : "bg-lime text-night border-2 border-lime hover:bg-transparent hover:text-lime"
+          "px-4 py-2 text-xs font-medium rounded-lg transition-colors",
+          isApplying
+            ? "bg-muted text-muted-foreground"
+            : "bg-emerald-500 text-white hover:bg-emerald-600"
         )}
       >
-        {isApplying ? "Applying..." : canApply ? "Apply" : "Read only"}
+        {isApplying ? "..." : "Apply"}
       </button>
     </div>
   );
@@ -346,35 +849,88 @@ function CreateBandPrompt() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-night relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center p-6 bg-background relative overflow-hidden">
       {/* Background accent */}
-      <div className="absolute top-0 left-0 w-96 h-96 bg-violet/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
-      <div className="absolute bottom-0 right-0 w-96 h-96 bg-lime/5 rounded-full blur-3xl translate-x-1/2 translate-y-1/2" />
-      
-      <div className="text-center max-w-md relative z-10">
-        {/* Icon with glow effect */}
-        <div className="w-24 h-24 border-2 border-lime flex items-center justify-center mx-auto mb-6 relative">
-          <div className="absolute inset-0 bg-lime/5 animate-pulse-lime" />
-          <Music className="w-12 h-12 text-lime relative z-10" />
+      <div className="absolute top-0 left-0 w-96 h-96 bg-band/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
+      <div className="absolute bottom-0 right-0 w-96 h-96 bg-band/5 rounded-full blur-3xl translate-x-1/2 translate-y-1/2" />
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="text-center max-w-md relative z-10"
+      >
+        {/* Icon */}
+        <div className="w-24 h-24 border border-band flex items-center justify-center mx-auto mb-6 relative rounded-xl">
+          <div className="absolute inset-0 bg-band/5 animate-pulse rounded-xl" />
+          <Music className="w-12 h-12 text-band relative z-10" />
         </div>
-        
-        <h2 className="text-3xl font-bold text-white uppercase tracking-tight mb-3">
+
+        <h2 className="text-2xl font-semibold text-foreground mb-3">
           Create Your Band Profile
         </h2>
-        <p className="text-zinc-400 mb-8 text-sm leading-relaxed">
-          Set up your band to start finding gigs, managing shows, and growing your fanbase.
+        <p className="text-muted-foreground mb-8 text-sm leading-relaxed">
+          Set up your band to start finding gigs, managing shows, and growing
+          your fanbase.
         </p>
-        
+
         <button
           onClick={() => setShowForm(true)}
-          className="inline-block px-10 py-4 bg-lime text-night font-bold uppercase tracking-wider text-sm border-2 border-lime hover:bg-transparent hover:text-lime transition-all shadow-brutal hover:shadow-none hover:translate-x-1 hover:translate-y-1"
+          className="inline-block px-10 py-4 bg-band text-foreground font-medium text-sm border border-band hover:bg-transparent hover:text-band transition-colors rounded-xl"
         >
           Get Started
         </button>
-        
-        <p className="mt-8 text-zinc-600 text-xs uppercase tracking-widest">
+
+        <p className="mt-8 text-muted-foreground text-xs">
           Takes less than 2 minutes
         </p>
+      </motion.div>
+    </div>
+  );
+}
+
+function DashboardSkeleton() {
+  return (
+    <div className="min-h-screen pb-24 bg-background">
+      <div className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-band/10 via-band/5 to-transparent h-64" />
+      </div>
+
+      <div className="relative px-4 -mt-56 space-y-5">
+        {/* Header Skeleton */}
+        <div className="bg-card border border-border rounded-2xl p-5 animate-shimmer">
+          <div className="flex items-start gap-4">
+            <div className="w-16 h-16 rounded-xl bg-muted" />
+            <div className="flex-1 space-y-2">
+              <div className="h-6 w-32 bg-muted rounded" />
+              <div className="h-4 w-48 bg-muted rounded" />
+              <div className="flex gap-4 mt-4">
+                <div className="h-4 w-16 bg-muted rounded" />
+                <div className="h-4 w-16 bg-muted rounded" />
+                <div className="h-4 w-16 bg-muted rounded" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Stats Skeleton */}
+        <div className="grid grid-cols-2 gap-3">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="bg-card border border-border p-4 rounded-xl animate-shimmer">
+              <div className="w-8 h-8 bg-muted rounded-lg mb-2" />
+              <div className="h-6 w-12 bg-muted rounded" />
+              <div className="h-3 w-20 bg-muted rounded mt-1" />
+            </div>
+          ))}
+        </div>
+
+        {/* Section Skeleton */}
+        <div className="bg-card border border-border rounded-2xl p-4 animate-shimmer">
+          <div className="h-5 w-32 bg-muted rounded mb-3" />
+          <div className="space-y-2">
+            <div className="h-16 bg-muted rounded-lg" />
+            <div className="h-16 bg-muted rounded-lg" />
+          </div>
+        </div>
       </div>
     </div>
   );

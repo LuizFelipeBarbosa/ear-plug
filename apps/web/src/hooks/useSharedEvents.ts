@@ -10,10 +10,18 @@ import { useCallback } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
-import type { VenueLocationData, CreateEventInput, UpdateEventInput } from "@/types";
+import type {
+  VenueLocationData,
+  CreateEventInput,
+  UpdateEventInput,
+} from "@/types";
 
 // Re-export types for backwards compatibility
-export type { VenueLocationData, CreateEventInput, UpdateEventInput } from "@/types";
+export type {
+  VenueLocationData,
+  CreateEventInput,
+  UpdateEventInput,
+} from "@/types";
 
 /**
  * Hook for creating events that are stored in the Convex database.
@@ -84,7 +92,7 @@ export function useSharedEvents() {
    */
   const createEvent = useCallback(
     async (
-      input: CreateEventInput
+      input: CreateEventInput,
     ): Promise<{ eventId: Id<"events">; venueId?: Id<"venues"> }> => {
       if (!input.date && input.startTime) {
         throw new Error("Pick a date before setting a start time.");
@@ -123,7 +131,7 @@ export function useSharedEvents() {
 
       return result;
     },
-    [createEventWithVenue]
+    [createEventWithVenue],
   );
 
   /**
@@ -135,7 +143,7 @@ export function useSharedEvents() {
    */
   const updateEvent = useCallback(
     async (
-      input: UpdateEventInput
+      input: UpdateEventInput,
     ): Promise<{ eventId: Id<"events">; venueId?: Id<"venues"> }> => {
       if (!input.date && input.startTime) {
         throw new Error("Pick a date before setting a start time.");
@@ -165,7 +173,7 @@ export function useSharedEvents() {
 
       if (input.date) {
         mutationArgs.dateTime = new Date(
-          `${input.date}T${input.startTime || "00:00"}`
+          `${input.date}T${input.startTime || "00:00"}`,
         ).getTime();
       }
 
@@ -173,7 +181,8 @@ export function useSharedEvents() {
       if (input.image !== undefined) mutationArgs.image = input.image;
       if (input.capacity !== undefined) mutationArgs.capacity = input.capacity;
       if (input.price !== undefined) mutationArgs.price = input.price;
-      if (input.description !== undefined) mutationArgs.description = input.description;
+      if (input.description !== undefined)
+        mutationArgs.description = input.description;
       if (input.genres !== undefined) mutationArgs.genres = input.genres;
       if (input.status !== undefined) mutationArgs.status = input.status;
       if (input.addressVisibility !== undefined) {
@@ -190,7 +199,7 @@ export function useSharedEvents() {
 
       return await updateEventWithVenue(mutationArgs);
     },
-    [updateEventWithVenue]
+    [updateEventWithVenue],
   );
 
   /**
@@ -201,14 +210,14 @@ export function useSharedEvents() {
   const deleteEvent = useCallback(
     async (
       eventId: string,
-      actingBandId: string
+      actingBandId: string,
     ): Promise<{ eventId: Id<"events"> }> => {
       return await deleteTentativeEvent({
         eventId: eventId as Id<"events">,
         actingBandId: actingBandId as Id<"bands">,
       });
     },
-    [deleteTentativeEvent]
+    [deleteTentativeEvent],
   );
 
   /**
@@ -230,7 +239,7 @@ export function useSharedEvents() {
   const createVenueFromPlace = useCallback(
     async (
       bandId: Id<"bands">,
-      venueData: VenueLocationData
+      venueData: VenueLocationData,
     ): Promise<Id<"venues">> => {
       const venueId = await createVenue({
         bandId,
@@ -244,7 +253,7 @@ export function useSharedEvents() {
 
       return venueId;
     },
-    [createVenue]
+    [createVenue],
   );
 
   return {
@@ -300,7 +309,7 @@ export function useBandEvents(bandId: string | undefined) {
       if (!bandId) throw new Error("Band ID is required");
       return createEvent({ ...input, bandId });
     },
-    [bandId, createEvent]
+    [bandId, createEvent],
   );
 
   return {

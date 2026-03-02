@@ -1,23 +1,14 @@
 import type { Metadata, Viewport } from "next";
-import { Oswald, Inter } from "next/font/google";
+import { Source_Serif_4 } from "next/font/google";
+import { GeistSans } from "geist/font/sans";
 import "./globals.css";
 import { Providers } from "./providers";
-
-// Oswald - Bold Condensed for headers (Street Poster Aesthetic)
-const oswald = Oswald({
+const sourceSerif = Source_Serif_4({
   subsets: ["latin"],
-  variable: "--font-oswald",
-  weight: ["500", "600", "700"],
+  variable: "--font-source-serif",
+  weight: ["400", "500", "600", "700"],
   display: "swap",
 });
-
-// Inter - Clean & Legible for body text
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-geist",
-  display: "swap",
-});
-
 export const metadata: Metadata = {
   title: "Ear-Plug | Listen Local",
   description:
@@ -31,29 +22,40 @@ export const metadata: Metadata = {
     locale: "en_US",
   },
 };
-
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: "#0F0F0F",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#0f0f10" },
+  ],
 };
-
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <html
-      lang="en"
-      suppressHydrationWarning
-      className="dark"
-      style={{ colorScheme: "dark" }}
-    >
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(() => {
+  try {
+    const stored = localStorage.getItem("ear-plug-theme");
+    const theme = stored === "dark" ? "dark" : "light";
+    const root = document.documentElement;
+    root.classList.toggle("dark", theme === "dark");
+    root.style.colorScheme = theme;
+  } catch (_error) {}
+})();`,
+          }}
+        />
+      </head>
       <body
-        className={`${oswald.variable} ${inter.variable} font-sans antialiased bg-night text-white`}
+        className={`${GeistSans.variable} ${sourceSerif.variable} font-sans antialiased bg-background text-foreground`}
       >
         <Providers>{children}</Providers>
       </body>
