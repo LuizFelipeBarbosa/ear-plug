@@ -203,7 +203,7 @@ export function EventTicketPanel({
             {/* QR Code */}
             <div className="flex flex-col sm:flex-row gap-4">
               <motion.button
-                whileTap={{ scale: 0.98 }}
+
                 onClick={() => setShowFullQr(true)}
                 className="relative bg-card border border-border rounded-xl p-4 flex items-center justify-center min-h-[180px] sm:w-44 group"
               >

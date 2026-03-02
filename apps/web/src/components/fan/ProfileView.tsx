@@ -222,7 +222,7 @@ export function FanProfileView() {
         <div className="flex items-center justify-between mb-6">
           <ProfileWorkspaceSwitcher className="flex-1 min-w-0" variant="header" />
           <motion.button
-            whileTap={{ scale: 0.95 }}
+
             onClick={openWorkspaceMenu}
             className="ml-3 p-2.5 bg-card border border-border rounded-xl hover:border-fan/30 hover:bg-fan/5 transition-colors touch-target shadow-sm"
             aria-label="Open workspace menu"
@@ -242,7 +242,7 @@ export function FanProfileView() {
             {/* Avatar */}
             <div className="relative">
               <motion.div
-                whileHover={{ scale: 1.02 }}
+
                 className="w-20 h-20 bg-gradient-to-br from-fan/20 to-fan/5 border-2 border-fan/20 rounded-2xl overflow-hidden flex items-center justify-center flex-shrink-0"
               >
                 {user.avatar ? (
@@ -260,7 +260,7 @@ export function FanProfileView() {
                 )}
               </motion.div>
               <motion.button
-                whileTap={{ scale: 0.9 }}
+
                 onClick={() => setIsEditModalOpen(true)}
                 className="absolute -bottom-1 -right-1 p-1.5 bg-fan text-white rounded-lg shadow-lg shadow-fan/30 hover:bg-fan/90 transition-colors"
               >

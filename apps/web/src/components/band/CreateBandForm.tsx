@@ -237,7 +237,7 @@ export function CreateBandForm() {
         <motion.button
           initial={{ opacity: 0, x: -10 }}
           animate={{ opacity: 1, x: 0 }}
-          whileTap={{ scale: 0.95 }}
+
           onClick={handleBack}
           className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-band transition-colors mb-4"
         >
@@ -364,7 +364,7 @@ export function CreateBandForm() {
                   </label>
                   <CityAutocomplete
                     value={formData.location}
-                    onChange={(city) => setFormData({ ...formData, location: city })}
+                    onChange={(city) => setFormData({ ...formData, location: city as string })}
                     placeholder="e.g., San Francisco, CA"
                     required
                   />
@@ -502,8 +502,7 @@ export function CreateBandForm() {
                   <div className="flex items-center justify-center gap-6">
                     <motion.button
                       type="button"
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
+
                       onClick={() =>
                         setFormData({
                           ...formData,
@@ -524,8 +523,7 @@ export function CreateBandForm() {
                     </motion.span>
                     <motion.button
                       type="button"
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
+
                       onClick={() =>
                         setFormData({
                           ...formData,
@@ -629,7 +627,7 @@ export function CreateBandForm() {
             <motion.button
               type="button"
               onClick={handleBack}
-              whileTap={{ scale: 0.98 }}
+
               className="flex-1 py-3.5 px-4 bg-muted border border-border text-muted-foreground font-medium rounded-xl hover:bg-muted/80 transition-colors touch-target"
             >
               Back

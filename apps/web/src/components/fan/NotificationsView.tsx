@@ -240,7 +240,7 @@ export function FanNotificationsView() {
             <motion.button
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              whileTap={{ scale: 0.95 }}
+
               onClick={() => markAllAsRead()}
               className="flex items-center gap-1.5 px-3 py-2 bg-fan/10 text-fan text-xs font-medium rounded-xl hover:bg-fan/20 transition-colors border border-fan/20"
             >
@@ -448,7 +448,7 @@ export function FanNotificationsView() {
                           <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             {!notification.read && (
                               <motion.button
-                                whileTap={{ scale: 0.9 }}
+
                                 onClick={() => markAsRead(notification._id as any)}
                                 className="p-2 flex items-center justify-center text-muted-foreground hover:text-fan hover:bg-fan/10 transition-colors rounded-lg touch-target-sm"
                                 title="Mark as read"
@@ -457,7 +457,7 @@ export function FanNotificationsView() {
                               </motion.button>
                             )}
                             <motion.button
-                              whileTap={{ scale: 0.9 }}
+
                               onClick={() => handleDelete(notification._id)}
                               disabled={deletingId === notification._id}
                               className="p-2 flex items-center justify-center text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors rounded-lg touch-target-sm disabled:opacity-50"

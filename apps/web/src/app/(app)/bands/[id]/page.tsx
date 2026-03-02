@@ -181,7 +181,7 @@ export default function BandFeedPage({ params }: PageProps) {
             This band profile may have been removed or doesn&apos;t exist.
           </p>
           <motion.button
-            whileTap={{ scale: 0.98 }}
+
             type="button"
             onClick={() => router.push("/home")}
             className="inline-flex items-center gap-2 px-6 py-3 bg-fan text-white text-sm font-medium rounded-xl hover:bg-fan/90 transition-colors"
@@ -208,7 +208,7 @@ export default function BandFeedPage({ params }: PageProps) {
         <motion.button
           initial={{ opacity: 0, x: -10 }}
           animate={{ opacity: 1, x: 0 }}
-          whileTap={{ scale: 0.95 }}
+
           onClick={() => router.back()}
           className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-fan transition-colors mb-4"
         >
@@ -226,7 +226,7 @@ export default function BandFeedPage({ params }: PageProps) {
           <div className="flex items-start gap-4">
             {/* Avatar */}
             <motion.div
-              whileHover={{ scale: 1.02 }}
+
               className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-fan/20 to-fan/5 border-2 border-fan/20 rounded-2xl overflow-hidden flex items-center justify-center flex-shrink-0"
             >
               {band.image ? (
@@ -297,7 +297,7 @@ export default function BandFeedPage({ params }: PageProps) {
           <div className="mt-4">
             {canToggleFollow ? (
               <motion.button
-                whileTap={{ scale: 0.98 }}
+
                 type="button"
                 onClick={handleToggleFollow}
                 disabled={isSavingFollow}
@@ -628,8 +628,7 @@ function SocialButton({
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
+
       className="flex items-center gap-2 px-4 py-2.5 bg-card border border-border text-muted-foreground hover:border-fan/30 hover:text-fan transition-colors text-xs font-medium rounded-xl"
     >
       {getIcon()}

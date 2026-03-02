@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Calendar,
   CalendarDays,
@@ -13,6 +14,10 @@ import {
   Plus,
   Music,
   Users,
+  CheckCircle2,
+  HelpCircle,
+  Sparkles,
+  MoreHorizontal,
 } from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
@@ -31,6 +36,7 @@ import type { EventStatus } from "@ear-plug/shared/types";
 
 type CreationKind = "tentative" | "confirmed";
 type ViewMode = "list" | "month";
+type FilterStatus = "all" | "confirmed" | "tentative";
 
 interface CalendarCell {
   dateKey: string | null;
@@ -38,15 +44,61 @@ interface CalendarCell {
   isCurrentMonth: boolean;
 }
 
-const WEEKDAY_LABELS = [
-  "Sun",
-  "Mon",
-  "Tue",
-  "Wed",
-  "Thu",
-  "Fri",
-  "Sat",
-] as const;
+const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+
+// Color themes for different statuses
+const STATUS_COLORS = {
+  confirmed: {
+    bg: "bg-emerald-500",
+    bgLight: "bg-emerald-500/10",
+    bgHover: "hover:bg-emerald-500/20",
+    border: "border-emerald-500/40",
+    borderStrong: "border-emerald-500",
+    text: "text-emerald-500",
+    textDark: "text-emerald-600",
+    ring: "ring-emerald-500/30",
+  },
+  tentative: {
+    bg: "bg-amber-500",
+    bgLight: "bg-amber-500/10",
+    bgHover: "hover:bg-amber-500/20",
+    border: "border-amber-500/40",
+    borderStrong: "border-amber-500",
+    text: "text-amber-500",
+    textDark: "text-amber-600",
+    ring: "ring-amber-500/30",
+  },
+};
+
+const ANIMATION_VARIANTS = {
+  container: {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.05 },
+    },
+  },
+  item: {
+    hidden: { opacity: 0, y: 16 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { type: "spring" as const, stiffness: 400, damping: 30 },
+    },
+  },
+  card: {
+    hidden: { opacity: 0, scale: 0.95 },
+    visible: {
+      opacity: 1,
+      scale: 1,
+      transition: { type: "spring" as const, stiffness: 400, damping: 30 },
+    },
+  },
+  fadeIn: {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { duration: 0.3 } },
+  },
+};
 
 function toLocalDateKey(timestamp: number): string {
   const date = new Date(timestamp);
@@ -118,13 +170,11 @@ export function BandCalendarView() {
   const { band, isLoading: bandLoading } = useCurrentBand();
   const { bands } = useProfileContext();
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
-    if (typeof window === "undefined") {
-      return "list";
-    }
-
+    if (typeof window === "undefined") return "list";
     const stored = window.localStorage.getItem("band-calendar-view-mode");
     return stored === "month" ? "month" : "list";
   });
+  const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
   const [viewMonth, setViewMonth] = useState(new Date());
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
   const [isCreateTypeModalOpen, setIsCreateTypeModalOpen] = useState(false);
@@ -148,16 +198,12 @@ export function BandCalendarView() {
 
   const prevMonth = () => {
     setSelectedDateKey(null);
-    setViewMonth(
-      new Date(viewMonth.getFullYear(), viewMonth.getMonth() - 1, 1),
-    );
+    setViewMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() - 1, 1));
   };
 
   const nextMonth = () => {
     setSelectedDateKey(null);
-    setViewMonth(
-      new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 1),
-    );
+    setViewMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 1));
   };
 
   const monthName = viewMonth.toLocaleDateString("en-US", {
@@ -165,75 +211,78 @@ export function BandCalendarView() {
     year: "numeric",
   });
 
-  const scheduledEvents = useMemo<any[]>(
-    () => (events ?? []).filter((event) => typeof event.dateTime === "number"),
-    [events],
-  );
+  // Filter and organize events
+  const { scheduledEvents, unscheduledTentatives, filteredEvents } = useMemo(() => {
+    const allEvents = events ?? [];
+    const scheduled = allEvents.filter((event) => typeof event.dateTime === "number");
+    const unscheduled = allEvents.filter(
+      (event) => event.status === "hold" && event.dateTime === undefined,
+    );
+
+    let filtered = scheduled;
+    if (filterStatus === "confirmed") {
+      filtered = scheduled.filter((e) => e.status === "confirmed");
+    } else if (filterStatus === "tentative") {
+      filtered = scheduled.filter((e) => e.status === "hold");
+    }
+
+    return {
+      scheduledEvents: scheduled,
+      unscheduledTentatives: unscheduled,
+      filteredEvents: filtered,
+    };
+  }, [events, filterStatus]);
 
   const scheduledEventsInViewMonth = useMemo(
     () =>
-      scheduledEvents.filter((event) =>
+      filteredEvents.filter((event) =>
         isInViewMonth(event.dateTime as number, viewMonth),
       ),
-    [scheduledEvents, viewMonth],
-  );
-
-  const unscheduledTentatives = useMemo(
-    () =>
-      (events ?? []).filter(
-        (event) => event.status === "hold" && event.dateTime === undefined,
-      ),
-    [events],
+    [filteredEvents, viewMonth],
   );
 
   const groupedEvents = useMemo(() => {
     const grouped: Record<string, any[]> = {};
-
     scheduledEventsInViewMonth.forEach((event) => {
       const dateKey = toLocalDateKey(event.dateTime as number);
-      if (!grouped[dateKey]) {
-        grouped[dateKey] = [];
-      }
+      if (!grouped[dateKey]) grouped[dateKey] = [];
       grouped[dateKey].push(event);
     });
-
     return grouped;
   }, [scheduledEventsInViewMonth]);
 
   const eventsByDateKey = useMemo(() => {
     const byDate: Record<string, any[]> = {};
-
     scheduledEventsInViewMonth.forEach((event) => {
       const dateKey = toLocalDateKey(event.dateTime as number);
-      if (!byDate[dateKey]) {
-        byDate[dateKey] = [];
-      }
+      if (!byDate[dateKey]) byDate[dateKey] = [];
       byDate[dateKey].push(event);
     });
-
     return byDate;
   }, [scheduledEventsInViewMonth]);
 
   const monthCells = useMemo(() => buildMonthCells(viewMonth), [viewMonth]);
 
   const selectedDateEvents = useMemo(() => {
-    if (!selectedDateKey) {
-      return [];
-    }
-
+    if (!selectedDateKey) return [];
     const dayEvents = eventsByDateKey[selectedDateKey] ?? [];
     return [...dayEvents].sort(
       (a, b) => (a.dateTime as number) - (b.dateTime as number),
     );
   }, [eventsByDateKey, selectedDateKey]);
 
+  const eventCounts = useMemo(() => {
+    const confirmed = scheduledEvents.filter((e) => e.status === "confirmed").length;
+    const tentative =
+      scheduledEvents.filter((e) => e.status === "hold").length + unscheduledTentatives.length;
+    return { confirmed, tentative, total: confirmed + tentative };
+  }, [scheduledEvents, unscheduledTentatives]);
+
   const hasListEvents =
     Object.keys(groupedEvents).length > 0 || unscheduledTentatives.length > 0;
   const hasMonthEvents = scheduledEventsInViewMonth.length > 0;
 
-  const openCreateChooser = () => {
-    setIsCreateTypeModalOpen(true);
-  };
+  const openCreateChooser = () => setIsCreateTypeModalOpen(true);
 
   const handleCreateTypeSelect = (kind: CreationKind) => {
     setCreationKind(kind);
@@ -250,311 +299,197 @@ export function BandCalendarView() {
     window.localStorage.setItem("band-calendar-view-mode", viewMode);
   }, [viewMode]);
 
+  if (isLoading) {
+    return <CalendarSkeleton />;
+  }
+
   return (
-    <div className="min-h-screen bg-background overflow-x-hidden">
+    <div className="min-h-screen pb-8 bg-background">
       {/* Header */}
-      <header className="bg-card border-b border-band/20 p-4">
-        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-lg sm:text-xl font-semibold text-foreground">
-            Shows & Availability
-          </h1>
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            <div className="inline-flex border border-border bg-muted p-1 rounded-lg">
+      <header className="relative bg-gradient-to-br from-band/10 via-background to-background border-b border-border overflow-hidden">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-band/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
+        <div className="absolute bottom-0 left-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl translate-y-1/2 -translate-x-1/3" />
+
+        <div className="relative px-4 pt-5 pb-4">
+          {/* Top row: Title + Actions */}
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-8 h-8 rounded-lg bg-band/10 flex items-center justify-center">
+                  <Calendar className="w-4 h-4 text-band" />
+                </div>
+                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  Band Workspace
+                </span>
+              </div>
+              <h1 className="text-xl font-bold text-foreground">Shows & Events</h1>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Manage your gigs, holds, and availability
+              </p>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.1 }}
+              className="flex items-center gap-2"
+            >
+              {band && canManageShows && (
+                <button
+                  onClick={openCreateChooser}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-band text-white font-medium text-xs rounded-lg hover:bg-band/90 transition-all shadow-sm hover:shadow-md active:scale-95"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span className="hidden sm:inline">Create Gig</span>
+                  <span className="sm:hidden">New</span>
+                </button>
+              )}
+            </motion.div>
+          </div>
+
+          {/* View Mode Toggle */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            className="flex items-center gap-2 mb-4"
+          >
+            <div className="flex-1 flex items-center justify-center bg-muted/70 border border-border p-1 rounded-xl">
               <button
                 type="button"
                 onClick={() => setViewMode("list")}
-                aria-pressed={viewMode === "list"}
                 className={cn(
-                  "px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs font-medium border transition-all flex items-center gap-1.5 sm:gap-2 rounded-md",
+                  "flex-1 flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium rounded-lg transition-all",
                   viewMode === "list"
-                    ? "bg-band text-foreground border-band"
-                    : "bg-card border-transparent text-muted-foreground hover:text-band",
+                    ? "bg-card text-foreground shadow-sm border border-border/50"
+                    : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                <List className="w-3 h-3 sm:w-4 sm:h-4" />
+                <List className="w-3.5 h-3.5" />
                 List
               </button>
               <button
                 type="button"
                 onClick={() => setViewMode("month")}
-                aria-pressed={viewMode === "month"}
                 className={cn(
-                  "px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs font-medium border transition-all flex items-center gap-1.5 sm:gap-2 rounded-md ml-1",
+                  "flex-1 flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium rounded-lg transition-all",
                   viewMode === "month"
-                    ? "bg-band text-foreground border-band"
-                    : "bg-card border-transparent text-muted-foreground hover:text-band",
+                    ? "bg-card text-foreground shadow-sm border border-border/50"
+                    : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                <CalendarDays className="w-3 h-3 sm:w-4 sm:h-4" />
-                Month
+                <CalendarDays className="w-3.5 h-3.5" />
+                Calendar
               </button>
             </div>
+          </motion.div>
 
-            {band && canManageShows && (
-              <button
-                onClick={openCreateChooser}
-                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-band text-foreground font-medium text-xs border border-band hover:bg-transparent hover:text-band transition-all touch-target rounded-lg"
-              >
-                <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                Create Gig
-              </button>
-            )}
-          </div>
-        </div>
-        {band && !canManageShows && (
-          <p className="text-xs text-muted-foreground">
-            Member access: owners/admins create gigs.
-          </p>
-        )}
-
-        {/* Month Navigation */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          <button
-            onClick={prevMonth}
-            className="shrink-0 flex items-center justify-center p-2 sm:p-2.5 hover:bg-muted border border-border hover:border-band/30 transition-colors touch-target rounded-lg"
+          {/* Month Navigation */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="flex items-center gap-3"
           >
-            <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
-          </button>
-          <span className="min-w-0 flex-1 text-center truncate text-sm sm:text-lg font-semibold text-foreground">
-            {monthName}
-          </span>
-          <button
-            onClick={nextMonth}
-            className="shrink-0 flex items-center justify-center p-2 sm:p-2.5 hover:bg-muted border border-border hover:border-band/30 transition-colors touch-target rounded-lg"
-          >
-            <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
-          </button>
-        </div>
+            <button
+              onClick={prevMonth}
+              className="p-2 hover:bg-muted border border-border hover:border-band/30 transition-all rounded-lg active:scale-95"
+            >
+              <ChevronLeft className="w-4 h-4 text-muted-foreground" />
+            </button>
+            <span className="flex-1 text-center text-sm font-semibold text-foreground">
+              {monthName}
+            </span>
+            <button
+              onClick={nextMonth}
+              className="p-2 hover:bg-muted border border-border hover:border-band/30 transition-all rounded-lg active:scale-95"
+            >
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            </button>
+          </motion.div>
 
-        <div className="mt-3 sm:mt-4 border border-border bg-muted/70 p-3 sm:p-4 rounded-lg">
-          <p className="text-xs font-medium text-muted-foreground">
-            Calendar Color Key
-          </p>
-          <div className="mt-2 grid gap-2 sm:grid-cols-2">
-            <div className="flex items-center justify-between gap-3 border border-band/40 bg-band/10 px-3 py-2 rounded">
-              <span className="inline-flex items-center gap-2 text-xs sm:text-sm font-medium text-band">
-                <span className="h-2.5 w-2.5 rounded-full bg-band" />
-                Confirmed
-              </span>
-              <span className="text-xs font-medium text-muted-foreground">
-                Scheduled Gig
-              </span>
-            </div>
-            <div className="flex items-center justify-between gap-3 border border-band/40 bg-band/10 px-3 py-2 rounded">
-              <span className="inline-flex items-center gap-2 text-xs sm:text-sm font-medium text-band">
-                <span className="h-2.5 w-2.5 rounded-full bg-band" />
-                Tentative
-              </span>
-              <span className="text-xs font-medium text-muted-foreground">
-                Hold / Draft Gig
-              </span>
-            </div>
-          </div>
+          {/* Stats + Filter Bar */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.25 }}
+            className="mt-4 flex flex-wrap items-center gap-2"
+          >
+            <button
+              onClick={() => setFilterStatus("all")}
+              className={cn(
+                "flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-all",
+                filterStatus === "all"
+                  ? "bg-card border-border shadow-sm text-foreground"
+                  : "bg-transparent border-transparent text-muted-foreground hover:bg-muted",
+              )}
+            >
+              <span className="w-2 h-2 rounded-full bg-foreground" />
+              All ({eventCounts.total})
+            </button>
+            <button
+              onClick={() => setFilterStatus("confirmed")}
+              className={cn(
+                "flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-all",
+                filterStatus === "confirmed"
+                  ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-600 shadow-sm"
+                  : "bg-transparent border-transparent text-muted-foreground hover:bg-emerald-500/5",
+              )}
+            >
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              Confirmed ({eventCounts.confirmed})
+            </button>
+            <button
+              onClick={() => setFilterStatus("tentative")}
+              className={cn(
+                "flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-all",
+                filterStatus === "tentative"
+                  ? "bg-amber-500/10 border-amber-500/40 text-amber-600 shadow-sm"
+                  : "bg-transparent border-transparent text-muted-foreground hover:bg-amber-500/5",
+              )}
+            >
+              <HelpCircle className="w-3.5 h-3.5" />
+              Tentative ({eventCounts.tentative})
+            </button>
+          </motion.div>
+
+          {/* Legend */}
+          {band && !canManageShows && (
+            <p className="mt-3 text-xs text-muted-foreground">
+              Member access: owners/admins can create and edit gigs.
+            </p>
+          )}
         </div>
       </header>
 
-      {/* Events List */}
-      <div className="p-4">
-        {isLoading ? (
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="h-24 bg-muted border border-border rounded-lg animate-shimmer"
-              />
-            ))}
-          </div>
-        ) : viewMode === "month" ? (
-          <div className="space-y-4">
-            <div className="grid grid-cols-7 gap-0.5 sm:gap-2">
-              {WEEKDAY_LABELS.map((weekday) => (
-                <div
-                  key={weekday}
-                  className="text-xs font-medium text-muted-foreground text-center py-1.5 sm:py-2"
-                >
-                  <span className="sm:hidden">{weekday[0]}</span>
-                  <span className="hidden sm:inline">{weekday}</span>
-                </div>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-7 gap-0.5 sm:gap-2">
-              {monthCells.map((cell, index) => {
-                if (
-                  !cell.isCurrentMonth ||
-                  !cell.dateKey ||
-                  cell.dayNumber === null
-                ) {
-                  return (
-                    <div
-                      key={`placeholder-${index}`}
-                      className="h-24 sm:h-28 bg-muted/40 border border-border/50 rounded"
-                    />
-                  );
-                }
-
-                const dayEvents = eventsByDateKey[cell.dateKey] ?? [];
-                const sortedDayEvents = [...dayEvents].sort(
-                  (a, b) => (a.dateTime as number) - (b.dateTime as number),
-                );
-                const tentativeCount = dayEvents.filter(
-                  (event) => event.status === "hold",
-                ).length;
-                const confirmedCount = dayEvents.filter(
-                  (event) => event.status === "confirmed",
-                ).length;
-                const previewEvents = sortedDayEvents.slice(0, 1);
-                const hiddenEventCount =
-                  sortedDayEvents.length - previewEvents.length;
-                const hasDayEvents = tentativeCount + confirmedCount > 0;
-                const hasMixedStatus = tentativeCount > 0 && confirmedCount > 0;
-                const isSelected = selectedDateKey === cell.dateKey;
-
-                return (
-                  <button
-                    key={cell.dateKey}
-                    type="button"
-                    onClick={() => setSelectedDateKey(cell.dateKey)}
-                    className={cn(
-                      "h-20 sm:h-24 p-1 sm:p-2 border text-left transition-all overflow-hidden rounded",
-                      isSelected
-                        ? "border-foreground bg-card"
-                        : "border-border bg-muted hover:border-muted-foreground/50",
-                      hasDayEvents &&
-                        !hasMixedStatus &&
-                        confirmedCount > 0 &&
-                        "border-band/50 bg-band/5",
-                      hasDayEvents &&
-                        !hasMixedStatus &&
-                        tentativeCount > 0 &&
-                        "border-band/60 bg-band/10",
-                      hasMixedStatus && "border-muted-foreground/50 bg-muted/80",
-                    )}
-                  >
-                    <div className="flex items-center justify-between gap-1">
-                      <span
-                        className={cn(
-                          "text-xs sm:text-sm font-medium leading-none",
-                          hasDayEvents ? "text-foreground" : "text-muted-foreground",
-                        )}
-                      >
-                        {cell.dayNumber}
-                      </span>
-                      {hasDayEvents && (
-                        <span className="text-xs font-medium text-muted-foreground">
-                          {tentativeCount + confirmedCount}
-                        </span>
-                      )}
-                    </div>
-
-                    {hasDayEvents && (
-                      <>
-                        <div className="mt-1 flex items-center gap-1 flex-wrap">
-                          {confirmedCount > 0 && (
-                            <span className="px-1 py-0.5 text-xs font-medium border border-band/40 bg-band/10 text-band rounded">
-                              {confirmedCount} C
-                            </span>
-                          )}
-                          {tentativeCount > 0 && (
-                            <span className="px-1 py-0.5 text-xs font-medium border border-band/40 bg-band/10 text-band rounded">
-                              {tentativeCount} T
-                            </span>
-                          )}
-                        </div>
-                        <ol className="mt-1 space-y-0.5 list-decimal list-inside overflow-hidden">
-                          {previewEvents.map((event) => (
-                            <li
-                              key={event._id}
-                              className="text-xs font-medium truncate leading-4 text-band"
-                            >
-                              {getEventDisplayTitle(event)}
-                            </li>
-                          ))}
-                        </ol>
-                        <div className="mt-0.5 overflow-hidden">
-                          {hiddenEventCount > 0 && (
-                            <p className="text-xs text-muted-foreground truncate">
-                              +{hiddenEventCount} more
-                            </p>
-                          )}
-                        </div>
-                      </>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="bg-muted border border-border p-3 sm:p-4 rounded-lg">
-              <h3 className="text-xs sm:text-sm font-medium text-band mb-3">
-                {selectedDateKey
-                  ? formatDateHeadingFromKey(selectedDateKey)
-                  : `Select A Date In ${monthName}`}
-              </h3>
-
-              {!hasMonthEvents ? (
-                <p className="text-xs sm:text-sm text-muted-foreground">
-                  No scheduled gigs in {monthName}.
-                </p>
-              ) : selectedDateKey === null ? (
-                <p className="text-xs sm:text-sm text-muted-foreground">
-                  Select a date to view gigs.
-                </p>
-              ) : selectedDateEvents.length === 0 ? (
-                <p className="text-xs sm:text-sm text-muted-foreground">
-                  No gigs for this date.
-                </p>
-              ) : (
-                <div className="space-y-3">
-                  {selectedDateEvents.map((event) => (
-                    <EventItem
-                      key={event._id}
-                      event={event}
-                      onOpenTentative={openTentativeEditor}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
+      {/* Main Content */}
+      <motion.main
+        variants={ANIMATION_VARIANTS.container}
+        initial="hidden"
+        animate="visible"
+        className="px-4 pt-4"
+      >
+        {viewMode === "month" ? (
+          <MonthView
+            monthCells={monthCells}
+            eventsByDateKey={eventsByDateKey}
+            selectedDateKey={selectedDateKey}
+            onSelectDate={setSelectedDateKey}
+            selectedDateEvents={selectedDateEvents}
+            hasMonthEvents={hasMonthEvents}
+            monthName={monthName}
+            onOpenTentative={openTentativeEditor}
+          />
         ) : hasListEvents ? (
-          <div className="space-y-6">
-            {Object.entries(groupedEvents).map(([date, dateEvents]) => {
-              return (
-                <div key={date}>
-                  <h3 className="text-xs font-medium text-band mb-3">
-                    {formatDateHeadingFromKey(date)}
-                  </h3>
-                  <div className="space-y-3">
-                    {dateEvents.map((event) => (
-                      <EventItem
-                        key={event._id}
-                        event={event}
-                        onOpenTentative={openTentativeEditor}
-                      />
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-
-            {unscheduledTentatives.length > 0 && (
-              <div>
-                <h3 className="text-xs font-medium text-band mb-3">
-                  Unscheduled Tentative
-                </h3>
-                <div className="space-y-3">
-                  {unscheduledTentatives.map((event) => (
-                    <EventItem
-                      key={event._id}
-                      event={event}
-                      onOpenTentative={openTentativeEditor}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+          <ListView
+            groupedEvents={groupedEvents}
+            unscheduledTentatives={unscheduledTentatives}
+            onOpenTentative={openTentativeEditor}
+          />
         ) : (
           <EmptyState
             onCreateClick={openCreateChooser}
@@ -562,15 +497,15 @@ export function BandCalendarView() {
             canManageShows={canManageShows}
           />
         )}
-      </div>
+      </motion.main>
 
+      {/* Modals */}
       <CreateGigTypeModal
         isOpen={isCreateTypeModalOpen}
         onClose={() => setIsCreateTypeModalOpen(false)}
         onSelect={handleCreateTypeSelect}
       />
 
-      {/* Create Gig Modal */}
       {band && canManageShows && (
         <CreateGigModal
           isOpen={isCreateModalOpen}
@@ -578,9 +513,7 @@ export function BandCalendarView() {
           bandId={band._id}
           bandName={band.name}
           creationKind={creationKind}
-          onSuccess={() => {
-            // Event will appear automatically via Convex real-time sync
-          }}
+          onSuccess={() => {}}
         />
       )}
 
@@ -596,137 +529,417 @@ export function BandCalendarView() {
   );
 }
 
-interface EventItemProps {
+// Sub-components
+
+function MonthView({
+  monthCells,
+  eventsByDateKey,
+  selectedDateKey,
+  onSelectDate,
+  selectedDateEvents,
+  hasMonthEvents,
+  monthName,
+  onOpenTentative,
+}: {
+  monthCells: CalendarCell[];
+  eventsByDateKey: Record<string, any[]>;
+  selectedDateKey: string | null;
+  onSelectDate: (key: string | null) => void;
+  selectedDateEvents: any[];
+  hasMonthEvents: boolean;
+  monthName: string;
+  onOpenTentative: (event: any) => void;
+}) {
+  return (
+    <div className="space-y-4">
+      {/* Weekday Headers */}
+      <motion.div variants={ANIMATION_VARIANTS.item} className="grid grid-cols-7 gap-1">
+        {WEEKDAY_LABELS.map((weekday) => (
+          <div
+            key={weekday}
+            className="text-xs font-medium text-muted-foreground text-center py-2"
+          >
+            <span className="sm:hidden">{weekday[0]}</span>
+            <span className="hidden sm:inline">{weekday}</span>
+          </div>
+        ))}
+      </motion.div>
+
+      {/* Calendar Grid */}
+      <motion.div variants={ANIMATION_VARIANTS.item} className="grid grid-cols-7 gap-1">
+        {monthCells.map((cell, index) => {
+          if (!cell.isCurrentMonth || !cell.dateKey || cell.dayNumber === null) {
+            return (
+              <div
+                key={`placeholder-${index}`}
+                className="aspect-square bg-muted/30 border border-border/30 rounded-lg"
+              />
+            );
+          }
+
+          const dayEvents = eventsByDateKey[cell.dateKey] ?? [];
+          const sortedDayEvents = [...dayEvents].sort(
+            (a, b) => (a.dateTime as number) - (b.dateTime as number),
+          );
+          const tentativeCount = dayEvents.filter((e) => e.status === "hold").length;
+          const confirmedCount = dayEvents.filter((e) => e.status === "confirmed").length;
+          const hasEvents = tentativeCount + confirmedCount > 0;
+          const isSelected = selectedDateKey === cell.dateKey;
+
+          return (
+            <motion.button
+              key={cell.dateKey}
+              type="button"
+              onClick={() => onSelectDate(isSelected ? null : cell.dateKey)}
+
+              className={cn(
+                "aspect-square p-1.5 sm:p-2 border text-left transition-all rounded-lg relative overflow-hidden",
+                isSelected
+                  ? "border-band ring-2 ring-band/30 bg-card"
+                  : "border-border bg-card hover:border-muted-foreground/50",
+                hasEvents && !isSelected && "border-band/30",
+              )}
+            >
+              {/* Day Number */}
+              <span
+                className={cn(
+                  "text-xs sm:text-sm font-medium",
+                  hasEvents ? "text-foreground" : "text-muted-foreground",
+                )}
+              >
+                {cell.dayNumber}
+              </span>
+
+              {/* Event Dots */}
+              {hasEvents && (
+                <div className="absolute bottom-1.5 left-1.5 right-1.5 flex flex-wrap gap-1">
+                  {confirmedCount > 0 && (
+                    <div className="flex items-center gap-0.5">
+                      {[...Array(Math.min(confirmedCount, 3))].map((_, i) => (
+                        <span
+                          key={`c-${i}`}
+                          className="w-2 h-2 rounded-full bg-emerald-500"
+                        />
+                      ))}
+                      {confirmedCount > 3 && (
+                        <span className="text-[8px] text-emerald-500 font-medium">
+                          +{confirmedCount - 3}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  {tentativeCount > 0 && (
+                    <div className="flex items-center gap-0.5">
+                      {[...Array(Math.min(tentativeCount, 2))].map((_, i) => (
+                        <span
+                          key={`t-${i}`}
+                          className="w-2 h-2 rounded-full bg-amber-500"
+                        />
+                      ))}
+                      {tentativeCount > 2 && (
+                        <span className="text-[8px] text-amber-500 font-medium">
+                          +{tentativeCount - 2}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Preview of first event */}
+              {sortedDayEvents.length > 0 && (
+                <div className="hidden sm:block mt-4 pr-1">
+                  <p className="text-[10px] font-medium text-muted-foreground truncate">
+                    {getEventDisplayTitle(sortedDayEvents[0])}
+                  </p>
+                </div>
+              )}
+            </motion.button>
+          );
+        })}
+      </motion.div>
+
+      {/* Selected Date Events Panel */}
+      <AnimatePresence mode="wait">
+        {selectedDateKey && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="bg-card border border-border rounded-2xl overflow-hidden"
+          >
+            <div className="p-4 border-b border-border/50 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-band" />
+                <h3 className="text-sm font-semibold text-foreground">
+                  {formatDateHeadingFromKey(selectedDateKey)}
+                </h3>
+              </div>
+              <button
+                onClick={() => onSelectDate(null)}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="p-4">
+              {!hasMonthEvents ? (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  No scheduled gigs in {monthName}.
+                </p>
+              ) : selectedDateEvents.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  No gigs scheduled for this date.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {selectedDateEvents.map((event, index) => (
+                    <motion.div
+                      key={event._id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                    >
+                      <EventItem event={event} onOpenTentative={onOpenTentative} />
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function ListView({
+  groupedEvents,
+  unscheduledTentatives,
+  onOpenTentative,
+}: {
+  groupedEvents: Record<string, any[]>;
+  unscheduledTentatives: any[];
+  onOpenTentative: (event: any) => void;
+}) {
+  const sortedDates = Object.keys(groupedEvents).sort();
+
+  return (
+    <div className="space-y-6">
+      {sortedDates.map((date, dateIndex) => (
+        <motion.div key={date} variants={ANIMATION_VARIANTS.item}>
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-xl bg-band/10 flex items-center justify-center">
+              <Calendar className="w-5 h-5 text-band" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">
+                {formatDateHeadingFromKey(date)}
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                {groupedEvents[date].length} event
+                {groupedEvents[date].length !== 1 ? "s" : ""}
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            {groupedEvents[date].map((event, eventIndex) => (
+              <motion.div
+                key={event._id}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: eventIndex * 0.05 }}
+              >
+                <EventItem event={event} onOpenTentative={onOpenTentative} />
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+      ))}
+
+      {/* Unscheduled Tentatives Section */}
+      <AnimatePresence>
+        {unscheduledTentatives.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            variants={ANIMATION_VARIANTS.item}
+          >
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                <HelpCircle className="w-5 h-5 text-amber-500" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">
+                  Unscheduled Tentatives
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  {unscheduledTentatives.length} pending
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {unscheduledTentatives.map((event, index) => (
+                <motion.div
+                  key={event._id}
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                >
+                  <EventItem event={event} onOpenTentative={onOpenTentative} />
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function EventItem({
+  event,
+  onOpenTentative,
+}: {
   event: any;
   onOpenTentative: (event: any) => void;
-}
-
-// Helper function to get genres from event (handles both new and legacy format)
-function getEventGenres(event: any): string[] {
-  if (event.genres && event.genres.length > 0) {
-    return event.genres;
-  }
-  if (event.genre) {
-    return [event.genre];
-  }
-  return [];
-}
-
-function getEventDisplayTitle(event: any): string {
-  const title = event.title?.trim();
-  if (title) {
-    return title;
-  }
-
-  return event.status === "hold" ? "Untitled Tentative Gig" : "Untitled Gig";
-}
-
-function EventItem({ event, onOpenTentative }: EventItemProps) {
+}) {
   const statusConfig = EVENT_STATUS_CONFIG[event.status as EventStatus];
   const genres = getEventGenres(event);
   const isTentative = event.status === "hold";
-  const displayTitle = event.title?.trim() || "Untitled Tentative Gig";
+  const isConfirmed = event.status === "confirmed";
+  const colors = isConfirmed ? STATUS_COLORS.confirmed : STATUS_COLORS.tentative;
+
+  const displayTitle = getEventDisplayTitle(event);
   const displayTime =
-    typeof event.dateTime === "number"
-      ? formatEventTime(event.dateTime)
-      : "Time TBD";
+    typeof event.dateTime === "number" ? formatEventTime(event.dateTime) : "Time TBD";
   const displayVenue = event.venue?.name || "Venue TBD";
 
-  const content = (
+  const cardContent = (
     <>
-      <div className="flex items-start justify-between">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-2 flex-wrap">
-            {/* Status Badge */}
+      {/* Top Row: Status + Genres */}
+      <div className="flex items-center gap-2 mb-3 flex-wrap">
+        <span
+          className={cn(
+            "flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full border",
+            colors.bgLight,
+            colors.border,
+            colors.text,
+          )}
+        >
+          {isConfirmed ? (
+            <CheckCircle2 className="w-3 h-3" />
+          ) : (
+            <HelpCircle className="w-3 h-3" />
+          )}
+          {statusConfig.label}
+        </span>
+
+        {genres.slice(0, 2).map((genre) => {
+          const genreColor = GENRE_COLORS[genre as keyof typeof GENRE_COLORS] || "#71717A";
+          return (
             <span
-              className={cn(
-                "px-2 py-0.5 text-xs font-medium border rounded",
-                event.status === "confirmed" &&
-                  "bg-band/10 border-band/30 text-band",
-                event.status === "hold" &&
-                  "bg-band/10 border-band/30 text-band",
-                event.status === "available" &&
-                  "bg-muted border-border text-muted-foreground",
-              )}
-            >
-              {statusConfig.label}
-            </span>
-            {/* Genre Badges */}
-            {genres.map((genre) => {
-              const genreColor =
-                GENRE_COLORS[genre as keyof typeof GENRE_COLORS] || "#71717A";
-              return (
-                <span
-                  key={genre}
-                  className="px-2 py-0.5 text-xs font-medium border rounded"
-                  style={{
-                    color: genreColor,
-                    borderColor: `${genreColor}40`,
-                    backgroundColor: `${genreColor}10`,
-                  }}
-                >
-                  {genre}
-                </span>
-              );
-            })}
-          </div>
-          <h3 className="font-medium text-foreground text-sm group-hover:text-band transition-colors">
-            {displayTitle}
-          </h3>
-          <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <Clock className="w-3.5 h-3.5 text-band" />
-              {displayTime}
-            </span>
-            <span className="flex items-center gap-1 truncate">
-              <MapPin className="w-3.5 h-3.5 text-band flex-shrink-0" />
-              {displayVenue}
-            </span>
-          </div>
-        </div>
-        <div className="text-right flex-shrink-0 ml-4">
-          <div className="text-xl font-semibold text-band">{event.rsvpCount}</div>
-          <div className="text-xs text-muted-foreground">RSVPs</div>
-        </div>
-      </div>
-      {/* Capacity indicator if available */}
-      {event.capacity && (
-        <div className="mt-3 pt-3 border-t border-border/50 flex items-center gap-2">
-          <Users className="w-3.5 h-3.5 text-muted-foreground" />
-          <div className="flex-1 h-1.5 bg-card rounded-full overflow-hidden">
-            <div
-              className="h-full bg-band rounded-full"
+              key={genre}
+              className="px-2 py-0.5 text-[10px] font-medium rounded-full border"
               style={{
-                width: `${Math.min((event.rsvpCount / event.capacity) * 100, 100)}%`,
+                color: genreColor,
+                borderColor: `${genreColor}40`,
+                backgroundColor: `${genreColor}10`,
               }}
-            />
-          </div>
-          <span className="text-xs text-muted-foreground">
-            {event.rsvpCount}/{event.capacity}
+            >
+              {genre}
+            </span>
+          );
+        })}
+        {genres.length > 2 && (
+          <span className="px-2 py-0.5 text-[10px] font-medium text-muted-foreground bg-muted rounded-full">
+            +{genres.length - 2}
           </span>
+        )}
+      </div>
+
+      {/* Title */}
+      <h3 className="font-semibold text-foreground text-sm mb-3 group-hover:text-band transition-colors line-clamp-2">
+        {displayTitle}
+      </h3>
+
+      {/* Details Row */}
+      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+        <span className="flex items-center gap-1.5">
+          <Clock className={cn("w-3.5 h-3.5", colors.text)} />
+          {displayTime}
+        </span>
+        <span className="flex items-center gap-1.5 truncate">
+          <MapPin className={cn("w-3.5 h-3.5 flex-shrink-0", colors.text)} />
+          <span className="truncate">{displayVenue}</span>
+        </span>
+      </div>
+
+      {/* RSVP Count + Capacity */}
+      <div className="mt-4 pt-3 border-t border-border/50 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Users className="w-3.5 h-3.5 text-muted-foreground" />
+          <span className="text-sm font-semibold text-foreground">
+            {event.rsvpCount || 0}
+          </span>
+          <span className="text-xs text-muted-foreground">RSVPs</span>
         </div>
-      )}
+
+        {event.capacity && (
+          <div className="flex items-center gap-2 flex-1 max-w-[120px] ml-4">
+            <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{
+                  width: `${Math.min((event.rsvpCount / event.capacity) * 100, 100)}%`,
+                }}
+                transition={{ duration: 0.8, delay: 0.2 }}
+                className={cn("h-full rounded-full", colors.bg)}
+              />
+            </div>
+            <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+              {Math.round((event.rsvpCount / event.capacity) * 100)}%
+            </span>
+          </div>
+        )}
+      </div>
     </>
   );
 
   if (isTentative) {
     return (
-      <button
-        type="button"
+      <motion.button
+
         onClick={() => onOpenTentative(event)}
-        className="w-full text-left block bg-muted border border-border p-4 hover:border-band/50 transition-all group rounded-lg"
+        className={cn(
+          "w-full text-left block bg-card border p-4 rounded-xl transition-all group",
+          "hover:shadow-md",
+          colors.border,
+          "hover:border-amber-500/60",
+        )}
       >
-        {content}
-      </button>
+        {cardContent}
+      </motion.button>
     );
   }
 
   return (
-    <Link
-      href={`/gig/${event._id}`}
-      className="block bg-muted border border-border p-4 hover:border-band/30 transition-all group rounded-lg"
-    >
-      {content}
+    <Link href={`/gig/${event._id}`} className="block">
+      <motion.div
+
+        className={cn(
+          "bg-card border p-4 rounded-xl transition-all group cursor-pointer",
+          "hover:shadow-md",
+          "border-border",
+          "hover:border-emerald-500/40",
+        )}
+      >
+        {cardContent}
+      </motion.div>
     </Link>
   );
 }
@@ -741,35 +954,95 @@ function EmptyState({
   canManageShows: boolean;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-center border border-dashed border-border rounded-lg">
-      <div className="w-16 h-16 bg-muted border border-border flex items-center justify-center mb-4 rounded-lg">
-        <Calendar className="w-8 h-8 text-muted-foreground" />
-      </div>
-      <h3 className="text-base font-semibold text-foreground mb-2">No upcoming shows</h3>
-      <p className="text-muted-foreground max-w-[250px] text-sm mb-6">
+    <motion.div
+      variants={ANIMATION_VARIANTS.item}
+      className="flex flex-col items-center justify-center py-16 text-center"
+    >
+      <motion.div
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ type: "spring", stiffness: 200 }}
+        className="w-20 h-20 bg-gradient-to-br from-band/20 to-band/5 rounded-2xl flex items-center justify-center mb-5 border border-band/20"
+      >
+        <Sparkles className="w-10 h-10 text-band" />
+      </motion.div>
+
+      <h3 className="text-lg font-bold text-foreground mb-2">No upcoming shows</h3>
+      <p className="text-sm text-muted-foreground max-w-[260px] mb-6">
         {band
-          ? "Create your first gig to get started building your calendar"
+          ? "Start building your calendar by creating your first gig"
           : "Create your band profile to start managing shows"}
       </p>
+
       {band && canManageShows ? (
-        <button
+        <motion.button
+
           onClick={onCreateClick}
-          className="flex items-center gap-2 px-6 py-3 bg-band text-foreground font-medium text-sm border border-band hover:bg-transparent hover:text-band transition-all rounded-lg"
+          className="flex items-center gap-2 px-6 py-3 bg-band text-white font-medium text-sm rounded-xl hover:bg-band/90 transition-all shadow-lg shadow-band/20"
         >
           <Plus className="w-4 h-4" />
           Create First Gig
-        </button>
+        </motion.button>
       ) : band ? (
-        <div className="flex items-center gap-2 text-muted-foreground">
+        <div className="flex items-center gap-2 text-muted-foreground bg-muted px-4 py-3 rounded-xl">
           <Users className="w-5 h-5" />
           <span className="text-sm">Only owners/admins can create gigs</span>
         </div>
       ) : (
-        <div className="flex items-center gap-2 text-muted-foreground">
+        <div className="flex items-center gap-2 text-muted-foreground bg-muted px-4 py-3 rounded-xl">
           <Music className="w-5 h-5" />
           <span className="text-sm">Create your band profile first</span>
         </div>
       )}
+    </motion.div>
+  );
+}
+
+function CalendarSkeleton() {
+  return (
+    <div className="min-h-screen pb-8 bg-background">
+      <div className="relative bg-muted border-b border-border overflow-hidden">
+        <div className="px-4 pt-5 pb-4">
+          <div className="animate-shimmer space-y-4">
+            <div className="h-16 bg-muted-foreground/10 rounded-xl" />
+            <div className="h-10 bg-muted-foreground/10 rounded-xl" />
+            <div className="h-10 bg-muted-foreground/10 rounded-xl" />
+          </div>
+        </div>
+      </div>
+
+      <div className="px-4 pt-4">
+        <div className="grid grid-cols-7 gap-1 mb-1">
+          {[...Array(7)].map((_, i) => (
+            <div
+              key={i}
+              className="h-8 bg-muted-foreground/10 rounded animate-shimmer"
+            />
+          ))}
+        </div>
+        <div className="grid grid-cols-7 gap-1">
+          {[...Array(35)].map((_, i) => (
+            <div
+              key={i}
+              className="aspect-square bg-muted-foreground/5 border border-border/30 rounded-lg animate-shimmer"
+            />
+          ))}
+        </div>
+      </div>
     </div>
   );
+}
+
+// Helper functions
+
+function getEventGenres(event: any): string[] {
+  if (event.genres && event.genres.length > 0) return event.genres;
+  if (event.genre) return [event.genre];
+  return [];
+}
+
+function getEventDisplayTitle(event: any): string {
+  const title = event.title?.trim();
+  if (title) return title;
+  return event.status === "hold" ? "Untitled Tentative Gig" : "Untitled Gig";
 }

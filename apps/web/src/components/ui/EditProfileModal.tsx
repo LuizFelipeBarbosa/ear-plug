@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { GENRES, GENRE_COLORS } from "@ear-plug/shared/constants";
 import type { Genre } from "@ear-plug/shared/types";
 import Image from "next/image";
+import { CityAutocomplete } from "@/components/ui/CityAutocomplete";
 
 interface EditProfileModalProps {
   isOpen: boolean;
@@ -196,7 +197,7 @@ export function EditProfileModal({
                 </div>
               </div>
               <motion.button
-                whileTap={{ scale: 0.9 }}
+
                 onClick={onClose}
                 className="p-2.5 hover:bg-muted border border-border hover:border-fan/30 rounded-xl transition-colors touch-target"
               >
@@ -216,7 +217,7 @@ export function EditProfileModal({
               <motion.div variants={itemVariants} className="flex flex-col items-center">
                 <div className="relative">
                   <motion.div
-                    whileHover={{ scale: 1.02 }}
+
                     className="w-28 h-28 bg-gradient-to-br from-fan/20 to-fan/5 border-2 border-fan/20 rounded-2xl overflow-hidden flex items-center justify-center shadow-inner"
                   >
                     {formData.avatar ? (
@@ -235,8 +236,7 @@ export function EditProfileModal({
                   </motion.div>
                   <motion.button
                     type="button"
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
+
                     className="absolute -bottom-1 -right-1 w-10 h-10 bg-fan text-white rounded-xl shadow-lg shadow-fan/30 hover:bg-fan/90 transition-colors flex items-center justify-center"
                   >
                     <Camera className="w-4 h-4" />
@@ -280,21 +280,14 @@ export function EditProfileModal({
                   </div>
                 </div>
 
-                {/* Location Field */}
+                {/* Location Field - Using CityAutocomplete */}
                 <div>
-                  <label className="flex items-center gap-2 text-sm font-medium text-foreground mb-2">
-                    <MapPin className="w-4 h-4 text-muted-foreground" />
-                    Location
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={formData.location || ""}
-                      onChange={(e) => handleFieldChange("location", e.target.value)}
-                      placeholder="e.g., San Francisco, CA"
-                      className="w-full px-4 py-3.5 bg-muted/50 border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-fan/50 focus:bg-fan/[0.02] focus:ring-2 focus:ring-fan/10 transition-all"
-                    />
-                  </div>
+                  <CityAutocomplete
+                    value={formData.location || ""}
+                    onChange={(city) => handleFieldChange("location", city as string)}
+                    placeholder="e.g., San Francisco, CA"
+                    label="Location"
+                  />
                 </div>
               </motion.div>
 
@@ -392,7 +385,7 @@ export function EditProfileModal({
                 <motion.button
                   type="button"
                   onClick={onClose}
-                  whileTap={{ scale: 0.98 }}
+
                   className="flex-1 py-3.5 px-4 bg-muted border border-border text-muted-foreground font-medium rounded-xl hover:bg-muted/80 transition-colors touch-target"
                 >
                   Cancel

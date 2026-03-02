@@ -147,8 +147,7 @@ export function BandMediaSlotModal({ slot, onClose, onSave, onClear }: BandMedia
       >
         {/* Close Button */}
         <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
+
           type="button"
           onClick={onClose}
           className="absolute top-3 right-3 z-20 p-2 bg-black/50 backdrop-blur-sm border border-white/20 text-white hover:bg-black/70 rounded-xl transition-colors"
@@ -205,7 +204,7 @@ export function BandMediaSlotModal({ slot, onClose, onSave, onClear }: BandMedia
           {/* Replace File Button */}
           {slot.canEdit && previewMediaUrl && (
             <motion.button
-              whileTap={{ scale: 0.95 }}
+
               type="button"
               onClick={triggerFilePicker}
               className="absolute bottom-4 right-4 px-3 py-2 bg-black/70 backdrop-blur-sm border border-white/20 text-white text-xs font-medium rounded-lg hover:bg-black/90 transition-colors flex items-center gap-1.5"
@@ -263,7 +262,7 @@ export function BandMediaSlotModal({ slot, onClose, onSave, onClear }: BandMedia
               <div>
                 <CityAutocomplete
                   value={location}
-                  onChange={setLocation}
+                  onChange={(city) => setLocation(city as string)}
                   placeholder="e.g., San Francisco, CA"
                   label="Event Location"
                   disabled={!slot.canEdit}
@@ -341,7 +340,7 @@ export function BandMediaSlotModal({ slot, onClose, onSave, onClear }: BandMedia
           {/* Actions */}
           <div className="mt-auto pt-2 flex items-center justify-end gap-2">
             <motion.button
-              whileTap={{ scale: 0.98 }}
+
               type="button"
               onClick={onClose}
               className="px-4 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors rounded-xl"
@@ -351,7 +350,7 @@ export function BandMediaSlotModal({ slot, onClose, onSave, onClear }: BandMedia
 
             {slot.canEdit && slot.isFilled && (
               <motion.button
-                whileTap={{ scale: 0.98 }}
+  
                 type="button"
                 onClick={handleClear}
                 disabled={isClearing || isSaving}
@@ -368,7 +367,7 @@ export function BandMediaSlotModal({ slot, onClose, onSave, onClear }: BandMedia
 
             {slot.canEdit && (
               <motion.button
-                whileTap={{ scale: 0.98 }}
+  
                 type="button"
                 onClick={handleSave}
                 disabled={!canSave || isSaving || isClearing}

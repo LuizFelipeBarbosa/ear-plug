@@ -25,9 +25,9 @@ import { useMutation, useQuery } from "convex/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import {
-  PlaceAutocomplete,
+  CityAutocomplete,
   type VenueLocationData,
-} from "@/components/maps/PlaceAutocomplete";
+} from "@/components/ui/CityAutocomplete";
 import { useSharedEvents } from "@/hooks/useSharedEvents";
 import { useProfileContext } from "@/hooks/useProfileContext";
 import { api } from "../../../../../convex/_generated/api";
@@ -597,10 +597,11 @@ export function EditGigModal({
               </div>
 
               {/* Venue */}
-              <PlaceAutocomplete
+              <CityAutocomplete
+                mode="venue"
                 value={venue}
                 onChange={(v) => {
-                  setVenue(v);
+                  setVenue(v as VenueLocationData | null);
                   if (v && errors.venue) {
                     setErrors((prev) => {
                       const next = { ...prev };

@@ -326,7 +326,7 @@ export function BandProfileView() {
         <div className="flex items-center justify-between mb-6">
           <ProfileWorkspaceSwitcher className="flex-1 min-w-0" variant="header" />
           <motion.button
-            whileTap={{ scale: 0.95 }}
+
             onClick={openSettingsMenu}
             className="ml-3 p-2.5 bg-card border border-border rounded-xl hover:border-band/30 hover:bg-band/5 transition-colors touch-target shadow-sm"
             aria-label="Open band settings"
@@ -346,7 +346,7 @@ export function BandProfileView() {
             {/* Avatar */}
             <div className="relative">
               <motion.div
-                whileHover={{ scale: 1.02 }}
+
                 className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-band/20 to-band/5 border-2 border-band/20 rounded-2xl overflow-hidden flex items-center justify-center flex-shrink-0"
               >
                 {band.image ? (
@@ -365,7 +365,7 @@ export function BandProfileView() {
               </motion.div>
               {canEditBandProfile && (
                 <motion.button
-                  whileTap={{ scale: 0.9 }}
+
                   onClick={() => setShowEditModal(true)}
                   className="absolute -bottom-1 -right-1 p-1.5 bg-band text-white rounded-lg shadow-lg shadow-band/30 hover:bg-band/90 transition-colors"
                 >
@@ -524,7 +524,7 @@ export function BandProfileView() {
                   <h3 className="text-base font-semibold text-foreground">Band Settings</h3>
                 </div>
                 <motion.button
-                  whileTap={{ scale: 0.9 }}
+
                   onClick={closeSettingsMenu}
                   className="p-2 border border-border text-muted-foreground hover:text-foreground hover:border-band/30 rounded-lg transition-colors"
                 >
@@ -585,7 +585,7 @@ export function BandProfileView() {
                             {canManageMembers && entry.membership.role !== "owner" && (
                               <>
                                 <motion.button
-                                  whileTap={{ scale: 0.95 }}
+                      
                                   onClick={() =>
                                     updateMemberRole({
                                       bandId: band._id,
@@ -599,7 +599,7 @@ export function BandProfileView() {
                                   <ArrowRightLeft className="w-3.5 h-3.5" />
                                 </motion.button>
                                 <motion.button
-                                  whileTap={{ scale: 0.95 }}
+                      
                                   onClick={() =>
                                     removeMember({
                                       bandId: band._id,
@@ -615,7 +615,7 @@ export function BandProfileView() {
                             )}
                             {canTransferOwnership && entry.membership.role !== "owner" && (
                               <motion.button
-                                whileTap={{ scale: 0.95 }}
+                    
                                 onClick={() =>
                                   transferOwnership({
                                     bandId: band._id,
@@ -732,7 +732,7 @@ export function BandProfileView() {
                             <option value="admin">Admin</option>
                           </select>
                           <motion.button
-                            whileTap={{ scale: 0.98 }}
+
                             onClick={handleInvite}
                             disabled={
                               isInviting || !selectedInviteUser || selectedInviteUser.inviteState !== "eligible"
@@ -817,7 +817,7 @@ export function BandProfileView() {
                               </div>
                               {invite.status === "pending" && (
                                 <motion.button
-                                  whileTap={{ scale: 0.95 }}
+                      
                                   onClick={() => revokeInvite({ inviteId: invite._id })}
                                   className="px-2.5 py-1 text-xs font-medium border border-red-500/30 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
                                 >
@@ -836,7 +836,7 @@ export function BandProfileView() {
                 <section>
                   <SignOutButton>
                     <motion.button
-                      whileTap={{ scale: 0.98 }}
+
                       className="w-full flex items-center justify-center gap-2 py-3.5 border border-red-500/20 text-red-500 font-medium text-sm bg-red-500/5 hover:bg-red-500/10 transition-colors rounded-xl"
                     >
                       <LogOut className="w-4 h-4" />
@@ -1040,7 +1040,7 @@ function SettingsTab({
         <SectionTitle icon={Settings} title="Band Management" />
         <div className="space-y-3">
           <motion.button
-            whileTap={{ scale: 0.98 }}
+
             onClick={onOpenSettingsMenu}
             className="w-full flex items-center justify-between p-4 bg-card border border-border rounded-xl hover:border-band/30 transition-colors"
           >
@@ -1064,7 +1064,7 @@ function SettingsTab({
         <SectionTitle icon={LogOut} title="Account" />
         <SignOutButton>
           <motion.button
-            whileTap={{ scale: 0.98 }}
+
             className="w-full flex items-center justify-center gap-2 py-4 border border-red-500/20 text-red-500 font-medium text-sm bg-red-500/5 hover:bg-red-500/10 transition-colors rounded-xl"
           >
             <LogOut className="w-4 h-4" />
@@ -1164,8 +1164,7 @@ function SocialButton({
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
+
       className="flex items-center gap-2 px-4 py-2.5 bg-card border border-border text-muted-foreground hover:border-band/30 hover:text-band transition-colors text-xs font-medium rounded-xl"
     >
       {getIcon()}

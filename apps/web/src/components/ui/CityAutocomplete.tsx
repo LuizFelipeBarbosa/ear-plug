@@ -5,17 +5,28 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { MapPin, X, Loader2, Search } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import usePlacesAutocomplete from "use-places-autocomplete";
 import { cn } from "@/lib/utils";
 import { ensurePlacesLibrary } from "@/lib/google/ensurePlacesLibrary";
+import type { VenueLocationData } from "@/types";
+
+export type { VenueLocationData };
+
+type SuggestionMode = "city" | "venue";
 
 interface CityAutocompleteProps {
-  value?: string;
-  onChange: (city: string) => void;
+  value?: string | VenueLocationData | null;
+  onChange: (value: string | VenueLocationData | null) => void;
   placeholder?: string;
   disabled?: boolean;
   required?: boolean;
   label?: string;
   error?: string;
+  /**
+   * "city" - Only suggests cities/towns
+   * "venue" - Suggests any place (venues, addresses, specific locations)
+   */
+  mode?: SuggestionMode;
 }
 
 interface CitySuggestion {
@@ -68,21 +79,38 @@ function parseCitySuggestion(rawSuggestion: unknown, index: number): CitySuggest
 }
 
 /**
- * City Autocomplete Component
+ * Location Autocomplete Component
  *
- * Provides autocomplete functionality that only suggests cities/towns,
- * not street addresses or specific venues.
+ * Supports two modes:
+ * - "city": Only suggests cities/towns (for user profiles, band locations)
+ * - "venue": Suggests any place including specific addresses and venues (for event creation)
+ *
+ * Automatically extracts:
+ * - Venue/Location Name
+ * - Full Address
+ * - City
+ * - Coordinates (lat/lng) - venue mode only
+ * - Place ID
  */
 export function CityAutocomplete({
   value = "",
   onChange,
-  placeholder = "Enter a city...",
+  placeholder = "Enter a location...",
   disabled = false,
   required = false,
   label = "Location",
   error,
+  mode = "city",
 }: CityAutocompleteProps) {
-  const controlledValue = value ?? "";
+  const isVenueMode = mode === "venue";
+
+  // For city mode: value is string
+  // For venue mode: value can be VenueLocationData
+  const controlledValue =
+    isVenueMode && value && typeof value === "object"
+      ? (value as VenueLocationData).name || ""
+      : (value as string) || "";
+
   const [placesStatus, setPlacesStatus] = useState<"loading" | "ready" | "error">("loading");
   const [placesErrorMessage, setPlacesErrorMessage] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -93,10 +121,25 @@ export function CityAutocomplete({
   >(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [inputValue, setInputValue] = useState(controlledValue);
-  const [suggestions, setSuggestions] = useState<CitySuggestion[]>([]);
+  const [citySuggestions, setCitySuggestions] = useState<CitySuggestion[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
 
+  // Venue mode: use use-places-autocomplete
+  const autocompleteHook = usePlacesAutocomplete({
+    debounce: 200,
+    requestOptions: isVenueMode ? undefined : {}, // Don't run in city mode
+  });
+
+  const {
+    ready: venueReady,
+    value: venueInputValue,
+    suggestions: { status: venueStatus, data: venueSuggestions },
+    setValue: setVenueValue,
+    clearSuggestions: clearVenueSuggestions,
+  } = autocompleteHook;
+
+  // Initialize Places Library
   useEffect(() => {
     let isCancelled = false;
 
@@ -135,9 +178,16 @@ export function CityAutocomplete({
 
   // Sync external value with local input
   useEffect(() => {
+    if (isVenueMode) {
+      // For venue mode, sync with the hook's value if we have a VenueLocationData object
+      if (value && typeof value === "object") {
+        setVenueValue(value.name, false);
+      }
+    }
     setInputValue(controlledValue);
-  }, [controlledValue]);
+  }, [value, controlledValue, isVenueMode, setVenueValue]);
 
+  // City mode: fetch suggestions
   const getFetchAutocompleteSuggestions = useCallback(async () => {
     if (fetchAutocompleteSuggestionsRef.current) {
       return fetchAutocompleteSuggestionsRef.current;
@@ -176,14 +226,15 @@ export function CityAutocomplete({
     return boundFetcher;
   }, []);
 
+  // City mode: fetch city suggestions
   useEffect(() => {
-    if (placesStatus !== "ready") {
+    if (isVenueMode || placesStatus !== "ready") {
       return;
     }
 
     const query = inputValue.trim();
     if (!showSuggestions || query.length < 2) {
-      setSuggestions([]);
+      setCitySuggestions([]);
       setIsSearching(false);
       return;
     }
@@ -215,10 +266,10 @@ export function CityAutocomplete({
           .map((item, index) => parseCitySuggestion(item, index))
           .filter((item): item is CitySuggestion => item !== null);
 
-        setSuggestions(normalizedSuggestions);
+        setCitySuggestions(normalizedSuggestions);
       } catch {
         if (requestId === requestIdRef.current) {
-          setSuggestions([]);
+          setCitySuggestions([]);
         }
       } finally {
         if (requestId === requestIdRef.current) {
@@ -230,31 +281,145 @@ export function CityAutocomplete({
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [inputValue, getFetchAutocompleteSuggestions, placesStatus, showSuggestions]);
+  }, [inputValue, getFetchAutocompleteSuggestions, placesStatus, showSuggestions, isVenueMode]);
 
+  // Handle input change
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     setInputValue(newValue);
-    onChange(newValue);
-    setShowSuggestions(true);
+
+    if (isVenueMode) {
+      setVenueValue(newValue);
+      if (newValue.length >= 2) {
+        setShowSuggestions(true);
+      }
+      // Clear selection if user modifies the text after selection
+      if (value && newValue !== (value as VenueLocationData).name) {
+        onChange(null);
+      }
+    } else {
+      onChange(newValue);
+      setShowSuggestions(true);
+    }
   };
 
+  // Clear selection
   const handleClear = () => {
     setInputValue("");
-    onChange("");
-    setSuggestions([]);
+    onChange(isVenueMode ? null : "");
+    if (isVenueMode) {
+      setVenueValue("", false);
+      clearVenueSuggestions();
+    } else {
+      setCitySuggestions([]);
+    }
     setShowSuggestions(false);
     inputRef.current?.focus();
   };
 
-  const handleSelect = useCallback(
+  // Extract city from address components (venue mode)
+  const extractCity = useCallback(
+    (addressComponents: google.maps.GeocoderAddressComponent[]): string => {
+      const cityComponent =
+        addressComponents.find((comp) => comp.types.includes("locality")) ||
+        addressComponents.find((comp) => comp.types.includes("sublocality")) ||
+        addressComponents.find((comp) =>
+          comp.types.includes("administrative_area_level_2")
+        );
+      return cityComponent?.long_name || "";
+    },
+    []
+  );
+
+  // Handle city selection (city mode)
+  const handleCitySelect = useCallback(
     (suggestion: CitySuggestion) => {
       setInputValue(suggestion.fullText);
       onChange(suggestion.fullText);
       setShowSuggestions(false);
-      setSuggestions([]);
+      setCitySuggestions([]);
     },
     [onChange]
+  );
+
+  // Handle venue selection (venue mode)
+  const handleVenueSelect = useCallback(
+    async (suggestion: google.maps.places.AutocompletePrediction) => {
+      setVenueValue(suggestion.description, false);
+      setInputValue(suggestion.description);
+      setShowSuggestions(false);
+      clearVenueSuggestions();
+
+      if (typeof window === "undefined" || !window.google?.maps?.places) {
+        console.error("Google Maps not loaded");
+        return;
+      }
+
+      try {
+        const placesService = new window.google.maps.places.PlacesService(
+          document.createElement("div")
+        );
+
+        placesService.getDetails(
+          {
+            placeId: suggestion.place_id,
+            fields: [
+              "name",
+              "formatted_address",
+              "geometry",
+              "place_id",
+              "formatted_phone_number",
+              "website",
+              "address_components",
+            ],
+          },
+          (place, status) => {
+            if (
+              status === window.google.maps.places.PlacesServiceStatus.OK &&
+              place &&
+              place.geometry &&
+              place.geometry.location
+            ) {
+              const city = place.address_components
+                ? extractCity(place.address_components)
+                : "";
+
+              let name = place.name || "";
+              if (!name || name === place.formatted_address) {
+                const streetNumber = place.address_components?.find((c) =>
+                  c.types.includes("street_number")
+                )?.long_name;
+                const route = place.address_components?.find((c) =>
+                  c.types.includes("route")
+                )?.long_name;
+                name =
+                  streetNumber && route
+                    ? `${streetNumber} ${route}`
+                    : suggestion.terms[0]?.value || "Location";
+              }
+
+              const venueData: VenueLocationData = {
+                name,
+                address: place.formatted_address || suggestion.description,
+                city,
+                coordinates: {
+                  lat: place.geometry.location.lat(),
+                  lng: place.geometry.location.lng(),
+                },
+                placeId: suggestion.place_id,
+                phoneNumber: place.formatted_phone_number,
+                website: place.website,
+              };
+
+              onChange(venueData);
+            }
+          }
+        );
+      } catch (err) {
+        console.error("Error fetching place details:", err);
+      }
+    },
+    [clearVenueSuggestions, extractCity, onChange, setVenueValue]
   );
 
   // Render loading state
@@ -301,9 +466,9 @@ export function CityAutocomplete({
           </div>
           <input
             type="text"
-            value={controlledValue}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder="Enter city manually"
+            value={isVenueMode ? (value as VenueLocationData)?.name || "" : (value as string) || ""}
+            onChange={(e) => onChange(isVenueMode ? null : e.target.value)}
+            placeholder={isVenueMode ? "Enter location manually" : "Enter city manually"}
             className={cn(
               "w-full pl-12 pr-4 py-3.5 bg-muted/50 border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-band/50 focus:ring-2 focus:ring-band/10 transition-all",
               error ? "border-red-500" : "border-border"
@@ -311,11 +476,30 @@ export function CityAutocomplete({
           />
         </div>
         <p className="text-xs text-muted-foreground mt-1.5">
-          {placesErrorMessage || "Autocomplete unavailable. Type your city name manually."}
+          {placesErrorMessage ||
+            (isVenueMode
+              ? "Autocomplete unavailable. Type details manually."
+              : "Autocomplete unavailable. Type your city name manually.")}
         </p>
       </div>
     );
   }
+
+  // Determine if we have selected venue data to show
+  const hasSelectedVenue = isVenueMode && value && typeof value === "object";
+  const selectedVenue = hasSelectedVenue ? (value as VenueLocationData) : null;
+
+  const hasSuggestions = isVenueMode
+    ? showSuggestions && venueInputValue.length >= 2 && venueStatus === "OK" && venueSuggestions.length > 0
+    : showSuggestions && inputValue.length >= 2 && citySuggestions.length > 0;
+
+  const isLoadingSuggestions = isVenueMode
+    ? false // use-places-autocomplete doesn't expose loading state, data is async but instant
+    : showSuggestions && inputValue.length >= 2 && isSearching;
+
+  const hasNoResults = isVenueMode
+    ? showSuggestions && venueInputValue.length >= 2 && venueStatus === "ZERO_RESULTS"
+    : showSuggestions && inputValue.length >= 2 && !isSearching && citySuggestions.length === 0;
 
   return (
     <div ref={containerRef} className="w-full relative">
@@ -349,7 +533,7 @@ export function CityAutocomplete({
             setShowSuggestions(true);
           }}
           onBlur={() => setIsFocused(false)}
-          disabled={disabled}
+          disabled={disabled || (isVenueMode && !venueReady)}
           placeholder={placeholder}
           className={cn(
             "w-full pl-12 pr-10 py-3.5 bg-muted/50 border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-band/10 transition-all",
@@ -394,48 +578,115 @@ export function CityAutocomplete({
         )}
       </AnimatePresence>
 
-      {/* Suggestions Dropdown */}
+      {/* Selected Venue Info (venue mode only) */}
       <AnimatePresence>
-        {showSuggestions && inputValue.length >= 2 && suggestions.length > 0 && (
+        {selectedVenue && (
           <motion.div
-            initial={{ opacity: 0, y: -8 }}
+            initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.15 }}
-            className="absolute z-50 left-0 right-0 top-full mt-2 bg-card border border-border shadow-xl rounded-xl overflow-hidden"
+            exit={{ opacity: 0, y: -10 }}
+            className="mt-3 p-4 bg-band/5 border border-band/20 rounded-xl"
           >
-            {suggestions.map((suggestion, index) => (
-              <motion.button
-                key={suggestion.placeId}
-                type="button"
-                onClick={() => handleSelect(suggestion)}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.03 }}
-                className="w-full px-4 py-3 text-left hover:bg-muted transition-colors border-b border-border/50 last:border-0 group"
-              >
-                <div className="flex items-start gap-3">
-                  <MapPin className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0 group-hover:text-band transition-colors" />
-                  <div className="min-w-0">
-                    <p className="text-sm text-foreground font-medium truncate group-hover:text-band transition-colors">
-                      {suggestion.primaryText}
-                    </p>
-                    {suggestion.secondaryText && (
-                      <p className="text-xs text-muted-foreground truncate">
-                        {suggestion.secondaryText}
-                      </p>
-                    )}
-                  </div>
+            <div className="flex items-start gap-3">
+              <MapPin className="w-5 h-5 text-band mt-0.5 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-foreground truncate">{selectedVenue.name}</p>
+                <p className="text-xs text-muted-foreground truncate">{selectedVenue.address}</p>
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-[10px] bg-muted text-muted-foreground px-2 py-1 rounded-md">
+                    {selectedVenue.city}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">
+                    {selectedVenue.coordinates.lat.toFixed(4)}, {selectedVenue.coordinates.lng.toFixed(4)}
+                  </span>
                 </div>
-              </motion.button>
-            ))}
+              </div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
 
+      {/* Suggestions Dropdown */}
+      <AnimatePresence>
+        {isVenueMode
+          ? showSuggestions &&
+            venueInputValue.length >= 2 &&
+            venueStatus === "OK" &&
+            venueSuggestions.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.15 }}
+                className="absolute z-50 left-0 right-0 top-full mt-2 bg-card border border-border shadow-xl rounded-xl overflow-hidden"
+              >
+                {venueSuggestions.map((suggestion, index) => (
+                  <motion.button
+                    key={suggestion.place_id}
+                    type="button"
+                    onClick={() => handleVenueSelect(suggestion)}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.03 }}
+                    className="w-full px-4 py-3 text-left hover:bg-muted transition-colors border-b border-border/50 last:border-0 group"
+                  >
+                    <div className="flex items-start gap-3">
+                      <MapPin className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0 group-hover:text-band transition-colors" />
+                      <div className="min-w-0">
+                        <p className="text-sm text-foreground font-medium truncate group-hover:text-band transition-colors">
+                          {suggestion.structured_formatting.main_text}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {suggestion.structured_formatting.secondary_text}
+                        </p>
+                      </div>
+                    </div>
+                  </motion.button>
+                ))}
+              </motion.div>
+            )
+          : showSuggestions &&
+            inputValue.length >= 2 &&
+            citySuggestions.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.15 }}
+                className="absolute z-50 left-0 right-0 top-full mt-2 bg-card border border-border shadow-xl rounded-xl overflow-hidden"
+              >
+                {citySuggestions.map((suggestion, index) => (
+                  <motion.button
+                    key={suggestion.placeId}
+                    type="button"
+                    onClick={() => handleCitySelect(suggestion)}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.03 }}
+                    className="w-full px-4 py-3 text-left hover:bg-muted transition-colors border-b border-border/50 last:border-0 group"
+                  >
+                    <div className="flex items-start gap-3">
+                      <MapPin className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0 group-hover:text-band transition-colors" />
+                      <div className="min-w-0">
+                        <p className="text-sm text-foreground font-medium truncate group-hover:text-band transition-colors">
+                          {suggestion.primaryText}
+                        </p>
+                        {suggestion.secondaryText && (
+                          <p className="text-xs text-muted-foreground truncate">
+                            {suggestion.secondaryText}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </motion.button>
+                ))}
+              </motion.div>
+            )}
+      </AnimatePresence>
+
       {/* Searching state */}
       <AnimatePresence>
-        {showSuggestions && inputValue.length >= 2 && isSearching && (
+        {isLoadingSuggestions && (
           <motion.div
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
@@ -444,7 +695,7 @@ export function CityAutocomplete({
           >
             <div className="flex items-center justify-center gap-2 text-muted-foreground">
               <Loader2 className="w-4 h-4 animate-spin" />
-              <span className="text-sm">Searching cities...</span>
+              <span className="text-sm">Searching {isVenueMode ? "locations" : "cities"}...</span>
             </div>
           </motion.div>
         )}
@@ -452,39 +703,37 @@ export function CityAutocomplete({
 
       {/* No Results */}
       <AnimatePresence>
-        {showSuggestions &&
-          inputValue.length >= 2 &&
-          !isSearching &&
-          suggestions.length === 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              className="absolute z-50 left-0 right-0 top-full mt-2 bg-card border border-border shadow-xl rounded-xl p-4 text-center"
-            >
-              <Search className="w-5 h-5 text-muted-foreground mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">No cities found</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Try a different search term
-              </p>
-            </motion.div>
-          )}
-      </AnimatePresence>
-
-      {/* Typing hint */}
-      <AnimatePresence>
-        {showSuggestions && inputValue.length === 1 && (
+        {hasNoResults && (
           <motion.div
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
-            className="absolute z-50 left-0 right-0 top-full mt-2 bg-card border border-border shadow-xl rounded-xl p-3 text-center"
+            className="absolute z-50 left-0 right-0 top-full mt-2 bg-card border border-border shadow-xl rounded-xl p-4 text-center"
           >
-            <p className="text-xs text-muted-foreground">
-              Keep typing to see city suggestions...
+            <Search className="w-5 h-5 text-muted-foreground mx-auto mb-2" />
+            <p className="text-sm text-muted-foreground">
+              No {isVenueMode ? "locations" : "cities"} found
             </p>
+            <p className="text-xs text-muted-foreground mt-1">Try a different search term</p>
           </motion.div>
         )}
+      </AnimatePresence>
+
+      {/* Typing hint */}
+      <AnimatePresence>
+        {showSuggestions &&
+          (isVenueMode ? venueInputValue.length === 1 : inputValue.length === 1) && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              className="absolute z-50 left-0 right-0 top-full mt-2 bg-card border border-border shadow-xl rounded-xl p-3 text-center"
+            >
+              <p className="text-xs text-muted-foreground">
+                Keep typing to see {isVenueMode ? "location" : "city"} suggestions...
+              </p>
+            </motion.div>
+          )}
       </AnimatePresence>
     </div>
   );

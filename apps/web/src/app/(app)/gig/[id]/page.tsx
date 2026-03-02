@@ -217,7 +217,7 @@ export default function EventDetailsPage({ params }: PageProps) {
         {/* Navigation Actions */}
         <div className="absolute top-0 left-0 right-0 p-4 flex items-center justify-between">
           <motion.button
-            whileTap={{ scale: 0.95 }}
+
             onClick={() => router.back()}
             className="p-3 bg-background/80 backdrop-blur-xl border border-border rounded-xl text-foreground hover:bg-background transition-colors touch-target shadow-lg"
           >
@@ -226,7 +226,7 @@ export default function EventDetailsPage({ params }: PageProps) {
 
           <div className="flex items-center gap-2">
             <motion.button
-              whileTap={{ scale: 0.95 }}
+  
               onClick={handleShare}
               className="p-3 bg-background/80 backdrop-blur-xl border border-border rounded-xl text-foreground hover:bg-background transition-colors touch-target shadow-lg"
             >
@@ -234,7 +234,7 @@ export default function EventDetailsPage({ params }: PageProps) {
             </motion.button>
             {!isPast && !inBandMode && (
               <motion.button
-                whileTap={{ scale: 0.95 }}
+    
                 onClick={() => toggleLike()}
                 className={cn(
                   "p-3 backdrop-blur-xl border rounded-xl transition-colors touch-target shadow-lg",

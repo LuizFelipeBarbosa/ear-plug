@@ -152,7 +152,7 @@ export default function PublicFanProfilePage({ params }: PageProps) {
         <motion.button
           initial={{ opacity: 0, x: -10 }}
           animate={{ opacity: 1, x: 0 }}
-          whileTap={{ scale: 0.95 }}
+
           onClick={() => router.back()}
           className="mb-4 inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-fan transition-colors"
         >
@@ -170,7 +170,7 @@ export default function PublicFanProfilePage({ params }: PageProps) {
           <div className="flex items-center gap-4">
             {/* Avatar */}
             <motion.div
-              whileHover={{ scale: 1.02 }}
+
               className="relative w-20 h-20 bg-gradient-to-br from-fan/20 to-fan/5 border-2 border-fan/20 rounded-2xl overflow-hidden flex items-center justify-center flex-shrink-0"
             >
               {fan.avatar ? (

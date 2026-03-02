@@ -29,7 +29,7 @@ export function GuestListCard({
 
   return (
     <motion.button
-      whileTap={{ scale: 0.98 }}
+
       onClick={onOpen}
       className="w-full text-left bg-card border border-border rounded-2xl p-4 hover:border-band/30 transition-colors group"
     >
@@ -52,7 +52,7 @@ export function GuestListCard({
               Admin
             </span>
           )}
-          <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+          <ChevronRight className="w-4 h-4 transition-transform" />
         </div>
       </div>
 

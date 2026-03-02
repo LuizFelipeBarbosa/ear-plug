@@ -290,7 +290,7 @@ export function EditBandProfileModal({
                 </div>
               </div>
               <motion.button
-                whileTap={{ scale: 0.9 }}
+
                 onClick={onClose}
                 className="p-2.5 hover:bg-muted border border-border hover:border-band/30 rounded-xl transition-colors touch-target"
               >
@@ -438,7 +438,7 @@ export function EditBandProfileModal({
                       <motion.div variants={itemVariants}>
                         <CityAutocomplete
                           value={formData.location}
-                          onChange={(city) => setFormData({ ...formData, location: city })}
+                          onChange={(city) => setFormData({ ...formData, location: city as string })}
                           placeholder="e.g., San Francisco, CA"
                           label="Location"
                           required
@@ -472,8 +472,7 @@ export function EditBandProfileModal({
                         <div className="flex items-center justify-center gap-6">
                           <motion.button
                             type="button"
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
+
                             onClick={() =>
                               setFormData({
                                 ...formData,
@@ -494,8 +493,7 @@ export function EditBandProfileModal({
                           </motion.span>
                           <motion.button
                             type="button"
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
+
                             onClick={() =>
                               setFormData({
                                 ...formData,
@@ -592,7 +590,7 @@ export function EditBandProfileModal({
               <motion.button
                 type="button"
                 onClick={onClose}
-                whileTap={{ scale: 0.98 }}
+
                 className="flex-1 py-3.5 px-4 bg-muted border border-border text-muted-foreground font-medium rounded-xl hover:bg-muted/80 transition-colors touch-target"
               >
                 Cancel
