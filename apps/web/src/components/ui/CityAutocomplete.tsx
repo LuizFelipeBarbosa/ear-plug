@@ -121,6 +121,7 @@ export function CityAutocomplete({
   >(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [inputValue, setInputValue] = useState(controlledValue);
+  const [manualErrorInput, setManualErrorInput] = useState(controlledValue);
   const [citySuggestions, setCitySuggestions] = useState<CitySuggestion[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
@@ -186,6 +187,18 @@ export function CityAutocomplete({
     }
     setInputValue(controlledValue);
   }, [value, controlledValue, isVenueMode, setVenueValue]);
+
+  // Keep the manual fallback input in sync with externally controlled selections.
+  useEffect(() => {
+    if (controlledValue) {
+      setManualErrorInput(controlledValue);
+      return;
+    }
+
+    if (!isVenueMode) {
+      setManualErrorInput(controlledValue);
+    }
+  }, [controlledValue, isVenueMode]);
 
   // City mode: fetch suggestions
   const getFetchAutocompleteSuggestions = useCallback(async () => {
@@ -306,6 +319,7 @@ export function CityAutocomplete({
   // Clear selection
   const handleClear = () => {
     setInputValue("");
+    setManualErrorInput("");
     onChange(isVenueMode ? null : "");
     if (isVenueMode) {
       setVenueValue("", false);
@@ -466,8 +480,12 @@ export function CityAutocomplete({
           </div>
           <input
             type="text"
-            value={isVenueMode ? (value as VenueLocationData)?.name || "" : (value as string) || ""}
-            onChange={(e) => onChange(isVenueMode ? null : e.target.value)}
+            value={manualErrorInput}
+            onChange={(e) => {
+              const nextValue = e.target.value;
+              setManualErrorInput(nextValue);
+              onChange(isVenueMode ? null : nextValue);
+            }}
             placeholder={isVenueMode ? "Enter location manually" : "Enter city manually"}
             className={cn(
               "w-full pl-12 pr-4 py-3.5 bg-muted/50 border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-band/50 focus:ring-2 focus:ring-band/10 transition-all",

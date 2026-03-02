@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
   X,
@@ -47,6 +47,7 @@ export function CreateGigModal({
 }: CreateGigModalProps) {
   const { createEvent } = useSharedEvents();
   const isTentative = creationKind === "tentative";
+  const initialStatus = (isTentative ? "hold" : "confirmed") as EventStatus;
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -54,7 +55,7 @@ export function CreateGigModal({
   const [activeTab, setActiveTab] = useState<GigModalTab>("details");
 
   const [formData, setFormData] = useState<GigFormData>(() =>
-    createGigFormData((isTentative ? "hold" : "confirmed") as EventStatus),
+    createGigFormData(initialStatus),
   );
 
   const [venue, setVenue] = useState<VenueLocationData | null>(null);
@@ -86,16 +87,31 @@ export function CreateGigModal({
       .slice(0, 8);
   }, [allBands, bandId, cohostSearch, selectedCohostBandIds]);
 
-  // Reset form when modal opens with different creation kind
-  useEffect(() => {
-    if (isOpen) {
-      setFormData((prev) => ({
-        ...prev,
-        status: (isTentative ? "hold" : "confirmed") as EventStatus,
-      }));
-      setActiveTab("details");
+  const resetForm = useCallback(() => {
+    setFormData(createGigFormData(initialStatus));
+    setVenue(null);
+    setCoverImage(null);
+    setIsDragging(false);
+    setErrors({});
+    setSubmitError(null);
+    setCohostSearch("");
+    setSelectedCohostBandIds([]);
+    setActiveTab("details");
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
     }
-  }, [isOpen, isTentative]);
+  }, [initialStatus]);
+
+  // Reset form whenever the modal is opened.
+  useEffect(() => {
+    if (!isOpen) return;
+    resetForm();
+  }, [isOpen, resetForm]);
+
+  const handleClose = useCallback(() => {
+    resetForm();
+    onClose();
+  }, [onClose, resetForm]);
 
   const clearFieldError = (field: string) => {
     if (!errors[field]) {
@@ -178,7 +194,7 @@ export function CreateGigModal({
       });
 
       onSuccess?.();
-      onClose();
+      handleClose();
     } catch (error) {
       setSubmitError(
         error instanceof Error ? error.message : "Failed to create event"
@@ -197,7 +213,7 @@ export function CreateGigModal({
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-        onClick={onClose}
+        onClick={handleClose}
       />
 
       <motion.div
@@ -247,7 +263,7 @@ export function CreateGigModal({
               </div>
             </div>
             <button
-              onClick={onClose}
+              onClick={handleClose}
               disabled={isSubmitting}
               className="p-2 bg-muted border border-border rounded-xl text-muted-foreground hover:text-foreground transition-colors"
             >
@@ -397,7 +413,7 @@ export function CreateGigModal({
           <div className="sticky bottom-0 bg-card pt-2 pb-4 border-t border-border flex gap-3">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               disabled={isSubmitting}
               className="flex-1 py-3 bg-muted text-foreground font-medium rounded-xl hover:bg-muted/80 transition-colors"
             >
