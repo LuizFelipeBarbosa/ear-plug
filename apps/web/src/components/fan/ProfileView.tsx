@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -44,6 +44,7 @@ import { getInitials } from "@ear-plug/shared/utils";
 import type { Genre } from "@ear-plug/shared/types";
 import { cn } from "@/lib/utils";
 import { panelFade, presenceSyncNoInitial } from "@/lib/motion/presets";
+import { uploadToConvexStorage } from "@/lib/convexUpload";
 
 const PANEL_TRANSITION_MS = 250;
 
@@ -67,6 +68,9 @@ export function FanProfileView() {
   const pendingInvites = useQuery(api.bandMembers.listMyPendingInvites) ?? [];
   const acceptInvite = useMutation(api.bandMembers.acceptInvite);
   const declineInvite = useMutation(api.bandMembers.declineInvite);
+  const generateAvatarUploadUrl = useMutation(api.users.generateAvatarUploadUrl);
+  const setAvatarFromStorage = useMutation(api.users.setAvatarFromStorage);
+  const clearAvatar = useMutation(api.users.clearAvatar);
 
   const [activeTab, setActiveTab] = useState<TabType>("overview");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -75,6 +79,43 @@ export function FanProfileView() {
   const workspaceMenuCloseTimeout = useRef<number | null>(null);
   const [showCreateBandForm, setShowCreateBandForm] = useState(false);
   const [processingInviteId, setProcessingInviteId] = useState<Id<"bandInvites"> | null>(null);
+  const openEditModal = useCallback(() => setIsEditModalOpen(true), []);
+  const closeEditModal = useCallback(() => setIsEditModalOpen(false), []);
+
+  const handleSaveProfile = useCallback(
+    async (data: {
+      name: string;
+      location?: string;
+      topGenres?: Genre[];
+      avatarFile?: File;
+      removeAvatar?: boolean;
+    }) => {
+      if (data.avatarFile) {
+        const { uploadUrl } = await generateAvatarUploadUrl({});
+        const uploadData = await uploadToConvexStorage(uploadUrl, data.avatarFile);
+        await setAvatarFromStorage({ storageId: uploadData.storageId as Id<"_storage"> });
+      } else if (data.removeAvatar) {
+        await clearAvatar({});
+      }
+
+      await updateProfile({
+        name: data.name,
+        location: data.location,
+        topGenres: data.topGenres,
+      });
+    },
+    [clearAvatar, generateAvatarUploadUrl, setAvatarFromStorage, updateProfile]
+  );
+
+  const editModalInitialData = useMemo(
+    () => ({
+      name: user?.name ?? "",
+      location: user?.location,
+      avatar: user?.avatar,
+      topGenres: (user?.topGenres as Genre[] | undefined) ?? undefined,
+    }),
+    [user?.avatar, user?.location, user?.name, user?.topGenres]
+  );
 
   useEffect(() => {
     return () => {
@@ -94,15 +135,6 @@ export function FanProfileView() {
     month: "short",
     year: "numeric",
   });
-
-  const handleSaveProfile = async (data: {
-    name: string;
-    location?: string;
-    avatar?: string;
-    topGenres?: Genre[];
-  }) => {
-    await updateProfile(data);
-  };
 
   const handleAcceptInvite = async (
     inviteId: Id<"bandInvites">,
@@ -188,7 +220,7 @@ export function FanProfileView() {
           stats={stats}
           avatarAction={
             <motion.button
-              onClick={() => setIsEditModalOpen(true)}
+              onClick={openEditModal}
               className="absolute -bottom-1 -right-1 p-1.5 bg-fan text-white rounded-lg shadow-lg shadow-fan/30 hover:bg-fan/90 transition-colors"
             >
               <Edit3 className="w-3.5 h-3.5" />
@@ -405,14 +437,9 @@ export function FanProfileView() {
       {/* Edit Profile Modal */}
       <EditProfileModal
         isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
+        onClose={closeEditModal}
         onSave={handleSaveProfile}
-        initialData={{
-          name: user.name,
-          location: user.location,
-          avatar: user.avatar,
-          topGenres: user.topGenres as Genre[] | undefined,
-        }}
+        initialData={editModalInitialData}
       />
     </div>
   );

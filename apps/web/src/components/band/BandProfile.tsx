@@ -31,6 +31,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { useBandPastShows, useCurrentBand } from "@/hooks/useBand";
+import { useProfileContext } from "@/hooks/useProfileContext";
 import { EditBandProfileModal } from "@/components/band/EditBandProfileModal";
 import { BandMediaSlotsSection } from "@/components/band/slots/BandMediaSlotsSection";
 import { PastShowFlyerSection } from "@/components/events/PastShowFlyerSection";
@@ -65,6 +66,7 @@ export function BandProfileView() {
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [inviteNotice, setInviteNotice] = useState<string | null>(null);
   const convex = useConvex();
+  const { setPersonalMode } = useProfileContext();
   const myBands = useQuery(api.bands.listMyBands);
   const activeMembership = myBands?.find((entry) => entry.band._id === band?._id);
   const memberRole = activeMembership?.membership.role;
@@ -81,6 +83,12 @@ export function BandProfileView() {
   const removeMember = useMutation(api.bandMembers.removeMember);
   const revokeInvite = useMutation(api.bandMembers.revokeInvite);
   const transferOwnership = useMutation(api.bandMembers.transferOwnership);
+  const deleteBandMutation = useMutation(api.bands.deleteBand);
+  const [deleteConfirmationText, setDeleteConfirmationText] = useState("");
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isDeletingBand, setIsDeletingBand] = useState(false);
+  const openEditModal = useCallback(() => setShowEditModal(true), []);
+  const closeEditModal = useCallback(() => setShowEditModal(false), []);
 
   useEffect(() => {
     return () => {
@@ -89,6 +97,11 @@ export function BandProfileView() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    setDeleteConfirmationText("");
+    setDeleteError(null);
+  }, [band?._id, isSettingsMenuOpen]);
 
   const openSettingsMenu = () => {
     if (settingsMenuCloseTimeout.current !== null) {
@@ -233,6 +246,33 @@ export function BandProfileView() {
     setInviteNotice(null);
   };
 
+  const deletePhrase = band ? `I CONFIRM I WANT TO DELETE ${band.name}` : "";
+  const isDeletePhraseMatch = deleteConfirmationText.trim() === deletePhrase;
+
+  const handleDeleteBand = async () => {
+    if (!band || !canTransferOwnership || !isDeletePhraseMatch) {
+      return;
+    }
+
+    setDeleteError(null);
+    setIsDeletingBand(true);
+    try {
+      await deleteBandMutation({
+        bandId: band._id,
+        confirmationText: deleteConfirmationText,
+      });
+      setPersonalMode();
+      setDeleteConfirmationText("");
+      closeSettingsMenu();
+    } catch (error) {
+      setDeleteError(
+        error instanceof Error ? error.message : "Failed to delete band."
+      );
+    } finally {
+      setIsDeletingBand(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen pb-24 bg-background overflow-x-hidden">
@@ -264,6 +304,17 @@ export function BandProfileView() {
       </div>
     );
   }
+
+  const editModalBand = {
+    _id: band._id,
+    name: band.name,
+    genres: band.genres || [],
+    location: band.location,
+    bio: band.bio,
+    memberCount: band.memberCount,
+    image: band.image,
+    socialLinks: band.socialLinks,
+  };
 
   const stats = bandWithStats?.stats;
 
@@ -321,7 +372,7 @@ export function BandProfileView() {
               {canEditBandProfile && (
                 <motion.button
 
-                  onClick={() => setShowEditModal(true)}
+                  onClick={openEditModal}
                   className="absolute -bottom-1 -right-1 p-1.5 bg-band text-white rounded-lg shadow-lg shadow-band/30 hover:bg-band/90 transition-colors"
                 >
                   <Edit3 className="w-3.5 h-3.5" />
@@ -782,6 +833,51 @@ export function BandProfileView() {
                   </section>
                 )}
 
+                {/* Danger Zone */}
+                {canTransferOwnership && band && (
+                  <section>
+                    <h4 className="flex items-center gap-2 text-xs font-semibold text-red-500 uppercase tracking-wide mb-3">
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Danger Zone
+                    </h4>
+                    <div className="bg-red-500/5 border border-red-500/20 rounded-xl p-4 space-y-3">
+                      <p className="text-xs text-muted-foreground">
+                        Type the confirmation phrase exactly to permanently delete this band and all linked data.
+                      </p>
+                      <p className="text-xs font-semibold text-foreground break-words">
+                        {deletePhrase}
+                      </p>
+                      <input
+                        type="text"
+                        value={deleteConfirmationText}
+                        onChange={(event) => {
+                          setDeleteConfirmationText(event.target.value);
+                          if (deleteError) setDeleteError(null);
+                        }}
+                        placeholder="Type confirmation phrase"
+                        className="w-full bg-card border border-red-500/30 rounded-xl px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-red-500/60 focus:ring-2 focus:ring-red-500/10"
+                      />
+                      {deleteError && (
+                        <p className="text-xs text-red-500">{deleteError}</p>
+                      )}
+                      <button
+                        type="button"
+                        onClick={handleDeleteBand}
+                        disabled={!isDeletePhraseMatch || isDeletingBand}
+                        className={cn(
+                          "w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl border transition-colors",
+                          !isDeletePhraseMatch || isDeletingBand
+                            ? "bg-muted border-border text-muted-foreground cursor-not-allowed"
+                            : "bg-red-500/10 border-red-500/30 text-red-500 hover:bg-red-500/20"
+                        )}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        {isDeletingBand ? "Deleting..." : "Delete Band"}
+                      </button>
+                    </div>
+                  </section>
+                )}
+
                 {/* Sign Out */}
                 <section>
                   <SignOutButton>
@@ -803,17 +899,8 @@ export function BandProfileView() {
       {/* Edit Profile Modal */}
       <EditBandProfileModal
         isOpen={canEditBandProfile && showEditModal}
-        onClose={() => setShowEditModal(false)}
-        band={{
-          _id: band._id,
-          name: band.name,
-          genres: band.genres || [],
-          location: band.location,
-          bio: band.bio,
-          memberCount: band.memberCount,
-          image: band.image,
-          socialLinks: band.socialLinks,
-        }}
+        onClose={closeEditModal}
+        band={editModalBand}
       />
     </div>
   );

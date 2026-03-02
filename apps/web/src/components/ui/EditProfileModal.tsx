@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { X, Camera, Check, MapPin, User, Music, Sparkles, Loader2 } from "lucide-react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { X, Camera, Check, User, Music, Sparkles, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { fadeFast, panelFade, presenceSyncNoInitial } from "@/lib/motion/presets";
 import { GENRES, GENRE_COLORS } from "@ear-plug/shared/constants";
 import type { Genre } from "@ear-plug/shared/types";
 import Image from "next/image";
@@ -24,65 +25,13 @@ interface EditProfileModalProps {
 interface ProfileFormData {
   name: string;
   location?: string;
-  avatar?: string;
   topGenres?: Genre[];
+  avatarFile?: File;
+  removeAvatar?: boolean;
 }
 
-const backdropVariants = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1 },
-  exit: { opacity: 0 },
-};
-
-const modalVariants = {
-  hidden: { 
-    opacity: 0, 
-    y: 100,
-    scale: 0.95,
-  },
-  visible: { 
-    opacity: 1, 
-    y: 0,
-    scale: 1,
-    transition: {
-      type: "spring" as const,
-      stiffness: 300,
-      damping: 30,
-    },
-  },
-  exit: { 
-    opacity: 0, 
-    y: 100,
-    scale: 0.95,
-    transition: {
-      duration: 0.2,
-    },
-  },
-};
-
-const contentVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.05,
-      delayChildren: 0.1,
-    },
-  },
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 10 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      type: "spring" as const,
-      stiffness: 400,
-      damping: 30,
-    },
-  },
-};
+const IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
 
 export function EditProfileModal({
   isOpen,
@@ -90,19 +39,59 @@ export function EditProfileModal({
   onSave,
   initialData,
 }: EditProfileModalProps) {
-  const [formData, setFormData] = useState<ProfileFormData>(initialData);
+  const latestInitialDataRef = useRef(initialData);
+  const wasOpenRef = useRef(false);
+  const [formData, setFormData] = useState<ProfileFormData>({
+    name: initialData.name,
+    location: initialData.location,
+    topGenres: initialData.topGenres,
+  });
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | undefined>(
+    initialData.avatar ?? undefined,
+  );
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [removeAvatar, setRemoveAvatar] = useState(false);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const avatarObjectUrlRef = useRef<string | null>(null);
 
-  // Reset form when modal opens
   useEffect(() => {
-    if (isOpen) {
-      setFormData(initialData);
+    latestInitialDataRef.current = initialData;
+  }, [initialData]);
+
+  // Initialize once per open cycle to avoid live-query re-render resets.
+  useEffect(() => {
+    if (isOpen && !wasOpenRef.current) {
+      const currentInitialData = latestInitialDataRef.current;
+      if (avatarObjectUrlRef.current) {
+        URL.revokeObjectURL(avatarObjectUrlRef.current);
+        avatarObjectUrlRef.current = null;
+      }
+      setFormData({
+        name: currentInitialData.name,
+        location: currentInitialData.location,
+        topGenres: currentInitialData.topGenres,
+      });
       setError(null);
+      setAvatarError(null);
+      setAvatarPreview(currentInitialData.avatar ?? undefined);
+      setAvatarFile(null);
+      setRemoveAvatar(false);
       setTouched({});
     }
-  }, [isOpen, initialData]);
+    wasOpenRef.current = isOpen;
+  }, [isOpen]);
+
+  useEffect(() => {
+    return () => {
+      if (avatarObjectUrlRef.current) {
+        URL.revokeObjectURL(avatarObjectUrlRef.current);
+      }
+    };
+  }, []);
 
   // Handle escape key
   useEffect(() => {
@@ -126,7 +115,11 @@ export function EditProfileModal({
 
     setIsSaving(true);
     try {
-      await onSave(formData);
+      await onSave({
+        ...formData,
+        avatarFile: avatarFile ?? undefined,
+        removeAvatar: avatarFile ? false : removeAvatar,
+      });
       onClose();
     } catch (err) {
       setError("Failed to save profile. Please try again.");
@@ -158,26 +151,61 @@ export function EditProfileModal({
     setTouched({ ...touched, [field]: true });
   };
 
+  const handleAvatarSelect = (file: File) => {
+    if (!IMAGE_MIME_TYPES.has(file.type)) {
+      setAvatarError("Image format must be JPEG, PNG, or WEBP.");
+      return;
+    }
+
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+      setAvatarError("Image size must be 10 MB or less.");
+      return;
+    }
+
+    if (avatarObjectUrlRef.current) {
+      URL.revokeObjectURL(avatarObjectUrlRef.current);
+      avatarObjectUrlRef.current = null;
+    }
+
+    const nextObjectUrl = URL.createObjectURL(file);
+    avatarObjectUrlRef.current = nextObjectUrl;
+    setAvatarPreview(nextObjectUrl);
+    setAvatarFile(file);
+    setRemoveAvatar(false);
+    setAvatarError(null);
+  };
+
+  const handleRemoveAvatar = () => {
+    if (avatarObjectUrlRef.current) {
+      URL.revokeObjectURL(avatarObjectUrlRef.current);
+      avatarObjectUrlRef.current = null;
+    }
+    setAvatarPreview(undefined);
+    setAvatarFile(null);
+    setRemoveAvatar(Boolean(initialData.avatar));
+    setAvatarError(null);
+  };
+
   const selectedGenresCount = formData.topGenres?.length || 0;
   const canSelectMoreGenres = selectedGenresCount < 5;
 
   return (
-    <AnimatePresence>
-      {isOpen && (
+    <AnimatePresence {...presenceSyncNoInitial}>
+      {isOpen ? (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
           {/* Backdrop */}
           <motion.div
-            variants={backdropVariants}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={fadeFast}
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={onClose}
           />
 
           {/* Modal */}
           <motion.div
-            variants={modalVariants}
+            variants={panelFade}
             initial="hidden"
             animate="visible"
             exit="exit"
@@ -195,34 +223,28 @@ export function EditProfileModal({
                     Update your personal information
                   </p>
                 </div>
-              </div>
-              <motion.button
+                </div>
+              <button
 
                 onClick={onClose}
                 className="p-2.5 hover:bg-muted border border-border hover:border-fan/30 rounded-xl transition-colors touch-target"
               >
                 <X className="w-5 h-5 text-muted-foreground" />
-              </motion.button>
+              </button>
             </div>
 
             {/* Form */}
-            <motion.form
-              variants={contentVariants}
-              initial="hidden"
-              animate="visible"
+            <form
               onSubmit={handleSubmit}
               className="p-5 space-y-6 overflow-y-auto max-h-[calc(90vh-80px)]"
             >
               {/* Avatar Section */}
-              <motion.div variants={itemVariants} className="flex flex-col items-center">
+              <div className="flex flex-col items-center">
                 <div className="relative">
-                  <motion.div
-
-                    className="w-28 h-28 bg-gradient-to-br from-fan/20 to-fan/5 border-2 border-fan/20 rounded-2xl overflow-hidden flex items-center justify-center shadow-inner"
-                  >
-                    {formData.avatar ? (
+                  <div className="w-28 h-28 bg-gradient-to-br from-fan/20 to-fan/5 border-2 border-fan/20 rounded-2xl overflow-hidden flex items-center justify-center shadow-inner">
+                    {avatarPreview ? (
                       <Image
-                        src={formData.avatar}
+                        src={avatarPreview}
                         alt="Avatar"
                         width={112}
                         height={112}
@@ -233,22 +255,52 @@ export function EditProfileModal({
                         {formData.name?.charAt(0).toUpperCase() || "?"}
                       </span>
                     )}
-                  </motion.div>
-                  <motion.button
+                  </div>
+                  <button
                     type="button"
+                    onClick={() => fileInputRef.current?.click()}
 
                     className="absolute -bottom-1 -right-1 w-10 h-10 bg-fan text-white rounded-xl shadow-lg shadow-fan/30 hover:bg-fan/90 transition-colors flex items-center justify-center"
                   >
                     <Camera className="w-4 h-4" />
-                  </motion.button>
+                  </button>
                 </div>
-                <p className="text-xs text-muted-foreground mt-3 text-center">
-                  Avatar synced from your account
-                </p>
-              </motion.div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) {
+                      handleAvatarSelect(file);
+                    }
+                    event.target.value = "";
+                  }}
+                />
+                <div className="mt-3 flex items-center gap-2">
+                  {avatarPreview && (
+                    <button
+                      type="button"
+                      onClick={handleRemoveAvatar}
+                      className="text-xs text-red-500 hover:text-red-400 transition-colors"
+                    >
+                      Remove photo
+                    </button>
+                  )}
+                  {!avatarPreview && (
+                    <p className="text-xs text-muted-foreground text-center">
+                      JPEG/PNG/WEBP up to 10MB
+                    </p>
+                  )}
+                </div>
+                {avatarError && (
+                  <p className="text-xs text-red-500 mt-2 text-center">{avatarError}</p>
+                )}
+              </div>
 
               {/* Form Fields */}
-              <motion.div variants={itemVariants} className="space-y-4">
+              <div className="space-y-4">
                 {/* Name Field */}
                 <div>
                   <label className="flex items-center gap-2 text-sm font-medium text-foreground mb-2">
@@ -262,20 +314,16 @@ export function EditProfileModal({
                       onChange={(e) => handleFieldChange("name", e.target.value)}
                       placeholder="Your name"
                       className={cn(
-                        "w-full px-4 py-3.5 bg-muted/50 border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none transition-all",
+                        "w-full px-4 py-3.5 bg-muted/50 border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none transition-colors transition-shadow",
                         touched.name && !formData.name.trim()
                           ? "border-red-500/50 focus:border-red-500"
                           : "border-border focus:border-fan/50 focus:bg-fan/[0.02] focus:ring-2 focus:ring-fan/10"
                       )}
                     />
                     {touched.name && !formData.name.trim() && (
-                      <motion.p
-                        initial={{ opacity: 0, y: -5 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="text-xs text-red-500 mt-1.5 ml-1"
-                      >
+                      <p className="text-xs text-red-500 mt-1.5 ml-1">
                         Name is required
-                      </motion.p>
+                      </p>
                     )}
                   </div>
                 </div>
@@ -289,10 +337,10 @@ export function EditProfileModal({
                     label="Location"
                   />
                 </div>
-              </motion.div>
+              </div>
 
               {/* Top Genres Section */}
-              <motion.div variants={itemVariants}>
+              <div>
                 <div className="flex items-center justify-between mb-3">
                   <label className="flex items-center gap-2 text-sm font-medium text-foreground">
                     <Music className="w-4 h-4 text-muted-foreground" />
@@ -309,23 +357,18 @@ export function EditProfileModal({
                 </div>
                 
                 <div className="flex flex-wrap gap-2">
-                  {GENRES.map((genre, index) => {
+                  {GENRES.map((genre) => {
                     const isSelected = formData.topGenres?.includes(genre.value);
                     const isDisabled = !isSelected && !canSelectMoreGenres;
                     
                     return (
-                      <motion.button
+                      <button
                         key={genre.value}
                         type="button"
                         onClick={() => !isDisabled && toggleGenre(genre.value)}
                         disabled={isDisabled}
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: index * 0.03 }}
-                        whileHover={!isDisabled ? { scale: 1.02 } : {}}
-                        whileTap={!isDisabled ? { scale: 0.98 } : {}}
                         className={cn(
-                          "px-3 py-2 text-xs font-medium rounded-xl transition-all duration-200 flex items-center gap-1.5",
+                          "px-3 py-2 text-xs font-medium rounded-xl transition-colors transition-shadow duration-200 flex items-center gap-1.5",
                           isSelected
                             ? "text-white shadow-sm"
                             : isDisabled
@@ -341,38 +384,31 @@ export function EditProfileModal({
                         }
                       >
                         {isSelected && (
-                          <motion.span
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                          >
+                          <span>
                             <Check className="w-3 h-3" />
-                          </motion.span>
+                          </span>
                         )}
                         {genre.label}
-                      </motion.button>
+                      </button>
                     );
                   })}
                 </div>
                 
                 {selectedGenresCount >= 5 && (
-                  <motion.p
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    className="text-xs text-fan mt-2"
-                  >
+                  <p className="text-xs text-fan mt-2">
                     Maximum 5 genres selected. Deselect one to choose another.
-                  </motion.p>
+                  </p>
                 )}
-              </motion.div>
+              </div>
 
               {/* Error Message */}
               <AnimatePresence>
                 {error && (
                   <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
+                    variants={panelFade}
+                    initial="hidden"
+                    animate="visible"
+                    exit="exit"
                     className="p-4 bg-red-500/5 border border-red-500/20 rounded-xl"
                   >
                     <p className="text-sm text-red-500 text-center">{error}</p>
@@ -381,21 +417,20 @@ export function EditProfileModal({
               </AnimatePresence>
 
               {/* Actions */}
-              <motion.div variants={itemVariants} className="flex gap-3 pt-2">
-                <motion.button
+              <div className="flex gap-3 pt-2">
+                <button
                   type="button"
                   onClick={onClose}
 
                   className="flex-1 py-3.5 px-4 bg-muted border border-border text-muted-foreground font-medium rounded-xl hover:bg-muted/80 transition-colors touch-target"
                 >
                   Cancel
-                </motion.button>
-                <motion.button
+                </button>
+                <button
                   type="submit"
                   disabled={isSaving}
-                  whileTap={!isSaving ? { scale: 0.98 } : {}}
                   className={cn(
-                    "flex-1 py-3.5 px-4 bg-fan text-white font-medium rounded-xl transition-all touch-target flex items-center justify-center gap-2",
+                    "flex-1 py-3.5 px-4 bg-fan text-white font-medium rounded-xl transition-colors transition-shadow touch-target flex items-center justify-center gap-2",
                     isSaving
                       ? "opacity-70 cursor-not-allowed"
                       : "hover:bg-fan/90 shadow-lg shadow-fan/25"
@@ -409,12 +444,12 @@ export function EditProfileModal({
                   ) : (
                     "Save Changes"
                   )}
-                </motion.button>
-              </motion.div>
-            </motion.form>
+                </button>
+              </div>
+            </form>
           </motion.div>
         </div>
-      )}
+      ) : null}
     </AnimatePresence>
   );
 }

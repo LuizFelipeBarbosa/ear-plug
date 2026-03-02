@@ -16,6 +16,8 @@ import {
 } from "./utils/permissions";
 
 const PROFILE_VIEW_DEDUPE_WINDOW_MS = 6 * 60 * 60 * 1000;
+const IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
 
 /** Validator for music genre field */
 const genreValidator = v.union(
@@ -57,6 +59,18 @@ function validateSocialLinks(
       throw new Error(`Invalid URL for ${key}: must use http or https protocol`);
     }
   }
+}
+
+function uniqueById<T extends { _id: unknown }>(docs: T[]): T[] {
+  const seen = new Set<string>();
+  return docs.filter((doc) => {
+    const key = String(doc._id);
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
 }
 
 async function listBandParticipatingEvents(
@@ -443,6 +457,342 @@ export const update = mutation({
     await ctx.db.patch(args.bandId, filteredUpdates);
 
     return args.bandId;
+  },
+});
+
+/**
+ * Generates a short-lived Convex upload URL for band profile image uploads.
+ * Owners/admins only.
+ */
+export const generateImageUploadUrl = mutation({
+  args: {
+    bandId: v.id("bands"),
+  },
+  handler: async (ctx, args) => {
+    await requireBandRole(ctx, args.bandId, ["owner", "admin"]);
+    const uploadUrl = await ctx.storage.generateUploadUrl();
+    return { uploadUrl };
+  },
+});
+
+/**
+ * Commits a previously uploaded storage object as the band's profile image.
+ * Owners/admins only. Replaces prior image storage object when present.
+ */
+export const setImageFromStorage = mutation({
+  args: {
+    bandId: v.id("bands"),
+    storageId: v.id("_storage"),
+  },
+  handler: async (ctx, args) => {
+    await requireBandRole(ctx, args.bandId, ["owner", "admin"]);
+
+    const band = await ctx.db.get(args.bandId);
+    if (!band) {
+      throw new Error("Band not found");
+    }
+
+    const metadata = await ctx.storage.getMetadata(args.storageId);
+    if (!metadata) {
+      throw new Error("Uploaded band image file not found.");
+    }
+
+    const mimeType = metadata.contentType ?? "";
+    if (!IMAGE_MIME_TYPES.has(mimeType)) {
+      throw new Error("Unsupported image format. Use JPEG, PNG, or WEBP.");
+    }
+    if (metadata.size > MAX_IMAGE_SIZE_BYTES) {
+      throw new Error("Image file exceeds the 10 MB size limit.");
+    }
+
+    const imageUrl = await ctx.storage.getUrl(args.storageId);
+    if (!imageUrl) {
+      throw new Error("Unable to resolve image URL from storage.");
+    }
+
+    const previousStorageId = band.imageStorageId;
+    await ctx.db.patch(args.bandId, {
+      image: imageUrl,
+      imageStorageId: args.storageId,
+    });
+
+    if (previousStorageId && previousStorageId !== args.storageId) {
+      try {
+        await ctx.storage.delete(previousStorageId);
+      } catch {
+        // Storage object may already be missing.
+      }
+    }
+
+    return args.bandId;
+  },
+});
+
+/**
+ * Clears a band's profile image and deletes linked storage if present.
+ * Owners/admins only.
+ */
+export const clearImage = mutation({
+  args: {
+    bandId: v.id("bands"),
+  },
+  handler: async (ctx, args) => {
+    await requireBandRole(ctx, args.bandId, ["owner", "admin"]);
+
+    const band = await ctx.db.get(args.bandId);
+    if (!band) {
+      throw new Error("Band not found");
+    }
+
+    const previousStorageId = band.imageStorageId;
+    await ctx.db.patch(args.bandId, {
+      image: undefined,
+      imageStorageId: undefined,
+    });
+
+    if (previousStorageId) {
+      try {
+        await ctx.storage.delete(previousStorageId);
+      } catch {
+        // Storage object may already be missing.
+      }
+    }
+
+    return args.bandId;
+  },
+});
+
+/**
+ * Permanently deletes a band and all linked records.
+ * Owner-only and protected by typed confirmation phrase.
+ */
+export const deleteBand = mutation({
+  args: {
+    bandId: v.id("bands"),
+    confirmationText: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const band = await ctx.db.get(args.bandId);
+    if (!band) {
+      throw new Error("Band not found");
+    }
+
+    await requireBandRole(ctx, args.bandId, ["owner"]);
+
+    const expectedConfirmation = `I CONFIRM I WANT TO DELETE ${band.name}`;
+    if (args.confirmationText.trim() !== expectedConfirmation) {
+      throw new Error(
+        `Confirmation text mismatch. Type exactly: ${expectedConfirmation}`
+      );
+    }
+
+    const [
+      memberships,
+      invites,
+      mediaSlots,
+      savedArtists,
+      profileEngagements,
+      applications,
+      conversations,
+      hostedEvents,
+      cohostInvitesByInvitedBand,
+      cohostInvitesByHostBand,
+      cohostInvitesByInvitedByBand,
+      checkinStaffAssignedByBand,
+      notificationsByBand,
+    ] = await Promise.all([
+      ctx.db
+        .query("bandMemberships")
+        .withIndex("by_band", (q) => q.eq("bandId", args.bandId))
+        .collect(),
+      ctx.db
+        .query("bandInvites")
+        .withIndex("by_band", (q) => q.eq("bandId", args.bandId))
+        .collect(),
+      ctx.db
+        .query("bandMediaSlots")
+        .withIndex("by_band_slot", (q) => q.eq("bandId", args.bandId))
+        .collect(),
+      ctx.db
+        .query("savedArtists")
+        .withIndex("by_band", (q) => q.eq("bandId", args.bandId))
+        .collect(),
+      ctx.db
+        .query("bandProfileEngagements")
+        .withIndex("by_band", (q) => q.eq("bandId", args.bandId))
+        .collect(),
+      ctx.db
+        .query("applications")
+        .withIndex("by_band", (q) => q.eq("bandId", args.bandId))
+        .collect(),
+      ctx.db
+        .query("conversations")
+        .withIndex("by_band", (q) => q.eq("bandId", args.bandId))
+        .collect(),
+      ctx.db
+        .query("events")
+        .withIndex("by_band", (q) => q.eq("bandId", args.bandId))
+        .collect(),
+      ctx.db
+        .query("eventCohostInvites")
+        .withIndex("by_invited_band", (q) => q.eq("invitedBandId", args.bandId))
+        .collect(),
+      ctx.db
+        .query("eventCohostInvites")
+        .withIndex("by_host_band", (q) => q.eq("hostBandId", args.bandId))
+        .collect(),
+      ctx.db
+        .query("eventCohostInvites")
+        .withIndex("by_invited_by_band", (q) =>
+          q.eq("invitedByBandId", args.bandId)
+        )
+        .collect(),
+      ctx.db
+        .query("eventCheckinStaff")
+        .withIndex("by_assigned_by_band", (q) =>
+          q.eq("assignedByBandId", args.bandId)
+        )
+        .collect(),
+      ctx.db
+        .query("notifications")
+        .withIndex("by_band", (q) => q.eq("bandId", args.bandId))
+        .collect(),
+    ]);
+
+    const conversationCleanup = await Promise.all(
+      conversations.map(async (conversation) => {
+        const [messages, conversationReads] = await Promise.all([
+          ctx.db
+            .query("messages")
+            .withIndex("by_conversation", (q) =>
+              q.eq("conversationId", conversation._id)
+            )
+            .collect(),
+          ctx.db
+            .query("conversationReads")
+            .withIndex("by_conversation_user", (q) =>
+              q.eq("conversationId", conversation._id)
+            )
+            .collect(),
+        ]);
+        return {
+          messages,
+          conversationReads,
+        };
+      })
+    );
+
+    const hostedEventCleanup = await Promise.all(
+      hostedEvents.map(async (event) => {
+        const [likes, rsvps, tickets, checkinStaff, cohostInvites, notifications] =
+          await Promise.all([
+            ctx.db
+              .query("likes")
+              .withIndex("by_event", (q) => q.eq("eventId", event._id))
+              .collect(),
+            ctx.db
+              .query("rsvps")
+              .withIndex("by_event", (q) => q.eq("eventId", event._id))
+              .collect(),
+            ctx.db
+              .query("eventTickets")
+              .withIndex("by_event", (q) => q.eq("eventId", event._id))
+              .collect(),
+            ctx.db
+              .query("eventCheckinStaff")
+              .withIndex("by_event", (q) => q.eq("eventId", event._id))
+              .collect(),
+            ctx.db
+              .query("eventCohostInvites")
+              .withIndex("by_event", (q) => q.eq("eventId", event._id))
+              .collect(),
+            ctx.db
+              .query("notifications")
+              .withIndex("by_event", (q) => q.eq("eventId", event._id))
+              .collect(),
+          ]);
+
+        return {
+          likes,
+          rsvps,
+          tickets,
+          checkinStaff,
+          cohostInvites,
+          notifications,
+        };
+      })
+    );
+
+    const conversationMessages = uniqueById(
+      conversationCleanup.flatMap((entry) => entry.messages)
+    );
+    const conversationReads = uniqueById(
+      conversationCleanup.flatMap((entry) => entry.conversationReads)
+    );
+    const eventLikes = uniqueById(
+      hostedEventCleanup.flatMap((entry) => entry.likes)
+    );
+    const eventRsvps = uniqueById(
+      hostedEventCleanup.flatMap((entry) => entry.rsvps)
+    );
+    const eventTickets = uniqueById(
+      hostedEventCleanup.flatMap((entry) => entry.tickets)
+    );
+    const allEventCheckinStaff = uniqueById([
+      ...hostedEventCleanup.flatMap((entry) => entry.checkinStaff),
+      ...checkinStaffAssignedByBand,
+    ]);
+    const allEventCohostInvites = uniqueById([
+      ...hostedEventCleanup.flatMap((entry) => entry.cohostInvites),
+      ...cohostInvitesByInvitedBand,
+      ...cohostInvitesByHostBand,
+      ...cohostInvitesByInvitedByBand,
+    ]);
+    const allNotifications = uniqueById([
+      ...hostedEventCleanup.flatMap((entry) => entry.notifications),
+      ...notificationsByBand,
+    ]);
+
+    await Promise.all([
+      ...eventLikes.map((row) => ctx.db.delete(row._id)),
+      ...eventRsvps.map((row) => ctx.db.delete(row._id)),
+      ...eventTickets.map((row) => ctx.db.delete(row._id)),
+      ...allEventCheckinStaff.map((row) => ctx.db.delete(row._id)),
+      ...allEventCohostInvites.map((row) => ctx.db.delete(row._id)),
+      ...allNotifications.map((row) => ctx.db.delete(row._id)),
+      ...conversationMessages.map((row) => ctx.db.delete(row._id)),
+      ...conversationReads.map((row) => ctx.db.delete(row._id)),
+      ...conversations.map((row) => ctx.db.delete(row._id)),
+      ...applications.map((row) => ctx.db.delete(row._id)),
+      ...savedArtists.map((row) => ctx.db.delete(row._id)),
+      ...profileEngagements.map((row) => ctx.db.delete(row._id)),
+      ...mediaSlots.map((row) => ctx.db.delete(row._id)),
+      ...invites.map((row) => ctx.db.delete(row._id)),
+      ...memberships.map((row) => ctx.db.delete(row._id)),
+      ...hostedEvents.map((row) => ctx.db.delete(row._id)),
+    ]);
+
+    await ctx.db.delete(args.bandId);
+
+    const storageIdsToDelete = new Set<string>();
+    if (band.imageStorageId) {
+      storageIdsToDelete.add(String(band.imageStorageId));
+    }
+    for (const slot of mediaSlots) {
+      storageIdsToDelete.add(String(slot.mediaStorageId));
+    }
+
+    await Promise.all(
+      Array.from(storageIdsToDelete).map(async (storageId) => {
+        try {
+          await ctx.storage.delete(storageId as Id<"_storage">);
+        } catch {
+          // Storage object may already be missing.
+        }
+      })
+    );
+
+    return { deleted: true, bandId: args.bandId };
   },
 });
 
