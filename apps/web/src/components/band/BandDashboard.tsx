@@ -36,33 +36,7 @@ import { cn } from "@/lib/utils";
 import { useQuery } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
-
-// Animation variants matching other redesigned components
-const ANIMATION_VARIANTS = {
-  container: {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { staggerChildren: 0.06, delayChildren: 0.1 },
-    },
-  },
-  item: {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { type: "spring" as const, stiffness: 400, damping: 30 },
-    },
-  },
-  card: {
-    hidden: { opacity: 0, scale: 0.95 },
-    visible: {
-      opacity: 1,
-      scale: 1,
-      transition: { type: "spring" as const, stiffness: 400, damping: 30 },
-    },
-  },
-};
+import { panelFade } from "@/lib/motion/presets";
 
 const STATUS_COLORS = {
   confirmed: {
@@ -188,14 +162,14 @@ export function BandDashboard() {
 
       {/* Main Content */}
       <motion.main
-        variants={ANIMATION_VARIANTS.container}
+        variants={panelFade}
         initial="hidden"
         animate="visible"
         className="relative px-4 -mt-56"
       >
         {/* Band Header Card */}
         <motion.div
-          variants={ANIMATION_VARIANTS.item}
+          variants={panelFade}
           className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm"
         >
           <div className="p-5">
@@ -305,7 +279,7 @@ export function BandDashboard() {
 
         {/* Next Show Highlight */}
         {nextShow && (
-          <motion.div variants={ANIMATION_VARIANTS.item} className="mt-5">
+          <motion.div variants={panelFade} className="mt-5">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-band" />
@@ -325,7 +299,7 @@ export function BandDashboard() {
         )}
 
         {/* Stats Overview */}
-        <motion.div variants={ANIMATION_VARIANTS.item} className="mt-5">
+        <motion.div variants={panelFade} className="mt-5">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <BarChart3 className="w-4 h-4 text-band" />
@@ -375,7 +349,7 @@ export function BandDashboard() {
 
         {/* Upcoming Shows Preview */}
         {(confirmedShows.length > 0 || tentativeShows.length > 0) && (
-          <motion.div variants={ANIMATION_VARIANTS.item} className="mt-5">
+          <motion.div variants={panelFade} className="mt-5">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-band" />
@@ -391,25 +365,15 @@ export function BandDashboard() {
             </div>
 
             <div className="space-y-2">
-              {confirmedShows.slice(0, 2).map((show, index) => (
-                <motion.div
-                  key={show._id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                >
+              {confirmedShows.slice(0, 2).map((show) => (
+                <div key={show._id}>
                   <UpcomingShowCard show={show} status="confirmed" />
-                </motion.div>
+                </div>
               ))}
-              {tentativeShows.slice(0, 1).map((show, index) => (
-                <motion.div
-                  key={show._id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: (confirmedShows.length + index) * 0.1 }}
-                >
+              {tentativeShows.slice(0, 1).map((show) => (
+                <div key={show._id}>
                   <UpcomingShowCard show={show} status="tentative" />
-                </motion.div>
+                </div>
               ))}
             </div>
           </motion.div>
@@ -417,7 +381,7 @@ export function BandDashboard() {
 
         {/* Messages & Invites Preview */}
         {(hasNotifications || conversations.length > 0) && (
-          <motion.div variants={ANIMATION_VARIANTS.item} className="mt-5">
+          <motion.div variants={panelFade} className="mt-5">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <MessageCircle className="w-4 h-4 text-band" />
@@ -498,7 +462,7 @@ export function BandDashboard() {
 
         {/* Open Dates */}
         {openDates.length > 0 && canManageShows && (
-          <motion.div variants={ANIMATION_VARIANTS.item} className="mt-5">
+          <motion.div variants={panelFade} className="mt-5">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <DollarSign className="w-4 h-4 text-emerald-500" />
@@ -521,7 +485,7 @@ export function BandDashboard() {
 
         {/* Suggested Venues */}
         {suggestedVenues.length > 0 && (
-          <motion.div variants={ANIMATION_VARIANTS.item} className="mt-5">
+          <motion.div variants={panelFade} className="mt-5">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-band" />
@@ -539,7 +503,7 @@ export function BandDashboard() {
 
         {/* Past Shows */}
         {pastShows.length > 0 && (
-          <motion.div variants={ANIMATION_VARIANTS.item} className="mt-5">
+          <motion.div variants={panelFade} className="mt-5">
             <PastShowFlyerSection
               shows={pastShows}
               emptyMessage="No past shows yet."
@@ -551,7 +515,7 @@ export function BandDashboard() {
         )}
 
         {/* Quick Actions Footer */}
-        <motion.div variants={ANIMATION_VARIANTS.item} className="mt-6">
+        <motion.div variants={panelFade} className="mt-6">
           <div className="grid grid-cols-2 gap-3">
             <QuickActionCard
               href="/calendar"
@@ -584,7 +548,7 @@ function NextShowCard({ show }: { show: any }) {
   return (
     <Link href={`/gig/${show._id}`}>
       <div className={cn(
-        "bg-card border p-4 rounded-xl transition-all hover:shadow-md",
+        "bg-card border p-4 rounded-xl transition-colors transition-shadow hover:shadow-md",
         colors.border
       )}>
         <div className="flex items-start justify-between gap-3">
@@ -668,7 +632,7 @@ function UpcomingShowCard({ show, status }: { show: any; status: "confirmed" | "
   return (
     <Link href={`/gig/${show._id}`}>
       <div className={cn(
-        "bg-card border p-3 rounded-xl flex items-center gap-3 transition-all hover:bg-muted/50",
+        "bg-card border p-3 rounded-xl flex items-center gap-3 transition-colors hover:bg-muted/50",
         colors.border
       )}>
         <div className={cn(
@@ -723,9 +687,7 @@ function StatCard({
   };
 
   return (
-    <motion.div
-      variants={ANIMATION_VARIANTS.card}
-      
+    <div
       className={cn(
         "relative bg-card border p-4 rounded-xl overflow-hidden group",
         highlight ? "border-band/30" : "border-border"
@@ -757,7 +719,7 @@ function StatCard({
         </p>
         <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -784,7 +746,7 @@ function QuickActionCard({
     <Link href={href}>
       <div
         className={cn(
-          "p-4 rounded-xl border transition-all",
+          "p-4 rounded-xl border transition-colors",
           colorClasses[color]
         )}
       >
@@ -805,7 +767,7 @@ function QuickActionCard({
 
 function VenueCard({ venue }: { venue: any }) {
   return (
-    <div className="w-36 flex-shrink-0 bg-card border border-border rounded-xl overflow-hidden hover:border-band/30 transition-all">
+    <div className="w-36 flex-shrink-0 bg-card border border-border rounded-xl overflow-hidden hover:border-band/30 transition-colors">
       <div className="h-20 relative bg-muted">
         {venue.images?.[0] ? (
           <Image
@@ -867,7 +829,7 @@ function OpenDateCard({
         onClick={onApply}
         disabled={isApplying}
         className={cn(
-          "px-4 py-2 text-xs font-medium rounded-lg transition-all",
+          "px-4 py-2 text-xs font-medium rounded-lg transition-colors",
           isApplying
             ? "bg-muted text-muted-foreground"
             : "bg-emerald-500 text-white hover:bg-emerald-600"
@@ -913,7 +875,7 @@ function CreateBandPrompt() {
 
         <button
           onClick={() => setShowForm(true)}
-          className="inline-block px-10 py-4 bg-band text-foreground font-medium text-sm border border-band hover:bg-transparent hover:text-band transition-all rounded-xl"
+          className="inline-block px-10 py-4 bg-band text-foreground font-medium text-sm border border-band hover:bg-transparent hover:text-band transition-colors rounded-xl"
         >
           Get Started
         </button>

@@ -24,7 +24,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { motion, AnimatePresence, type Variants } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useCurrentUser } from "@/hooks/useUser";
 import { useSavedBands } from "@/hooks/useBand";
 import { useProfileContext } from "@/hooks/useProfileContext";
@@ -43,65 +43,11 @@ import { GENRE_COLORS } from "@ear-plug/shared/constants";
 import { getInitials } from "@ear-plug/shared/utils";
 import type { Genre } from "@ear-plug/shared/types";
 import { cn } from "@/lib/utils";
+import { panelFade, presenceSyncNoInitial } from "@/lib/motion/presets";
 
 const PANEL_TRANSITION_MS = 250;
 
 type TabType = "overview" | "saved" | "activity" | "settings";
-
-// Animation variants
-const containerVariants: Variants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.08,
-      delayChildren: 0.1,
-    },
-  },
-};
-
-const itemVariants: Variants = {
-  hidden: { opacity: 0, y: 16 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      type: "spring" as const,
-      stiffness: 400,
-      damping: 30,
-    },
-  },
-};
-
-const fadeInVariants: Variants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { duration: 0.25 },
-  },
-  exit: {
-    opacity: 0,
-    transition: { duration: 0.15 },
-  },
-};
-
-const slideUpVariants: Variants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      type: "spring" as const,
-      stiffness: 300,
-      damping: 25,
-    },
-  },
-  exit: {
-    opacity: 0,
-    y: -10,
-    transition: { duration: 0.2 },
-  },
-};
 
 function capitalizeGenre(genre: Genre | null): string {
   if (!genre) return "Explorer";
@@ -285,7 +231,7 @@ export function FanProfileView() {
 
       {/* Tab Content */}
       <main className="px-4 pt-4">
-        <AnimatePresence mode="wait">
+        <AnimatePresence {...presenceSyncNoInitial}>
           {activeTab === "overview" && (
             <OverviewTab
               key="overview"
@@ -356,11 +302,7 @@ export function FanProfileView() {
                     Your Bands
                   </h4>
                   {myBands.length === 0 ? (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="bg-muted/50 border border-dashed border-border rounded-xl p-4 text-center"
-                    >
+                    <div className="bg-muted/50 border border-dashed border-border rounded-xl p-4 text-center">
                       <Music className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
                       <p className="text-sm text-muted-foreground mb-3">
                         Create your first band workspace
@@ -374,14 +316,12 @@ export function FanProfileView() {
                       >
                         <Plus className="w-4 h-4" /> Create Band
                       </button>
-                    </motion.div>
+                    </div>
                   ) : (
                     <div className="space-y-2">
                       {myBands.map((entry) => (
-                        <motion.div
+                        <div
                           key={entry.band._id}
-                          initial={{ opacity: 0, x: 10 }}
-                          animate={{ opacity: 1, x: 0 }}
                           className="flex items-center gap-3 p-3 bg-muted/50 border border-border rounded-xl"
                         >
                           <div className="w-10 h-10 bg-band/10 border border-band/20 rounded-lg flex items-center justify-center">
@@ -395,7 +335,7 @@ export function FanProfileView() {
                               {entry.membership.role}
                             </p>
                           </div>
-                        </motion.div>
+                        </div>
                       ))}
                       <button
                         onClick={() => {
@@ -417,12 +357,9 @@ export function FanProfileView() {
                       Pending Invites ({pendingInvites.length})
                     </h4>
                     <div className="space-y-2">
-                      {pendingInvites.map((invite, index) => (
-                        <motion.div
+                      {pendingInvites.map((invite) => (
+                        <div
                           key={invite._id}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: index * 0.05 }}
                           className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-4"
                         >
                           <div className="flex items-start gap-3">
@@ -454,7 +391,7 @@ export function FanProfileView() {
                               <X className="w-4 h-4" /> Decline
                             </button>
                           </div>
-                        </motion.div>
+                        </div>
                       ))}
                     </div>
                   </section>
@@ -489,12 +426,7 @@ function OverviewTab({
 }) {
   if (!publicProfile) {
     return (
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        className="space-y-4"
-      >
+      <motion.div variants={panelFade} initial="hidden" animate="visible" className="space-y-4">
         <div className="h-32 bg-muted rounded-xl animate-shimmer" />
         <div className="h-48 bg-muted rounded-xl animate-shimmer" />
         <div className="h-40 bg-muted rounded-xl animate-shimmer" />
@@ -504,14 +436,14 @@ function OverviewTab({
 
   return (
     <motion.div
-      variants={containerVariants}
+      variants={panelFade}
       initial="hidden"
       animate="visible"
       exit="exit"
       className="space-y-5"
     >
       {/* Gig DNA Card */}
-      <motion.div variants={itemVariants}>
+      <div>
         <FanSectionTitle icon={Sparkles} title="Your Gig DNA" />
         <div className="bg-gradient-to-br from-fan/10 via-fan/5 to-transparent border border-fan/20 rounded-2xl p-4">
           <div className="flex items-start gap-4">
@@ -536,19 +468,16 @@ function OverviewTab({
             </div>
           </div>
         </div>
-      </motion.div>
+      </div>
 
       {/* Top Genres */}
       {publicProfile.topGenres.length > 0 && (
-        <motion.div variants={itemVariants}>
+        <div>
           <FanSectionTitle icon={Music} title="Top Genres" />
           <div className="flex flex-wrap gap-2">
-            {publicProfile.topGenres.map((entry: any, index: number) => (
-              <motion.div
+            {publicProfile.topGenres.map((entry: any) => (
+              <div
                 key={entry.genre}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: index * 0.05 }}
                 className="px-3 py-2 rounded-xl text-sm font-medium text-white shadow-sm"
                 style={{
                   backgroundColor: GENRE_COLORS[entry.genre as Genre],
@@ -556,15 +485,15 @@ function OverviewTab({
               >
                 {entry.label}
                 <span className="opacity-80 ml-1.5 text-xs">({entry.attendedCount})</span>
-              </motion.div>
+              </div>
             ))}
           </div>
-        </motion.div>
+        </div>
       )}
 
       {/* Recent Past Shows */}
       {publicProfile.pastShows.length > 0 && (
-        <motion.div variants={itemVariants}>
+        <div>
           <div className="flex items-center justify-between mb-3">
             <FanSectionTitle icon={Ticket} title="Recent Shows" className="mb-0" />
             <span className="text-xs text-muted-foreground">
@@ -585,7 +514,7 @@ function OverviewTab({
             maxItems={4}
             tone="fan"
           />
-        </motion.div>
+        </div>
       )}
     </motion.div>
   );
@@ -595,7 +524,7 @@ function OverviewTab({
 function SavedTab({ publicProfile }: { publicProfile: any }) {
   if (!publicProfile) {
     return (
-      <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-4">
+      <motion.div variants={panelFade} initial="hidden" animate="visible" className="space-y-4">
         <div className="h-32 bg-muted rounded-xl animate-shimmer" />
         <div className="h-48 bg-muted rounded-xl animate-shimmer" />
       </motion.div>
@@ -604,27 +533,24 @@ function SavedTab({ publicProfile }: { publicProfile: any }) {
 
   return (
     <motion.div
-      variants={containerVariants}
+      variants={panelFade}
       initial="hidden"
       animate="visible"
       exit="exit"
       className="space-y-5"
     >
       {/* Saved Artists */}
-      <motion.div variants={itemVariants}>
+      <div>
         <FanSectionTitle icon={Heart} title={`Saved Artists (${publicProfile.savedArtists.length})`} />
         {publicProfile.savedArtists.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {publicProfile.savedArtists.map((artist: any, index: number) => (
-              <motion.div
+            {publicProfile.savedArtists.map((artist: any) => (
+              <div
                 key={artist.bandId}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
               >
                 <Link
                   href={`/bands/${artist.bandId}`}
-                  className="group flex items-center gap-3 p-3 bg-card border border-border rounded-xl hover:border-fan/30 transition-all hover:shadow-sm"
+                  className="group flex items-center gap-3 p-3 bg-card border border-border rounded-xl hover:border-fan/30 transition-colors transition-shadow hover:shadow-sm"
                 >
                   <div className="w-12 h-12 bg-muted border border-border rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0">
                     {artist.image ? (
@@ -651,7 +577,7 @@ function SavedTab({ publicProfile }: { publicProfile: any }) {
                   </div>
                   <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                 </Link>
-              </motion.div>
+              </div>
             ))}
           </div>
         ) : (
@@ -661,19 +587,16 @@ function SavedTab({ publicProfile }: { publicProfile: any }) {
             description="Save your favorite bands to see them here"
           />
         )}
-      </motion.div>
+      </div>
 
       {/* Most Viewed */}
       {publicProfile.mostViewedSavedArtists.length > 0 && (
-        <motion.div variants={itemVariants}>
+        <div>
           <FanSectionTitle icon={Zap} title="Most Engaged" />
           <div className="space-y-2">
             {publicProfile.mostViewedSavedArtists.map((artist: any, index: number) => (
-              <motion.div
+              <div
                 key={artist.bandId}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.05 }}
               >
                 <Link
                   href={`/bands/${artist.bandId}`}
@@ -701,10 +624,10 @@ function SavedTab({ publicProfile }: { publicProfile: any }) {
                     {artist.score} pts
                   </span>
                 </Link>
-              </motion.div>
+              </div>
             ))}
           </div>
-        </motion.div>
+        </div>
       )}
     </motion.div>
   );
@@ -714,7 +637,7 @@ function SavedTab({ publicProfile }: { publicProfile: any }) {
 function ActivityTab({ publicProfile }: { publicProfile: any }) {
   if (!publicProfile) {
     return (
-      <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-4">
+      <motion.div variants={panelFade} initial="hidden" animate="visible" className="space-y-4">
         <div className="h-48 bg-muted rounded-xl animate-shimmer" />
       </motion.div>
     );
@@ -722,14 +645,14 @@ function ActivityTab({ publicProfile }: { publicProfile: any }) {
 
   return (
     <motion.div
-      variants={containerVariants}
+      variants={panelFade}
       initial="hidden"
       animate="visible"
       exit="exit"
       className="space-y-5"
     >
       {/* All Past Shows */}
-      <motion.div variants={itemVariants}>
+      <div>
         <div className="flex items-center justify-between mb-3">
           <FanSectionTitle icon={Ticket} title="Show History" className="mb-0" />
           {publicProfile.pastShows.length > 0 && (
@@ -749,7 +672,7 @@ function ActivityTab({ publicProfile }: { publicProfile: any }) {
           emptyMessage="No shows attended yet. Start exploring events near you!"
           tone="fan"
         />
-      </motion.div>
+      </div>
     </motion.div>
   );
 }
@@ -764,22 +687,22 @@ function SettingsTab({
 }) {
   return (
     <motion.div
-      variants={containerVariants}
+      variants={panelFade}
       initial="hidden"
       animate="visible"
       exit="exit"
       className="space-y-5"
     >
       {/* Appearance */}
-      <motion.div variants={itemVariants}>
+      <div>
         <FanSectionTitle icon={Settings} title="Appearance" />
         <div className="bg-card border border-border rounded-xl p-4">
           <ThemeToggleRow />
         </div>
-      </motion.div>
+      </div>
 
       {/* Workspace */}
-      <motion.div variants={itemVariants}>
+      <div>
         <FanSectionTitle icon={Users} title="Workspace" />
         <div className="space-y-2">
           <button
@@ -799,9 +722,7 @@ function SettingsTab({
           </button>
 
           {pendingInvitesCount > 0 && (
-            <motion.button
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
+            <button
               onClick={onOpenWorkspaceMenu}
               className="w-full flex items-center justify-between p-4 bg-amber-500/5 border border-amber-500/20 rounded-xl hover:bg-amber-500/10 transition-colors"
             >
@@ -820,20 +741,20 @@ function SettingsTab({
                 </div>
               </div>
               <ChevronRight className="w-5 h-5 text-muted-foreground" />
-            </motion.button>
+            </button>
           )}
         </div>
-      </motion.div>
+      </div>
 
       {/* Sign Out */}
-      <motion.div variants={itemVariants}>
+      <div>
         <SignOutButton>
           <button className="w-full flex items-center justify-center gap-2 py-4 border border-red-500/20 text-red-500 font-medium text-sm bg-red-500/5 hover:bg-red-500/10 transition-colors rounded-xl">
             <LogOut className="w-4 h-4" />
             <span>Sign Out</span>
           </button>
         </SignOutButton>
-      </motion.div>
+      </div>
     </motion.div>
   );
 }

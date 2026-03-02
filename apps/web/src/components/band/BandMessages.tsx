@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useBandConversations, useConversation } from "@/hooks/useMessages";
+import { panelFade, presenceSyncNoInitial } from "@/lib/motion/presets";
 import {
   formatEventTime,
   formatFullDate,
@@ -30,7 +31,7 @@ export function BandMessagesView() {
   const [selectedConversation, setSelectedConversation] = useState<Id<"conversations"> | null>(null);
 
   return (
-    <AnimatePresence mode="wait">
+    <AnimatePresence {...presenceSyncNoInitial}>
       {selectedConversation ? (
         <ConversationView
           key="conversation"
@@ -43,31 +44,6 @@ export function BandMessagesView() {
     </AnimatePresence>
   );
 }
-
-// Animation variants
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.05,
-      delayChildren: 0.1,
-    },
-  },
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 16 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      type: "spring" as const,
-      stiffness: 400,
-      damping: 30,
-    },
-  },
-};
 
 function ConversationsList({
   onSelect,
@@ -137,12 +113,9 @@ function ConversationsList({
               </span>
             </div>
             <div className="space-y-3">
-              {pendingCohostInvites.map((invite, index) => (
-                <motion.div
+              {pendingCohostInvites.map((invite) => (
+                <div
                   key={invite._id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.1 }}
                   className="bg-card border border-band/20 rounded-2xl p-4 shadow-sm"
                 >
                   {/* Event Info */}
@@ -174,13 +147,13 @@ function ConversationsList({
 
                   {/* Action Buttons */}
                   <div className="flex gap-2">
-                    <motion.button
+                    <button
                       type="button"
 
                       onClick={() => handleInviteAction(invite._id, "accept")}
                       disabled={activeInviteId === invite._id || !invite.canRespond}
                       className={cn(
-                        "flex-1 py-2.5 px-4 rounded-xl text-sm font-medium transition-all flex items-center justify-center gap-2",
+                        "flex-1 py-2.5 px-4 rounded-xl text-sm font-medium transition-colors transition-shadow flex items-center justify-center gap-2",
                         activeInviteId === invite._id || !invite.canRespond
                           ? "bg-muted text-muted-foreground cursor-not-allowed"
                           : "bg-band text-white hover:bg-band/90 shadow-lg shadow-band/25"
@@ -188,14 +161,14 @@ function ConversationsList({
                     >
                       <Check className="w-4 h-4" />
                       Accept
-                    </motion.button>
-                    <motion.button
+                    </button>
+                    <button
                       type="button"
 
                       onClick={() => handleInviteAction(invite._id, "decline")}
                       disabled={activeInviteId === invite._id || !invite.canRespond}
                       className={cn(
-                        "flex-1 py-2.5 px-4 rounded-xl text-sm font-medium border transition-all flex items-center justify-center gap-2",
+                        "flex-1 py-2.5 px-4 rounded-xl text-sm font-medium border transition-colors transition-shadow flex items-center justify-center gap-2",
                         activeInviteId === invite._id || !invite.canRespond
                           ? "bg-muted border-border text-muted-foreground cursor-not-allowed"
                           : "bg-card border-border text-muted-foreground hover:border-red-500/30 hover:text-red-500"
@@ -203,9 +176,9 @@ function ConversationsList({
                     >
                       <X className="w-4 h-4" />
                       Decline
-                    </motion.button>
+                    </button>
                   </div>
-                </motion.div>
+                </div>
               ))}
             </div>
           </motion.section>
@@ -223,18 +196,12 @@ function ConversationsList({
             )}
           </div>
 
-          <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-            className="space-y-2"
-          >
+          <motion.div variants={panelFade} initial="hidden" animate="visible" className="space-y-2">
             {isLoading ? (
               // Loading Skeleton
               [1, 2, 3].map((i) => (
-                <motion.div
+                <div
                   key={i}
-                  variants={itemVariants}
                   className="p-4 flex items-center gap-3 bg-card border border-border rounded-2xl"
                 >
                   <div className="w-12 h-12 bg-muted animate-shimmer rounded-xl" />
@@ -242,17 +209,16 @@ function ConversationsList({
                     <div className="h-4 bg-muted w-1/3 animate-shimmer rounded" />
                     <div className="h-3 bg-muted w-2/3 animate-shimmer rounded" />
                   </div>
-                </motion.div>
+                </div>
               ))
             ) : conversations.length > 0 ? (
-              conversations.map((conv, index) => (
-                <motion.button
+              conversations.map((conv) => (
+                <button
                   key={conv._id}
-                  variants={itemVariants}
 
                   onClick={() => onSelect(conv._id)}
                   className={cn(
-                    "w-full p-4 flex items-center gap-3 text-left bg-card border rounded-2xl transition-all",
+                    "w-full p-4 flex items-center gap-3 text-left bg-card border rounded-2xl transition-colors transition-shadow",
                     conv.unreadCount > 0
                       ? "border-band/30 shadow-sm"
                       : "border-border hover:border-band/20"
@@ -308,15 +274,12 @@ function ConversationsList({
                       {conv.unreadCount}
                     </span>
                   )}
-                </motion.button>
+                </button>
               ))
             ) : pendingCohostInvites.length > 0 ? (
-              <motion.div
-                variants={itemVariants}
-                className="p-4 text-sm text-muted-foreground bg-muted/50 border border-dashed border-border rounded-2xl text-center"
-              >
+              <div className="p-4 text-sm text-muted-foreground bg-muted/50 border border-dashed border-border rounded-2xl text-center">
                 No venue conversations yet.
-              </motion.div>
+              </div>
             ) : (
               <EmptyState />
             )}
@@ -367,22 +330,22 @@ function ConversationView({
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: 100 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: 100 }}
-      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      variants={panelFade}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
       className="min-h-screen flex flex-col bg-background pb-24"
     >
       {/* Header */}
       <header className="sticky top-0 z-20 bg-card/95 backdrop-blur-xl border-b border-border px-4 py-4">
         <div className="flex items-center gap-3">
-          <motion.button
+          <button
 
             onClick={onBack}
             className="p-2.5 hover:bg-muted border border-border hover:border-band/30 rounded-xl transition-colors touch-target"
           >
             <ArrowLeft className="w-5 h-5 text-muted-foreground" />
-          </motion.button>
+          </button>
 
           {/* Venue Info */}
           <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -414,33 +377,26 @@ function ConversationView({
         {isLoading ? (
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (
-              <motion.div
+              <div
                 key={i}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: i * 0.1 }}
                 className={cn(
                   "max-w-[75%] p-4 animate-shimmer rounded-2xl",
                   i % 2 === 0 ? "ml-auto bg-band/20" : "bg-muted"
                 )}
               >
                 <div className="h-4 bg-muted w-full rounded" />
-              </motion.div>
+              </div>
             ))}
           </div>
         ) : messages.length > 0 ? (
           <>
-            {messages.map((msg, index) => (
-              <MessageBubble key={msg._id} message={msg} index={index} />
+            {messages.map((msg) => (
+              <MessageBubble key={msg._id} message={msg} />
             ))}
             <div ref={messagesEndRef} />
           </>
         ) : (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col items-center justify-center py-16 text-center"
-          >
+          <div className="flex flex-col items-center justify-center py-16 text-center">
             <div className="w-16 h-16 bg-band/10 rounded-full flex items-center justify-center mb-4">
               <Sparkles className="w-8 h-8 text-band" />
             </div>
@@ -448,7 +404,7 @@ function ConversationView({
             <p className="text-sm text-muted-foreground max-w-[250px]">
               Send a message to connect with this venue
             </p>
-          </motion.div>
+          </div>
         )}
       </div>
 
@@ -461,7 +417,7 @@ function ConversationView({
             onKeyDown={handleKeyDown}
             placeholder="Type a message..."
             rows={1}
-            className="flex-1 px-4 py-3 bg-muted/50 border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-band/50 focus:ring-2 focus:ring-band/10 transition-all resize-none min-h-[48px] max-h-[120px]"
+            className="flex-1 px-4 py-3 bg-muted/50 border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-band/50 focus:ring-2 focus:ring-band/10 transition-colors transition-shadow resize-none min-h-[48px] max-h-[120px]"
             style={{ height: "auto" }}
             onInput={(e) => {
               const target = e.target as HTMLTextAreaElement;
@@ -469,36 +425,31 @@ function ConversationView({
               target.style.height = target.scrollHeight + "px";
             }}
           />
-          <motion.button
+          <button
 
             onClick={handleSend}
             disabled={!newMessage.trim()}
             className={cn(
-              "p-3 rounded-xl transition-all touch-target flex items-center justify-center",
+              "p-3 rounded-xl transition-colors transition-shadow touch-target flex items-center justify-center",
               newMessage.trim()
                 ? "bg-band text-white hover:bg-band/90 shadow-lg shadow-band/25"
                 : "bg-muted text-muted-foreground cursor-not-allowed"
             )}
           >
             <Send className="w-5 h-5" />
-          </motion.button>
+          </button>
         </div>
       </div>
     </motion.div>
   );
 }
 
-function MessageBubble({ message, index }: { message: any; index: number }) {
+function MessageBubble({ message }: { message: any }) {
   // Determine if message is from band (own) or venue (other)
   const isOwn = message.senderRole === "band";
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.05 }}
-      className={cn("flex", isOwn ? "justify-end" : "justify-start")}
-    >
+    <div className={cn("flex", isOwn ? "justify-end" : "justify-start")}>
       <div
         className={cn(
           "max-w-[75%] px-4 py-3 rounded-2xl",
@@ -517,16 +468,13 @@ function MessageBubble({ message, index }: { message: any; index: number }) {
           {getRelativeTime(message.timestamp)}
         </p>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
 function EmptyState() {
   return (
-    <motion.div
-      variants={itemVariants}
-      className="flex flex-col items-center justify-center py-16 text-center px-4"
-    >
+    <div className="flex flex-col items-center justify-center py-16 text-center px-4">
       <div className="w-20 h-20 bg-gradient-to-br from-band/10 to-fan/10 border border-band/20 rounded-2xl flex items-center justify-center mb-4">
         <MessageCircle className="w-10 h-10 text-band" />
       </div>
@@ -534,6 +482,6 @@ function EmptyState() {
       <p className="text-sm text-muted-foreground max-w-[280px]">
         Apply to open dates to start conversations with venues and book your next gig
       </p>
-    </motion.div>
+    </div>
   );
 }

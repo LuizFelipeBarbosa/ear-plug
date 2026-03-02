@@ -16,54 +16,13 @@ import {
 import { useQuery } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import { EventCard } from "@/components/events/EventCard";
-import { motion, AnimatePresence, type Variants } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { panelFade, presenceSyncNoInitial } from "@/lib/motion/presets";
 import { formatEventDate, formatEventTime } from "@ear-plug/shared/constants";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 
 type EventTab = "upcoming" | "saved" | "past";
-
-// Animation variants
-const containerVariants: Variants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.06,
-      delayChildren: 0.1,
-    },
-  },
-  exit: {
-    opacity: 0,
-    transition: { duration: 0.15 },
-  },
-};
-
-const itemVariants: Variants = {
-  hidden: { opacity: 0, y: 12 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      type: "spring" as const,
-      stiffness: 400,
-      damping: 30,
-    },
-  },
-};
-
-const monthHeaderVariants: Variants = {
-  hidden: { opacity: 0, x: -10 },
-  visible: {
-    opacity: 1,
-    x: 0,
-    transition: {
-      type: "spring" as const,
-      stiffness: 300,
-      damping: 25,
-    },
-  },
-};
 
 // Event type matching EventCard expectations
 interface CalendarEvent {
@@ -172,15 +131,12 @@ export function FanCalendarView() {
           transition={{ delay: 0.1, duration: 0.3 }}
           className="grid grid-cols-3 gap-3 mt-5"
         >
-          {tabs.map((tab, index) => (
-            <motion.button
+          {tabs.map((tab) => (
+            <button
               key={tab.id}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.15 + index * 0.05 }}
               onClick={() => setActiveTab(tab.id)}
               className={cn(
-                "flex flex-col items-center p-3 rounded-xl border transition-all",
+                "flex flex-col items-center p-3 rounded-xl border transition-colors",
                 activeTab === tab.id
                   ? "bg-fan/10 border-fan/30 text-fan"
                   : "bg-card border-border text-muted-foreground hover:border-fan/20"
@@ -191,7 +147,7 @@ export function FanCalendarView() {
               <span className="text-[10px] uppercase tracking-wide font-medium">
                 {tab.label}
               </span>
-            </motion.button>
+            </button>
           ))}
         </motion.div>
 
@@ -308,24 +264,20 @@ export function FanCalendarView() {
 
       {/* Events List */}
       <main className="px-4 pt-4">
-        <AnimatePresence mode="wait">
+        <AnimatePresence {...presenceSyncNoInitial}>
           {isLoading ? (
             <LoadingState key="loading" />
           ) : currentEvents && currentEvents.length > 0 ? (
             <motion.div
               key={activeTab}
-              variants={containerVariants}
+              variants={panelFade}
               initial="hidden"
               animate="visible"
               exit="exit"
               className="space-y-6"
             >
-              {Object.entries(groupedEvents).map(([month, monthEvents], monthIndex) => (
-                <motion.div
-                  key={month}
-                  variants={monthHeaderVariants}
-                  custom={monthIndex}
-                >
+              {Object.entries(groupedEvents).map(([month, monthEvents]) => (
+                <div key={month}>
                   {/* Month Header */}
                   <div className="flex items-center gap-3 mb-3">
                     <div className="w-8 h-8 bg-fan/10 border border-fan/20 rounded-lg flex items-center justify-center">
@@ -342,21 +294,17 @@ export function FanCalendarView() {
 
                   {/* Events for this month */}
                   <div className="space-y-3">
-                    {monthEvents.map((event, eventIndex) => (
-                      <motion.div
-                        key={event._id}
-                        variants={itemVariants}
-                        custom={eventIndex}
-                      >
+                    {monthEvents.map((event) => (
+                      <div key={event._id}>
                         <EventCard
                           event={event}
                           showAttendanceStatus={activeTab === "past"}
                           variant="default"
                         />
-                      </motion.div>
+                      </div>
                     ))}
                   </div>
-                </motion.div>
+                </div>
               ))}
             </motion.div>
           ) : (
@@ -424,20 +372,10 @@ function EmptyState({ activeTab }: { activeTab: EventTab }) {
   const { icon: Icon, title, description, action } = config[activeTab];
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
-      className="flex flex-col items-center justify-center py-16 text-center"
-    >
-      <motion.div
-        initial={{ scale: 0.9 }}
-        animate={{ scale: 1 }}
-        transition={{ type: "spring", stiffness: 300 }}
-        className="w-20 h-20 bg-muted/50 border border-dashed border-border rounded-2xl flex items-center justify-center mb-5"
-      >
+    <div className="flex flex-col items-center justify-center py-16 text-center">
+      <div className="w-20 h-20 bg-muted/50 border border-dashed border-border rounded-2xl flex items-center justify-center mb-5">
         <Icon className="w-8 h-8 text-muted-foreground" />
-      </motion.div>
+      </div>
       <h3 className="text-lg font-semibold text-foreground mb-2">{title}</h3>
       <p className="text-sm text-muted-foreground max-w-[260px] mb-6">
         {description}
@@ -451,6 +389,6 @@ function EmptyState({ activeTab }: { activeTab: EventTab }) {
           {action.label}
         </Link>
       )}
-    </motion.div>
+    </div>
   );
 }

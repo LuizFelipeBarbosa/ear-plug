@@ -172,6 +172,19 @@
     -webkit-tap-highlight-color: rgba(37, 99, 235, 0.1);
   }
 }
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .animate-shimmer,
+  .animate-pulse-fan,
+  .animate-pulse-band,
+  .animate-spin,
+  .animate-ping {
+    animation: none !important;
+  }
+}
 @media screen and (max-width: 768px) {
   input[type="text"],
   input[type="email"],

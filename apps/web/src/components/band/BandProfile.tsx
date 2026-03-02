@@ -27,7 +27,7 @@ import {
   Trash2,
   ArrowRightLeft,
 } from "lucide-react";
-import { motion, AnimatePresence, type Variants } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { useBandPastShows, useCurrentBand } from "@/hooks/useBand";
@@ -40,56 +40,11 @@ import { GENRE_COLORS } from "@ear-plug/shared/constants";
 import { getInitials } from "@ear-plug/shared/utils";
 import type { BandInviteAssignableUser, Genre } from "@ear-plug/shared/types";
 import { cn } from "@/lib/utils";
+import { panelFade, presenceSyncNoInitial } from "@/lib/motion/presets";
 
 const PANEL_TRANSITION_MS = 250;
 
 type TabType = "overview" | "media" | "shows" | "settings";
-
-// Animation variants
-const containerVariants: Variants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.08,
-      delayChildren: 0.1,
-    },
-  },
-};
-
-const itemVariants: Variants = {
-  hidden: { opacity: 0, y: 16 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      type: "spring" as const,
-      stiffness: 400,
-      damping: 30,
-    },
-  },
-};
-
-const slideVariants = {
-  enter: (direction: number) => ({
-    x: direction > 0 ? 20 : -20,
-    opacity: 0,
-  }),
-  center: {
-    x: 0,
-    opacity: 1,
-    transition: {
-      type: "spring" as const,
-      stiffness: 300,
-      damping: 30,
-    },
-  },
-  exit: (direction: number) => ({
-    x: direction < 0 ? 20 : -20,
-    opacity: 0,
-    transition: { duration: 0.15 },
-  }),
-};
 
 export function BandProfileView() {
   const { band, bandWithStats, isLoading } = useCurrentBand();
@@ -461,7 +416,7 @@ export function BandProfileView() {
 
       {/* Tab Content */}
       <main className="px-4 pt-4">
-        <AnimatePresence mode="wait">
+        <AnimatePresence {...presenceSyncNoInitial}>
           {activeTab === "overview" && (
             <OverviewTab
               key="overview"
@@ -550,12 +505,9 @@ export function BandProfileView() {
                     ) : members.length === 0 ? (
                       <EmptyState icon={Users} title="No members found" description="Invite members to join your band" />
                     ) : (
-                      members.map((entry, index) => (
-                        <motion.div
+                      members.map((entry) => (
+                        <div
                           key={entry.membership._id}
-                          initial={{ opacity: 0, x: 10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: index * 0.05 }}
                           className="flex items-center justify-between gap-3 p-3 bg-card border border-border rounded-xl"
                         >
                           <div className="flex items-center gap-3 min-w-0">
@@ -584,7 +536,7 @@ export function BandProfileView() {
                           <div className="flex items-center gap-1.5">
                             {canManageMembers && entry.membership.role !== "owner" && (
                               <>
-                                <motion.button
+                                <button
                       
                                   onClick={() =>
                                     updateMemberRole({
@@ -597,8 +549,8 @@ export function BandProfileView() {
                                   title={entry.membership.role === "member" ? "Make Admin" : "Make Member"}
                                 >
                                   <ArrowRightLeft className="w-3.5 h-3.5" />
-                                </motion.button>
-                                <motion.button
+                                </button>
+                                <button
                       
                                   onClick={() =>
                                     removeMember({
@@ -610,11 +562,11 @@ export function BandProfileView() {
                                   title="Remove member"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
-                                </motion.button>
+                                </button>
                               </>
                             )}
                             {canTransferOwnership && entry.membership.role !== "owner" && (
-                              <motion.button
+                              <button
                     
                                 onClick={() =>
                                   transferOwnership({
@@ -626,10 +578,10 @@ export function BandProfileView() {
                                 title="Transfer ownership"
                               >
                                 <Crown className="w-3.5 h-3.5" />
-                              </motion.button>
+                              </button>
                             )}
                           </div>
-                        </motion.div>
+                        </div>
                       ))
                     )}
                   </div>
@@ -667,7 +619,7 @@ export function BandProfileView() {
                               if (event.key === "Escape") setShowInviteSuggestions(false);
                             }}
                             placeholder="Search users by name..."
-                            className="w-full bg-card border border-border rounded-xl px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-band/50 focus:ring-2 focus:ring-band/10 transition-all"
+                            className="w-full bg-card border border-border rounded-xl px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-band/50 focus:ring-2 focus:ring-band/10 transition-colors transition-shadow"
                           />
                           {showInviteSuggestions && !selectedInviteUser && (
                             <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-50 border border-border bg-card shadow-xl rounded-xl overflow-hidden">
@@ -738,7 +690,7 @@ export function BandProfileView() {
                               isInviting || !selectedInviteUser || selectedInviteUser.inviteState !== "eligible"
                             }
                             className={cn(
-                              "flex-1 py-2.5 px-4 font-medium text-sm rounded-xl transition-all flex items-center justify-center gap-2",
+                              "flex-1 py-2.5 px-4 font-medium text-sm rounded-xl transition-colors transition-shadow flex items-center justify-center gap-2",
                               isInviting || !selectedInviteUser || selectedInviteUser.inviteState !== "eligible"
                                 ? "bg-muted text-muted-foreground cursor-not-allowed"
                                 : "bg-band text-white hover:bg-band/90 shadow-lg shadow-band/25"
@@ -793,10 +745,8 @@ export function BandProfileView() {
                         <div className="mt-4 pt-4 border-t border-border space-y-2">
                           <p className="text-xs font-medium text-muted-foreground mb-2">Pending Invites</p>
                           {invites.map((invite) => (
-                            <motion.div
+                            <div
                               key={invite._id}
-                              initial={{ opacity: 0 }}
-                              animate={{ opacity: 1 }}
                               className="flex items-center justify-between p-2.5 bg-card border border-border rounded-xl"
                             >
                               <div className="flex items-center gap-2 min-w-0">
@@ -816,15 +766,15 @@ export function BandProfileView() {
                                 </div>
                               </div>
                               {invite.status === "pending" && (
-                                <motion.button
+                                <button
                       
                                   onClick={() => revokeInvite({ inviteId: invite._id })}
                                   className="px-2.5 py-1 text-xs font-medium border border-red-500/30 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
                                 >
                                   Revoke
-                                </motion.button>
+                                </button>
                               )}
-                            </motion.div>
+                            </div>
                           ))}
                         </div>
                       )}
@@ -902,25 +852,25 @@ function OverviewTab({
 }) {
   return (
     <motion.div
-      variants={containerVariants}
+      variants={panelFade}
       initial="hidden"
       animate="visible"
-      exit={{ opacity: 0, y: -10 }}
+      exit="exit"
       className="space-y-5"
     >
       {/* Bio Section */}
       {band.bio && (
-        <motion.div variants={itemVariants}>
+        <div>
           <SectionTitle icon={Sparkles} title="About" />
           <div className="bg-card/50 border border-border rounded-2xl p-4">
             <p className="text-sm text-muted-foreground leading-relaxed">{band.bio}</p>
           </div>
-        </motion.div>
+        </div>
       )}
 
       {/* Social Links */}
       {band.socialLinks && Object.keys(band.socialLinks).length > 0 && (
-        <motion.div variants={itemVariants}>
+        <div>
           <SectionTitle icon={ExternalLink} title="Social Links" />
           <div className="flex flex-wrap gap-2">
             {band.socialLinks.spotify && (
@@ -942,11 +892,11 @@ function OverviewTab({
               <SocialButton href={band.socialLinks.website} icon="website" label="Website" />
             )}
           </div>
-        </motion.div>
+        </div>
       )}
 
       {/* Recent Shows Preview */}
-      <motion.div variants={itemVariants}>
+      <div>
         <div className="flex items-center justify-between mb-3">
           <SectionTitle icon={Calendar} title="Recent Shows" className="mb-0" />
           {pastShows.length > 0 && (
@@ -959,7 +909,7 @@ function OverviewTab({
           isLoading={isPastShowsLoading}
           tone="band"
         />
-      </motion.div>
+      </div>
     </motion.div>
   );
 }
@@ -968,20 +918,20 @@ function OverviewTab({
 function MediaTab({ bandId, canManageSlots }: { bandId: Id<"bands">; canManageSlots: boolean }) {
   return (
     <motion.div
-      variants={containerVariants}
+      variants={panelFade}
       initial="hidden"
       animate="visible"
-      exit={{ opacity: 0, y: -10 }}
+      exit="exit"
       className="space-y-5"
     >
-      <motion.div variants={itemVariants}>
+      <div>
         <BandMediaSlotsSection
           bandId={bandId}
           canManageSlots={canManageSlots}
           title="Photos & Videos"
           description="Showcase your band with up to 6 photos and videos. Drag to reorder."
         />
-      </motion.div>
+      </div>
     </motion.div>
   );
 }
@@ -996,13 +946,13 @@ function ShowsTab({
 }) {
   return (
     <motion.div
-      variants={containerVariants}
+      variants={panelFade}
       initial="hidden"
       animate="visible"
-      exit={{ opacity: 0, y: -10 }}
+      exit="exit"
       className="space-y-5"
     >
-      <motion.div variants={itemVariants}>
+      <div>
         <div className="flex items-center justify-between mb-3">
           <SectionTitle icon={Ticket} title="Show History" className="mb-0" />
           {pastShows.length > 0 && (
@@ -1015,7 +965,7 @@ function ShowsTab({
           isLoading={isPastShowsLoading}
           tone="band"
         />
-      </motion.div>
+      </div>
     </motion.div>
   );
 }
@@ -1030,16 +980,16 @@ function SettingsTab({
 }) {
   return (
     <motion.div
-      variants={containerVariants}
+      variants={panelFade}
       initial="hidden"
       animate="visible"
-      exit={{ opacity: 0, y: -10 }}
+      exit="exit"
       className="space-y-5"
     >
-      <motion.div variants={itemVariants}>
+      <div>
         <SectionTitle icon={Settings} title="Band Management" />
         <div className="space-y-3">
-          <motion.button
+          <button
 
             onClick={onOpenSettingsMenu}
             className="w-full flex items-center justify-between p-4 bg-card border border-border rounded-xl hover:border-band/30 transition-colors"
@@ -1056,22 +1006,22 @@ function SettingsTab({
               </div>
             </div>
             <ChevronRight className="w-5 h-5 text-muted-foreground" />
-          </motion.button>
+          </button>
         </div>
-      </motion.div>
+      </div>
 
-      <motion.div variants={itemVariants}>
+      <div>
         <SectionTitle icon={LogOut} title="Account" />
         <SignOutButton>
-          <motion.button
+          <button
 
             className="w-full flex items-center justify-center gap-2 py-4 border border-red-500/20 text-red-500 font-medium text-sm bg-red-500/5 hover:bg-red-500/10 transition-colors rounded-xl"
           >
             <LogOut className="w-4 h-4" />
             <span>Sign Out</span>
-          </motion.button>
+          </button>
         </SignOutButton>
-      </motion.div>
+      </div>
     </motion.div>
   );
 }
@@ -1125,17 +1075,13 @@ function EmptyState({
   description: string;
 }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="flex flex-col items-center justify-center text-center py-12 px-4 bg-muted/30 border border-dashed border-border rounded-2xl"
-    >
+    <div className="flex flex-col items-center justify-center text-center py-12 px-4 bg-muted/30 border border-dashed border-border rounded-2xl">
       <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center mb-3">
         <Icon className="w-5 h-5 text-muted-foreground" />
       </div>
       <p className="text-sm font-medium text-foreground mb-1">{title}</p>
       <p className="text-xs text-muted-foreground">{description}</p>
-    </motion.div>
+    </div>
   );
 }
 

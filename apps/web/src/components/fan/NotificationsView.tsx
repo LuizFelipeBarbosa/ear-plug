@@ -17,12 +17,10 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
-import {
-  getRelativeTime,
-  NOTIFICATION_TYPE_CONFIG,
-} from "@ear-plug/shared/constants";
-import { motion, AnimatePresence, type Variants } from "framer-motion";
+import { getRelativeTime } from "@ear-plug/shared/constants";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { panelFade, presenceSyncNoInitial } from "@/lib/motion/presets";
 import type { NotificationType } from "@ear-plug/shared/types";
 
 type FilterOption = "all" | "unread" | NotificationType;
@@ -35,54 +33,6 @@ const FILTER_OPTIONS: { value: FilterOption; label: string; icon: React.ElementT
   { value: "new_event_nearby", label: "Nearby", icon: MapPin },
   { value: "lineup_change", label: "Updates", icon: RefreshCw },
 ];
-
-// Animation variants
-const containerVariants: Variants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.05,
-      delayChildren: 0.1,
-    },
-  },
-  exit: {
-    opacity: 0,
-    transition: { duration: 0.15 },
-  },
-};
-
-const itemVariants: Variants = {
-  hidden: { opacity: 0, y: 10, scale: 0.98 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    scale: 1,
-    transition: {
-      type: "spring" as const,
-      stiffness: 400,
-      damping: 30,
-    },
-  },
-  exit: {
-    opacity: 0,
-    x: -20,
-    transition: { duration: 0.2 },
-  },
-};
-
-const sectionVariants: Variants = {
-  hidden: { opacity: 0, x: -10 },
-  visible: {
-    opacity: 1,
-    x: 0,
-    transition: {
-      type: "spring" as const,
-      stiffness: 300,
-      damping: 25,
-    },
-  },
-};
 
 interface Notification {
   _id: string;
@@ -206,8 +156,6 @@ export function FanNotificationsView() {
 
   const handleDelete = async (id: string) => {
     setDeletingId(id);
-    // Small delay for animation
-    await new Promise((resolve) => setTimeout(resolve, 200));
     await removeNotification(id as any);
     setDeletingId(null);
   };
@@ -301,7 +249,7 @@ export function FanNotificationsView() {
                 Filter
               </span>
             </div>
-            {FILTER_OPTIONS.map((option, index) => {
+            {FILTER_OPTIONS.map((option) => {
               const count =
                 option.value === "all"
                   ? stats.all
@@ -318,14 +266,11 @@ export function FanNotificationsView() {
                   : 0;
 
               return (
-                <motion.button
+                <button
                   key={option.value}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.15 + index * 0.03 }}
                   onClick={() => setActiveFilter(option.value)}
                   className={cn(
-                    "flex items-center gap-1.5 px-3 py-2 text-xs font-medium whitespace-nowrap rounded-xl transition-all border touch-target-sm",
+                    "flex items-center gap-1.5 px-3 py-2 text-xs font-medium whitespace-nowrap rounded-xl transition-colors transition-shadow border touch-target-sm",
                     activeFilter === option.value
                       ? "bg-fan text-white border-fan shadow-md shadow-fan/20"
                       : "bg-card border-border text-muted-foreground hover:border-fan/30 hover:text-foreground"
@@ -345,7 +290,7 @@ export function FanNotificationsView() {
                       {count > 99 ? "99+" : count}
                     </span>
                   )}
-                </motion.button>
+                </button>
               );
             })}
           </div>
@@ -354,23 +299,20 @@ export function FanNotificationsView() {
 
       {/* Notifications List */}
       <main className="px-4 pt-4">
-        <AnimatePresence mode="wait">
+        <AnimatePresence {...presenceSyncNoInitial}>
           {isLoading ? (
             <LoadingState key="loading" />
           ) : groupedNotifications.length > 0 ? (
             <motion.div
               key={activeFilter}
-              variants={containerVariants}
+              variants={panelFade}
               initial="hidden"
               animate="visible"
               exit="exit"
               className="space-y-6"
             >
               {groupedNotifications.map((group) => (
-                <motion.section
-                  key={group.title}
-                  variants={sectionVariants}
-                >
+                <section key={group.title}>
                   {/* Section Header */}
                   <div className="flex items-center gap-3 mb-3">
                     <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
@@ -384,106 +326,98 @@ export function FanNotificationsView() {
 
                   {/* Notifications */}
                   <div className="space-y-2">
-                    <AnimatePresence mode="popLayout">
-                      {group.notifications.map((notification, index) => (
-                        <motion.div
-                          key={notification._id}
-                          variants={itemVariants}
-                          custom={index}
-                          layout
-                          exit={{ opacity: 0, x: -100, transition: { duration: 0.2 } }}
+                    {group.notifications.map((notification) => (
+                      <div
+                        key={notification._id}
+                        className={cn(
+                          "group relative flex gap-3 p-4 border rounded-xl transition-colors",
+                          notification.read
+                            ? "bg-card border-border"
+                            : "bg-fan/[0.02] border-fan/30 shadow-sm shadow-fan/5"
+                        )}
+                      >
+                        {/* Unread indicator */}
+                        {!notification.read && (
+                          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-fan rounded-r-full" />
+                        )}
+
+                        {/* Icon */}
+                        <div
                           className={cn(
-                            "group relative flex gap-3 p-4 border rounded-xl transition-all",
-                            notification.read
-                              ? "bg-card border-border"
-                              : "bg-fan/[0.02] border-fan/30 shadow-sm shadow-fan/5"
+                            "w-11 h-11 flex items-center justify-center flex-shrink-0 border rounded-xl transition-colors",
+                            getIconBg(notification.type, notification.read)
                           )}
                         >
-                          {/* Unread indicator */}
-                          {!notification.read && (
-                            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-fan rounded-r-full" />
-                          )}
+                          {getIcon(notification.type)}
+                        </div>
 
-                          {/* Icon */}
-                          <div
-                            className={cn(
-                              "w-11 h-11 flex items-center justify-center flex-shrink-0 border rounded-xl transition-colors",
-                              getIconBg(notification.type, notification.read)
-                            )}
-                          >
-                            {getIcon(notification.type)}
-                          </div>
-
-                          {/* Content */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-2">
-                              <h3
-                                className={cn(
-                                  "text-sm leading-tight",
-                                  notification.read
-                                    ? "text-foreground"
-                                    : "font-semibold text-foreground"
-                                )}
-                              >
-                                {notification.title}
-                              </h3>
-                              <span className="text-[10px] text-muted-foreground whitespace-nowrap flex-shrink-0">
-                                {getRelativeTime(notification.timestamp)}
-                              </span>
-                            </div>
-                            <p className="text-sm text-muted-foreground mt-1 line-clamp-2 leading-relaxed">
-                              {notification.content}
-                            </p>
-
-                            {/* Action hint for linked events */}
-                            {notification.eventId && (
-                              <div className="flex items-center gap-1 mt-2 text-xs text-fan">
-                                <span>View event</span>
-                                <ChevronRight className="w-3 h-3" />
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Actions */}
-                          <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            {!notification.read && (
-                              <motion.button
-
-                                onClick={() => markAsRead(notification._id as any)}
-                                className="p-2 flex items-center justify-center text-muted-foreground hover:text-fan hover:bg-fan/10 transition-colors rounded-lg touch-target-sm"
-                                title="Mark as read"
-                              >
-                                <Check className="w-4 h-4" />
-                              </motion.button>
-                            )}
-                            <motion.button
-
-                              onClick={() => handleDelete(notification._id)}
-                              disabled={deletingId === notification._id}
-                              className="p-2 flex items-center justify-center text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors rounded-lg touch-target-sm disabled:opacity-50"
-                              title="Delete"
+                        {/* Content */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2">
+                            <h3
+                              className={cn(
+                                "text-sm leading-tight",
+                                notification.read
+                                  ? "text-foreground"
+                                  : "font-semibold text-foreground"
+                              )}
                             >
-                              <Trash2 className="w-4 h-4" />
-                            </motion.button>
+                              {notification.title}
+                            </h3>
+                            <span className="text-[10px] text-muted-foreground whitespace-nowrap flex-shrink-0">
+                              {getRelativeTime(notification.timestamp)}
+                            </span>
                           </div>
+                          <p className="text-sm text-muted-foreground mt-1 line-clamp-2 leading-relaxed">
+                            {notification.content}
+                          </p>
 
-                          {/* Link overlay */}
+                          {/* Action hint for linked events */}
                           {notification.eventId && (
-                            <Link
-                              href={`/gig/${notification.eventId}`}
-                              onClick={() => {
-                                if (!notification.read) {
-                                  markAsRead(notification._id as any);
-                                }
-                              }}
-                              className="absolute inset-0 z-10"
-                            />
+                            <div className="flex items-center gap-1 mt-2 text-xs text-fan">
+                              <span>View event</span>
+                              <ChevronRight className="w-3 h-3" />
+                            </div>
                           )}
-                        </motion.div>
-                      ))}
-                    </AnimatePresence>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {!notification.read && (
+                            <button
+                              onClick={() => markAsRead(notification._id as any)}
+                              className="p-2 flex items-center justify-center text-muted-foreground hover:text-fan hover:bg-fan/10 transition-colors rounded-lg touch-target-sm"
+                              title="Mark as read"
+                            >
+                              <Check className="w-4 h-4" />
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleDelete(notification._id)}
+                            disabled={deletingId === notification._id}
+                            className="p-2 flex items-center justify-center text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors rounded-lg touch-target-sm disabled:opacity-50"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+
+                        {/* Link overlay */}
+                        {notification.eventId && (
+                          <Link
+                            href={`/gig/${notification.eventId}`}
+                            onClick={() => {
+                              if (!notification.read) {
+                                markAsRead(notification._id as any);
+                              }
+                            }}
+                            className="absolute inset-0 z-10"
+                          />
+                        )}
+                      </div>
+                    ))}
                   </div>
-                </motion.section>
+                </section>
               ))}
             </motion.div>
           ) : (

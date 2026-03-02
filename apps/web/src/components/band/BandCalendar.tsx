@@ -32,6 +32,7 @@ import {
   GENRE_COLORS,
 } from "@ear-plug/shared/constants";
 import { cn } from "@/lib/utils";
+import { panelFade, presenceSyncNoInitial } from "@/lib/motion/presets";
 import type { EventStatus } from "@ear-plug/shared/types";
 
 type CreationKind = "tentative" | "confirmed";
@@ -67,36 +68,6 @@ const STATUS_COLORS = {
     text: "text-amber-500",
     textDark: "text-amber-600",
     ring: "ring-amber-500/30",
-  },
-};
-
-const ANIMATION_VARIANTS = {
-  container: {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { staggerChildren: 0.05 },
-    },
-  },
-  item: {
-    hidden: { opacity: 0, y: 16 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { type: "spring" as const, stiffness: 400, damping: 30 },
-    },
-  },
-  card: {
-    hidden: { opacity: 0, scale: 0.95 },
-    visible: {
-      opacity: 1,
-      scale: 1,
-      transition: { type: "spring" as const, stiffness: 400, damping: 30 },
-    },
-  },
-  fadeIn: {
-    hidden: { opacity: 0 },
-    visible: { opacity: 1, transition: { duration: 0.3 } },
   },
 };
 
@@ -341,7 +312,7 @@ export function BandCalendarView() {
               {band && canManageShows && (
                 <button
                   onClick={openCreateChooser}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-band text-white font-medium text-xs rounded-lg hover:bg-band/90 transition-all shadow-sm hover:shadow-md active:scale-95"
+                  className="flex items-center gap-1.5 px-3 py-2 bg-band text-white font-medium text-xs rounded-lg hover:bg-band/90 transition-colors transition-shadow shadow-sm hover:shadow-md active:scale-95"
                 >
                   <Plus className="w-4 h-4" />
                   <span className="hidden sm:inline">Create Gig</span>
@@ -363,7 +334,7 @@ export function BandCalendarView() {
                 type="button"
                 onClick={() => setViewMode("list")}
                 className={cn(
-                  "flex-1 flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium rounded-lg transition-all",
+                  "flex-1 flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium rounded-lg transition-colors transition-shadow",
                   viewMode === "list"
                     ? "bg-card text-foreground shadow-sm border border-border/50"
                     : "text-muted-foreground hover:text-foreground",
@@ -376,7 +347,7 @@ export function BandCalendarView() {
                 type="button"
                 onClick={() => setViewMode("month")}
                 className={cn(
-                  "flex-1 flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium rounded-lg transition-all",
+                  "flex-1 flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium rounded-lg transition-colors transition-shadow",
                   viewMode === "month"
                     ? "bg-card text-foreground shadow-sm border border-border/50"
                     : "text-muted-foreground hover:text-foreground",
@@ -397,7 +368,7 @@ export function BandCalendarView() {
           >
             <button
               onClick={prevMonth}
-              className="p-2 hover:bg-muted border border-border hover:border-band/30 transition-all rounded-lg active:scale-95"
+              className="p-2 hover:bg-muted border border-border hover:border-band/30 transition-colors rounded-lg active:scale-95"
             >
               <ChevronLeft className="w-4 h-4 text-muted-foreground" />
             </button>
@@ -406,7 +377,7 @@ export function BandCalendarView() {
             </span>
             <button
               onClick={nextMonth}
-              className="p-2 hover:bg-muted border border-border hover:border-band/30 transition-all rounded-lg active:scale-95"
+              className="p-2 hover:bg-muted border border-border hover:border-band/30 transition-colors rounded-lg active:scale-95"
             >
               <ChevronRight className="w-4 h-4 text-muted-foreground" />
             </button>
@@ -422,7 +393,7 @@ export function BandCalendarView() {
             <button
               onClick={() => setFilterStatus("all")}
               className={cn(
-                "flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-all",
+                "flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-colors transition-shadow",
                 filterStatus === "all"
                   ? "bg-card border-border shadow-sm text-foreground"
                   : "bg-transparent border-transparent text-muted-foreground hover:bg-muted",
@@ -434,7 +405,7 @@ export function BandCalendarView() {
             <button
               onClick={() => setFilterStatus("confirmed")}
               className={cn(
-                "flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-all",
+                "flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-colors transition-shadow",
                 filterStatus === "confirmed"
                   ? "bg-emerald-500/10 border-emerald-500/40 text-emerald-600 shadow-sm"
                   : "bg-transparent border-transparent text-muted-foreground hover:bg-emerald-500/5",
@@ -446,7 +417,7 @@ export function BandCalendarView() {
             <button
               onClick={() => setFilterStatus("tentative")}
               className={cn(
-                "flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-all",
+                "flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-colors transition-shadow",
                 filterStatus === "tentative"
                   ? "bg-amber-500/10 border-amber-500/40 text-amber-600 shadow-sm"
                   : "bg-transparent border-transparent text-muted-foreground hover:bg-amber-500/5",
@@ -468,35 +439,43 @@ export function BandCalendarView() {
 
       {/* Main Content */}
       <motion.main
-        variants={ANIMATION_VARIANTS.container}
+        variants={panelFade}
         initial="hidden"
         animate="visible"
         className="px-4 pt-4"
       >
-        {viewMode === "month" ? (
-          <MonthView
-            monthCells={monthCells}
-            eventsByDateKey={eventsByDateKey}
-            selectedDateKey={selectedDateKey}
-            onSelectDate={setSelectedDateKey}
-            selectedDateEvents={selectedDateEvents}
-            hasMonthEvents={hasMonthEvents}
-            monthName={monthName}
-            onOpenTentative={openTentativeEditor}
-          />
-        ) : hasListEvents ? (
-          <ListView
-            groupedEvents={groupedEvents}
-            unscheduledTentatives={unscheduledTentatives}
-            onOpenTentative={openTentativeEditor}
-          />
-        ) : (
-          <EmptyState
-            onCreateClick={openCreateChooser}
-            band={band}
-            canManageShows={canManageShows}
-          />
-        )}
+        <AnimatePresence {...presenceSyncNoInitial}>
+          {viewMode === "month" ? (
+            <motion.div key="month" variants={panelFade} initial="hidden" animate="visible" exit="exit">
+              <MonthView
+                monthCells={monthCells}
+                eventsByDateKey={eventsByDateKey}
+                selectedDateKey={selectedDateKey}
+                onSelectDate={setSelectedDateKey}
+                selectedDateEvents={selectedDateEvents}
+                hasMonthEvents={hasMonthEvents}
+                monthName={monthName}
+                onOpenTentative={openTentativeEditor}
+              />
+            </motion.div>
+          ) : hasListEvents ? (
+            <motion.div key="list" variants={panelFade} initial="hidden" animate="visible" exit="exit">
+              <ListView
+                groupedEvents={groupedEvents}
+                unscheduledTentatives={unscheduledTentatives}
+                onOpenTentative={openTentativeEditor}
+              />
+            </motion.div>
+          ) : (
+            <motion.div key="empty" variants={panelFade} initial="hidden" animate="visible" exit="exit">
+              <EmptyState
+                onCreateClick={openCreateChooser}
+                band={band}
+                canManageShows={canManageShows}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.main>
 
       {/* Modals */}
@@ -553,7 +532,7 @@ function MonthView({
   return (
     <div className="space-y-4">
       {/* Weekday Headers */}
-      <motion.div variants={ANIMATION_VARIANTS.item} className="grid grid-cols-7 gap-1">
+      <div className="grid grid-cols-7 gap-1">
         {WEEKDAY_LABELS.map((weekday) => (
           <div
             key={weekday}
@@ -563,10 +542,10 @@ function MonthView({
             <span className="hidden sm:inline">{weekday}</span>
           </div>
         ))}
-      </motion.div>
+      </div>
 
       {/* Calendar Grid */}
-      <motion.div variants={ANIMATION_VARIANTS.item} className="grid grid-cols-7 gap-1">
+      <div className="grid grid-cols-7 gap-1">
         {monthCells.map((cell, index) => {
           if (!cell.isCurrentMonth || !cell.dateKey || cell.dayNumber === null) {
             return (
@@ -587,13 +566,13 @@ function MonthView({
           const isSelected = selectedDateKey === cell.dateKey;
 
           return (
-            <motion.button
+            <button
               key={cell.dateKey}
               type="button"
               onClick={() => onSelectDate(isSelected ? null : cell.dateKey)}
 
               className={cn(
-                "aspect-square p-1.5 sm:p-2 border text-left transition-all rounded-lg relative overflow-hidden",
+                "aspect-square p-1.5 sm:p-2 border text-left transition-colors rounded-lg relative overflow-hidden",
                 isSelected
                   ? "border-band ring-2 ring-band/30 bg-card"
                   : "border-border bg-card hover:border-muted-foreground/50",
@@ -654,18 +633,19 @@ function MonthView({
                   </p>
                 </div>
               )}
-            </motion.button>
+            </button>
           );
         })}
-      </motion.div>
+      </div>
 
       {/* Selected Date Events Panel */}
-      <AnimatePresence mode="wait">
+      <AnimatePresence {...presenceSyncNoInitial}>
         {selectedDateKey && (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
+            variants={panelFade}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
             className="bg-card border border-border rounded-2xl overflow-hidden"
           >
             <div className="p-4 border-b border-border/50 flex items-center justify-between">
@@ -694,15 +674,10 @@ function MonthView({
                 </p>
               ) : (
                 <div className="space-y-3">
-                  {selectedDateEvents.map((event, index) => (
-                    <motion.div
-                      key={event._id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                    >
+                  {selectedDateEvents.map((event) => (
+                    <div key={event._id}>
                       <EventItem event={event} onOpenTentative={onOpenTentative} />
-                    </motion.div>
+                    </div>
                   ))}
                 </div>
               )}
@@ -727,8 +702,8 @@ function ListView({
 
   return (
     <div className="space-y-6">
-      {sortedDates.map((date, dateIndex) => (
-        <motion.div key={date} variants={ANIMATION_VARIANTS.item}>
+      {sortedDates.map((date) => (
+        <div key={date}>
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 rounded-xl bg-band/10 flex items-center justify-center">
               <Calendar className="w-5 h-5 text-band" />
@@ -745,28 +720,23 @@ function ListView({
           </div>
 
           <div className="space-y-3">
-            {groupedEvents[date].map((event, eventIndex) => (
-              <motion.div
-                key={event._id}
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: eventIndex * 0.05 }}
-              >
+            {groupedEvents[date].map((event) => (
+              <div key={event._id}>
                 <EventItem event={event} onOpenTentative={onOpenTentative} />
-              </motion.div>
+              </div>
             ))}
           </div>
-        </motion.div>
+        </div>
       ))}
 
       {/* Unscheduled Tentatives Section */}
-      <AnimatePresence>
+      <AnimatePresence {...presenceSyncNoInitial}>
         {unscheduledTentatives.length > 0 && (
           <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            variants={ANIMATION_VARIANTS.item}
+            variants={panelFade}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
           >
             <div className="flex items-center gap-3 mb-3">
               <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
@@ -783,15 +753,10 @@ function ListView({
             </div>
 
             <div className="space-y-3">
-              {unscheduledTentatives.map((event, index) => (
-                <motion.div
-                  key={event._id}
-                  initial={{ opacity: 0, y: 16 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                >
+              {unscheduledTentatives.map((event) => (
+                <div key={event._id}>
                   <EventItem event={event} onOpenTentative={onOpenTentative} />
-                </motion.div>
+                </div>
               ))}
             </div>
           </motion.div>
@@ -912,34 +877,34 @@ function EventItem({
 
   if (isTentative) {
     return (
-      <motion.button
+      <button
 
         onClick={() => onOpenTentative(event)}
         className={cn(
-          "w-full text-left block bg-card border p-4 rounded-xl transition-all group",
+          "w-full text-left block bg-card border p-4 rounded-xl transition-colors transition-shadow group",
           "hover:shadow-md",
           colors.border,
           "hover:border-amber-500/60",
         )}
       >
         {cardContent}
-      </motion.button>
+      </button>
     );
   }
 
   return (
     <Link href={`/gig/${event._id}`} className="block">
-      <motion.div
+      <div
 
         className={cn(
-          "bg-card border p-4 rounded-xl transition-all group cursor-pointer",
+          "bg-card border p-4 rounded-xl transition-colors transition-shadow group cursor-pointer",
           "hover:shadow-md",
           "border-border",
           "hover:border-emerald-500/40",
         )}
       >
         {cardContent}
-      </motion.div>
+      </div>
     </Link>
   );
 }
@@ -954,18 +919,10 @@ function EmptyState({
   canManageShows: boolean;
 }) {
   return (
-    <motion.div
-      variants={ANIMATION_VARIANTS.item}
-      className="flex flex-col items-center justify-center py-16 text-center"
-    >
-      <motion.div
-        initial={{ scale: 0.8, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ type: "spring", stiffness: 200 }}
-        className="w-20 h-20 bg-gradient-to-br from-band/20 to-band/5 rounded-2xl flex items-center justify-center mb-5 border border-band/20"
-      >
+    <div className="flex flex-col items-center justify-center py-16 text-center">
+      <div className="w-20 h-20 bg-gradient-to-br from-band/20 to-band/5 rounded-2xl flex items-center justify-center mb-5 border border-band/20">
         <Sparkles className="w-10 h-10 text-band" />
-      </motion.div>
+      </div>
 
       <h3 className="text-lg font-bold text-foreground mb-2">No upcoming shows</h3>
       <p className="text-sm text-muted-foreground max-w-[260px] mb-6">
@@ -975,14 +932,14 @@ function EmptyState({
       </p>
 
       {band && canManageShows ? (
-        <motion.button
+        <button
 
           onClick={onCreateClick}
-          className="flex items-center gap-2 px-6 py-3 bg-band text-white font-medium text-sm rounded-xl hover:bg-band/90 transition-all shadow-lg shadow-band/20"
+          className="flex items-center gap-2 px-6 py-3 bg-band text-white font-medium text-sm rounded-xl hover:bg-band/90 transition-colors transition-shadow shadow-lg shadow-band/20"
         >
           <Plus className="w-4 h-4" />
           Create First Gig
-        </motion.button>
+        </button>
       ) : band ? (
         <div className="flex items-center gap-2 text-muted-foreground bg-muted px-4 py-3 rounded-xl">
           <Users className="w-5 h-5" />
@@ -994,7 +951,7 @@ function EmptyState({
           <span className="text-sm">Create your band profile first</span>
         </div>
       )}
-    </motion.div>
+    </div>
   );
 }
 
