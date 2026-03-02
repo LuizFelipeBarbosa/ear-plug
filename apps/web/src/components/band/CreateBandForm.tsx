@@ -366,6 +366,7 @@ export function CreateBandForm() {
                     value={formData.location}
                     onChange={(city) => setFormData({ ...formData, location: city as string })}
                     placeholder="e.g., San Francisco, CA"
+                    label=""
                     required
                   />
                 </motion.div>
