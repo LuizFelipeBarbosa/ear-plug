@@ -13,7 +13,10 @@ import {
 } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { normalizeInvitePhone } from "./utils/phone";
-import { requireAuthenticatedUser } from "./utils/permissions";
+import {
+  getAuthenticatedUserOrNull,
+  requireAuthenticatedUser,
+} from "./utils/permissions";
 
 const GENRE_VALUES = [
   "indie",
@@ -86,17 +89,7 @@ function normalizeStoredEmail(email: string): string {
 export const getCurrentUser = query({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      return null;
-    }
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
-      .unique();
-
-    return user;
+    return await getAuthenticatedUserOrNull(ctx);
   },
 });
 
@@ -463,19 +456,7 @@ export const updateRole = mutation({
     role: v.union(v.literal("fan"), v.literal("musician")),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
-      .unique();
-
-    if (!user) {
-      throw new Error("User not found");
-    }
+    const user = await requireAuthenticatedUser(ctx);
 
     // Web is fan-first. Keep this mutation for backward compatibility, but
     // clamp to "fan" so legacy clients cannot switch auth mode.
@@ -525,19 +506,7 @@ export const updateProfile = mutation({
     ),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
-      .unique();
-
-    if (!user) {
-      throw new Error("User not found");
-    }
+    const user = await requireAuthenticatedUser(ctx);
 
     const updates: Partial<typeof args> = {};
     if (args.name !== undefined) updates.name = args.name;

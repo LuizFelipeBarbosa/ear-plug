@@ -39,6 +39,21 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(() => {
+  try {
+    const stored = localStorage.getItem("ear-plug-theme");
+    const theme = stored === "dark" ? "dark" : "light";
+    const root = document.documentElement;
+    root.classList.toggle("dark", theme === "dark");
+    root.style.colorScheme = theme;
+  } catch (_error) {}
+})();`,
+          }}
+        />
+      </head>
       <body
         className={`${GeistSans.variable} ${sourceSerif.variable} font-sans antialiased bg-background text-foreground`}
       >

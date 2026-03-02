@@ -168,7 +168,7 @@ export function CreateGigTypeModal({
                     </div>
                     <p className="text-sm text-muted-foreground leading-relaxed">
                       Start with a placeholder. Perfect for holds, potential
-                      dates, or ideas you're not ready to announce.
+                      dates, or ideas you&apos;re not ready to announce.
                     </p>
                     <div className="flex items-center gap-3 mt-3">
                       <span className="flex items-center gap-1.5 text-xs text-muted-foreground">

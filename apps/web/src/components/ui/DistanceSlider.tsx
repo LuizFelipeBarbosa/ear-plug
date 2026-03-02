@@ -47,11 +47,12 @@ export function DistanceSlider({
           disabled={loading}
           className={cn(
             "w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-md",
-            "bg-muted border border-border",
-            "hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors",
+            "bg-muted border border-border text-foreground",
+            "hover:bg-muted/80 transition-colors",
             "disabled:opacity-50 disabled:cursor-not-allowed",
             "text-sm font-medium touch-target",
           )}
+          style={{ color: "oklch(var(--foreground))" }}
         >
           {" "}
           {loading ? (

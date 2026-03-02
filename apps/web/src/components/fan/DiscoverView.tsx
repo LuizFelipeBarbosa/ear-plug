@@ -107,6 +107,7 @@ export function FanDiscoverView() {
 
   // Search and filter state
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [selectedGenre, setSelectedGenre] = useState<Genre | undefined>(
     genreParam && VALID_GENRES.includes(genreParam) ? genreParam : undefined
   );
@@ -135,12 +136,14 @@ export function FanDiscoverView() {
     genre: selectedGenre,
     enabled: useDistanceFilter && hasLocation,
   });
-  const { results: searchResults } = useSearchEvents(searchQuery);
+  const { results: searchResults, isLoading: searchLoading } = useSearchEvents(debouncedSearchQuery);
 
   // Determine which events to display
+  const hasActiveSearch = debouncedSearchQuery.length >= 2;
   const events = useDistanceFilter && hasLocation ? nearbyEvents : regularEvents;
-  const isLoading = useDistanceFilter && hasLocation ? nearbyLoading : regularLoading;
-  const displayEvents = (searchQuery.length >= 2 ? searchResults : events) as DisplayEvent[] | undefined;
+  const baseEventsLoading = useDistanceFilter && hasLocation ? nearbyLoading : regularLoading;
+  const isLoading = hasActiveSearch ? searchLoading : baseEventsLoading;
+  const displayEvents = (hasActiveSearch ? searchResults : events) as DisplayEvent[] | undefined;
 
   // Enable distance filter when location becomes available
   useEffect(() => {
@@ -156,6 +159,15 @@ export function FanDiscoverView() {
       setShowFilters(true);
     }
   }, [genreParam]);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery.trim());
+    }, 250);
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [searchQuery]);
 
   // Load Google Maps API key
   useEffect(() => {
@@ -443,6 +455,7 @@ export function FanDiscoverView() {
                     animate={{ opacity: 1, y: 0 }}
                     onClick={requestPosition}
                     className="absolute bottom-4 left-4 flex items-center gap-2 px-4 py-2.5 bg-card/90 backdrop-blur-xl border border-border rounded-xl shadow-lg text-sm font-medium text-foreground hover:bg-card transition-colors"
+                    style={{ color: "oklch(var(--foreground))" }}
                   >
                     <Navigation className="w-4 h-4 text-fan" />
                     Enable location

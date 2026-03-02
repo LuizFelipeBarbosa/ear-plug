@@ -1,0 +1,79 @@
+{
+  "timestamp": "2026-03-02T05:00:37.179Z",
+  "convexUrl": "https://brilliant-cardinal-773.convex.cloud",
+  "iterations": 20,
+  "warmupIterations": 3,
+  "results": [
+    {
+      "name": "events.listUpcoming",
+      "convexFunction": "events:listUpcoming",
+      "args": {
+        "limit": 50
+      },
+      "samples": 20,
+      "minMs": 124.42,
+      "maxMs": 654.75,
+      "avgMs": 305.25,
+      "p50Ms": 253.8,
+      "p95Ms": 602.99
+    },
+    {
+      "name": "events.listByGenre",
+      "convexFunction": "events:listByGenre",
+      "args": {
+        "genre": "rock",
+        "limit": 50
+      },
+      "samples": 20,
+      "minMs": 95.14,
+      "maxMs": 190.98,
+      "avgMs": 124.31,
+      "p50Ms": 113.74,
+      "p95Ms": 190.11
+    },
+    {
+      "name": "events.search",
+      "convexFunction": "events:search",
+      "args": {
+        "query": "rock",
+        "limit": 20
+      },
+      "samples": 20,
+      "minMs": 93.13,
+      "maxMs": 193.09,
+      "avgMs": 125.81,
+      "p50Ms": 112.23,
+      "p95Ms": 190.04
+    },
+    {
+      "name": "events.listNearby",
+      "convexFunction": "events:listNearby",
+      "args": {
+        "latitude": 37.7749,
+        "longitude": -122.4194,
+        "radiusMiles": 25,
+        "genre": "rock",
+        "limit": 50
+      },
+      "samples": 20,
+      "minMs": 93.88,
+      "maxMs": 195.61,
+      "avgMs": 115.63,
+      "p50Ms": 110.6,
+      "p95Ms": 184.44
+    },
+    {
+      "name": "venues.list",
+      "convexFunction": "venues:list",
+      "args": {
+        "limit": 50
+      },
+      "samples": 20,
+      "minMs": 91.11,
+      "maxMs": 119.82,
+      "avgMs": 105.31,
+      "p50Ms": 103.79,
+      "p95Ms": 116.33
+    }
+  ]
+}

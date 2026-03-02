@@ -9,6 +9,7 @@ import { query, mutation } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import {
+  getAuthenticatedUserOrNull,
   requireAuthenticatedUser,
   requireBandMember,
   requireBandRole,
@@ -213,16 +214,7 @@ export const trackProfileView = mutation({
 export const getCurrentUserBand = query({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      return null;
-    }
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
-      .unique();
-
+    const user = await getAuthenticatedUserOrNull(ctx);
     if (!user) {
       return null;
     }
@@ -252,16 +244,7 @@ export const getCurrentUserBand = query({
 export const listMyBands = query({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      return [];
-    }
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
-      .unique();
-
+    const user = await getAuthenticatedUserOrNull(ctx);
     if (!user) {
       return [];
     }
@@ -548,19 +531,7 @@ export const search = query({
 export const toggleSave = mutation({
   args: { bandId: v.id("bands") },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
-      .unique();
-
-    if (!user) {
-      throw new Error("User not found");
-    }
+    const user = await requireAuthenticatedUser(ctx);
 
     const existing = await ctx.db
       .query("savedArtists")
@@ -597,16 +568,7 @@ export const toggleSave = mutation({
 export const getSavedBands = query({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      return [];
-    }
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
-      .unique();
-
+    const user = await getAuthenticatedUserOrNull(ctx);
     if (!user) {
       return [];
     }

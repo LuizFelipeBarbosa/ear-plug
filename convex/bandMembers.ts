@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query, type MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import {
+  getAuthenticatedUserOrNull,
   requireAuthenticatedUser,
   requireBandMember,
   requireBandRole,
@@ -123,16 +124,7 @@ async function resolveActivePendingInvite(
 export const listMyBands = query({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      return [];
-    }
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
-      .unique();
-
+    const user = await getAuthenticatedUserOrNull(ctx);
     if (!user) {
       return [];
     }
@@ -428,16 +420,7 @@ export const listBandInvites = query({
 export const listMyPendingInvites = query({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      return [];
-    }
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
-      .unique();
-
+    const user = await getAuthenticatedUserOrNull(ctx);
     if (!user) {
       return [];
     }

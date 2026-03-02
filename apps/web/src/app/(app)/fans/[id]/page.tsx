@@ -6,12 +6,10 @@ import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import {
   ArrowLeft,
-  Calendar,
   ChevronRight,
   Clock,
   Eye,
   Heart,
-  MapPin,
   Music,
   Sparkles,
   Ticket,
@@ -22,6 +20,12 @@ import { motion, AnimatePresence, type Variants } from "framer-motion";
 import { api } from "../../../../../../../convex/_generated/api";
 import type { Id } from "../../../../../../../convex/_generated/dataModel";
 import { PastShowFlyerSection } from "@/components/events/PastShowFlyerSection";
+import {
+  FanBadge,
+  FanEmptyState,
+  FanProfileHeaderCard,
+  FanSectionTitle,
+} from "@/components/fan/profile/FanProfilePrimitives";
 import { GENRE_COLORS } from "@ear-plug/shared/constants";
 import { getInitials } from "@ear-plug/shared/utils";
 import type { Genre } from "@ear-plug/shared/types";
@@ -133,9 +137,8 @@ export default function PublicFanProfilePage({ params }: PageProps) {
 
   const stats = {
     showsAttended: fan.showsAttended || 0,
-    savedArtistsCount: savedArtists.length,
+    savedArtists: savedArtists.length,
     memberSince: memberSinceDate,
-    distinctVenues: gigDna?.distinctVenues || 0,
   };
 
   return (
@@ -160,61 +163,13 @@ export default function PublicFanProfilePage({ params }: PageProps) {
           Back
         </motion.button>
 
-        {/* Profile Card */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ type: "spring", stiffness: 300, damping: 30 }}
-          className="bg-card/80 backdrop-blur-xl border border-border rounded-2xl p-5 shadow-sm"
-        >
-          <div className="flex items-center gap-4">
-            {/* Avatar */}
-            <motion.div
-
-              className="relative w-20 h-20 bg-gradient-to-br from-fan/20 to-fan/5 border-2 border-fan/20 rounded-2xl overflow-hidden flex items-center justify-center flex-shrink-0"
-            >
-              {fan.avatar ? (
-                <Image
-                  src={fan.avatar}
-                  alt={fan.name}
-                  width={80}
-                  height={80}
-                  className="object-cover w-full h-full"
-                />
-              ) : (
-                <span className="text-2xl font-bold text-fan">
-                  {getInitials(fan.name)}
-                </span>
-              )}
-            </motion.div>
-
-            {/* Info */}
-            <div className="flex-1 min-w-0">
-              <h1 className="text-xl font-bold text-foreground truncate">
-                {fan.name}
-              </h1>
-              {fan.location && (
-                <div className="flex items-center gap-1.5 text-muted-foreground text-sm mt-1">
-                  <MapPin className="w-3.5 h-3.5 text-fan" />
-                  <span className="truncate">{fan.location}</span>
-                </div>
-              )}
-              <div className="flex items-center gap-2 mt-2">
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-fan/10 text-fan text-[10px] font-medium rounded-full">
-                  <Zap className="w-3 h-3" />
-                  {gigDna?.label || "Music Explorer"}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Stats Row */}
-          <div className="grid grid-cols-3 gap-3 mt-5 pt-4 border-t border-border/50">
-            <QuickStat icon={Ticket} value={stats.showsAttended} label="Shows" />
-            <QuickStat icon={Heart} value={stats.savedArtistsCount} label="Saved" />
-            <QuickStat icon={Calendar} value={stats.memberSince} label="Joined" isText />
-          </div>
-        </motion.div>
+        <FanProfileHeaderCard
+          name={fan.name}
+          avatar={fan.avatar}
+          location={fan.location}
+          gigLabel={gigDna?.label}
+          stats={stats}
+        />
       </header>
 
       {/* Tab Navigation */}
@@ -278,36 +233,6 @@ export default function PublicFanProfilePage({ params }: PageProps) {
   );
 }
 
-// Quick Stat Component
-function QuickStat({
-  icon: Icon,
-  value,
-  label,
-  isText = false,
-}: {
-  icon: React.ElementType;
-  value: string | number;
-  label: string;
-  isText?: boolean;
-}) {
-  return (
-    <div className="flex flex-col items-center text-center">
-      <Icon className="w-4 h-4 text-muted-foreground mb-1" />
-      <span
-        className={cn(
-          "font-semibold text-foreground",
-          isText ? "text-xs" : "text-lg"
-        )}
-      >
-        {value}
-      </span>
-      <span className="text-[10px] text-muted-foreground uppercase tracking-wide">
-        {label}
-      </span>
-    </div>
-  );
-}
-
 // Overview Tab
 function OverviewTab({
   gigDna,
@@ -342,7 +267,7 @@ function OverviewTab({
     >
       {/* Gig DNA Card */}
       <motion.div variants={itemVariants}>
-        <SectionTitle icon={Sparkles} title="Gig DNA" />
+        <FanSectionTitle icon={Sparkles} title="Gig DNA" />
         <div className="bg-gradient-to-br from-fan/10 via-fan/5 to-transparent border border-fan/20 rounded-2xl p-4">
           <div className="flex items-start gap-4">
             <div className="w-14 h-14 bg-fan/15 border border-fan/25 rounded-xl flex items-center justify-center flex-shrink-0">
@@ -359,9 +284,9 @@ function OverviewTab({
                 Dominant: {capitalizeGenre(gigDna.dominantGenre)}
               </p>
               <div className="flex flex-wrap gap-2 mt-3">
-                <Badge variant="default">{gigDna.attendedShows} shows</Badge>
-                <Badge variant="default">{gigDna.distinctVenues} venues</Badge>
-                <Badge variant="highlight">Tier {gigDna.tier}</Badge>
+                <FanBadge variant="default">{gigDna.attendedShows} shows</FanBadge>
+                <FanBadge variant="default">{gigDna.distinctVenues} venues</FanBadge>
+                <FanBadge variant="highlight">Tier {gigDna.tier}</FanBadge>
               </div>
             </div>
           </div>
@@ -371,7 +296,7 @@ function OverviewTab({
       {/* Top Genres */}
       {topGenres.length > 0 && (
         <motion.div variants={itemVariants}>
-          <SectionTitle icon={Music} title="Top Genres" />
+          <FanSectionTitle icon={Music} title="Top Genres" />
           <div className="flex flex-wrap gap-2">
             {topGenres.map((entry: any, index: number) => (
               <motion.div
@@ -396,7 +321,7 @@ function OverviewTab({
       {pastShows.length > 0 && (
         <motion.div variants={itemVariants}>
           <div className="flex items-center justify-between mb-3">
-            <SectionTitle icon={Ticket} title="Recent Shows" className="mb-0" />
+            <FanSectionTitle icon={Ticket} title="Recent Shows" className="mb-0" />
             <span className="text-xs text-muted-foreground">
               {pastShows.length} total
             </span>
@@ -439,7 +364,7 @@ function SavedTab({
     >
       {/* Saved Artists */}
       <motion.div variants={itemVariants}>
-        <SectionTitle icon={Heart} title={`Saved Artists (${savedArtists.length})`} />
+        <FanSectionTitle icon={Heart} title={`Saved Artists (${savedArtists.length})`} />
         {savedArtists.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {savedArtists.map((artist: any, index: number) => (
@@ -482,7 +407,7 @@ function SavedTab({
             ))}
           </div>
         ) : (
-          <EmptyState
+          <FanEmptyState
             icon={Heart}
             title="No saved artists"
             description="This fan hasn't saved any bands yet."
@@ -493,7 +418,7 @@ function SavedTab({
       {/* Most Viewed */}
       {mostViewedSavedArtists.length > 0 && (
         <motion.div variants={itemVariants}>
-          <SectionTitle icon={Zap} title="Most Engaged" />
+          <FanSectionTitle icon={Zap} title="Most Engaged" />
           <div className="space-y-2">
             {mostViewedSavedArtists.map((artist: any, index: number) => (
               <motion.div
@@ -554,9 +479,9 @@ function ActivityTab({
       {/* All Past Shows */}
       <motion.div variants={itemVariants}>
         <div className="flex items-center justify-between mb-3">
-          <SectionTitle icon={Ticket} title="Show History" className="mb-0" />
+          <FanSectionTitle icon={Ticket} title="Show History" className="mb-0" />
           {pastShows.length > 0 && (
-            <Badge variant="highlight">{pastShows.length} shows</Badge>
+            <FanBadge variant="highlight">{pastShows.length} shows</FanBadge>
           )}
         </div>
         <PastShowFlyerSection
@@ -573,69 +498,6 @@ function ActivityTab({
           tone="fan"
         />
       </motion.div>
-    </motion.div>
-  );
-}
-
-// Helper Components
-function SectionTitle({
-  icon: Icon,
-  title,
-  className,
-}: {
-  icon: React.ElementType;
-  title: string;
-  className?: string;
-}) {
-  return (
-    <div className={cn("flex items-center gap-2 mb-3", className)}>
-      <Icon className="w-4 h-4 text-muted-foreground" />
-      <h2 className="text-sm font-semibold text-foreground">{title}</h2>
-    </div>
-  );
-}
-
-function Badge({
-  children,
-  variant = "default",
-}: {
-  children: React.ReactNode;
-  variant?: "default" | "highlight";
-}) {
-  return (
-    <span
-      className={cn(
-        "px-2 py-1 text-[10px] font-semibold rounded-lg",
-        variant === "highlight"
-          ? "bg-fan/15 text-fan border border-fan/25"
-          : "bg-muted text-muted-foreground border border-border"
-      )}
-    >
-      {children}
-    </span>
-  );
-}
-
-function EmptyState({
-  icon: Icon,
-  title,
-  description,
-}: {
-  icon: React.ElementType;
-  title: string;
-  description: string;
-}) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="flex flex-col items-center justify-center text-center py-12 px-4 bg-muted/30 border border-dashed border-border rounded-2xl"
-    >
-      <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center mb-3">
-        <Icon className="w-5 h-5 text-muted-foreground" />
-      </div>
-      <p className="text-sm font-medium text-foreground mb-1">{title}</p>
-      <p className="text-xs text-muted-foreground">{description}</p>
     </motion.div>
   );
 }

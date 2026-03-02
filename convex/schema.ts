@@ -401,7 +401,10 @@ export default defineSchema({
     .index("by_band", ["bandId"])
     .index("by_venue", ["venueId"])
     .index("by_date", ["dateTime"])
-    .index("by_status", ["status"]),
+    .index("by_status", ["status"])
+    .index("by_status_date", ["status", "dateTime"])
+    .index("by_band_date", ["bandId", "dateTime"])
+    .index("by_venue_date", ["venueId", "dateTime"]),
 
   // ==================== EVENT CO-HOST INVITES ====================
   /**

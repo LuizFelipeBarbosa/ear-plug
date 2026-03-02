@@ -1,9 +1,30 @@
-import type { Id } from "../_generated/dataModel";
+import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 
 export type BandMemberRole = "owner" | "admin" | "member";
 
 type AuthCtx = QueryCtx | MutationCtx;
+
+async function getUserByClerkSubject(
+  ctx: AuthCtx,
+  clerkSubject: string
+): Promise<Doc<"users"> | null> {
+  return await ctx.db
+    .query("users")
+    .withIndex("by_clerk_id", (q) => q.eq("clerkId", clerkSubject))
+    .unique();
+}
+
+export async function getAuthenticatedUserOrNull(
+  ctx: AuthCtx
+): Promise<Doc<"users"> | null> {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) {
+    return null;
+  }
+
+  return await getUserByClerkSubject(ctx, identity.subject);
+}
 
 export async function requireAuthenticatedUser(ctx: AuthCtx) {
   const identity = await ctx.auth.getUserIdentity();
@@ -11,10 +32,7 @@ export async function requireAuthenticatedUser(ctx: AuthCtx) {
     throw new Error("Not authenticated");
   }
 
-  const user = await ctx.db
-    .query("users")
-    .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
-    .unique();
+  const user = await getUserByClerkSubject(ctx, identity.subject);
 
   if (!user) {
     throw new Error("User not found");

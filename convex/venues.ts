@@ -8,7 +8,12 @@ import { v } from "convex/values";
 import { query, mutation, internalQuery } from "./_generated/server";
 import { Doc, Id } from "./_generated/dataModel";
 import { haversineDistance, coordinatesMatch, COORDINATE_TOLERANCE } from "./utils/geo";
-import { requireBandMember, requireBandRole } from "./utils/permissions";
+import {
+  getAuthenticatedUserOrNull,
+  requireAuthenticatedUser,
+  requireBandMember,
+  requireBandRole,
+} from "./utils/permissions";
 
 /** Validator for music genre field */
 const genreValidator = v.union(
@@ -225,19 +230,7 @@ export const getNearby = query({
 export const toggleSave = mutation({
   args: { venueId: v.id("venues") },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
-      .unique();
-
-    if (!user) {
-      throw new Error("User not found");
-    }
+    const user = await requireAuthenticatedUser(ctx);
 
     const existing = await ctx.db
       .query("savedVenues")
@@ -273,16 +266,7 @@ export const toggleSave = mutation({
 export const getSavedVenues = query({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      return [];
-    }
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
-      .unique();
-
+    const user = await getAuthenticatedUserOrNull(ctx);
     if (!user) {
       return [];
     }

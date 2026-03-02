@@ -1,45 +1,38 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Image from "next/image";
 import {
   X,
-  Calendar,
-  Clock,
-  ImageIcon,
-  Users,
-  FileText,
   Check,
   AlertCircle,
   Loader2,
-  DollarSign,
-  Eye,
-  EyeOff,
   Trash2,
-  ChevronRight,
-  MapPin,
   Music,
   UserPlus,
 } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import {
-  CityAutocomplete,
-  type VenueLocationData,
-} from "@/components/ui/CityAutocomplete";
+import { type VenueLocationData } from "@/components/ui/CityAutocomplete";
 import { useSharedEvents } from "@/hooks/useSharedEvents";
 import { useProfileContext } from "@/hooks/useProfileContext";
+import {
+  createGigFormData,
+  GigDetailsSection,
+  type GigFormData,
+  type GigModalTab,
+  GigModalTabs,
+  GigSettingsSection,
+  parseGigFormNumbers,
+  validateGigForm,
+} from "@/components/band/GigFormShared";
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
-import { GENRES, GENRE_COLORS } from "@ear-plug/shared/constants";
 import type {
   EventAddressVisibility,
   EventStatus,
   Genre,
 } from "@ear-plug/shared/types";
-
-const MAX_EVENT_GENRES = 3;
 
 interface EditableEvent {
   _id: string;
@@ -82,19 +75,11 @@ export function EditGigModal({
   const [isDeleting, setIsDeleting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [activeTab, setActiveTab] = useState<"details" | "lineup" | "settings">("details");
+  const [activeTab, setActiveTab] = useState<GigModalTab>("details");
 
-  const [formData, setFormData] = useState({
-    title: "",
-    date: "",
-    startTime: "",
-    genres: [] as Genre[],
-    capacity: "",
-    price: "",
-    description: "",
-    status: "confirmed" as EventStatus,
-    addressVisibility: "public" as EventAddressVisibility,
-  });
+  const [formData, setFormData] = useState<GigFormData>(() =>
+    createGigFormData("confirmed"),
+  );
 
   const [venue, setVenue] = useState<VenueLocationData | null>(null);
   const [coverImage, setCoverImage] = useState<string | null>(null);
@@ -190,15 +175,20 @@ export function EditGigModal({
       .slice(0, 8);
   }, [allBands, bandId, cohostSearch, rosterInvitedBandIds]);
 
-  const updateField = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors((prev) => {
-        const next = { ...prev };
-        delete next[field];
-        return next;
-      });
+  const clearFieldError = (field: string) => {
+    if (!errors[field]) {
+      return;
     }
+    setErrors((prev) => {
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
+
+  const updateField = (field: keyof GigFormData, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    clearFieldError(field);
   };
 
   const handleInviteCohostBand = async (invitedBandId: string) => {
@@ -267,11 +257,6 @@ export function EditGigModal({
     reader.readAsDataURL(file);
   };
 
-  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) handleImageSelect(file);
-  };
-
   const removeImage = () => {
     setCoverImage(null);
     setImageWasRemoved(true);
@@ -279,37 +264,7 @@ export function EditGigModal({
   };
 
   const validateForm = (targetStatus: EventStatus): boolean => {
-    const nextErrors: Record<string, string> = {};
-    const isTentative = targetStatus === "hold";
-    if (!isTentative && !formData.title.trim()) {
-      nextErrors.title = "Event title is required";
-    }
-    if (!isTentative && !formData.date) {
-      nextErrors.date = "Date is required";
-    }
-    if (!isTentative && !venue) {
-      nextErrors.venue = "Venue location is required";
-    }
-    if (!isTentative && formData.genres.length === 0) {
-      nextErrors.genres = "At least one genre is required";
-    }
-    if (formData.genres.length > MAX_EVENT_GENRES) {
-      nextErrors.genres = `Select up to ${MAX_EVENT_GENRES} genres`;
-    }
-    if (formData.capacity.trim()) {
-      const parsed = Number.parseInt(formData.capacity, 10);
-      if (!Number.isFinite(parsed) || parsed <= 0) {
-        nextErrors.capacity = "Capacity must be a positive number";
-      }
-    } else if (!isTentative) {
-      nextErrors.capacity = "Capacity is required";
-    }
-    if (formData.price.trim()) {
-      const parsed = Number.parseFloat(formData.price);
-      if (!Number.isFinite(parsed) || parsed < 0) {
-        nextErrors.price = "Price must be zero or greater";
-      }
-    }
+    const nextErrors = validateGigForm(formData, venue, targetStatus);
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
   };
@@ -326,12 +281,8 @@ export function EditGigModal({
 
     setIsSubmitting(true);
     try {
-      const parsedCapacity = formData.capacity.trim()
-        ? Number.parseInt(formData.capacity, 10)
-        : undefined;
-      const parsedPrice = formData.price.trim()
-        ? Math.round(Number.parseFloat(formData.price) * 100)
-        : undefined;
+      const { capacity: parsedCapacity, price: parsedPrice } =
+        parseGigFormNumbers(formData);
       await updateEvent({
         eventId: event._id,
         actingBandId,
@@ -396,12 +347,6 @@ export function EditGigModal({
   const wasTentative = event.status === "hold";
   const isBusy = isSubmitting || isDeleting;
 
-  const tabs = [
-    { id: "details" as const, label: "Details", icon: FileText },
-    { id: "lineup" as const, label: "Lineup", icon: Music },
-    { id: "settings" as const, label: "Settings", icon: Eye },
-  ];
-
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-6">
       <motion.div
@@ -437,24 +382,7 @@ export function EditGigModal({
             </button>
           </div>
 
-          {/* Tabs */}
-          <div className="flex gap-1 mt-4">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={cn(
-                  "flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium rounded-lg transition-all",
-                  activeTab === tab.id
-                    ? "bg-band text-white"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                )}
-              >
-                <tab.icon className="w-3.5 h-3.5" />
-                {tab.label}
-              </button>
-            ))}
-          </div>
+          <GigModalTabs activeTab={activeTab} onChange={setActiveTab} />
         </div>
 
         {/* Content */}
@@ -466,272 +394,24 @@ export function EditGigModal({
             </div>
           )}
 
-          {/* Details Tab */}
           {activeTab === "details" && (
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="space-y-4"
-            >
-              {/* Image */}
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-2">
-                  Cover Image
-                </label>
-                {coverImage ? (
-                  <div className="relative aspect-video bg-muted border border-border rounded-xl overflow-hidden group">
-                    <Image
-                      src={coverImage}
-                      alt="Cover preview"
-                      fill
-                      className="object-cover"
-                    />
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        className="px-4 py-2 bg-white text-black text-sm font-medium rounded-xl hover:bg-white/90"
-                      >
-                        Change
-                      </button>
-                      <button
-                        type="button"
-                        onClick={removeImage}
-                        className="px-4 py-2 bg-red-500 text-white text-sm font-medium rounded-xl hover:bg-red-600"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div
-                    onClick={() => fileInputRef.current?.click()}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      setIsDragging(true);
-                    }}
-                    onDragLeave={(e) => {
-                      e.preventDefault();
-                      setIsDragging(false);
-                    }}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      setIsDragging(false);
-                      const file = e.dataTransfer.files?.[0];
-                      if (file) handleImageSelect(file);
-                    }}
-                    className={cn(
-                      "aspect-video border-2 border-dashed rounded-xl flex flex-col items-center justify-center cursor-pointer transition-colors",
-                      isDragging
-                        ? "border-band bg-band/5"
-                        : "border-border hover:border-muted-foreground bg-muted"
-                    )}
-                  >
-                    <ImageIcon className="w-8 h-8 text-muted-foreground mb-2" />
-                    <p className="text-sm text-muted-foreground">Click or drag image here</p>
-                    <p className="text-xs text-muted-foreground mt-1">Max 5MB</p>
-                  </div>
-                )}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileInputChange}
-                  className="hidden"
-                />
-              </div>
-
-              {/* Title */}
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-2">
-                  Event Title {!isTentative && <span className="text-band">*</span>}
-                </label>
-                <input
-                  type="text"
-                  value={formData.title}
-                  onChange={(e) => updateField("title", e.target.value)}
-                  className={cn(
-                    "w-full px-4 py-3 bg-muted border rounded-xl text-foreground focus:outline-none transition-colors",
-                    errors.title ? "border-red-500" : "border-border focus:border-band"
-                  )}
-                />
-                {errors.title && (
-                  <p className="text-xs text-red-500 mt-1">{errors.title}</p>
-                )}
-              </div>
-
-              {/* Date & Time */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-muted-foreground mb-2">
-                    Date {!isTentative && <span className="text-band">*</span>}
-                  </label>
-                  <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <input
-                      type="date"
-                      value={formData.date}
-                      onChange={(e) => updateField("date", e.target.value)}
-                      className={cn(
-                        "w-full pl-10 pr-3 py-3 bg-muted border rounded-xl text-foreground focus:outline-none",
-                        errors.date ? "border-red-500" : "border-border focus:border-band"
-                      )}
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-muted-foreground mb-2">
-                    Start Time
-                  </label>
-                  <div className="relative">
-                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <input
-                      type="time"
-                      value={formData.startTime}
-                      onChange={(e) => updateField("startTime", e.target.value)}
-                      className="w-full pl-10 pr-3 py-3 bg-muted border border-border rounded-xl text-foreground focus:outline-none focus:border-band"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Venue */}
-              <CityAutocomplete
-                mode="venue"
-                value={venue}
-                onChange={(v) => {
-                  setVenue(v as VenueLocationData | null);
-                  if (v && errors.venue) {
-                    setErrors((prev) => {
-                      const next = { ...prev };
-                      delete next.venue;
-                      return next;
-                    });
-                  }
-                }}
-                label="Venue Location"
-                placeholder="Search for a venue..."
-                required={!isTentative}
-                error={errors.venue}
-              />
-
-              {/* Capacity & Price */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-muted-foreground mb-2">
-                    Capacity {!isTentative && <span className="text-band">*</span>}
-                  </label>
-                  <div className="relative">
-                    <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <input
-                      type="number"
-                      min="1"
-                      value={formData.capacity}
-                      onChange={(e) => updateField("capacity", e.target.value)}
-                      className={cn(
-                        "w-full pl-10 pr-3 py-3 bg-muted border rounded-xl text-foreground focus:outline-none",
-                        errors.capacity ? "border-red-500" : "border-border focus:border-band"
-                      )}
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-muted-foreground mb-2">
-                    Price ($)
-                  </label>
-                  <div className="relative">
-                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={formData.price}
-                      onChange={(e) => updateField("price", e.target.value)}
-                      placeholder="0.00"
-                      className="w-full pl-10 pr-3 py-3 bg-muted border border-border rounded-xl text-foreground focus:outline-none focus:border-band"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Description */}
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-2">
-                  Description
-                </label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => updateField("description", e.target.value)}
-                  placeholder="Tell fans about the show..."
-                  rows={4}
-                  className="w-full px-4 py-3 bg-muted border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-band resize-none"
-                />
-              </div>
-
-              {/* Genres */}
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-2">
-                  Genres ({formData.genres.length}/{MAX_EVENT_GENRES})
-                  {!isTentative && <span className="text-band">*</span>}
-                </label>
-                <div
-                  className={cn(
-                    "grid grid-cols-2 gap-2 p-3 bg-muted border rounded-xl",
-                    errors.genres ? "border-red-500" : "border-border"
-                  )}
-                >
-                  {GENRES.map((genreOption) => {
-                    const isSelected = formData.genres.includes(genreOption.value);
-                    const isDisabled = !isSelected && formData.genres.length >= MAX_EVENT_GENRES;
-                    const genreColor = GENRE_COLORS[genreOption.value];
-                    return (
-                      <button
-                        key={genreOption.value}
-                        type="button"
-                        disabled={isDisabled}
-                        onClick={() => {
-                          const nextGenres = isSelected
-                            ? formData.genres.filter((g) => g !== genreOption.value)
-                            : formData.genres.length < MAX_EVENT_GENRES
-                            ? [...formData.genres, genreOption.value]
-                            : formData.genres;
-                          setFormData((prev) => ({ ...prev, genres: nextGenres }));
-                          if (errors.genres) {
-                            setErrors((prev) => {
-                              const next = { ...prev };
-                              delete next.genres;
-                              return next;
-                            });
-                          }
-                        }}
-                        className={cn(
-                          "px-3 py-2 text-sm font-medium rounded-lg transition-all",
-                          isSelected
-                            ? "text-white"
-                            : isDisabled
-                            ? "bg-card text-muted-foreground cursor-not-allowed"
-                            : "hover:brightness-110"
-                        )}
-                        style={
-                          isSelected
-                            ? { backgroundColor: genreColor }
-                            : isDisabled
-                            ? undefined
-                            : {
-                                backgroundColor: `${genreColor}20`,
-                                color: genreColor,
-                              }
-                        }
-                      >
-                        {genreOption.label}
-                      </button>
-                    );
-                  })}
-                </div>
-                {errors.genres && <p className="text-xs text-red-500 mt-1">{errors.genres}</p>}
-              </div>
-            </motion.div>
+            <GigDetailsSection
+              formData={formData}
+              errors={errors}
+              venue={venue}
+              coverImage={coverImage}
+              isDragging={isDragging}
+              setIsDragging={setIsDragging}
+              fileInputRef={fileInputRef}
+              onImageSelect={handleImageSelect}
+              onRemoveImage={removeImage}
+              onUpdateField={updateField}
+              onVenueChange={setVenue}
+              onGenresChange={(genres) =>
+                setFormData((prev) => ({ ...prev, genres }))
+              }
+              clearError={clearFieldError}
+            />
           )}
 
           {/* Lineup Tab */}
@@ -861,106 +541,31 @@ export function EditGigModal({
             </motion.div>
           )}
 
-          {/* Settings Tab */}
           {activeTab === "settings" && (
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="space-y-4"
-            >
-              {/* Status */}
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-2">
-                  Event Status
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setFormData((prev) => ({ ...prev, status: "confirmed" }))}
-                    className={cn(
-                      "px-4 py-3 text-sm font-medium rounded-xl border-2 transition-all",
-                      formData.status === "confirmed"
-                        ? "bg-success text-white border-success"
-                        : "bg-card border-border text-muted-foreground hover:border-success/50"
-                    )}
-                  >
-                    <Check className="w-4 h-4 inline mr-2" />
-                    Confirmed
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFormData((prev) => ({ ...prev, status: "hold" }))}
-                    className={cn(
-                      "px-4 py-3 text-sm font-medium rounded-xl border-2 transition-all",
-                      formData.status === "hold"
-                        ? "bg-amber-500 text-white border-amber-500"
-                        : "bg-card border-border text-muted-foreground hover:border-amber-500/50"
-                    )}
-                  >
-                    <AlertCircle className="w-4 h-4 inline mr-2" />
-                    Tentative
-                  </button>
-                </div>
-              </div>
-
-              {/* Address Visibility */}
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-2">
-                  Address Visibility
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setFormData((prev) => ({ ...prev, addressVisibility: "public" }))
-                    }
-                    className={cn(
-                      "px-4 py-3 text-sm font-medium rounded-xl border-2 transition-all flex items-center justify-center gap-2",
-                      formData.addressVisibility === "public"
-                        ? "bg-band text-white border-band"
-                        : "bg-card border-border text-muted-foreground hover:border-band/50"
-                    )}
-                  >
-                    <Eye className="w-4 h-4" />
-                    Public
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setFormData((prev) => ({ ...prev, addressVisibility: "rsvp_only" }))
-                    }
-                    className={cn(
-                      "px-4 py-3 text-sm font-medium rounded-xl border-2 transition-all flex items-center justify-center gap-2",
-                      formData.addressVisibility === "rsvp_only"
-                        ? "bg-band text-white border-band"
-                        : "bg-card border-border text-muted-foreground hover:border-band/50"
-                    )}
-                  >
-                    <EyeOff className="w-4 h-4" />
-                    RSVP Only
-                  </button>
-                </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  RSVP-only hides the street address until fans RSVP
-                </p>
-              </div>
-
-              {/* Delete */}
-              {wasTentative && (
-                <div className="pt-4 border-t border-border">
-                  <button
-                    type="button"
-                    onClick={handleDelete}
-                    disabled={isDeleting}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-500/10 text-red-500 border border-red-500/30 rounded-xl hover:bg-red-500/20 transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    {isDeleting ? "Deleting..." : "Delete Event"}
-                  </button>
-                </div>
-              )}
-            </motion.div>
+            <GigSettingsSection
+              formData={formData}
+              onStatusChange={(status) =>
+                setFormData((prev) => ({ ...prev, status }))
+              }
+              onAddressVisibilityChange={(addressVisibility) =>
+                setFormData((prev) => ({ ...prev, addressVisibility }))
+              }
+              dangerSlot={
+                wasTentative ? (
+                  <div className="pt-4 border-t border-border">
+                    <button
+                      type="button"
+                      onClick={handleDelete}
+                      disabled={isDeleting}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-500/10 text-red-500 border border-red-500/30 rounded-xl hover:bg-red-500/20 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      {isDeleting ? "Deleting..." : "Delete Event"}
+                    </button>
+                  </div>
+                ) : undefined
+              }
+            />
           )}
 
           {/* Footer Actions */}

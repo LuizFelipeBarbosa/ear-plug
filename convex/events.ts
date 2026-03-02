@@ -10,6 +10,7 @@ import { query, mutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { haversineDistance, coordinatesMatch } from "./utils/geo";
 import {
+  getAuthenticatedUserOrNull,
   requireAuthenticatedUser,
   requireBandMember,
   requireBandRole,
@@ -126,6 +127,104 @@ type PublicEvent = Doc<"events"> & {
   dateTime: number;
   capacity: number;
 };
+
+type EventHydrationCtx = QueryCtx | MutationCtx;
+type EventWithBandVenue = PublicEvent & {
+  band: Doc<"bands"> | null;
+  venue: Doc<"venues"> | null;
+};
+
+interface EventHydrationCache {
+  bands: Map<Id<"bands">, Doc<"bands"> | null>;
+  venues: Map<Id<"venues">, Doc<"venues"> | null>;
+}
+
+function createEventHydrationCache(): EventHydrationCache {
+  return {
+    bands: new Map(),
+    venues: new Map(),
+  };
+}
+
+async function getBandFromCache(
+  ctx: EventHydrationCtx,
+  cache: EventHydrationCache,
+  bandId: Id<"bands">
+) {
+  if (!cache.bands.has(bandId)) {
+    const band = await ctx.db.get(bandId);
+    cache.bands.set(bandId, band);
+  }
+  return cache.bands.get(bandId) ?? null;
+}
+
+async function getVenueFromCache(
+  ctx: EventHydrationCtx,
+  cache: EventHydrationCache,
+  venueId: Id<"venues">
+) {
+  if (!cache.venues.has(venueId)) {
+    const venue = await ctx.db.get(venueId);
+    cache.venues.set(venueId, venue);
+  }
+  return cache.venues.get(venueId) ?? null;
+}
+
+async function hydratePublicEvent(
+  ctx: EventHydrationCtx,
+  event: PublicEvent,
+  cache: EventHydrationCache
+): Promise<EventWithBandVenue> {
+  const [band, venue] = await Promise.all([
+    getBandFromCache(ctx, cache, event.bandId),
+    getVenueFromCache(ctx, cache, event.venueId),
+  ]);
+
+  return {
+    ...event,
+    band,
+    venue,
+  };
+}
+
+async function listUpcomingPublicEvents(
+  ctx: QueryCtx,
+  options: { limit: number; scanLimit?: number }
+) {
+  const scanLimit = Math.max(
+    options.limit,
+    Math.min(options.scanLimit ?? options.limit * 4, 500)
+  );
+  const now = Date.now();
+
+  const events = await ctx.db
+    .query("events")
+    .withIndex("by_status_date", (q) =>
+      q.eq("status", "confirmed").gte("dateTime", now)
+    )
+    .take(scanLimit);
+
+  return events.filter((event): event is PublicEvent => isPublicEvent(event));
+}
+
+function eventMatchesGenre(
+  event: Pick<Doc<"events">, "genres" | "genre">,
+  genre: NonNullable<Doc<"events">["genre"]>
+) {
+  if (event.genres && event.genres.length > 0) {
+    return event.genres.includes(genre);
+  }
+  return event.genre === genre;
+}
+
+function sortEventsByDate<T extends { dateTime: number }>(
+  events: T[],
+  direction: "asc" | "desc"
+) {
+  return events.sort((a, b) =>
+    direction === "asc" ? a.dateTime - b.dateTime : b.dateTime - a.dateTime
+  );
+}
 
 function buildTicketQrValue(token: string): string {
   return `${TICKET_QR_PREFIX}:${token}`;
@@ -361,21 +460,7 @@ async function incrementShowsAttended(
 }
 
 async function buildViewerContext(ctx: QueryCtx): Promise<ViewerContext> {
-  const identity = await ctx.auth.getUserIdentity();
-  if (!identity) {
-    return {
-      userId: null,
-      memberBandIds: new Set<Id<"bands">>(),
-      rsvpEventIds: new Set<Id<"events">>(),
-      cohostEventIds: new Set<Id<"events">>(),
-    };
-  }
-
-  const user = await ctx.db
-    .query("users")
-    .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
-    .unique();
-
+  const user = await getAuthenticatedUserOrNull(ctx);
   if (!user) {
     return {
       userId: null,
@@ -613,38 +698,19 @@ export const listUpcoming = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const now = Date.now();
     const limit = args.limit || 50;
     const viewerContext = await buildViewerContext(ctx);
-
-    const rawEvents = await ctx.db
-      .query("events")
-      .withIndex("by_date")
-      .filter((q) => q.gte(q.field("dateTime"), now))
-      .order("asc")
-      .take(limit * 4);
-
-    const events = rawEvents
-      .filter((event): event is PublicEvent => isPublicEvent(event))
-      .slice(0, limit);
-
-    // Fetch related band and venue data
-    const eventsWithDetails = await Promise.all(
-      events.map(async (event) => {
-        const band = await ctx.db.get(event.bandId);
-        const venue = await ctx.db.get(event.venueId);
-        return applyAddressMask(
-          {
-            ...event,
-            band,
-            venue,
-          },
-          viewerContext
-        );
-      })
+    const cache = createEventHydrationCache();
+    const events = (await listUpcomingPublicEvents(ctx, { limit, scanLimit: limit * 4 })).slice(
+      0,
+      limit
     );
 
-    return eventsWithDetails;
+    return await Promise.all(
+      events.map(async (event) =>
+        applyAddressMask(await hydratePublicEvent(ctx, event, cache), viewerContext)
+      )
+    );
   },
 });
 
@@ -669,42 +735,23 @@ export const listByGenre = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const now = Date.now();
     const limit = args.limit || 50;
     const viewerContext = await buildViewerContext(ctx);
-
-    // Get all upcoming events and filter by genre
-    const events = await ctx.db
-      .query("events")
-      .withIndex("by_date")
-      .filter((q) => q.gte(q.field("dateTime"), now))
-      .take(200);
-
-    // Filter events that include the selected genre (check both genres array and legacy genre field)
-    const filteredEvents = events
-      .filter((event): event is PublicEvent => isPublicEvent(event))
-      .filter((event) => {
-        // Check genres array first
-        if (event.genres && event.genres.length > 0) {
-          return event.genres.includes(args.genre);
-        }
-        // Fall back to legacy genre field
-        return event.genre === args.genre;
+    const cache = createEventHydrationCache();
+    const filteredEvents = (
+      await listUpcomingPublicEvents(ctx, {
+        limit,
+        scanLimit: Math.max(limit * 8, 250),
       })
+    )
+      .filter((event) => eventMatchesGenre(event, args.genre))
       .slice(0, limit);
 
-    const eventsWithDetails = await Promise.all(
-      filteredEvents.map(async (event) => {
-        const band = await ctx.db.get(event.bandId);
-        const venue = await ctx.db.get(event.venueId);
-        return applyAddressMask(
-          { ...event, band, venue },
-          viewerContext
-        );
-      })
+    return await Promise.all(
+      filteredEvents.map(async (event) =>
+        applyAddressMask(await hydratePublicEvent(ctx, event, cache), viewerContext)
+      )
     );
-
-    return eventsWithDetails;
   },
 });
 
@@ -938,39 +985,27 @@ export const search = query({
   handler: async (ctx, args) => {
     const searchQuery = args.query.toLowerCase();
     const limit = args.limit || 20;
-    const now = Date.now();
     const viewerContext = await buildViewerContext(ctx);
-
-    // Get all upcoming events
-    const events = await ctx.db
-      .query("events")
-      .withIndex("by_date")
-      .filter((q) => q.gte(q.field("dateTime"), now))
-      .take(100);
-
-    // Fetch band and venue data and filter
-    const eventsWithDetails = await Promise.all(
-      events
-        .filter((event): event is PublicEvent => isPublicEvent(event))
-        .map(async (event) => {
-          const band = await ctx.db.get(event.bandId);
-          const venue = await ctx.db.get(event.venueId);
-          return applyAddressMask(
-            { ...event, band, venue },
-            viewerContext
-          );
-        })
-    );
-
-    // Filter by search query
-    const filtered = eventsWithDetails.filter((event) => {
-      const titleMatch = event.title.toLowerCase().includes(searchQuery);
-      const bandMatch = event.band?.name.toLowerCase().includes(searchQuery);
-      const venueMatch = event.venue?.name.toLowerCase().includes(searchQuery);
-      return titleMatch || bandMatch || venueMatch;
+    const cache = createEventHydrationCache();
+    const events = await listUpcomingPublicEvents(ctx, {
+      limit,
+      scanLimit: Math.max(limit * 10, 250),
     });
 
-    return filtered.slice(0, limit);
+    const hydrated = await Promise.all(
+      events.map((event) => hydratePublicEvent(ctx, event, cache))
+    );
+
+    const filtered = hydrated
+      .filter((event) => {
+        const titleMatch = event.title.toLowerCase().includes(searchQuery);
+        const bandMatch = event.band?.name.toLowerCase().includes(searchQuery);
+        const venueMatch = event.venue?.name.toLowerCase().includes(searchQuery);
+        return titleMatch || bandMatch || venueMatch;
+      })
+      .slice(0, limit);
+
+    return filtered.map((event) => applyAddressMask(event, viewerContext));
   },
 });
 
@@ -994,19 +1029,7 @@ export const search = query({
 export const rsvp = mutation({
   args: { eventId: v.id("events") },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
-      .unique();
-
-    if (!user) {
-      throw new Error("User not found");
-    }
+    const user = await requireAuthenticatedUser(ctx);
 
     const event = await ctx.db.get(args.eventId);
     if (!event || !isPublicEvent(event)) {
@@ -1084,19 +1107,7 @@ export const rsvp = mutation({
 export const toggleLike = mutation({
   args: { eventId: v.id("events") },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
-      .unique();
-
-    if (!user) {
-      throw new Error("User not found");
-    }
+    const user = await requireAuthenticatedUser(ctx);
 
     const event = await ctx.db.get(args.eventId);
     if (!event || !isPublicEvent(event)) {
@@ -1126,6 +1137,91 @@ export const toggleLike = mutation({
   },
 });
 
+async function listUserRsvpEventsWithDetails(
+  ctx: QueryCtx,
+  userId: Id<"users">,
+  options: { pastOnly: boolean }
+) {
+  const now = Date.now();
+  const rsvps = await ctx.db
+    .query("rsvps")
+    .withIndex("by_user", (q) => q.eq("userId", userId))
+    .collect();
+  const cache = createEventHydrationCache();
+
+  const eventsWithDetails = await Promise.all(
+    rsvps.map(async (rsvp) => {
+      const event = await ctx.db.get(rsvp.eventId);
+      if (!event || !isPublicEvent(event)) {
+        return null;
+      }
+
+      if (options.pastOnly ? event.dateTime >= now : event.dateTime < now) {
+        return null;
+      }
+
+      const hydrated = await hydratePublicEvent(ctx, event, cache);
+      if (options.pastOnly) {
+        return {
+          ...hydrated,
+          rsvpedAt: rsvp.createdAt,
+          attendanceStatus: getAttendanceStatus(rsvp),
+          attendedAt: rsvp.attendedAt,
+        };
+      }
+
+      return {
+        ...hydrated,
+        rsvpedAt: rsvp.createdAt,
+      };
+    })
+  );
+
+  const filtered = eventsWithDetails.filter(
+    (event): event is NonNullable<typeof event> => event !== null
+  );
+  return sortEventsByDate(filtered, options.pastOnly ? "desc" : "asc");
+}
+
+async function listUserLikedEventsWithDetails(
+  ctx: QueryCtx,
+  userId: Id<"users">,
+  viewerContext: ViewerContext
+) {
+  const likes = await ctx.db
+    .query("likes")
+    .withIndex("by_user", (q) => q.eq("userId", userId))
+    .collect();
+  const cache = createEventHydrationCache();
+
+  const eventsWithDetails = await Promise.all(
+    likes.map(async (like) => {
+      if (viewerContext.rsvpEventIds.has(like.eventId)) {
+        return null;
+      }
+
+      const event = await ctx.db.get(like.eventId);
+      if (!event || !isPublicEvent(event)) {
+        return null;
+      }
+
+      const hydrated = await hydratePublicEvent(ctx, event, cache);
+      return applyAddressMask(
+        {
+          ...hydrated,
+          likedAt: like.createdAt,
+        },
+        viewerContext
+      );
+    })
+  );
+
+  const filtered = eventsWithDetails.filter(
+    (event): event is NonNullable<typeof event> => event !== null
+  );
+  return sortEventsByDate(filtered, "asc");
+}
+
 /**
  * Gets the current user's upcoming RSVP'd events.
  * Excludes past events. Returns events sorted by date ascending.
@@ -1139,49 +1235,11 @@ export const toggleLike = mutation({
 export const getUserRsvps = query({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      return [];
-    }
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
-      .unique();
-
+    const user = await getAuthenticatedUserOrNull(ctx);
     if (!user) {
       return [];
     }
-
-    const now = Date.now();
-    const rsvps = await ctx.db
-      .query("rsvps")
-      .withIndex("by_user", (q) => q.eq("userId", user._id))
-      .collect();
-
-    const eventsWithDetails = await Promise.all(
-      rsvps.map(async (rsvp) => {
-        const event = await ctx.db.get(rsvp.eventId);
-        if (!event) return null;
-        if (!isPublicEvent(event)) return null;
-        // Only include upcoming events
-        if (event.dateTime < now) return null;
-
-        const band = await ctx.db.get(event.bandId);
-        const venue = await ctx.db.get(event.venueId);
-        // No address masking needed here: this list only contains RSVP'd events.
-        return {
-          ...event,
-          band,
-          venue,
-          rsvpedAt: rsvp.createdAt,
-        };
-      })
-    );
-
-    return eventsWithDetails
-      .filter((e) => e !== null)
-      .sort((a, b) => a!.dateTime - b!.dateTime);
+    return await listUserRsvpEventsWithDetails(ctx, user._id, { pastOnly: false });
   },
 });
 
@@ -1199,51 +1257,11 @@ export const getUserRsvps = query({
 export const getUserPastRsvps = query({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      return [];
-    }
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
-      .unique();
-
+    const user = await getAuthenticatedUserOrNull(ctx);
     if (!user) {
       return [];
     }
-
-    const now = Date.now();
-    const rsvps = await ctx.db
-      .query("rsvps")
-      .withIndex("by_user", (q) => q.eq("userId", user._id))
-      .collect();
-
-    const eventsWithDetails = await Promise.all(
-      rsvps.map(async (rsvp) => {
-        const event = await ctx.db.get(rsvp.eventId);
-        if (!event) return null;
-        if (!isPublicEvent(event)) return null;
-        // Only include past events
-        if (event.dateTime >= now) return null;
-
-        const band = await ctx.db.get(event.bandId);
-        const venue = await ctx.db.get(event.venueId);
-        // No address masking needed here: this list only contains RSVP'd events.
-        return {
-          ...event,
-          band,
-          venue,
-          rsvpedAt: rsvp.createdAt,
-          attendanceStatus: getAttendanceStatus(rsvp),
-          attendedAt: rsvp.attendedAt,
-        };
-      })
-    );
-
-    return eventsWithDetails
-      .filter((e) => e !== null)
-      .sort((a, b) => b!.dateTime - a!.dateTime); // Most recent first
+    return await listUserRsvpEventsWithDetails(ctx, user._id, { pastOnly: true });
   },
 });
 
@@ -1266,32 +1284,7 @@ export const getUserLikes = query({
     if (!userId) {
       return [];
     }
-
-    const likes = await ctx.db
-      .query("likes")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
-
-    const eventsWithDetails = await Promise.all(
-      likes.map(async (like) => {
-        if (viewerContext.rsvpEventIds.has(like.eventId)) return null; // Exclude RSVP'd events
-
-        const event = await ctx.db.get(like.eventId);
-        if (!event) return null;
-        if (!isPublicEvent(event)) return null;
-
-        const band = await ctx.db.get(event.bandId);
-        const venue = await ctx.db.get(event.venueId);
-        return applyAddressMask(
-          { ...event, band, venue, likedAt: like.createdAt },
-          viewerContext
-        );
-      })
-    );
-
-    return eventsWithDetails
-      .filter((e) => e !== null)
-      .sort((a, b) => a!.dateTime - b!.dateTime);
+    return await listUserLikedEventsWithDetails(ctx, userId, viewerContext);
   },
 });
 
@@ -1317,16 +1310,7 @@ export const getUserEventStatus = query({
       return { hasRsvp: false, hasLiked: false };
     }
 
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      return { hasRsvp: false, hasLiked: false };
-    }
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
-      .unique();
-
+    const user = await getAuthenticatedUserOrNull(ctx);
     if (!user) {
       return { hasRsvp: false, hasLiked: false };
     }
@@ -1359,15 +1343,7 @@ export const getUserEventStatus = query({
 export const getMyEventTicket = query({
   args: { eventId: v.id("events") },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      return null;
-    }
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
-      .unique();
+    const user = await getAuthenticatedUserOrNull(ctx);
     if (!user) {
       return null;
     }
@@ -1431,18 +1407,7 @@ export const getMyEventTicket = query({
 export const ensureMyEventTicket = mutation({
   args: { eventId: v.id("events") },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerk_id", (q) => q.eq("clerkId", identity.subject))
-      .unique();
-    if (!user) {
-      throw new Error("User not found");
-    }
+    const user = await requireAuthenticatedUser(ctx);
 
     const event = await ctx.db.get(args.eventId);
     if (!event || !isPublicEvent(event)) {
@@ -2067,79 +2032,48 @@ export const listNearby = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const now = Date.now();
     const limit = args.limit || 50;
     const viewerContext = await buildViewerContext(ctx);
+    const cache = createEventHydrationCache();
+    let events = await listUpcomingPublicEvents(ctx, {
+      limit,
+      scanLimit: Math.max(limit * 10, 300),
+    });
 
-    // Get all upcoming events
-    let events = await ctx.db
-      .query("events")
-      .withIndex("by_date")
-      .filter((q) => q.gte(q.field("dateTime"), now))
-      .take(200);
-
-    events = events.filter((event): event is PublicEvent => isPublicEvent(event));
-
-    // Filter by genre if specified (check both genres array and legacy genre field)
-    if (args.genre) {
-      events = events.filter((event) => {
-        if (event.genres && event.genres.length > 0) {
-          return event.genres.includes(args.genre!);
-        }
-        return event.genre === args.genre;
-      });
+    const requestedGenre = args.genre;
+    if (requestedGenre !== undefined) {
+      events = events.filter((event) => eventMatchesGenre(event, requestedGenre));
     }
 
-    // Fetch venue data and calculate distances
     const eventsWithDistance = await Promise.all(
       events.map(async (event) => {
-        const band = await ctx.db.get(event.bandId);
-        if (!event.venueId) {
+        const hydrated = await hydratePublicEvent(ctx, event, cache);
+        if (!hydrated.venue?.coordinates) {
           return null;
         }
 
-        const venue = await ctx.db.get(event.venueId);
-
-        if (!venue?.coordinates) {
-          return null;
-        }
-
-        // Calculate distance using Haversine formula
         const distance = haversineDistance(
           args.latitude,
           args.longitude,
-          venue.coordinates.lat,
-          venue.coordinates.lng
+          hydrated.venue.coordinates.lat,
+          hydrated.venue.coordinates.lng
         );
 
-        // Filter by radius
         if (distance > args.radiusMiles) {
           return null;
         }
 
-        const maskedEvent = applyAddressMask(
-          {
-            ...event,
-            band,
-            venue,
-          },
-          viewerContext
-        );
-
         return {
-          ...maskedEvent,
-          distance: Math.round(distance * 10) / 10, // Round to 1 decimal
+          ...applyAddressMask(hydrated, viewerContext),
+          distance: Math.round(distance * 10) / 10,
         };
       })
     );
 
-    // Filter out nulls and sort by distance
-    const filtered = eventsWithDistance
+    return eventsWithDistance
       .filter((e): e is NonNullable<typeof e> => e !== null)
       .sort((a, b) => a.distance - b.distance)
       .slice(0, limit);
-
-    return filtered;
   },
 });
 
