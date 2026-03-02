@@ -10,25 +10,93 @@ import {
   RefreshCw,
   Check,
   Trash2,
+  Filter,
+  Inbox,
+  AlertCircle,
+  ChevronRight,
+  Sparkles,
 } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
 import {
   getRelativeTime,
   NOTIFICATION_TYPE_CONFIG,
 } from "@ear-plug/shared/constants";
+import { motion, AnimatePresence, type Variants } from "framer-motion";
 import { cn } from "@/lib/utils";
 import type { NotificationType } from "@ear-plug/shared/types";
 
 type FilterOption = "all" | "unread" | NotificationType;
 
-const FILTER_OPTIONS: { value: FilterOption; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "unread", label: "Unread" },
-  { value: "event_reminder", label: "Reminders" },
-  { value: "new_event_followed_artist", label: "Artists" },
-  { value: "new_event_nearby", label: "Nearby" },
-  { value: "lineup_change", label: "Updates" },
+const FILTER_OPTIONS: { value: FilterOption; label: string; icon: React.ElementType }[] = [
+  { value: "all", label: "All", icon: Inbox },
+  { value: "unread", label: "Unread", icon: AlertCircle },
+  { value: "event_reminder", label: "Reminders", icon: Clock },
+  { value: "new_event_followed_artist", label: "Artists", icon: Music },
+  { value: "new_event_nearby", label: "Nearby", icon: MapPin },
+  { value: "lineup_change", label: "Updates", icon: RefreshCw },
 ];
+
+// Animation variants
+const containerVariants: Variants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05,
+      delayChildren: 0.1,
+    },
+  },
+  exit: {
+    opacity: 0,
+    transition: { duration: 0.15 },
+  },
+};
+
+const itemVariants: Variants = {
+  hidden: { opacity: 0, y: 10, scale: 0.98 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      type: "spring" as const,
+      stiffness: 400,
+      damping: 30,
+    },
+  },
+  exit: {
+    opacity: 0,
+    x: -20,
+    transition: { duration: 0.2 },
+  },
+};
+
+const sectionVariants: Variants = {
+  hidden: { opacity: 0, x: -10 },
+  visible: {
+    opacity: 1,
+    x: 0,
+    transition: {
+      type: "spring" as const,
+      stiffness: 300,
+      damping: 25,
+    },
+  },
+};
+
+interface Notification {
+  _id: string;
+  _creationTime: number;
+  userId: string;
+  type: NotificationType;
+  title: string;
+  content: string;
+  read: boolean;
+  timestamp: number;
+  eventId?: string;
+  bandId?: string;
+  venueId?: string;
+}
 
 export function FanNotificationsView() {
   const {
@@ -41,6 +109,7 @@ export function FanNotificationsView() {
   } = useNotifications();
 
   const [activeFilter, setActiveFilter] = useState<FilterOption>("all");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Filter notifications based on active filter
   const filteredNotifications = useMemo(() => {
@@ -55,6 +124,53 @@ export function FanNotificationsView() {
         return notifications.filter((n) => n.type === activeFilter);
     }
   }, [notifications, activeFilter]);
+
+  // Group notifications by time period
+  const groupedNotifications = useMemo(() => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const lastWeek = new Date(today);
+    lastWeek.setDate(lastWeek.getDate() - 7);
+
+    const groups: { title: string; notifications: Notification[] }[] = [
+      { title: "Today", notifications: [] },
+      { title: "Yesterday", notifications: [] },
+      { title: "This Week", notifications: [] },
+      { title: "Earlier", notifications: [] },
+    ];
+
+    filteredNotifications.forEach((notification: Notification) => {
+      const notifDate = new Date(notification.timestamp);
+      const notifDay = new Date(notifDate.getFullYear(), notifDate.getMonth(), notifDate.getDate());
+
+      if (notifDay.getTime() === today.getTime()) {
+        groups[0].notifications.push(notification);
+      } else if (notifDay.getTime() === yesterday.getTime()) {
+        groups[1].notifications.push(notification);
+      } else if (notifDate.getTime() > lastWeek.getTime()) {
+        groups[2].notifications.push(notification);
+      } else {
+        groups[3].notifications.push(notification);
+      }
+    });
+
+    return groups.filter((g) => g.notifications.length > 0);
+  }, [filteredNotifications]);
+
+  // Calculate stats per category
+  const stats = useMemo(() => {
+    if (!notifications) return { all: 0, unread: 0, reminders: 0, artists: 0, nearby: 0, updates: 0 };
+    return {
+      all: notifications.length,
+      unread: notifications.filter((n) => !n.read).length,
+      reminders: notifications.filter((n) => n.type === "event_reminder").length,
+      artists: notifications.filter((n) => n.type === "new_event_followed_artist").length,
+      nearby: notifications.filter((n) => n.type === "new_event_nearby").length,
+      updates: notifications.filter((n) => n.type === "lineup_change").length,
+    };
+  }, [notifications]);
 
   const getIcon = (type: NotificationType) => {
     switch (type) {
@@ -71,160 +187,354 @@ export function FanNotificationsView() {
     }
   };
 
-  const getIconBg = (type: NotificationType) => {
+  const getIconBg = (type: NotificationType, read: boolean) => {
+    if (read) return "bg-muted text-muted-foreground border-border";
+    
     switch (type) {
       case "event_reminder":
-        return "bg-fan/10 text-fan border-fan/30";
+        return "bg-fan/15 text-fan border-fan/30";
       case "new_event_followed_artist":
-        return "bg-band/10 text-band border-band/30";
+        return "bg-band/15 text-band border-band/30";
       case "new_event_nearby":
-        return "bg-fan/10 text-fan border-fan/30";
+        return "bg-emerald-500/15 text-emerald-500 border-emerald-500/30";
       case "lineup_change":
-        return "bg-band/10 text-band border-band/30";
+        return "bg-amber-500/15 text-amber-500 border-amber-500/30";
       default:
         return "bg-muted text-muted-foreground border-border";
     }
   };
 
+  const handleDelete = async (id: string) => {
+    setDeletingId(id);
+    // Small delay for animation
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    await removeNotification(id as any);
+    setDeletingId(null);
+  };
+
+  const unreadPercentage = stats.all > 0 ? Math.round((stats.unread / stats.all) * 100) : 0;
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen pb-24 bg-background overflow-x-hidden">
+      {/* Header Background */}
+      <div className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-fan/5 via-fan/2 to-transparent h-48" />
+        <div className="absolute top-0 right-0 w-64 h-64 bg-fan/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4" />
+      </div>
+
       {/* Header */}
-      <header className="bg-card border-b border-fan/20">
-        <div className="p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-xl font-semibold text-foreground">Notifications</h1>
+      <header className="relative px-4 pt-6 pb-4">
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="flex items-start justify-between"
+        >
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Notifications</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Stay updated on your events and artists
+            </p>
+          </div>
+          {unreadCount > 0 && (
+            <motion.button
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => markAllAsRead()}
+              className="flex items-center gap-1.5 px-3 py-2 bg-fan/10 text-fan text-xs font-medium rounded-xl hover:bg-fan/20 transition-colors border border-fan/20"
+            >
+              <Check className="w-3.5 h-3.5" />
+              Mark all read
+            </motion.button>
+          )}
+        </motion.div>
+
+        {/* Stats Summary */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1, duration: 0.3 }}
+          className="mt-5"
+        >
+          {/* Progress Bar */}
+          <div className="bg-card border border-border rounded-2xl p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-fan/10 rounded-lg flex items-center justify-center">
+                  <Sparkles className="w-4 h-4 text-fan" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    {unreadCount === 0 ? "All caught up!" : `${unreadCount} unread`}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {stats.all} total notifications
+                  </p>
+                </div>
+              </div>
               {unreadCount > 0 && (
-                <p className="text-xs text-fan font-medium mt-1">
-                  {unreadCount} unread
-                </p>
+                <span className="text-2xl font-bold text-fan">{unreadPercentage}%</span>
               )}
             </div>
-            {unreadCount > 0 && (
-              <button
-                onClick={() => markAllAsRead()}
-                className="flex items-center gap-1 text-fan text-xs font-medium hover:text-fan/80 transition-colors touch-target"
-              >
-                <Check className="w-4 h-4" />
-                Mark all read
-              </button>
-            )}
+            
+            {/* Progress bar */}
+            <div className="h-2 bg-muted rounded-full overflow-hidden">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${100 - unreadPercentage}%` }}
+                transition={{ delay: 0.3, duration: 0.5, ease: "easeOut" }}
+                className="h-full bg-gradient-to-r from-fan to-fan/70 rounded-full"
+              />
+            </div>
           </div>
-        </div>
-
-        {/* Filter Tabs */}
-        <div className="px-4 pb-2 overflow-x-auto no-scrollbar">
-          <div className="flex gap-2">
-            {FILTER_OPTIONS.map((option) => (
-              <button
-                key={option.value}
-                onClick={() => setActiveFilter(option.value)}
-                className={cn(
-                  "px-4 py-2 text-xs font-medium whitespace-nowrap transition-all border rounded-lg touch-target",
-                  activeFilter === option.value
-                    ? "bg-fan text-foreground border-fan"
-                    : "bg-muted border-border text-muted-foreground hover:border-fan/30",
-                )}
-              >
-                {option.label}
-                {option.value === "unread" && unreadCount > 0 && (
-                  <span className="ml-1.5 px-1.5 py-0.5 text-xs bg-fan text-foreground rounded">
-                    {unreadCount}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
+        </motion.div>
       </header>
 
-      {/* Notifications List */}
-      <div className="p-4">
-        {isLoading ? (
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="h-20 bg-muted border border-border rounded-lg animate-shimmer"
-              />
-            ))}
-          </div>
-        ) : filteredNotifications.length > 0 ? (
-          <div className="space-y-3">
-            {filteredNotifications.map((notification) => (
-              <div
-                key={notification._id}
-                className={cn(
-                  "relative flex gap-3 p-4 border rounded-lg transition-colors",
-                  notification.read
-                    ? "bg-muted border-border"
-                    : "bg-card border-fan/50",
-                )}
-              >
-                {/* Icon */}
-                <div
+      {/* Filter Pills */}
+      <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-xl border-b border-border">
+        <div className="px-4 py-3">
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+            <div className="flex items-center gap-1.5 pr-2 border-r border-border">
+              <Filter className="w-4 h-4 text-muted-foreground" />
+              <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">
+                Filter
+              </span>
+            </div>
+            {FILTER_OPTIONS.map((option, index) => {
+              const count =
+                option.value === "all"
+                  ? stats.all
+                  : option.value === "unread"
+                  ? stats.unread
+                  : option.value === "event_reminder"
+                  ? stats.reminders
+                  : option.value === "new_event_followed_artist"
+                  ? stats.artists
+                  : option.value === "new_event_nearby"
+                  ? stats.nearby
+                  : option.value === "lineup_change"
+                  ? stats.updates
+                  : 0;
+
+              return (
+                <motion.button
+                  key={option.value}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.15 + index * 0.03 }}
+                  onClick={() => setActiveFilter(option.value)}
                   className={cn(
-                    "w-10 h-10 flex items-center justify-center flex-shrink-0 border rounded-lg",
-                    getIconBg(notification.type),
+                    "flex items-center gap-1.5 px-3 py-2 text-xs font-medium whitespace-nowrap rounded-xl transition-all border touch-target-sm",
+                    activeFilter === option.value
+                      ? "bg-fan text-white border-fan shadow-md shadow-fan/20"
+                      : "bg-card border-border text-muted-foreground hover:border-fan/30 hover:text-foreground"
                   )}
                 >
-                  {getIcon(notification.type)}
-                </div>
-
-                {/* Content */}
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-medium text-foreground text-sm">
-                    {notification.title}
-                  </h3>
-                  <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2">
-                    {notification.content}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {getRelativeTime(notification.timestamp)}
-                  </p>
-                </div>
-
-                {/* Actions */}
-                <div className="flex flex-col gap-1">
-                  {!notification.read && (
-                    <button
-                      onClick={() => markAsRead(notification._id)}
-                      className="p-1.5 flex items-center justify-center text-muted-foreground hover:text-fan hover:bg-fan/10 transition-colors touch-target"
-                      title="Mark as read"
+                  <option.icon className="w-3.5 h-3.5" />
+                  {option.label}
+                  {count > 0 && (
+                    <span
+                      className={cn(
+                        "ml-0.5 px-1.5 py-0.5 text-[10px] rounded-full font-semibold",
+                        activeFilter === option.value
+                          ? "bg-white/20 text-white"
+                          : "bg-muted text-muted-foreground"
+                      )}
                     >
-                      <Check className="w-4 h-4" />
-                    </button>
+                      {count > 99 ? "99+" : count}
+                    </span>
                   )}
-                  <button
-                    onClick={() => removeNotification(notification._id)}
-                    className="p-1.5 flex items-center justify-center text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors touch-target"
-                    title="Delete"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-
-                {/* Link to event if applicable */}
-                {notification.eventId && (
-                  <Link
-                    href={`/gig/${notification.eventId}`}
-                    className="absolute inset-0"
-                  />
-                )}
-              </div>
-            ))}
+                </motion.button>
+              );
+            })}
           </div>
-        ) : (
-          <EmptyState
-            hasNotifications={notifications && notifications.length > 0}
-            filter={activeFilter}
-          />
-        )}
+        </div>
       </div>
+
+      {/* Notifications List */}
+      <main className="px-4 pt-4">
+        <AnimatePresence mode="wait">
+          {isLoading ? (
+            <LoadingState key="loading" />
+          ) : groupedNotifications.length > 0 ? (
+            <motion.div
+              key={activeFilter}
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              className="space-y-6"
+            >
+              {groupedNotifications.map((group) => (
+                <motion.section
+                  key={group.title}
+                  variants={sectionVariants}
+                >
+                  {/* Section Header */}
+                  <div className="flex items-center gap-3 mb-3">
+                    <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                      {group.title}
+                    </h2>
+                    <div className="flex-1 h-px bg-border" />
+                    <span className="text-xs text-muted-foreground">
+                      {group.notifications.length}
+                    </span>
+                  </div>
+
+                  {/* Notifications */}
+                  <div className="space-y-2">
+                    <AnimatePresence mode="popLayout">
+                      {group.notifications.map((notification, index) => (
+                        <motion.div
+                          key={notification._id}
+                          variants={itemVariants}
+                          custom={index}
+                          layout
+                          exit={{ opacity: 0, x: -100, transition: { duration: 0.2 } }}
+                          className={cn(
+                            "group relative flex gap-3 p-4 border rounded-xl transition-all",
+                            notification.read
+                              ? "bg-card border-border"
+                              : "bg-fan/[0.02] border-fan/30 shadow-sm shadow-fan/5"
+                          )}
+                        >
+                          {/* Unread indicator */}
+                          {!notification.read && (
+                            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-fan rounded-r-full" />
+                          )}
+
+                          {/* Icon */}
+                          <div
+                            className={cn(
+                              "w-11 h-11 flex items-center justify-center flex-shrink-0 border rounded-xl transition-colors",
+                              getIconBg(notification.type, notification.read)
+                            )}
+                          >
+                            {getIcon(notification.type)}
+                          </div>
+
+                          {/* Content */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-2">
+                              <h3
+                                className={cn(
+                                  "text-sm leading-tight",
+                                  notification.read
+                                    ? "text-foreground"
+                                    : "font-semibold text-foreground"
+                                )}
+                              >
+                                {notification.title}
+                              </h3>
+                              <span className="text-[10px] text-muted-foreground whitespace-nowrap flex-shrink-0">
+                                {getRelativeTime(notification.timestamp)}
+                              </span>
+                            </div>
+                            <p className="text-sm text-muted-foreground mt-1 line-clamp-2 leading-relaxed">
+                              {notification.content}
+                            </p>
+
+                            {/* Action hint for linked events */}
+                            {notification.eventId && (
+                              <div className="flex items-center gap-1 mt-2 text-xs text-fan">
+                                <span>View event</span>
+                                <ChevronRight className="w-3 h-3" />
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Actions */}
+                          <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            {!notification.read && (
+                              <motion.button
+                                whileTap={{ scale: 0.9 }}
+                                onClick={() => markAsRead(notification._id as any)}
+                                className="p-2 flex items-center justify-center text-muted-foreground hover:text-fan hover:bg-fan/10 transition-colors rounded-lg touch-target-sm"
+                                title="Mark as read"
+                              >
+                                <Check className="w-4 h-4" />
+                              </motion.button>
+                            )}
+                            <motion.button
+                              whileTap={{ scale: 0.9 }}
+                              onClick={() => handleDelete(notification._id)}
+                              disabled={deletingId === notification._id}
+                              className="p-2 flex items-center justify-center text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors rounded-lg touch-target-sm disabled:opacity-50"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </motion.button>
+                          </div>
+
+                          {/* Link overlay */}
+                          {notification.eventId && (
+                            <Link
+                              href={`/gig/${notification.eventId}`}
+                              onClick={() => {
+                                if (!notification.read) {
+                                  markAsRead(notification._id as any);
+                                }
+                              }}
+                              className="absolute inset-0 z-10"
+                            />
+                          )}
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                  </div>
+                </motion.section>
+              ))}
+            </motion.div>
+          ) : (
+            <EmptyState
+              key="empty"
+              hasNotifications={(notifications?.length || 0) > 0}
+              filter={activeFilter}
+            />
+          )}
+        </AnimatePresence>
+      </main>
     </div>
   );
 }
 
+// Loading State
+function LoadingState() {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="space-y-6"
+    >
+      {/* Section header skeleton */}
+      <div>
+        <div className="flex items-center gap-3 mb-3">
+          <div className="h-4 w-16 bg-muted rounded animate-shimmer" />
+          <div className="flex-1 h-px bg-border" />
+          <div className="h-3 w-6 bg-muted rounded animate-shimmer" />
+        </div>
+        <div className="space-y-2">
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="flex gap-3 p-4 bg-card border border-border rounded-xl animate-shimmer"
+            >
+              <div className="w-11 h-11 bg-muted rounded-xl flex-shrink-0" />
+              <div className="flex-1 space-y-2">
+                <div className="h-4 w-3/4 bg-muted rounded" />
+                <div className="h-3 w-1/2 bg-muted rounded" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+// Empty State
 function EmptyState({
   hasNotifications,
   filter,
@@ -232,57 +542,92 @@ function EmptyState({
   hasNotifications: boolean;
   filter: FilterOption;
 }) {
-  const getMessage = () => {
+  const getConfig = () => {
     if (!hasNotifications) {
       return {
+        icon: Bell,
         title: "No notifications yet",
-        description: "We'll notify you about events, updates, and more",
+        description: "We'll notify you about events, artist updates, and reminders",
+        action: null,
       };
     }
 
     switch (filter) {
       case "unread":
         return {
+          icon: Check,
           title: "All caught up!",
-          description: "You've read all your notifications",
+          description: "You've read all your notifications. Great job!",
+          action: null,
         };
       case "event_reminder":
         return {
+          icon: Clock,
           title: "No reminders",
-          description: "You don't have any event reminders",
+          description: "Event reminders will appear here before your shows",
+          action: null,
         };
       case "new_event_followed_artist":
         return {
+          icon: Music,
           title: "No artist updates",
-          description: "Follow artists to get notified about their new events",
+          description: "Follow your favorite artists to get notified about their new events",
+          action: { href: "/home", label: "Discover Artists" },
         };
       case "new_event_nearby":
         return {
+          icon: MapPin,
           title: "No nearby events",
-          description: "Enable location to get notified about events near you",
+          description: "Enable location services to find events near you",
+          action: null,
         };
       case "lineup_change":
         return {
-          title: "No updates",
-          description: "You don't have any lineup change notifications",
+          icon: RefreshCw,
+          title: "No lineup updates",
+          description: "You'll be notified here if there are changes to events you're attending",
+          action: null,
         };
       default:
         return {
+          icon: Inbox,
           title: "No notifications",
           description: "Nothing to show in this category",
+          action: null,
         };
     }
   };
 
-  const { title, description } = getMessage();
+  const { icon: Icon, title, description, action } = getConfig();
 
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-center border border-dashed border-border rounded-lg">
-      <div className="w-16 h-16 bg-muted border border-border rounded-lg flex items-center justify-center mb-4">
-        <Bell className="w-8 h-8 text-muted-foreground" />
-      </div>
-      <h3 className="text-base font-semibold text-foreground mb-2">{title}</h3>
-      <p className="text-muted-foreground max-w-[250px] text-sm">{description}</p>
-    </div>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      className="flex flex-col items-center justify-center py-16 text-center"
+    >
+      <motion.div
+        initial={{ scale: 0.9 }}
+        animate={{ scale: 1 }}
+        transition={{ type: "spring", stiffness: 300 }}
+        className="w-20 h-20 bg-muted/50 border border-dashed border-border rounded-2xl flex items-center justify-center mb-5"
+      >
+        <Icon className="w-8 h-8 text-muted-foreground" />
+      </motion.div>
+      <h3 className="text-lg font-semibold text-foreground mb-2">{title}</h3>
+      <p className="text-sm text-muted-foreground max-w-[260px] mb-6">
+        {description}
+      </p>
+      {action && (
+        <Link
+          href={action.href}
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-fan text-white font-medium text-sm rounded-xl hover:bg-fan/90 transition-colors shadow-lg shadow-fan/20"
+        >
+          <Music className="w-4 h-4" />
+          {action.label}
+        </Link>
+      )}
+    </motion.div>
   );
 }

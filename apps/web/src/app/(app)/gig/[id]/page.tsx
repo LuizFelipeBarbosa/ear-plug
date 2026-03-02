@@ -13,6 +13,14 @@ import {
   Clock,
   Users,
   DollarSign,
+  Ticket,
+  QrCode,
+  ChevronRight,
+  MoreHorizontal,
+  Edit3,
+  Sparkles,
+  Info,
+  Music,
 } from "lucide-react";
 import {
   useEvent,
@@ -30,6 +38,7 @@ import {
   formatFullDate,
   formatPrice,
 } from "@ear-plug/shared/constants";
+import { motion, AnimatePresence, type Variants } from "framer-motion";
 import { cn } from "@/lib/utils";
 import type { Id } from "../../../../../../../convex/_generated/dataModel";
 
@@ -37,11 +46,43 @@ interface PageProps {
   params: { id: string };
 }
 
+// Animation variants
+const containerVariants: Variants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.08,
+      delayChildren: 0.1,
+    },
+  },
+};
+
+const itemVariants: Variants = {
+  hidden: { opacity: 0, y: 16 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: "spring" as const,
+      stiffness: 400,
+      damping: 30,
+    },
+  },
+};
+
+const fadeInVariants: Variants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { duration: 0.3 } },
+  exit: { opacity: 0, transition: { duration: 0.2 } },
+};
+
 export default function EventDetailsPage({ params }: PageProps) {
   const { id } = params;
   const router = useRouter();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isGuestPanelOpen, setIsGuestPanelOpen] = useState(false);
+  const [showMoreBands, setShowMoreBands] = useState(false);
   const eventId = id as Id<"events">;
 
   const { event, hasRsvp, hasLiked, isLoading, rsvp, toggleLike } =
@@ -61,12 +102,12 @@ export default function EventDetailsPage({ params }: PageProps) {
     !!event &&
     (event.bandId === bandId ||
       (event.cohostBands ?? []).some(
-        (cohostBand) => cohostBand._id === bandId,
+        (cohostBand: any) => cohostBand._id === bandId
       ));
   const canViewGuestList = !!activeBandMembership && isBandParticipant;
   const { summary: guestListSummary } = useEventGuestListSummary(
     canViewGuestList && event ? eventId : undefined,
-    canViewGuestList && bandId ? bandId : undefined,
+    canViewGuestList && bandId ? bandId : undefined
   );
 
   const handleShare = async () => {
@@ -81,20 +122,21 @@ export default function EventDetailsPage({ params }: PageProps) {
         console.log("Share cancelled");
       }
     } else {
-      // Fallback: copy to clipboard
       await navigator.clipboard.writeText(window.location.href);
-      alert("Link copied to clipboard!");
+      // Could show toast here
     }
   };
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <div className="animate-shimmer">
-          <div className="h-64 bg-muted" />
-          <div className="p-6 space-y-4">
-            <div className="h-8 bg-muted w-3/4" />
-            <div className="h-4 bg-muted w-1/2" />
+        <div className="h-64 bg-muted animate-shimmer" />
+        <div className="px-4 py-6 space-y-4">
+          <div className="h-8 bg-muted rounded-xl w-3/4 animate-shimmer" />
+          <div className="h-4 bg-muted rounded-lg w-1/2 animate-shimmer" />
+          <div className="grid grid-cols-2 gap-3 mt-6">
+            <div className="h-20 bg-muted rounded-xl animate-shimmer" />
+            <div className="h-20 bg-muted rounded-xl animate-shimmer" />
           </div>
         </div>
       </div>
@@ -103,27 +145,34 @@ export default function EventDetailsPage({ params }: PageProps) {
 
   if (!event) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <h2 className="text-xl font-bold text-white   mb-2">
+      <div className="min-h-screen flex items-center justify-center bg-background px-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center"
+        >
+          <div className="w-16 h-16 bg-muted rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <Info className="w-8 h-8 text-muted-foreground" />
+          </div>
+          <h2 className="text-xl font-bold text-foreground mb-2">
             Event not found
           </h2>
+          <p className="text-muted-foreground text-sm mb-6">
+            This event may have been removed or is no longer available
+          </p>
           <button
             onClick={() => router.back()}
-            className="text-fan hover:text-fan  text-xs font-bold "
+            className="px-5 py-2.5 bg-fan text-white font-medium text-sm rounded-xl hover:bg-fan/90 transition-colors"
           >
-            Go back
+            Go Back
           </button>
-        </div>
+        </motion.div>
       </div>
     );
   }
 
   const spotsLeft = event.capacity - event.rsvpCount;
-  const fillPercentage = Math.min(
-    (event.rsvpCount / event.capacity) * 100,
-    100,
-  );
+  const fillPercentage = Math.min((event.rsvpCount / event.capacity) * 100, 100);
   const isPast = event.dateTime < Date.now();
   const canManageEvent =
     !isPast &&
@@ -131,323 +180,474 @@ export default function EventDetailsPage({ params }: PageProps) {
     (activeBandMembership?.membership.role === "owner" ||
       activeBandMembership?.membership.role === "admin");
 
+  // Get display genres
+  const displayGenres =
+    event.genres && event.genres.length > 0
+      ? event.genres
+      : event.genre
+      ? [event.genre]
+      : [];
+
+  // Lineup bands (host + cohosts)
+  const lineupBands = event.lineupBands || [];
+  const hostBand = lineupBands.find((b: any) => b._id === event.bandId) || event.band;
+  const cohostBands = lineupBands.filter((b: any) => b._id !== event.bandId);
+  const visibleCohosts = showMoreBands ? cohostBands : cohostBands.slice(0, 2);
+  const hasMoreCohosts = cohostBands.length > 2;
+
   return (
-    <div className="min-h-screen bg-background pb-28">
-      {/* Header Image */}
-      <div className="relative h-72">
+    <div className="min-h-screen bg-background pb-40 overflow-x-hidden">
+      {/* Hero Image Section */}
+      <div className="relative h-72 sm:h-80">
         {event.image ? (
           <Image
             src={event.image}
             alt={event.title}
             fill
             className="object-cover"
+            priority
           />
         ) : (
-          <div className="w-full h-full bg-gradient-to-br from-band/30 to-fan/30" />
+          <div className="w-full h-full bg-gradient-to-br from-band/30 via-fan/20 to-background" />
         )}
 
-        {/* Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-night via-night/50 to-transparent" />
+        {/* Gradient Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
 
-        {/* Actions */}
-        <div className="absolute top-4 left-4 right-4 flex items-center justify-between">
-          <button
+        {/* Navigation Actions */}
+        <div className="absolute top-0 left-0 right-0 p-4 flex items-center justify-between">
+          <motion.button
+            whileTap={{ scale: 0.95 }}
             onClick={() => router.back()}
-            className="p-3 flex items-center justify-center bg-card/80 backdrop-blur-sm border border-border text-white hover:border-fan/30 transition-colors touch-target"
+            className="p-3 bg-background/80 backdrop-blur-xl border border-border rounded-xl text-foreground hover:bg-background transition-colors touch-target shadow-lg"
           >
             <ArrowLeft className="w-5 h-5" />
-          </button>
+          </motion.button>
 
           <div className="flex items-center gap-2">
-            <button
+            <motion.button
+              whileTap={{ scale: 0.95 }}
               onClick={handleShare}
-              className="p-3 flex items-center justify-center bg-card/80 backdrop-blur-sm border border-border text-white hover:border-fan/30 transition-colors touch-target"
+              className="p-3 bg-background/80 backdrop-blur-xl border border-border rounded-xl text-foreground hover:bg-background transition-colors touch-target shadow-lg"
             >
               <Share2 className="w-5 h-5" />
-            </button>
+            </motion.button>
             {!isPast && !inBandMode && (
-              <button
+              <motion.button
+                whileTap={{ scale: 0.95 }}
                 onClick={() => toggleLike()}
                 className={cn(
-                  "p-3 flex items-center justify-center transition-colors border touch-target",
+                  "p-3 backdrop-blur-xl border rounded-xl transition-colors touch-target shadow-lg",
                   hasLiked
-                    ? "bg-fan border-fan text-foreground"
-                    : "bg-card/80 backdrop-blur-sm border-border text-white hover:border-fan/30",
+                    ? "bg-like/90 border-like text-white"
+                    : "bg-background/80 border-border text-foreground hover:bg-background"
                 )}
               >
                 <Heart className={cn("w-5 h-5", hasLiked && "fill-current")} />
-              </button>
+              </motion.button>
             )}
           </div>
         </div>
+
+        {/* Genre Tags */}
+        {displayGenres.length > 0 && (
+          <div className="absolute bottom-4 left-4 right-4 flex flex-wrap gap-2">
+            {displayGenres.slice(0, 3).map((genre: string) => (
+              <span
+                key={genre}
+                className="px-3 py-1 bg-background/90 backdrop-blur-xl border border-border text-xs font-medium text-foreground rounded-full"
+              >
+                {genre.charAt(0).toUpperCase() + genre.slice(1)}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Content */}
-      <div className="p-6 -mt-8 relative z-10">
-        {/* Band Info */}
-        {event.band && (
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-14 h-14 overflow-hidden bg-muted border-2 border-fan/30">
-              {event.band.image ? (
-                <Image
-                  src={event.band.image}
-                  alt={event.band.name}
-                  width={56}
-                  height={56}
-                  className="object-cover"
-                />
-              ) : (
-                <div className="w-full h-full bg-gradient-to-br from-band/30 to-fan/30" />
-              )}
-            </div>
-            <div>
-              <h3 className="font-bold text-white  ">{event.band.name}</h3>
-              <p className="text-xs text-fan font-bold  ">
-                {/* Display genres (handle both new and legacy format) */}
-                {(event.genres && event.genres.length > 0
-                  ? event.genres
-                  : event.genre
-                    ? [event.genre]
-                    : []
-                )
-                  .map((g: string) => g.charAt(0).toUpperCase() + g.slice(1))
-                  .join(" • ")}
-              </p>
-            </div>
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="px-4 -mt-4 relative z-10"
+      >
+        {/* Title Section */}
+        <motion.div variants={itemVariants} className="mb-6">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground leading-tight">
+            {event.title}
+          </h1>
+          
+          {/* Host Band */}
+          {hostBand && (
             <Link
-              href={`/bands/${event.bandId}`}
-              className="ml-auto px-3 py-2 border border-fan/40 text-fan text-[10px] font-bold   hover:bg-fan hover:text-foreground transition-colors"
+              href={`/bands/${hostBand._id || event.bandId}`}
+              className="inline-flex items-center gap-2 mt-3 group"
             >
-              View Band Profile
+              <div className="w-8 h-8 rounded-lg bg-muted border border-border overflow-hidden flex items-center justify-center">
+                {hostBand.image ? (
+                  <Image
+                    src={hostBand.image}
+                    alt={hostBand.name}
+                    width={32}
+                    height={32}
+                    className="object-cover w-full h-full"
+                  />
+                ) : (
+                  <Music className="w-4 h-4 text-muted-foreground" />
+                )}
+              </div>
+              <span className="text-sm font-medium text-foreground group-hover:text-fan transition-colors">
+                {hostBand.name}
+              </span>
+              <span className="text-xs text-muted-foreground">• Host</span>
             </Link>
-          </div>
-        )}
+          )}
+        </motion.div>
 
-        {event.lineupBands && event.lineupBands.length > 0 && (
-          <div className="mb-6 p-4 bg-muted border-2 border-border">
-            <h2 className="text-sm font-bold text-muted-foreground   mb-3">
-              Lineup
-            </h2>
-            <div className="space-y-2">
-              {event.lineupBands.map((lineupBand) => (
-                <div
-                  key={lineupBand._id}
-                  className="flex items-center justify-between gap-3 border border-border bg-card px-3 py-2"
-                >
-                  <div className="min-w-0">
-                    <p className="font-bold text-white   truncate">
-                      {lineupBand.name}
-                    </p>
-                    <p className="text-[10px]   text-muted-foreground">
-                      {lineupBand._id === event.bandId
-                        ? "Host band"
-                        : "Co-host band"}
-                    </p>
-                  </div>
-                  <Link
-                    href={`/bands/${lineupBand._id}`}
-                    className="px-3 py-1.5 border border-fan/40 text-fan text-[10px] font-bold   hover:bg-fan hover:text-foreground transition-colors"
-                  >
-                    View
-                  </Link>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Title */}
-        <h1 className="text-2xl font-bold text-white   mb-4">{event.title}</h1>
-
-        {/* Band Bio */}
-        {event.band?.bio && (
-          <div className="mb-6 p-4 bg-muted border-l-2 border-fan">
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              {event.band.bio}
-            </p>
-          </div>
-        )}
-
-        {/* Details Grid */}
-        <div className="grid grid-cols-2 gap-3 mb-6">
-          <DetailCard
-            icon={<Calendar className="w-5 h-5 text-fan" />}
+        {/* Quick Info Cards */}
+        <motion.div variants={itemVariants} className="grid grid-cols-2 gap-3 mb-6">
+          <InfoCard
+            icon={<Calendar className="w-5 h-5" />}
             label="Date"
             value={formatFullDate(event.dateTime)}
+            color="fan"
           />
-          <DetailCard
-            icon={<Clock className="w-5 h-5 text-fan" />}
+          <InfoCard
+            icon={<Clock className="w-5 h-5" />}
             label="Time"
             value={formatEventTime(event.dateTime)}
+            color="fan"
           />
-          <DetailCard
-            icon={<Users className="w-5 h-5 text-band" />}
-            label="RSVPs"
+          <InfoCard
+            icon={<Users className="w-5 h-5" />}
+            label="Capacity"
             value={`${event.rsvpCount} / ${event.capacity}`}
+            color="band"
+            highlight={spotsLeft <= 10 && !isPast ? `${spotsLeft} left` : undefined}
           />
-          <DetailCard
-            icon={<DollarSign className="w-5 h-5 text-band" />}
-            label="Ticket"
-            value={event.price ? formatPrice(event.price) : "Free"}
+          <InfoCard
+            icon={<DollarSign className="w-5 h-5" />}
+            label={event.price ? "Price" : "Free Entry"}
+            value={event.price ? formatPrice(event.price) : "$0"}
+            color="band"
           />
-        </div>
+        </motion.div>
 
         {/* RSVP Progress */}
-        <div className="mb-6 p-4 bg-muted border-2 border-border">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-bold   text-muted-foreground">
-              {isPast
-                ? `${event.rsvpCount} attended`
-                : `${spotsLeft} spots remaining`}
-            </span>
-            <span
-              className={cn(
-                "text-xs font-bold",
-                isPast ? "text-muted-foreground" : "text-fan",
+        {!isPast && (
+          <motion.div variants={itemVariants} className="mb-6">
+            <div className="bg-card border border-border rounded-2xl p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-foreground">
+                  {spotsLeft > 0 ? `${spotsLeft} spots remaining` : "Sold Out"}
+                </span>
+                <span className="text-sm font-bold text-fan">
+                  {Math.round(fillPercentage)}%
+                </span>
+              </div>
+              <div className="h-2 bg-muted rounded-full overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${fillPercentage}%` }}
+                  transition={{ delay: 0.5, duration: 0.8, ease: "easeOut" }}
+                  className={cn(
+                    "h-full rounded-full",
+                    fillPercentage >= 90
+                      ? "bg-gradient-to-r from-fan to-red-500"
+                      : "bg-gradient-to-r from-fan to-band"
+                  )}
+                />
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Lineup Section */}
+        {lineupBands.length > 1 && (
+          <motion.div variants={itemVariants} className="mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-semibold text-muted-foreground">
+                Lineup
+              </h2>
+              <span className="text-xs text-muted-foreground">
+                {lineupBands.length} artists
+              </span>
+            </div>
+            <div className="space-y-2">
+              {/* Host */}
+              {hostBand && (
+                <Link
+                  href={`/bands/${hostBand._id || event.bandId}`}
+                  className="flex items-center gap-3 p-3 bg-card border border-border rounded-xl hover:border-fan/30 transition-colors group"
+                >
+                  <div className="w-12 h-12 rounded-xl bg-muted border border-border overflow-hidden flex items-center justify-center">
+                    {hostBand.image ? (
+                      <Image
+                        src={hostBand.image}
+                        alt={hostBand.name}
+                        width={48}
+                        height={48}
+                        className="object-cover w-full h-full"
+                      />
+                    ) : (
+                      <Music className="w-5 h-5 text-muted-foreground" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-foreground truncate group-hover:text-fan transition-colors">
+                      {hostBand.name}
+                    </p>
+                    <p className="text-xs text-fan">Host</p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                </Link>
               )}
-            >
-              {Math.round(fillPercentage)}% {isPast ? "capacity" : "full"}
-            </span>
-          </div>
-          <div className="w-full h-2 bg-zinc-800 overflow-hidden">
-            <div
-              className={cn(
-                "h-full transition-all duration-500",
-                isPast ? "bg-zinc-600" : "bg-gradient-to-r from-fan to-band",
+
+              {/* Cohosts */}
+              {visibleCohosts.map((band: any, index: number) => (
+                <motion.div
+                  key={band._id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.1 + index * 0.05 }}
+                >
+                  <Link
+                    href={`/bands/${band._id}`}
+                    className="flex items-center gap-3 p-3 bg-card border border-border rounded-xl hover:border-band/30 transition-colors group"
+                  >
+                    <div className="w-12 h-12 rounded-xl bg-muted border border-border overflow-hidden flex items-center justify-center">
+                      {band.image ? (
+                        <Image
+                          src={band.image}
+                          alt={band.name}
+                          width={48}
+                          height={48}
+                          className="object-cover w-full h-full"
+                        />
+                      ) : (
+                        <Music className="w-5 h-5 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-foreground truncate group-hover:text-band transition-colors">
+                        {band.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Co-host</p>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </Link>
+                </motion.div>
+              ))}
+
+              {/* Show More */}
+              {hasMoreCohosts && (
+                <button
+                  onClick={() => setShowMoreBands(!showMoreBands)}
+                  className="w-full py-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {showMoreBands
+                    ? "Show less"
+                    : `+${cohostBands.length - 2} more`}
+                </button>
               )}
-              style={{ width: `${fillPercentage}%` }}
-            />
-          </div>
-        </div>
+            </div>
+          </motion.div>
+        )}
 
         {/* Description */}
         {event.description && (
-          <div className="mb-6">
-            <h2 className="text-sm font-bold text-muted-foreground   mb-3">
+          <motion.div variants={itemVariants} className="mb-6">
+            <h2 className="text-sm font-semibold text-muted-foreground mb-3">
               About
             </h2>
-            <p className="text-muted-foreground leading-relaxed">
-              {event.description}
-            </p>
-          </div>
+            <div className="bg-card border border-border rounded-2xl p-4">
+              <p className="text-muted-foreground leading-relaxed text-sm">
+                {event.description}
+              </p>
+            </div>
+          </motion.div>
         )}
 
-        {canManageEvent && (
-          <button
-            type="button"
-            onClick={() => setIsEditModalOpen(true)}
-            className="block mb-6 w-full py-3 text-center font-bold text-xs   border-2 border-band text-band hover:bg-band hover:text-white transition-colors"
-          >
-            Manage This Event
-          </button>
+        {/* Band Bio */}
+        {event.band?.bio && (
+          <motion.div variants={itemVariants} className="mb-6">
+            <h2 className="text-sm font-semibold text-muted-foreground mb-3">
+              About {event.band.name}
+            </h2>
+            <div className="bg-gradient-to-br from-fan/5 to-transparent border border-fan/10 rounded-2xl p-4">
+              <p className="text-muted-foreground leading-relaxed text-sm line-clamp-4">
+                {event.band.bio}
+              </p>
+              <Link
+                href={`/bands/${event.bandId}`}
+                className="inline-flex items-center gap-1 text-xs text-fan font-medium mt-2 hover:underline"
+              >
+                Read more <ChevronRight className="w-3 h-3" />
+              </Link>
+            </div>
+          </motion.div>
         )}
 
-        {canScan && (
-          <Link
-            href={`/gig/${eventId}/check-in`}
-            className="block mb-6 w-full py-3 text-center font-bold text-xs   border-2 border-fan text-fan hover:bg-fan hover:text-foreground transition-colors"
-          >
-            Open Check-in Scanner
-          </Link>
-        )}
-
-        {canViewGuestList &&
-          (guestListSummary ? (
-            <GuestListCard
-              totalCount={guestListSummary.totalCount}
-              previewGuests={guestListSummary.previewGuests}
-              canManage={guestListSummary.canManage}
-              onOpen={() => setIsGuestPanelOpen(true)}
-            />
-          ) : (
-            <div className="mb-6 h-40 bg-muted border-2 border-border animate-shimmer" />
-          ))}
-
+        {/* Ticket Panel (if RSVP'd) */}
         {!inBandMode && hasRsvp && (
-          <EventTicketPanel
-            eventId={eventId}
-            ticketPayload={ticket}
-            isLoading={isTicketLoading}
-            onEnsureTicket={ensureTicket}
-          />
+          <motion.div variants={itemVariants}>
+            <EventTicketPanel
+              eventId={eventId}
+              ticketPayload={ticket}
+              isLoading={isTicketLoading}
+              onEnsureTicket={ensureTicket}
+            />
+          </motion.div>
         )}
 
         {/* Venue Info */}
         {event.venue && (
-          <div className="mb-6">
-            <h2 className="text-sm font-bold text-muted-foreground   mb-3">
+          <motion.div variants={itemVariants} className="mb-6">
+            <h2 className="text-sm font-semibold text-muted-foreground mb-3">
               Venue
             </h2>
-            <div className="relative overflow-hidden p-4 bg-muted border-2 border-border">
+            <div
+              className={cn(
+                "relative bg-card border rounded-2xl p-4 overflow-hidden transition-all",
+                event.isVenueAddressHidden
+                  ? "border-dashed border-border"
+                  : "border-border"
+              )}
+            >
               <div
                 className={cn(
                   "flex items-start gap-3 transition-all duration-200",
-                  event.isVenueAddressHidden &&
-                    "blur-md opacity-25 select-none pointer-events-none",
+                  event.isVenueAddressHidden && "blur-sm opacity-30"
                 )}
               >
-                <MapPin className="w-5 h-5 text-fan mt-0.5" />
-                <div>
-                  <h3 className="font-bold text-white  ">{event.venue.name}</h3>
-                  <p
-                    className={cn(
-                      "text-sm",
-                      event.isVenueAddressHidden
-                        ? "text-muted-foreground italic"
-                        : "text-muted-foreground",
-                    )}
-                  >
-                    {event.isVenueAddressHidden
-                      ? "Address revealed after RSVP"
-                      : event.venue.address}
+                <div className="w-10 h-10 bg-fan/10 border border-fan/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <MapPin className="w-5 h-5 text-fan" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-foreground">
+                    {event.venue.name}
+                  </h3>
+                  <p className="text-sm text-muted-foreground mt-0.5">
+                    {event.venue.address}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
                     {event.venue.city} • Capacity: {event.venue.capacity}
                   </p>
                 </div>
               </div>
+
               {event.isVenueAddressHidden && (
-                <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-                  <p className="px-4 text-center text-xs font-bold  tracking-[0.18em] text-zinc-200">
-                    RSVP to reveal venue details
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/50 backdrop-blur-sm p-4">
+                  <MapPin className="w-6 h-6 text-muted-foreground mb-2" />
+                  <p className="text-sm font-medium text-foreground text-center">
+                    Venue address hidden
+                  </p>
+                  <p className="text-xs text-muted-foreground text-center mt-1">
+                    RSVP to reveal location
                   </p>
                 </div>
               )}
             </div>
-          </div>
+          </motion.div>
         )}
 
-        {/* RSVP Button - Hidden for past events */}
+        {/* Guest List Preview (for band members) */}
+        {canViewGuestList &&
+          (guestListSummary ? (
+            <motion.div variants={itemVariants} className="mb-6">
+              <GuestListCard
+                totalCount={guestListSummary.totalCount}
+                previewGuests={guestListSummary.previewGuests}
+                canManage={guestListSummary.canManage}
+                onOpen={() => setIsGuestPanelOpen(true)}
+              />
+            </motion.div>
+          ) : (
+            <div className="mb-6 h-32 bg-muted border border-border rounded-2xl animate-shimmer" />
+          ))}
+
+        {/* Band Management Actions */}
+        {canManageEvent && (
+          <motion.div variants={itemVariants} className="mb-6 space-y-3">
+            <button
+              onClick={() => setIsEditModalOpen(true)}
+              className="w-full flex items-center justify-center gap-2 py-3.5 bg-band/10 border border-band/30 text-band font-medium rounded-xl hover:bg-band/20 transition-colors"
+            >
+              <Edit3 className="w-4 h-4" />
+              Manage Event
+            </button>
+          </motion.div>
+        )}
+
+        {canScan && (
+          <motion.div variants={itemVariants} className="mb-6">
+            <Link
+              href={`/gig/${eventId}/check-in`}
+              className="flex items-center justify-center gap-2 w-full py-3.5 bg-fan/10 border border-fan/30 text-fan font-medium rounded-xl hover:bg-fan/20 transition-colors"
+            >
+              <QrCode className="w-4 h-4" />
+              Open Check-in Scanner
+            </Link>
+          </motion.div>
+        )}
+      </motion.div>
+
+      {/* Sticky Bottom Action */}
+      <AnimatePresence>
         {!isPast && (
-          <div className="mb-6 p-4 bg-card border-2 border-border">
+          <motion.div
+            initial={{ y: 100 }}
+            animate={{ y: 0 }}
+            exit={{ y: 100 }}
+            className="fixed left-0 right-0 bg-background/95 backdrop-blur-xl border-t border-border p-4 z-30"
+            style={{ bottom: 'calc(64px + env(safe-area-inset-bottom, 0px))' }}
+          >
             {inBandMode ? (
-              <div className="w-full py-4 font-bold text-sm   border-2 border-border bg-zinc-800 text-muted-foreground text-center">
+              <div className="flex items-center justify-center gap-2 py-3 text-sm text-muted-foreground">
+                <Info className="w-4 h-4" />
                 Band workspace view (RSVP/Like disabled)
               </div>
             ) : (
-              <button
-                onClick={() => rsvp()}
-                disabled={spotsLeft <= 0 && !hasRsvp}
-                className={cn(
-                  "w-full py-4 font-bold text-lg   transition-all border-2 touch-target",
-                  hasRsvp
-                    ? "bg-fan text-foreground border-fan"
-                    : spotsLeft <= 0
-                      ? "bg-zinc-800 text-muted-foreground border-border cursor-not-allowed"
-                      : "bg-fan text-foreground border-fan hover:bg-transparent hover:text-fan",
-                )}
-              >
-                {hasRsvp
-                  ? "You're Going! ✓"
-                  : spotsLeft <= 0
-                    ? "Sold Out"
-                    : "RSVP to Event"}
-              </button>
-            )}
-          </div>
-        )}
-      </div>
+              <div className="flex items-center gap-3">
+                {/* Price info */}
+                <div className="flex-shrink-0 text-right pr-3 border-r border-border">
+                  <p className="text-xs text-muted-foreground">Price</p>
+                  <p className="text-lg font-bold text-foreground">
+                    {event.price ? formatPrice(event.price) : "Free"}
+                  </p>
+                </div>
 
+                {/* RSVP Button */}
+                <button
+                  onClick={() => rsvp()}
+                  disabled={spotsLeft <= 0 && !hasRsvp}
+                  className={cn(
+                    "flex-1 py-3.5 font-semibold text-base rounded-xl transition-all touch-target",
+                    hasRsvp
+                      ? "bg-success text-white shadow-lg shadow-success/20"
+                      : spotsLeft <= 0
+                      ? "bg-muted text-muted-foreground cursor-not-allowed"
+                      : "bg-fan text-white shadow-lg shadow-fan/25 hover:bg-fan/90"
+                  )}
+                >
+                  {hasRsvp ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Sparkles className="w-4 h-4" />
+                      You&apos;re Going!
+                    </span>
+                  ) : spotsLeft <= 0 ? (
+                    "Sold Out"
+                  ) : (
+                    "RSVP to Event"
+                  )}
+                </button>
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modals */}
       <EditGigModal
         isOpen={canManageEvent && isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
@@ -467,22 +667,36 @@ export default function EventDetailsPage({ params }: PageProps) {
   );
 }
 
-function DetailCard({
+// Info Card Component
+function InfoCard({
   icon,
   label,
   value,
+  color,
+  highlight,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string;
+  color: "fan" | "band";
+  highlight?: string;
 }) {
   return (
-    <div className="p-4 bg-muted border-2 border-border">
+    <div className="bg-card border border-border rounded-xl p-3">
       <div className="flex items-center gap-2 mb-1">
-        {icon}
-        <span className="text-xs text-muted-foreground  ">{label}</span>
+        <span className={color === "fan" ? "text-fan" : "text-band"}>
+          {icon}
+        </span>
+        <span className="text-xs text-muted-foreground">{label}</span>
       </div>
-      <p className="font-bold text-white text-sm">{value}</p>
+      <div className="flex items-center justify-between">
+        <p className="font-semibold text-foreground text-sm truncate">{value}</p>
+        {highlight && (
+          <span className="text-[10px] font-bold text-fan bg-fan/10 px-2 py-0.5 rounded-full">
+            {highlight}
+          </span>
+        )}
+      </div>
     </div>
   );
 }

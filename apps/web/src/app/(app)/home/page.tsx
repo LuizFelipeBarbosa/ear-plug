@@ -1,7 +1,7 @@
 "use client";
 import { useCurrentUser } from "@/hooks/useUser";
 import { useProfileContext } from "@/hooks/useProfileContext";
-import { FanMapView } from "@/components/fan/MapView";
+import { FanDiscoverView } from "@/components/fan/DiscoverView";
 import { BandDashboard } from "@/components/band/BandDashboard";
 export default function HomePage() {
   const { user, isLoading } = useCurrentUser();
@@ -16,7 +16,7 @@ export default function HomePage() {
     );
   }
   if (!user || mode === "personal") {
-    return <FanMapView />;
+    return <FanDiscoverView />;
   }
   return <BandDashboard />;
 }
