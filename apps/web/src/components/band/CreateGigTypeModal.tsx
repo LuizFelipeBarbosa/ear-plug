@@ -11,6 +11,7 @@ import {
   CalendarClock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { fadeFast, panelFade, presenceSyncNoInitial } from "@/lib/motion/presets";
 
 interface CreateGigTypeModalProps {
   isOpen: boolean;
@@ -48,11 +49,9 @@ export function CreateGigTypeModal({
   onClose,
   onSelect,
 }: CreateGigTypeModalProps) {
-  if (!isOpen) return null;
-
   return (
-    <AnimatePresence>
-      {isOpen && (
+    <AnimatePresence {...presenceSyncNoInitial}>
+      {isOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
           {/* Backdrop */}
           <motion.button
@@ -60,6 +59,7 @@ export function CreateGigTypeModal({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            transition={fadeFast}
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={onClose}
             aria-label="Close gig type chooser"
@@ -67,10 +67,10 @@ export function CreateGigTypeModal({
 
           {/* Modal */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            variants={panelFade}
             className="relative w-full max-w-md bg-card border border-border shadow-2xl rounded-2xl overflow-hidden"
           >
             {/* Header */}
@@ -99,7 +99,7 @@ export function CreateGigTypeModal({
                   type="button"
 
                   onClick={onClose}
-                  className="p-2 hover:bg-muted border border-border hover:border-band/30 transition-all rounded-xl"
+                  className="p-2 hover:bg-muted border border-border hover:border-band/30 transition-colors rounded-xl"
                 >
                   <X className="w-5 h-5 text-muted-foreground" />
                 </motion.button>
@@ -117,7 +117,7 @@ export function CreateGigTypeModal({
 
                 onClick={() => onSelect("tentative")}
                 className={cn(
-                  "w-full text-left p-5 rounded-2xl border-2 transition-all group relative overflow-hidden",
+                  "w-full text-left p-5 rounded-2xl border-2 transition-colors transition-shadow group relative overflow-hidden",
                   "bg-card hover:shadow-lg",
                   STATUS_COLORS.tentative.border,
                   STATUS_COLORS.tentative.bgHover,
@@ -135,7 +135,7 @@ export function CreateGigTypeModal({
                 <div className="relative flex items-start gap-4">
                   <div
                     className={cn(
-                      "w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 transition-all",
+                      "w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 transition-colors",
                       STATUS_COLORS.tentative.bgLight,
                       STATUS_COLORS.tentative.border,
                       "border-2",
@@ -193,7 +193,7 @@ export function CreateGigTypeModal({
 
                 onClick={() => onSelect("confirmed")}
                 className={cn(
-                  "w-full text-left p-5 rounded-2xl border-2 transition-all group relative overflow-hidden",
+                  "w-full text-left p-5 rounded-2xl border-2 transition-colors transition-shadow group relative overflow-hidden",
                   "bg-card hover:shadow-lg",
                   STATUS_COLORS.confirmed.border,
                   STATUS_COLORS.confirmed.bgHover,
@@ -211,7 +211,7 @@ export function CreateGigTypeModal({
                 <div className="relative flex items-start gap-4">
                   <div
                     className={cn(
-                      "w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 transition-all",
+                      "w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 transition-colors",
                       STATUS_COLORS.confirmed.bgLight,
                       STATUS_COLORS.confirmed.border,
                       "border-2",
@@ -269,7 +269,7 @@ export function CreateGigTypeModal({
             </div>
           </motion.div>
         </div>
-      )}
+      ) : null}
     </AnimatePresence>
   );
 }

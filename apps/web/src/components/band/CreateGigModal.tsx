@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
   Check,
@@ -25,6 +25,7 @@ import {
   parseGigFormNumbers,
   validateGigForm,
 } from "@/components/band/GigFormShared";
+import { fadeFast, presenceSyncNoInitial } from "@/lib/motion/presets";
 import { api } from "../../../../../convex/_generated/api";
 import type { EventStatus } from "@ear-plug/shared/types";
 
@@ -204,25 +205,26 @@ export function CreateGigModal({
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-6">
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-        onClick={handleClose}
-      />
+    <AnimatePresence {...presenceSyncNoInitial}>
+      {isOpen ? (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-6">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={fadeFast}
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={handleClose}
+          />
 
-      <motion.div
-        initial={{ y: "100%", opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        exit={{ y: "100%", opacity: 0 }}
-        transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        className="relative w-full max-w-lg max-h-[90vh] bg-card border border-border sm:rounded-3xl rounded-t-3xl overflow-hidden shadow-2xl flex flex-col"
-      >
+          <motion.div
+            initial={{ y: "6%", opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: "6%", opacity: 0 }}
+            transition={{ duration: 0.16, ease: [0.25, 0.1, 0.25, 1] }}
+            className="relative w-full max-w-lg max-h-[90vh] bg-card border border-border sm:rounded-3xl rounded-t-3xl overflow-hidden shadow-2xl flex flex-col"
+          >
         {/* Header */}
         <div className="sticky top-0 z-10 bg-card/95 backdrop-blur-xl border-b border-border p-4">
           <div className="flex items-center justify-between gap-4">
@@ -435,7 +437,9 @@ export function CreateGigModal({
             </button>
           </div>
         </form>
-      </motion.div>
-    </div>
+          </motion.div>
+        </div>
+      ) : null}
+    </AnimatePresence>
   );
 }

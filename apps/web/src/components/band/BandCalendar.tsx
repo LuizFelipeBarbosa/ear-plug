@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -153,6 +153,7 @@ export function BandCalendarView() {
   const [creationKind, setCreationKind] = useState<CreationKind>("confirmed");
   const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const openCreateModalTimerRef = useRef<number | null>(null);
 
   const activeMembership = bands.find((entry) => entry.band._id === band?._id);
   const canManageShows =
@@ -258,7 +259,12 @@ export function BandCalendarView() {
   const handleCreateTypeSelect = (kind: CreationKind) => {
     setCreationKind(kind);
     setIsCreateTypeModalOpen(false);
-    setIsCreateModalOpen(true);
+    if (openCreateModalTimerRef.current !== null) {
+      window.clearTimeout(openCreateModalTimerRef.current);
+    }
+    openCreateModalTimerRef.current = window.setTimeout(() => {
+      setIsCreateModalOpen(true);
+    }, 120);
   };
 
   const openTentativeEditor = (event: any) => {
@@ -269,6 +275,15 @@ export function BandCalendarView() {
   useEffect(() => {
     window.localStorage.setItem("band-calendar-view-mode", viewMode);
   }, [viewMode]);
+
+  useEffect(() => {
+    return () => {
+      if (openCreateModalTimerRef.current !== null) {
+        window.clearTimeout(openCreateModalTimerRef.current);
+        openCreateModalTimerRef.current = null;
+      }
+    };
+  }, []);
 
   if (isLoading) {
     return <CalendarSkeleton />;
