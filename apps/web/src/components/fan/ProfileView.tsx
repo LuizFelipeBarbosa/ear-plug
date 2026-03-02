@@ -32,6 +32,7 @@ import { EditProfileModal } from "@/components/ui/EditProfileModal";
 import { ThemeToggleRow } from "@/components/ui/ThemeToggle";
 import { CreateBandForm } from "@/components/band/CreateBandForm";
 import { PastShowFlyerSection } from "@/components/events/PastShowFlyerSection";
+import { GigDnaEvolutionModal } from "@/components/fan/profile/GigDnaEvolutionModal";
 import {
   FanBadge,
   FanEmptyState,
@@ -45,6 +46,7 @@ import type { Genre } from "@ear-plug/shared/types";
 import { cn } from "@/lib/utils";
 import { panelFade, presenceSyncNoInitial } from "@/lib/motion/presets";
 import { uploadToConvexStorage } from "@/lib/convexUpload";
+import type { GigDnaTier } from "@/lib/gigDnaEvolution";
 
 const PANEL_TRANSITION_MS = 250;
 
@@ -74,6 +76,7 @@ export function FanProfileView() {
 
   const [activeTab, setActiveTab] = useState<TabType>("overview");
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isGigDnaModalOpen, setIsGigDnaModalOpen] = useState(false);
   const [isWorkspaceMenuOpen, setIsWorkspaceMenuOpen] = useState(false);
   const [isWorkspaceMenuVisible, setIsWorkspaceMenuVisible] = useState(false);
   const workspaceMenuCloseTimeout = useRef<number | null>(null);
@@ -81,6 +84,12 @@ export function FanProfileView() {
   const [processingInviteId, setProcessingInviteId] = useState<Id<"bandInvites"> | null>(null);
   const openEditModal = useCallback(() => setIsEditModalOpen(true), []);
   const closeEditModal = useCallback(() => setIsEditModalOpen(false), []);
+  const openGigDnaModal = useCallback(() => {
+    if (publicProfile?.gigDna) {
+      setIsGigDnaModalOpen(true);
+    }
+  }, [publicProfile?.gigDna]);
+  const closeGigDnaModal = useCallback(() => setIsGigDnaModalOpen(false), []);
 
   const handleSaveProfile = useCallback(
     async (data: {
@@ -124,6 +133,12 @@ export function FanProfileView() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (!publicProfile?.gigDna && isGigDnaModalOpen) {
+      setIsGigDnaModalOpen(false);
+    }
+  }, [isGigDnaModalOpen, publicProfile?.gigDna]);
 
   if (!user) return null;
 
@@ -268,6 +283,7 @@ export function FanProfileView() {
             <OverviewTab
               key="overview"
               publicProfile={publicProfile}
+              onOpenGigDnaModal={openGigDnaModal}
             />
           )}
           {activeTab === "saved" && (
@@ -441,6 +457,19 @@ export function FanProfileView() {
         onSave={handleSaveProfile}
         initialData={editModalInitialData}
       />
+      <GigDnaEvolutionModal
+        isOpen={isGigDnaModalOpen}
+        onClose={closeGigDnaModal}
+        gigDna={
+          publicProfile?.gigDna
+            ? {
+                label: publicProfile.gigDna.label,
+                tier: publicProfile.gigDna.tier as GigDnaTier,
+                attendedShows: publicProfile.gigDna.attendedShows,
+              }
+            : null
+        }
+      />
     </div>
   );
 }
@@ -448,8 +477,10 @@ export function FanProfileView() {
 // Overview Tab
 function OverviewTab({
   publicProfile,
+  onOpenGigDnaModal,
 }: {
   publicProfile: any;
+  onOpenGigDnaModal: () => void;
 }) {
   if (!publicProfile) {
     return (
@@ -472,7 +503,17 @@ function OverviewTab({
       {/* Gig DNA Card */}
       <div>
         <FanSectionTitle icon={Sparkles} title="Your Gig DNA" />
-        <div className="bg-gradient-to-br from-fan/10 via-fan/5 to-transparent border border-fan/20 rounded-2xl p-4">
+        <button
+          type="button"
+          onClick={onOpenGigDnaModal}
+          disabled={!publicProfile.gigDna}
+          aria-label="Open Gig DNA evolution checkpoints"
+          className={cn(
+            "w-full text-left bg-gradient-to-br from-fan/10 via-fan/5 to-transparent border border-fan/20 rounded-2xl p-4 transition-all",
+            "hover:border-fan/35 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fan/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+            !publicProfile.gigDna && "opacity-70 cursor-default"
+          )}
+        >
           <div className="flex items-start gap-4">
             <div className="w-14 h-14 bg-fan/15 border border-fan/25 rounded-xl flex items-center justify-center flex-shrink-0">
               <Sparkles className="w-7 h-7 text-fan" />
@@ -493,8 +534,12 @@ function OverviewTab({
                 <FanBadge variant="highlight">Tier {publicProfile.gigDna.tier}</FanBadge>
               </div>
             </div>
+            <div className="flex flex-col items-end gap-1 text-fan">
+              <ChevronRight className="w-4 h-4" />
+              <span className="text-[11px] font-semibold">View tasks</span>
+            </div>
           </div>
-        </div>
+        </button>
       </div>
 
       {/* Top Genres */}
