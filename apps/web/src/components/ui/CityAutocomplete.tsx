@@ -3,7 +3,8 @@
 /// <reference types="google.maps" />
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { MapPin, X, Loader2 } from "lucide-react";
+import { MapPin, X, Loader2, Search } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { ensurePlacesLibrary } from "@/lib/google/ensurePlacesLibrary";
 
@@ -27,10 +28,7 @@ interface CitySuggestion {
 const CITY_PRIMARY_TYPES = ["(cities)"];
 const CITY_PRIMARY_TYPES_FALLBACK = ["locality"];
 
-function parseCitySuggestion(
-  rawSuggestion: unknown,
-  index: number,
-): CitySuggestion | null {
+function parseCitySuggestion(rawSuggestion: unknown, index: number): CitySuggestion | null {
   if (!rawSuggestion || typeof rawSuggestion !== "object") {
     return null;
   }
@@ -46,8 +44,7 @@ function parseCitySuggestion(
 
   const fullText =
     predictionText &&
-    typeof (predictionText as { toString?: () => string }).toString ===
-      "function"
+    typeof (predictionText as { toString?: () => string }).toString === "function"
       ? (predictionText as { toString: () => string }).toString().trim()
       : "";
 
@@ -61,20 +58,13 @@ function parseCitySuggestion(
     .filter(Boolean);
 
   const primaryText = parts[0] ?? fullText;
-  const secondaryText =
-    parts.length > 1 ? parts.slice(1).join(", ") : undefined;
+  const secondaryText = parts.length > 1 ? parts.slice(1).join(", ") : undefined;
   const placeId =
-    typeof predictionRecord.placeId === "string" &&
-    predictionRecord.placeId.length > 0
+    typeof predictionRecord.placeId === "string" && predictionRecord.placeId.length > 0
       ? predictionRecord.placeId
       : `${fullText}-${index}`;
 
-  return {
-    placeId,
-    primaryText,
-    secondaryText,
-    fullText,
-  };
+  return { placeId, primaryText, secondaryText, fullText };
 }
 
 /**
@@ -82,9 +72,6 @@ function parseCitySuggestion(
  *
  * Provides autocomplete functionality that only suggests cities/towns,
  * not street addresses or specific venues.
- *
- * Uses Google Places API with type filter set to "(cities)" to ensure
- * only city-level results are shown.
  */
 export function CityAutocomplete({
   value = "",
@@ -96,12 +83,8 @@ export function CityAutocomplete({
   error,
 }: CityAutocompleteProps) {
   const controlledValue = value ?? "";
-  const [placesStatus, setPlacesStatus] = useState<
-    "loading" | "ready" | "error"
-  >("loading");
-  const [placesErrorMessage, setPlacesErrorMessage] = useState<string | null>(
-    null,
-  );
+  const [placesStatus, setPlacesStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [placesErrorMessage, setPlacesErrorMessage] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const requestIdRef = useRef(0);
@@ -112,15 +95,14 @@ export function CityAutocomplete({
   const [inputValue, setInputValue] = useState(controlledValue);
   const [suggestions, setSuggestions] = useState<CitySuggestion[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
 
   useEffect(() => {
     let isCancelled = false;
 
     async function initializePlacesLibrary() {
       const result = await ensurePlacesLibrary();
-      if (isCancelled) {
-        return;
-      }
+      if (isCancelled) return;
 
       if (result.ready) {
         setPlacesStatus("ready");
@@ -142,10 +124,7 @@ export function CityAutocomplete({
   // Handle click outside to close suggestions
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(event.target as Node)
-      ) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setShowSuggestions(false);
       }
     };
@@ -153,8 +132,6 @@ export function CityAutocomplete({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  const controlledInputValue = inputValue ?? "";
 
   // Sync external value with local input
   useEffect(() => {
@@ -167,12 +144,10 @@ export function CityAutocomplete({
     }
 
     const placesLibrary = (await window.google.maps.importLibrary(
-      "places",
+      "places"
     )) as unknown as {
       AutocompleteSuggestion?: {
-        fetchAutocompleteSuggestions: (
-          request: unknown,
-        ) => Promise<{ suggestions?: unknown[] }>;
+        fetchAutocompleteSuggestions: (request: unknown) => Promise<{ suggestions?: unknown[] }>;
       };
     };
 
@@ -181,9 +156,7 @@ export function CityAutocomplete({
       (
         window.google.maps.places as unknown as {
           AutocompleteSuggestion?: {
-            fetchAutocompleteSuggestions: (
-              request: unknown,
-            ) => Promise<{ suggestions?: unknown[] }>;
+            fetchAutocompleteSuggestions: (request: unknown) => Promise<{ suggestions?: unknown[] }>;
           };
         }
       ).AutocompleteSuggestion;
@@ -192,13 +165,11 @@ export function CityAutocomplete({
       autocompleteSuggestionClass?.fetchAutocompleteSuggestions;
 
     if (typeof fetchAutocompleteSuggestions !== "function") {
-      throw new Error(
-        "Google Maps AutocompleteSuggestion is unavailable in the loaded Places library.",
-      );
+      throw new Error("Google Maps AutocompleteSuggestion is unavailable.");
     }
 
     const boundFetcher = fetchAutocompleteSuggestions.bind(
-      autocompleteSuggestionClass,
+      autocompleteSuggestionClass
     ) as (request: unknown) => Promise<{ suggestions?: unknown[] }>;
 
     fetchAutocompleteSuggestionsRef.current = boundFetcher;
@@ -210,7 +181,7 @@ export function CityAutocomplete({
       return;
     }
 
-    const query = controlledInputValue.trim();
+    const query = inputValue.trim();
     if (!showSuggestions || query.length < 2) {
       setSuggestions([]);
       setIsSearching(false);
@@ -222,8 +193,7 @@ export function CityAutocomplete({
       setIsSearching(true);
 
       try {
-        const fetchAutocompleteSuggestions =
-          await getFetchAutocompleteSuggestions();
+        const fetchAutocompleteSuggestions = await getFetchAutocompleteSuggestions();
 
         let result: { suggestions?: unknown[] };
 
@@ -239,9 +209,7 @@ export function CityAutocomplete({
           });
         }
 
-        if (requestId !== requestIdRef.current) {
-          return;
-        }
+        if (requestId !== requestIdRef.current) return;
 
         const normalizedSuggestions = (result.suggestions ?? [])
           .map((item, index) => parseCitySuggestion(item, index))
@@ -262,14 +230,8 @@ export function CityAutocomplete({
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [
-    controlledInputValue,
-    getFetchAutocompleteSuggestions,
-    placesStatus,
-    showSuggestions,
-  ]);
+  }, [inputValue, getFetchAutocompleteSuggestions, placesStatus, showSuggestions]);
 
-  // Handle input change
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     setInputValue(newValue);
@@ -277,7 +239,6 @@ export function CityAutocomplete({
     setShowSuggestions(true);
   };
 
-  // Clear selection
   const handleClear = () => {
     setInputValue("");
     onChange("");
@@ -286,7 +247,6 @@ export function CityAutocomplete({
     inputRef.current?.focus();
   };
 
-  // Handle city selection
   const handleSelect = useCallback(
     (suggestion: CitySuggestion) => {
       setInputValue(suggestion.fullText);
@@ -294,7 +254,7 @@ export function CityAutocomplete({
       setShowSuggestions(false);
       setSuggestions([]);
     },
-    [onChange],
+    [onChange]
   );
 
   // Render loading state
@@ -302,9 +262,10 @@ export function CityAutocomplete({
     return (
       <div className="w-full">
         {label && (
-          <label className="block text-xs font-bold   text-muted-foreground mb-2">
+          <label className="flex items-center gap-2 text-sm font-medium text-foreground mb-2">
+            <MapPin className="w-4 h-4 text-muted-foreground" />
             {label}
-            {required && <span className="text-fan ml-1">*</span>}
+            {required && <span className="text-red-500">*</span>}
           </label>
         )}
         <div className="relative">
@@ -315,8 +276,8 @@ export function CityAutocomplete({
             type="text"
             value=""
             disabled
-            placeholder="Loading Google Maps..."
-            className="w-full pl-12 pr-4 py-3.5 bg-muted border-2 border-border text-muted-foreground placeholder:text-muted-foreground focus:outline-none"
+            placeholder="Loading locations..."
+            className="w-full pl-12 pr-4 py-3.5 bg-muted/50 border border-border rounded-xl text-muted-foreground"
           />
         </div>
       </div>
@@ -328,9 +289,10 @@ export function CityAutocomplete({
     return (
       <div className="w-full">
         {label && (
-          <label className="block text-xs font-bold   text-muted-foreground mb-2">
+          <label className="flex items-center gap-2 text-sm font-medium text-foreground mb-2">
+            <MapPin className="w-4 h-4 text-muted-foreground" />
             {label}
-            {required && <span className="text-fan ml-1">*</span>}
+            {required && <span className="text-red-500">*</span>}
           </label>
         )}
         <div className="relative">
@@ -342,12 +304,14 @@ export function CityAutocomplete({
             value={controlledValue}
             onChange={(e) => onChange(e.target.value)}
             placeholder="Enter city manually"
-            className="w-full pl-12 pr-4 py-3.5 bg-muted border-2 border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-fan"
+            className={cn(
+              "w-full pl-12 pr-4 py-3.5 bg-muted/50 border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-band/50 focus:ring-2 focus:ring-band/10 transition-all",
+              error ? "border-red-500" : "border-border"
+            )}
           />
         </div>
         <p className="text-xs text-muted-foreground mt-1.5">
-          {placesErrorMessage ||
-            "Autocomplete unavailable. Type your city name manually."}
+          {placesErrorMessage || "Autocomplete unavailable. Type your city name manually."}
         </p>
       </div>
     );
@@ -356,9 +320,10 @@ export function CityAutocomplete({
   return (
     <div ref={containerRef} className="w-full relative">
       {label && (
-        <label className="block text-xs font-bold   text-muted-foreground mb-2">
+        <label className="flex items-center gap-2 text-sm font-medium text-foreground mb-2">
+          <MapPin className="w-4 h-4 text-muted-foreground" />
           {label}
-          {required && <span className="text-fan ml-1">*</span>}
+          {required && <span className="text-red-500">*</span>}
         </label>
       )}
 
@@ -368,7 +333,7 @@ export function CityAutocomplete({
           <MapPin
             className={cn(
               "w-5 h-5 transition-colors",
-              controlledValue ? "text-band" : "text-muted-foreground",
+              isFocused || controlledValue ? "text-band" : "text-muted-foreground"
             )}
           />
         </div>
@@ -377,49 +342,77 @@ export function CityAutocomplete({
         <input
           ref={inputRef}
           type="text"
-          value={controlledInputValue}
+          value={inputValue}
           onChange={handleInputChange}
-          onFocus={() => setShowSuggestions(true)}
+          onFocus={() => {
+            setIsFocused(true);
+            setShowSuggestions(true);
+          }}
+          onBlur={() => setIsFocused(false)}
           disabled={disabled}
           placeholder={placeholder}
           className={cn(
-            "w-full pl-12 pr-10 py-3.5 bg-muted border-2 text-foreground placeholder:text-muted-foreground focus:outline-none transition-colors",
+            "w-full pl-12 pr-10 py-3.5 bg-muted/50 border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-band/10 transition-all",
             error
-              ? "border-red-500 focus:border-red-400"
-              : "border-border focus:border-band",
-            controlledValue && "border-band/30",
+              ? "border-red-500 focus:border-red-500"
+              : isFocused
+              ? "border-band/50"
+              : "border-border hover:border-muted-foreground/30",
+            controlledValue && !isFocused && "border-band/30"
           )}
         />
 
         {/* Clear Button */}
-        {controlledInputValue && (
-          <button
-            type="button"
-            onClick={handleClear}
-            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 flex items-center justify-center hover:bg-muted transition-colors touch-target"
-            tabIndex={-1}
-          >
-            <X className="w-4 h-4 text-muted-foreground" />
-          </button>
-        )}
+        <AnimatePresence>
+          {inputValue && (
+            <motion.button
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              type="button"
+              onClick={handleClear}
+              className="absolute right-3 top-0 bottom-0 flex items-center justify-center w-8 hover:bg-muted rounded-lg transition-colors m-auto h-8"
+              tabIndex={-1}
+            >
+              <X className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+            </motion.button>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Error Message */}
-      {error && (
-        <p className="text-xs text-red-500 mt-1.5 font-medium  ">{error}</p>
-      )}
+      <AnimatePresence>
+        {error && (
+          <motion.p
+            initial={{ opacity: 0, y: -5 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="text-xs text-red-500 mt-1.5 ml-1"
+          >
+            {error}
+          </motion.p>
+        )}
+      </AnimatePresence>
 
       {/* Suggestions Dropdown */}
-      {showSuggestions &&
-        controlledInputValue.length >= 2 &&
-        suggestions.length > 0 && (
-          <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-card border-2 border-border shadow-xl max-h-64 overflow-y-auto">
-            {suggestions.map((suggestion) => (
-              <button
+      <AnimatePresence>
+        {showSuggestions && inputValue.length >= 2 && suggestions.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.15 }}
+            className="absolute z-50 left-0 right-0 top-full mt-2 bg-card border border-border shadow-xl rounded-xl overflow-hidden"
+          >
+            {suggestions.map((suggestion, index) => (
+              <motion.button
                 key={suggestion.placeId}
                 type="button"
                 onClick={() => handleSelect(suggestion)}
-                className="w-full px-4 py-3 text-left hover:bg-muted hover:border-fan/30 transition-colors border-b border-border/50 last:border-0 group"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.03 }}
+                className="w-full px-4 py-3 text-left hover:bg-muted transition-colors border-b border-border/50 last:border-0 group"
               >
                 <div className="flex items-start gap-3">
                   <MapPin className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0 group-hover:text-band transition-colors" />
@@ -427,43 +420,72 @@ export function CityAutocomplete({
                     <p className="text-sm text-foreground font-medium truncate group-hover:text-band transition-colors">
                       {suggestion.primaryText}
                     </p>
-                    {suggestion.secondaryText ? (
+                    {suggestion.secondaryText && (
                       <p className="text-xs text-muted-foreground truncate">
                         {suggestion.secondaryText}
                       </p>
-                    ) : null}
+                    )}
                   </div>
                 </div>
-              </button>
+              </motion.button>
             ))}
-          </div>
+          </motion.div>
         )}
+      </AnimatePresence>
 
       {/* Searching state */}
-      {showSuggestions && controlledInputValue.length >= 2 && isSearching && (
-        <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-card border-2 border-border shadow-xl p-3 text-center">
-          <p className="text-xs text-muted-foreground">Searching cities...</p>
-        </div>
-      )}
+      <AnimatePresence>
+        {showSuggestions && inputValue.length >= 2 && isSearching && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="absolute z-50 left-0 right-0 top-full mt-2 bg-card border border-border shadow-xl rounded-xl p-4"
+          >
+            <div className="flex items-center justify-center gap-2 text-muted-foreground">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span className="text-sm">Searching cities...</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* No Results */}
-      {showSuggestions &&
-        controlledInputValue.length >= 2 &&
-        !isSearching &&
-        suggestions.length === 0 && (
-          <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-card border-2 border-border shadow-xl p-4 text-center">
-            <p className="text-sm text-muted-foreground">No cities found</p>
-          </div>
-        )}
+      <AnimatePresence>
+        {showSuggestions &&
+          inputValue.length >= 2 &&
+          !isSearching &&
+          suggestions.length === 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              className="absolute z-50 left-0 right-0 top-full mt-2 bg-card border border-border shadow-xl rounded-xl p-4 text-center"
+            >
+              <Search className="w-5 h-5 text-muted-foreground mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">No cities found</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Try a different search term
+              </p>
+            </motion.div>
+          )}
+      </AnimatePresence>
 
       {/* Typing hint */}
-      {showSuggestions && controlledInputValue.length === 1 && (
-        <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-card border-2 border-border shadow-xl p-3 text-center">
-          <p className="text-xs text-muted-foreground">
-            Keep typing to see city suggestions...
-          </p>
-        </div>
-      )}
+      <AnimatePresence>
+        {showSuggestions && inputValue.length === 1 && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="absolute z-50 left-0 right-0 top-full mt-2 bg-card border border-border shadow-xl rounded-xl p-3 text-center"
+          >
+            <p className="text-xs text-muted-foreground">
+              Keep typing to see city suggestions...
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

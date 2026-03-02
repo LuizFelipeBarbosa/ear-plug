@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { X, Camera, Check } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { X, Camera, Check, MapPin, User, Music, Sparkles, Loader2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { GENRES, GENRE_COLORS } from "@ear-plug/shared/constants";
 import type { Genre } from "@ear-plug/shared/types";
+import Image from "next/image";
 
 interface EditProfileModalProps {
   isOpen: boolean;
@@ -25,6 +27,62 @@ interface ProfileFormData {
   topGenres?: Genre[];
 }
 
+const backdropVariants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1 },
+  exit: { opacity: 0 },
+};
+
+const modalVariants = {
+  hidden: { 
+    opacity: 0, 
+    y: 100,
+    scale: 0.95,
+  },
+  visible: { 
+    opacity: 1, 
+    y: 0,
+    scale: 1,
+    transition: {
+      type: "spring" as const,
+      stiffness: 300,
+      damping: 30,
+    },
+  },
+  exit: { 
+    opacity: 0, 
+    y: 100,
+    scale: 0.95,
+    transition: {
+      duration: 0.2,
+    },
+  },
+};
+
+const contentVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05,
+      delayChildren: 0.1,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 10 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: "spring" as const,
+      stiffness: 400,
+      damping: 30,
+    },
+  },
+};
+
 export function EditProfileModal({
   isOpen,
   onClose,
@@ -34,21 +92,34 @@ export function EditProfileModal({
   const [formData, setFormData] = useState<ProfileFormData>(initialData);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
 
   // Reset form when modal opens
   useEffect(() => {
     if (isOpen) {
       setFormData(initialData);
       setError(null);
+      setTouched({});
     }
   }, [isOpen, initialData]);
+
+  // Handle escape key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isOpen) {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [isOpen, onClose]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
     if (!formData.name.trim()) {
-      setError("Name is required");
+      setError("Please enter your name");
       return;
     }
 
@@ -63,7 +134,7 @@ export function EditProfileModal({
     }
   };
 
-  const toggleGenre = (genre: Genre) => {
+  const toggleGenre = useCallback((genre: Genre) => {
     const currentGenres = formData.topGenres || [];
     if (currentGenres.includes(genre)) {
       setFormData({
@@ -79,160 +150,278 @@ export function EditProfileModal({
         });
       }
     }
+  }, [formData]);
+
+  const handleFieldChange = (field: keyof ProfileFormData, value: string) => {
+    setFormData({ ...formData, [field]: value });
+    setTouched({ ...touched, [field]: true });
   };
 
-  if (!isOpen) return null;
+  const selectedGenresCount = formData.topGenres?.length || 0;
+  const canSelectMoreGenres = selectedGenresCount < 5;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-background/80 backdrop-blur-sm"
-        onClick={onClose}
-      />
-
-      {/* Modal - Brutalist Style */}
-      <div className="relative w-full max-w-lg bg-card border-2 border-border sm:rounded-none max-h-[90vh] overflow-y-auto animate-slide-up">
-        {/* Header */}
-        <div className="sticky top-0 bg-card z-10 flex items-center justify-between p-4 border-b-2 border-border">
-          <h2 className="text-lg font-bold text-foreground">Edit Profile</h2>
-          <button
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+          {/* Backdrop */}
+          <motion.div
+            variants={backdropVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={onClose}
-            className="p-2 flex items-center justify-center hover:bg-muted border border-border hover:border-fan/30 transition-colors touch-target"
+          />
+
+          {/* Modal */}
+          <motion.div
+            variants={modalVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className="relative w-full max-w-lg mx-4 bg-card border border-border rounded-t-3xl sm:rounded-3xl max-h-[90vh] overflow-hidden shadow-2xl"
           >
-            <X className="w-5 h-5 text-muted-foreground" />
-          </button>
-        </div>
-
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-4 space-y-6">
-          {/* Avatar */}
-          <div className="flex flex-col items-center">
-            <div className="relative">
-              <div className="w-24 h-24 overflow-hidden bg-muted border-2 border-fan/30">
-                {formData.avatar ? (
-                  <img
-                    src={formData.avatar}
-                    alt="Avatar"
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-3xl font-bold text-fan">
-                    {formData.name?.charAt(0).toUpperCase() || "?"}
-                  </div>
-                )}
+            {/* Header */}
+            <div className="sticky top-0 z-10 bg-card/95 backdrop-blur-xl border-b border-border px-5 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-fan/10 border border-fan/20 rounded-xl flex items-center justify-center">
+                  <Sparkles className="w-5 h-5 text-fan" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-foreground">Edit Profile</h2>
+                  <p className="text-xs text-muted-foreground">
+                    Update your personal information
+                  </p>
+                </div>
               </div>
-              <button
-                type="button"
-                className="absolute bottom-0 right-0 p-2 flex items-center justify-center bg-fan text-foreground border-2 border-border hover:bg-fan-600 transition-colors touch-target"
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                onClick={onClose}
+                className="p-2.5 hover:bg-muted border border-border hover:border-fan/30 rounded-xl transition-colors touch-target"
               >
-                <Camera className="w-4 h-4" />
-              </button>
+                <X className="w-5 h-5 text-muted-foreground" />
+              </motion.button>
             </div>
-            <p className="text-xs text-muted-foreground mt-2  ">
-              Avatar is synced from your account
-            </p>
-          </div>
 
-          {/* Name */}
-          <div>
-            <label className="block text-xs font-bold   text-muted-foreground mb-2">
-              Name
-            </label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) =>
-                setFormData({ ...formData, name: e.target.value })
-              }
-              placeholder="Your name"
-              className="w-full px-4 py-3 bg-muted border-2 border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-fan transition-colors"
-            />
-          </div>
-
-          {/* Location */}
-          <div>
-            <label className="block text-xs font-bold   text-muted-foreground mb-2">
-              Location
-            </label>
-            <input
-              type="text"
-              value={formData.location || ""}
-              onChange={(e) =>
-                setFormData({ ...formData, location: e.target.value })
-              }
-              placeholder="e.g., San Francisco, CA"
-              className="w-full px-4 py-3 bg-muted border-2 border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-fan transition-colors"
-            />
-          </div>
-
-          {/* Top Genres */}
-          <div>
-            <label className="block text-xs font-bold   text-muted-foreground mb-3">
-              Top Genres (select up to 5)
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {GENRES.map((genre) => {
-                const isSelected = formData.topGenres?.includes(genre.value);
-                return (
-                  <button
-                    key={genre.value}
-                    type="button"
-                    onClick={() => toggleGenre(genre.value)}
-                    className={cn(
-                      "px-4 py-2 text-xs font-bold   transition-all border-2 touch-target",
-                      isSelected
-                        ? "text-foreground border-transparent"
-                        : "bg-muted border-border text-muted-foreground hover:border-fan/30",
-                    )}
-                    style={
-                      isSelected
-                        ? {
-                            backgroundColor: GENRE_COLORS[genre.value],
-                            borderColor: GENRE_COLORS[genre.value],
-                          }
-                        : undefined
-                    }
+            {/* Form */}
+            <motion.form
+              variants={contentVariants}
+              initial="hidden"
+              animate="visible"
+              onSubmit={handleSubmit}
+              className="p-5 space-y-6 overflow-y-auto max-h-[calc(90vh-80px)]"
+            >
+              {/* Avatar Section */}
+              <motion.div variants={itemVariants} className="flex flex-col items-center">
+                <div className="relative">
+                  <motion.div
+                    whileHover={{ scale: 1.02 }}
+                    className="w-28 h-28 bg-gradient-to-br from-fan/20 to-fan/5 border-2 border-fan/20 rounded-2xl overflow-hidden flex items-center justify-center shadow-inner"
                   >
-                    {isSelected && <Check className="w-3 h-3 inline mr-1" />}
-                    {genre.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+                    {formData.avatar ? (
+                      <Image
+                        src={formData.avatar}
+                        alt="Avatar"
+                        width={112}
+                        height={112}
+                        className="object-cover w-full h-full"
+                      />
+                    ) : (
+                      <span className="text-4xl font-bold text-fan">
+                        {formData.name?.charAt(0).toUpperCase() || "?"}
+                      </span>
+                    )}
+                  </motion.div>
+                  <motion.button
+                    type="button"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="absolute -bottom-1 -right-1 w-10 h-10 bg-fan text-white rounded-xl shadow-lg shadow-fan/30 hover:bg-fan/90 transition-colors flex items-center justify-center"
+                  >
+                    <Camera className="w-4 h-4" />
+                  </motion.button>
+                </div>
+                <p className="text-xs text-muted-foreground mt-3 text-center">
+                  Avatar synced from your account
+                </p>
+              </motion.div>
 
-          {/* Error */}
-          {error && (
-            <p className="text-red-400 text-sm text-center border-2 border-red-500/30 bg-red-500/10 p-2">
-              {error}
-            </p>
-          )}
+              {/* Form Fields */}
+              <motion.div variants={itemVariants} className="space-y-4">
+                {/* Name Field */}
+                <div>
+                  <label className="flex items-center gap-2 text-sm font-medium text-foreground mb-2">
+                    <User className="w-4 h-4 text-muted-foreground" />
+                    Display Name
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={formData.name}
+                      onChange={(e) => handleFieldChange("name", e.target.value)}
+                      placeholder="Your name"
+                      className={cn(
+                        "w-full px-4 py-3.5 bg-muted/50 border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none transition-all",
+                        touched.name && !formData.name.trim()
+                          ? "border-red-500/50 focus:border-red-500"
+                          : "border-border focus:border-fan/50 focus:bg-fan/[0.02] focus:ring-2 focus:ring-fan/10"
+                      )}
+                    />
+                    {touched.name && !formData.name.trim() && (
+                      <motion.p
+                        initial={{ opacity: 0, y: -5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="text-xs text-red-500 mt-1.5 ml-1"
+                      >
+                        Name is required
+                      </motion.p>
+                    )}
+                  </div>
+                </div>
 
-          {/* Actions */}
-          <div className="flex gap-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 py-3 px-4 bg-muted border-2 border-border text-muted-foreground font-bold  text-xs  hover:border-zinc-600 transition-colors touch-target"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSaving}
-              className={cn(
-                "flex-1 py-3 px-4 bg-fan text-foreground font-bold  text-xs  border-2 border-fan transition-all touch-target",
-                isSaving
-                  ? "opacity-50 cursor-not-allowed"
-                  : "hover:bg-transparent hover:text-fan",
-              )}
-            >
-              {isSaving ? "Saving..." : "Save Changes"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+                {/* Location Field */}
+                <div>
+                  <label className="flex items-center gap-2 text-sm font-medium text-foreground mb-2">
+                    <MapPin className="w-4 h-4 text-muted-foreground" />
+                    Location
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={formData.location || ""}
+                      onChange={(e) => handleFieldChange("location", e.target.value)}
+                      placeholder="e.g., San Francisco, CA"
+                      className="w-full px-4 py-3.5 bg-muted/50 border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-fan/50 focus:bg-fan/[0.02] focus:ring-2 focus:ring-fan/10 transition-all"
+                    />
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Top Genres Section */}
+              <motion.div variants={itemVariants}>
+                <div className="flex items-center justify-between mb-3">
+                  <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+                    <Music className="w-4 h-4 text-muted-foreground" />
+                    Favorite Genres
+                  </label>
+                  <span className={cn(
+                    "text-xs font-medium px-2 py-1 rounded-full transition-colors",
+                    selectedGenresCount >= 5
+                      ? "bg-fan/10 text-fan"
+                      : "bg-muted text-muted-foreground"
+                  )}>
+                    {selectedGenresCount}/5 selected
+                  </span>
+                </div>
+                
+                <div className="flex flex-wrap gap-2">
+                  {GENRES.map((genre, index) => {
+                    const isSelected = formData.topGenres?.includes(genre.value);
+                    const isDisabled = !isSelected && !canSelectMoreGenres;
+                    
+                    return (
+                      <motion.button
+                        key={genre.value}
+                        type="button"
+                        onClick={() => !isDisabled && toggleGenre(genre.value)}
+                        disabled={isDisabled}
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: index * 0.03 }}
+                        whileHover={!isDisabled ? { scale: 1.02 } : {}}
+                        whileTap={!isDisabled ? { scale: 0.98 } : {}}
+                        className={cn(
+                          "px-3 py-2 text-xs font-medium rounded-xl transition-all duration-200 flex items-center gap-1.5",
+                          isSelected
+                            ? "text-white shadow-sm"
+                            : isDisabled
+                            ? "bg-muted/50 text-muted-foreground/50 cursor-not-allowed"
+                            : "bg-muted border border-border text-muted-foreground hover:border-fan/30 hover:text-foreground"
+                        )}
+                        style={
+                          isSelected
+                            ? {
+                                backgroundColor: GENRE_COLORS[genre.value],
+                              }
+                            : undefined
+                        }
+                      >
+                        {isSelected && (
+                          <motion.span
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                          >
+                            <Check className="w-3 h-3" />
+                          </motion.span>
+                        )}
+                        {genre.label}
+                      </motion.button>
+                    );
+                  })}
+                </div>
+                
+                {selectedGenresCount >= 5 && (
+                  <motion.p
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    className="text-xs text-fan mt-2"
+                  >
+                    Maximum 5 genres selected. Deselect one to choose another.
+                  </motion.p>
+                )}
+              </motion.div>
+
+              {/* Error Message */}
+              <AnimatePresence>
+                {error && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="p-4 bg-red-500/5 border border-red-500/20 rounded-xl"
+                  >
+                    <p className="text-sm text-red-500 text-center">{error}</p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Actions */}
+              <motion.div variants={itemVariants} className="flex gap-3 pt-2">
+                <motion.button
+                  type="button"
+                  onClick={onClose}
+                  whileTap={{ scale: 0.98 }}
+                  className="flex-1 py-3.5 px-4 bg-muted border border-border text-muted-foreground font-medium rounded-xl hover:bg-muted/80 transition-colors touch-target"
+                >
+                  Cancel
+                </motion.button>
+                <motion.button
+                  type="submit"
+                  disabled={isSaving}
+                  whileTap={!isSaving ? { scale: 0.98 } : {}}
+                  className={cn(
+                    "flex-1 py-3.5 px-4 bg-fan text-white font-medium rounded-xl transition-all touch-target flex items-center justify-center gap-2",
+                    isSaving
+                      ? "opacity-70 cursor-not-allowed"
+                      : "hover:bg-fan/90 shadow-lg shadow-fan/25"
+                  )}
+                >
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save Changes"
+                  )}
+                </motion.button>
+              </motion.div>
+            </motion.form>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
   );
 }
