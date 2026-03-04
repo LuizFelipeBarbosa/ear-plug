@@ -1,120 +1,96 @@
-import { useState } from "react";
-import { View, Text, TouchableOpacity, SafeAreaView } from "react-native";
-import { router } from "expo-router";
-import { useAuth, useUser } from "@clerk/clerk-expo";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useAuth } from "@clerk/clerk-expo";
 import { useMutation } from "convex/react";
+import { router } from "expo-router";
+import { Headphones, Mic2, Users } from "lucide-react-native";
+import { useState } from "react";
+import { SafeAreaView, Text, TouchableOpacity, View } from "react-native";
 import { api } from "../../../convex/_generated/api";
-import { Users, Mic2, ArrowRight, Headphones } from "lucide-react-native";
+import { onboardingStorageKey } from "@/constants/storage";
 
 type UserRole = "fan" | "musician";
 
 export default function OnboardingScreen() {
-  const { isSignedIn } = useAuth();
-  const { user: clerkUser } = useUser();
-  const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
-
-  const upsertUser = useMutation(api.users.upsertUser);
+  const { isSignedIn, userId } = useAuth();
   const updateRole = useMutation(api.users.updateRole);
+  const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleRoleSelect = async (role: UserRole) => {
+  const complete = async (role: UserRole) => {
+    if (!isSignedIn || !userId || pending) {
+      router.replace("/sign-in");
+      return;
+    }
+
     setSelectedRole(role);
+    setPending(true);
+    setError(null);
 
-    if (isSignedIn && clerkUser) {
-      try {
-        await upsertUser({
-          clerkId: clerkUser.id,
-          email: clerkUser.primaryEmailAddress?.emailAddress || "",
-          phoneNumber: clerkUser.primaryPhoneNumber?.phoneNumber,
-          name: clerkUser.fullName || clerkUser.firstName || "User",
-          avatar: clerkUser.imageUrl,
-        });
-
-        await updateRole({ role });
-        router.replace("/(tabs)");
-      } catch (error) {
-        console.error("Failed to complete onboarding:", error);
-      }
+    try {
+      await updateRole({ role });
+      await AsyncStorage.setItem(onboardingStorageKey(userId), "true");
+      router.replace("/(tabs)");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to complete onboarding.");
+      setPending(false);
     }
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-primary-900">
-      {/* Gradient Background */}
-      <View className="absolute inset-0 bg-gradient-to-b from-primary-800 to-accent-900" />
-
-      {/* Content */}
+    <SafeAreaView className="flex-1 bg-blue-950">
       <View className="flex-1 p-6">
-        {/* Header */}
         <View className="flex-row items-center">
-          <Headphones size={32} color="#a78bfa" />
-          <Text className="text-2xl font-bold text-white ml-2">Ear-Plug</Text>
+          <Headphones size={30} color="#93c5fd" />
+          <Text className="ml-2 text-2xl font-bold text-white">Ear-Plug</Text>
         </View>
-        <Text className="text-primary-200 mt-1 ml-10">Listen Local</Text>
+        <Text className="mt-1 text-sm text-blue-200">Listen Local</Text>
 
-        {/* Role Selection */}
         <View className="flex-1 justify-center">
-          <Text className="text-3xl font-bold text-white text-center mb-2">
-            How will you use Ear-Plug?
-          </Text>
-          <Text className="text-white/70 text-center mb-8">
-            Choose your experience to get started
+          <Text className="text-center text-3xl font-bold text-white">Choose Your Experience</Text>
+          <Text className="mt-2 text-center text-blue-200">
+            You can switch between personal and band workspaces later.
           </Text>
 
-          {/* Fan Option */}
           <TouchableOpacity
-            onPress={() => handleRoleSelect("fan")}
-            className={`p-6 rounded-2xl border-2 mb-4 ${
-              selectedRole === "fan"
-                ? "border-primary-400 bg-white/20"
-                : "border-white/20 bg-white/10"
+            onPress={() => void complete("fan")}
+            disabled={pending}
+            className={`mt-8 rounded-2xl border-2 p-5 ${
+              selectedRole === "fan" ? "border-blue-300 bg-white/20" : "border-white/20 bg-white/10"
             }`}
           >
             <View className="flex-row items-center">
-              <View className="p-3 rounded-xl bg-primary-500/30">
-                <Users size={32} color="#a78bfa" />
+              <View className="rounded-xl bg-blue-500/30 p-3">
+                <Users size={28} color="#bfdbfe" />
               </View>
-              <View className="flex-1 ml-4">
-                <Text className="text-xl font-semibold text-white">
-                  I&apos;m a Fan
-                </Text>
-                <Text className="text-white/60 mt-1">
-                  Discover shows, follow bands, and never miss a gig
-                </Text>
+              <View className="ml-4 flex-1">
+                <Text className="text-xl font-semibold text-white">I&apos;m a Fan</Text>
+                <Text className="mt-1 text-sm text-blue-100">Discover shows, RSVP, and follow local bands.</Text>
               </View>
-              <ArrowRight size={24} color="rgba(255,255,255,0.4)" />
             </View>
           </TouchableOpacity>
 
-          {/* Musician Option */}
           <TouchableOpacity
-            onPress={() => handleRoleSelect("musician")}
-            className={`p-6 rounded-2xl border-2 ${
-              selectedRole === "musician"
-                ? "border-accent-400 bg-white/20"
-                : "border-white/20 bg-white/10"
+            onPress={() => void complete("musician")}
+            disabled={pending}
+            className={`mt-4 rounded-2xl border-2 p-5 ${
+              selectedRole === "musician" ? "border-violet-300 bg-white/20" : "border-white/20 bg-white/10"
             }`}
           >
             <View className="flex-row items-center">
-              <View className="p-3 rounded-xl bg-accent-500/30">
-                <Mic2 size={32} color="#f472b6" />
+              <View className="rounded-xl bg-violet-500/30 p-3">
+                <Mic2 size={28} color="#ddd6fe" />
               </View>
-              <View className="flex-1 ml-4">
-                <Text className="text-xl font-semibold text-white">
-                  I&apos;m a Musician
-                </Text>
-                <Text className="text-white/60 mt-1">
-                  Promote shows, find gigs, and grow your fanbase
-                </Text>
+              <View className="ml-4 flex-1">
+                <Text className="text-xl font-semibold text-white">I&apos;m a Musician</Text>
+                <Text className="mt-1 text-sm text-blue-100">Manage your band workspace and book gigs.</Text>
               </View>
-              <ArrowRight size={24} color="rgba(255,255,255,0.4)" />
             </View>
           </TouchableOpacity>
+
+          {pending ? <Text className="mt-4 text-center text-sm text-blue-200">Finishing setup...</Text> : null}
+          {error ? <Text className="mt-3 text-center text-sm text-red-200">{error}</Text> : null}
         </View>
-
-        {/* Footer */}
-        <Text className="text-white/50 text-sm text-center">
-          Discover live music in the Bay Area
-        </Text>
       </View>
     </SafeAreaView>
   );
