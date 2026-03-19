@@ -1,9 +1,18 @@
+import {
+  ActionButton,
+  AppScreen,
+  EmptyState,
+  HeroHeader,
+  MiniBadge,
+  SectionCard,
+  SectionTitle,
+} from "@/components/ui/AppPrimitives";
 import { useMyEventTicket } from "@/hooks/useEvents";
 import { formatEventDate, formatEventTime } from "@ear-plug/shared/constants";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft, Clock, MapPin, QrCode as QrCodeIcon, Share2, Ticket } from "lucide-react-native";
 import { useState } from "react";
-import { ActivityIndicator, Share, Text, TouchableOpacity, View } from "react-native";
+import { Share, Text, TouchableOpacity, View } from "react-native";
 import QRCode from "react-native-qrcode-svg";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 
@@ -44,109 +53,131 @@ export default function EventTicketScreen() {
 
   if (isLoading) {
     return (
-      <View className="flex-1 items-center justify-center bg-white">
-        <ActivityIndicator size="small" color="#2563eb" />
-        <Text className="mt-2 text-sm text-gray-500">Loading ticket...</Text>
-      </View>
+      <AppScreen>
+        <SectionCard tone="fan">
+          <Text className="text-sm text-slate-500">Loading ticket...</Text>
+        </SectionCard>
+      </AppScreen>
     );
   }
 
   if (!ticket) {
     return (
-      <View className="flex-1 items-center justify-center bg-white px-6">
-        <Text className="text-xl font-semibold text-gray-900">Ticket unavailable</Text>
-        <Text className="mt-2 text-center text-sm text-gray-500">
-          RSVP to this event first, then open your ticket from the event page.
-        </Text>
-        <TouchableOpacity onPress={() => router.replace(`/gig/${eventId}`)} className="mt-5 rounded-xl bg-blue-600 px-4 py-2.5">
-          <Text className="font-semibold text-white">Back to Event</Text>
-        </TouchableOpacity>
-      </View>
+      <AppScreen>
+        <EmptyState
+          tone="fan"
+          title="Ticket unavailable"
+          message="RSVP to this event first, then open your ticket from the event page."
+          action={<ActionButton label="Back to Event" tone="fan" onPress={() => router.replace(`/gig/${eventId}`)} />}
+        />
+      </AppScreen>
     );
   }
 
   return (
-    <View className="flex-1 bg-white px-4 pb-8 pt-14">
-      <TouchableOpacity onPress={() => router.back()} className="flex-row items-center self-start rounded-lg border border-gray-200 px-3 py-2">
-        <ArrowLeft size={16} color="#4b5563" />
-        <Text className="ml-2 text-xs font-semibold text-gray-700">Back</Text>
-      </TouchableOpacity>
-
-      <View className="mt-4 rounded-3xl border border-gray-200 bg-gray-50 p-5">
-        <View className="flex-row items-center">
-          <Ticket size={18} color="#2563eb" />
-          <Text className="ml-2 text-base font-semibold text-gray-900">Event Ticket</Text>
-        </View>
-        <Text className="mt-3 text-2xl font-bold text-gray-900">{ticket.eventTitle}</Text>
-
-        <View className="mt-4 rounded-2xl border border-gray-200 bg-white p-4">
-          <DetailRow
-            icon={<Clock size={15} color="#6b7280" />}
-            label={`${formatEventDate(ticket.eventDateTime)} • ${formatEventTime(ticket.eventDateTime)}`}
-          />
-          <DetailRow
-            icon={<MapPin size={15} color="#6b7280" />}
-            label={
-              ticket.venue ? `${ticket.venue.name}${ticket.venue.city ? ` • ${ticket.venue.city}` : ""}` : "Venue TBD"
-            }
-          />
-          <Text className="mt-3 text-xs uppercase text-gray-500">Attendee</Text>
-          <Text className="text-sm font-semibold text-gray-900">{ticket.attendeeName}</Text>
-        </View>
-
-        <View className="mt-5 items-center rounded-2xl border border-dashed border-gray-300 bg-white p-5">
-          {ticket.requiresTicketBootstrap ? (
-            <View className="items-center">
-              <Text className="text-sm text-gray-600">Preparing your ticket...</Text>
-              <TouchableOpacity
-                onPress={() => void handleEnsureTicket()}
-                disabled={pendingEnsure}
-                className={`mt-3 rounded-xl px-4 py-2 ${pendingEnsure ? "bg-blue-300" : "bg-blue-600"}`}
-              >
-                <Text className="font-semibold text-white">{pendingEnsure ? "Preparing..." : "Generate Ticket"}</Text>
-              </TouchableOpacity>
-            </View>
-          ) : lifecycleStatus === "active" && qrValue ? (
-            <>
-              <QRCode value={qrValue} size={210} />
-              <Text className="mt-3 text-sm font-semibold text-gray-900">Code: {ticket.ticket?.ticketCode}</Text>
-              <Text className="mt-1 text-xs text-gray-500">Show this at the door for check-in.</Text>
-            </>
-          ) : lifecycleStatus === "used" ? (
-            <StatusBlock title="Ticket already used" subtitle="This ticket was already checked in." tone="amber" />
-          ) : lifecycleStatus === "revoked" ? (
-            <StatusBlock title="Ticket revoked" subtitle="This ticket is no longer valid for entry." tone="red" />
-          ) : (
-            <StatusBlock title="Ticket unavailable" subtitle="Your ticket is not ready yet." tone="gray" />
-          )}
-        </View>
-
-        {error ? <Text className="mt-3 text-sm text-red-600">{error}</Text> : null}
-
-        <TouchableOpacity
-          onPress={() => void handleShareTicket()}
-          className="mt-4 rounded-xl border border-blue-300 py-3"
+    <AppScreen
+      scroll
+      header={
+        <HeroHeader
+          title="Event Ticket"
+          subtitle="Present this at the venue entrance for one-time check-in."
+          eyebrow="Fan Ticket"
+          tone="fan"
+          action={
+            <TouchableOpacity onPress={() => router.back()} className="rounded-[18px] border border-slate-200 bg-white px-4 py-3">
+              <View className="flex-row items-center gap-2">
+                <ArrowLeft size={14} color="#334155" />
+                <Text className="text-xs font-semibold text-slate-700">Back</Text>
+              </View>
+            </TouchableOpacity>
+          }
         >
-          <View className="flex-row items-center justify-center">
-            <Share2 size={16} color="#1d4ed8" />
-            <Text className="ml-2 text-sm font-semibold text-blue-700">Share Ticket Details</Text>
+          <SectionCard tone="fan">
+            <Text className="text-2xl font-bold text-slate-950">{ticket.eventTitle}</Text>
+            <View className="mt-4 flex-row flex-wrap gap-2">
+              <MiniBadge label={ticket.ticket?.status ?? "pending"} tone={ticket.ticket?.status === "active" ? "success" : ticket.ticket?.status === "used" ? "warning" : "danger"} />
+              {ticket.ticket?.ticketCode ? <MiniBadge label={ticket.ticket.ticketCode} tone="neutral" /> : null}
+            </View>
+          </SectionCard>
+        </HeroHeader>
+      }
+    >
+      <View className="gap-4">
+        <SectionCard>
+          <SectionTitle title="Ticket Details" subtitle="Mobile-native ticket presentation using the same backend lifecycle as web." />
+          <View className="gap-3">
+            <DetailRow
+              icon={<Clock size={15} color="#64748b" />}
+              label={`${formatEventDate(ticket.eventDateTime)} • ${formatEventTime(ticket.eventDateTime)}`}
+            />
+            <DetailRow
+              icon={<MapPin size={15} color="#64748b" />}
+              label={ticket.venue ? `${ticket.venue.name}${ticket.venue.city ? ` • ${ticket.venue.city}` : ""}` : "Venue TBD"}
+            />
+            <DetailRow icon={<Ticket size={15} color="#64748b" />} label={ticket.attendeeName} />
           </View>
-        </TouchableOpacity>
+        </SectionCard>
 
-        <View className="mt-3 flex-row items-center justify-center">
-          <QrCodeIcon size={12} color="#6b7280" />
-          <Text className="ml-1 text-xs text-gray-500">One-time QR validation at entry</Text>
+        <SectionCard tone="fan">
+          <SectionTitle title="Entry QR" subtitle="One-time QR validation at the door." />
+          <View className="items-center">
+            {ticket.requiresTicketBootstrap ? (
+              <>
+                <Text className="text-sm text-slate-600">Preparing your ticket...</Text>
+                <View className="mt-4 w-full">
+                  <ActionButton
+                    label={pendingEnsure ? "Preparing..." : "Generate Ticket"}
+                    tone="fan"
+                    disabled={pendingEnsure}
+                    onPress={() => void handleEnsureTicket()}
+                  />
+                </View>
+              </>
+            ) : lifecycleStatus === "active" && qrValue ? (
+              <>
+                <View className="rounded-[28px] border border-dashed border-blue-200 bg-white p-5">
+                  <QRCode value={qrValue} size={210} />
+                </View>
+                <Text className="mt-4 text-sm font-semibold text-slate-900">Code: {ticket.ticket?.ticketCode}</Text>
+                <Text className="mt-1 text-xs text-slate-500">Show this at the door for check-in.</Text>
+              </>
+            ) : lifecycleStatus === "used" ? (
+              <StatusBlock title="Ticket already used" subtitle="This ticket was already checked in." tone="warning" />
+            ) : lifecycleStatus === "revoked" ? (
+              <StatusBlock title="Ticket revoked" subtitle="This ticket is no longer valid for entry." tone="danger" />
+            ) : (
+              <StatusBlock title="Ticket unavailable" subtitle="Your ticket is not ready yet." tone="neutral" />
+            )}
+          </View>
+        </SectionCard>
+
+        {error ? (
+          <SectionCard tone="danger">
+            <Text className="text-sm text-red-700">{error}</Text>
+          </SectionCard>
+        ) : null}
+
+        <ActionButton
+          label="Share Ticket Details"
+          variant="secondary"
+          onPress={() => void handleShareTicket()}
+          icon={<Share2 size={16} color="#334155" />}
+        />
+
+        <View className="flex-row items-center justify-center gap-2 pb-4">
+          <QrCodeIcon size={12} color="#64748b" />
+          <Text className="text-xs text-slate-500">One-time QR validation at entry</Text>
         </View>
       </View>
-    </View>
+    </AppScreen>
   );
 }
 
 function DetailRow({ icon, label }: { icon: React.ReactNode; label: string }) {
   return (
-    <View className="flex-row items-center">
+    <View className="flex-row items-center gap-3">
       {icon}
-      <Text className="ml-2 text-sm text-gray-700">{label}</Text>
+      <Text className="text-sm text-slate-700">{label}</Text>
     </View>
   );
 }
@@ -158,17 +189,17 @@ function StatusBlock({
 }: {
   title: string;
   subtitle: string;
-  tone: "amber" | "red" | "gray";
+  tone: "warning" | "danger" | "neutral";
 }) {
   const toneClasses =
-    tone === "amber"
-      ? "border-amber-300 bg-amber-50 text-amber-700"
-      : tone === "red"
-        ? "border-red-300 bg-red-50 text-red-700"
-        : "border-gray-300 bg-gray-100 text-gray-700";
+    tone === "warning"
+      ? "border-amber-200 bg-amber-50 text-amber-700"
+      : tone === "danger"
+        ? "border-red-200 bg-red-50 text-red-700"
+        : "border-slate-200 bg-slate-100 text-slate-700";
 
   return (
-    <View className={`w-full rounded-xl border p-4 ${toneClasses}`}>
+    <View className={`w-full rounded-[24px] border p-4 ${toneClasses}`}>
       <Text className="text-center text-base font-semibold">{title}</Text>
       <Text className="mt-1 text-center text-sm">{subtitle}</Text>
     </View>

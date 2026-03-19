@@ -1,16 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Stack, useRouter, useSegments } from "expo-router";
+import { Stack, useRootNavigationState, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { ClerkLoaded, ClerkProvider, useAuth, useUser } from "@clerk/clerk-expo";
 import { ConvexProviderWithClerk } from "convex/react-clerk";
 import { ConvexReactClient } from "convex/react";
 import { useMutation, useQuery } from "convex/react";
 import * as SecureStore from "expo-secure-store";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { SafeAreaView, Text, View } from "react-native";
+import { Text } from "react-native";
 import { api } from "../../../convex/_generated/api";
+import { AppScreen, HeroHeader, LoadingPanel, SectionCard } from "@/components/ui/AppPrimitives";
 import { MobileProfileContextProvider } from "@/context/ProfileContext";
-import { onboardingStorageKey } from "@/constants/storage";
 import { getEnv, getMissingRequiredEnv } from "@/lib/env";
 import "../global.css";
 
@@ -38,20 +37,25 @@ const tokenCache = {
 
 function EnvErrorScreen() {
   return (
-    <SafeAreaView className="flex-1 bg-white">
-      <View className="flex-1 p-6 justify-center">
-        <Text className="text-2xl font-bold text-gray-900">Mobile Env Misconfigured</Text>
-        <Text className="mt-3 text-gray-600">
-          Add missing variables to `apps/mobile/.env.local` and restart Expo.
-        </Text>
-
+    <AppScreen
+      scroll
+      header={
+        <HeroHeader
+          title="Mobile Env Misconfigured"
+          subtitle="Add the missing Expo public variables to `apps/mobile/.env.local` and restart Expo."
+          eyebrow="Runtime Setup"
+          tone="danger"
+        />
+      }
+    >
+      <SectionCard tone="danger">
         {missingEnv.map((key) => (
-          <View key={key} className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3">
+          <SectionCard key={key} tone="danger">
             <Text className="font-mono text-sm text-red-700">{key}</Text>
-          </View>
+          </SectionCard>
         ))}
-      </View>
-    </SafeAreaView>
+      </SectionCard>
+    </AppScreen>
   );
 }
 
@@ -90,9 +94,9 @@ function UserBootstrap({ children }: { children: React.ReactNode }) {
 
   if (isBootstrapping) {
     return (
-      <SafeAreaView className="flex-1 items-center justify-center bg-white">
-        <Text className="text-sm text-gray-600">Syncing account...</Text>
-      </SafeAreaView>
+      <AppScreen>
+        <LoadingPanel label="Syncing account..." tone="fan" />
+      </AppScreen>
     );
   }
 
@@ -100,59 +104,20 @@ function UserBootstrap({ children }: { children: React.ReactNode }) {
 }
 
 function NavigationGuard() {
-  const { isLoaded, isSignedIn, userId } = useAuth();
+  const { isLoaded, isSignedIn } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+  const rootNavigationState = useRootNavigationState();
   const navigatingRef = useRef(false);
-  const [onboardingHydrated, setOnboardingHydrated] = useState(false);
-  const [onboardingComplete, setOnboardingComplete] = useState(false);
 
   const firstSegment = segments[0];
 
   const isPublicRoute = useMemo(() => {
-    return firstSegment === "sign-in" || firstSegment === "sign-up";
+    return firstSegment === "sign-in" || firstSegment === "sign-up" || firstSegment === "sso-callback";
   }, [firstSegment]);
 
-  const isOnboardingRoute = firstSegment === "onboarding";
-
   useEffect(() => {
-    let active = true;
-
-    async function hydrateOnboardingStatus() {
-      if (!isLoaded) return;
-
-      if (!isSignedIn || !userId) {
-        if (active) {
-          setOnboardingHydrated(true);
-          setOnboardingComplete(false);
-        }
-        return;
-      }
-
-      try {
-        const value = await AsyncStorage.getItem(onboardingStorageKey(userId));
-        if (!active) return;
-        setOnboardingComplete(value === "true");
-      } catch {
-        if (!active) return;
-        setOnboardingComplete(false);
-      } finally {
-        if (active) {
-          setOnboardingHydrated(true);
-        }
-      }
-    }
-
-    setOnboardingHydrated(false);
-    void hydrateOnboardingStatus();
-
-    return () => {
-      active = false;
-    };
-  }, [isLoaded, isSignedIn, userId]);
-
-  useEffect(() => {
-    if (!isLoaded || navigatingRef.current) return;
+    if (!isLoaded || !rootNavigationState?.key || navigatingRef.current) return;
 
     if (!isSignedIn && !isPublicRoute) {
       navigatingRef.current = true;
@@ -163,42 +128,18 @@ function NavigationGuard() {
       return;
     }
 
-    if (isSignedIn && !isPublicRoute) {
-      if (!onboardingHydrated) return;
-
-      if (!onboardingComplete && !isOnboardingRoute) {
-        navigatingRef.current = true;
-        router.replace("/onboarding");
-        setTimeout(() => {
-          navigatingRef.current = false;
-        }, 50);
-        return;
-      }
-
-      if (onboardingComplete && isOnboardingRoute) {
-        navigatingRef.current = true;
-        router.replace("/(tabs)");
-        setTimeout(() => {
-          navigatingRef.current = false;
-        }, 50);
-        return;
-      }
-    }
-
     if (isSignedIn && isPublicRoute) {
       navigatingRef.current = true;
-      router.replace("/");
+      router.replace("/(tabs)");
       setTimeout(() => {
         navigatingRef.current = false;
       }, 50);
     }
   }, [
     isLoaded,
-    isOnboardingRoute,
     isPublicRoute,
     isSignedIn,
-    onboardingComplete,
-    onboardingHydrated,
+    rootNavigationState?.key,
     router,
   ]);
 
@@ -212,12 +153,13 @@ function RootNavigator() {
       <Stack
         screenOptions={{
           headerShown: false,
-          contentStyle: { backgroundColor: "#ffffff" },
+          contentStyle: { backgroundColor: "#f8fafc" },
         }}
       >
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="sign-in" options={{ headerShown: false }} />
         <Stack.Screen name="sign-up" options={{ headerShown: false }} />
+        <Stack.Screen name="sso-callback" options={{ headerShown: false }} />
         <Stack.Screen name="onboarding" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="gig/[id]" options={{ headerShown: false }} />

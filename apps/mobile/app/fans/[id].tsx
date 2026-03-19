@@ -1,7 +1,19 @@
+import {
+  ActionButton,
+  AppScreen,
+  Avatar,
+  EmptyState,
+  HeroHeader,
+  MiniBadge,
+  RowLink,
+  SectionCard,
+  SectionTitle,
+  StatCard,
+} from "@/components/ui/AppPrimitives";
 import { useQuery } from "convex/react";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ArrowLeft, Heart, MapPin, Music, Ticket, User } from "lucide-react-native";
-import { FlatList, Text, TouchableOpacity, View } from "react-native";
+import { ArrowLeft } from "lucide-react-native";
+import { Text, TouchableOpacity, View } from "react-native";
 import { api } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
 
@@ -14,118 +26,119 @@ export default function PublicFanProfileScreen() {
 
   if (profile === undefined) {
     return (
-      <View className="flex-1 items-center justify-center bg-white">
-        <Text className="text-gray-500">Loading fan profile...</Text>
-      </View>
+      <AppScreen>
+        <SectionCard tone="fan">
+          <Text className="text-sm text-slate-500">Loading fan profile...</Text>
+        </SectionCard>
+      </AppScreen>
     );
   }
 
   if (!profile) {
     return (
-      <View className="flex-1 items-center justify-center bg-white px-6">
-        <Text className="text-xl font-semibold text-gray-900">Fan profile not found</Text>
-        <Text className="mt-2 text-center text-sm text-gray-500">This fan profile is unavailable.</Text>
-        <TouchableOpacity onPress={() => router.back()} className="mt-5 rounded-xl bg-blue-600 px-4 py-2.5">
-          <Text className="font-semibold text-white">Go Back</Text>
-        </TouchableOpacity>
-      </View>
+      <AppScreen>
+        <EmptyState
+          tone="fan"
+          title="Fan profile not found"
+          message="This fan profile is unavailable."
+          action={<ActionButton label="Go Back" tone="fan" onPress={() => router.back()} />}
+        />
+      </AppScreen>
     );
   }
 
   const { fan, topGenres, savedArtists, pastShows, gigDna } = profile;
 
   return (
-    <View className="flex-1 bg-white px-4 pb-8 pt-14">
-      <TouchableOpacity onPress={() => router.back()} className="flex-row items-center self-start rounded-lg border border-gray-200 px-3 py-2">
-        <ArrowLeft size={16} color="#4b5563" />
-        <Text className="ml-2 text-xs font-semibold text-gray-700">Back</Text>
-      </TouchableOpacity>
-
-      <View className="mt-4 rounded-2xl border border-gray-200 bg-gray-50 p-4">
-        <View className="flex-row items-center">
-          <User size={16} color="#2563eb" />
-          <Text className="ml-2 text-xl font-bold text-gray-900">{fan.name}</Text>
-        </View>
-        <View className="mt-2 flex-row items-center">
-          <MapPin size={14} color="#6b7280" />
-          <Text className="ml-1 text-sm text-gray-600">{fan.location || "Location not set"}</Text>
-        </View>
-        <Text className="mt-1 text-xs text-gray-500">
-          Member since {new Date(fan.memberSince).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
-        </Text>
-        <Text className="mt-1 text-xs text-gray-500">Shows attended: {fan.showsAttended}</Text>
-        {gigDna ? (
-          <View className="mt-3 rounded-xl border border-blue-200 bg-blue-50 p-3">
-            <Text className="text-xs uppercase text-blue-700">Gig DNA</Text>
-            <Text className="mt-1 text-sm font-semibold text-blue-800">{gigDna.label}</Text>
-          </View>
-        ) : null}
-      </View>
-
-      <View className="mt-5 rounded-xl border border-gray-200 bg-white p-4">
-        <View className="flex-row items-center">
-          <Music size={15} color="#7c3aed" />
-          <Text className="ml-2 text-sm font-semibold text-gray-900">Top Genres</Text>
-        </View>
-        <View className="mt-2 flex-row flex-wrap">
-          {topGenres.length > 0 ? (
-            topGenres.map((entry) => (
-              <View key={entry.genre} className="mr-2 mb-2 rounded-full border border-violet-200 bg-violet-50 px-3 py-1">
-                <Text className="text-xs text-violet-700">{entry.label} ({entry.attendedCount})</Text>
+    <AppScreen
+      scroll
+      header={
+        <HeroHeader
+          title={fan.name}
+          subtitle={fan.location || "Location not set"}
+          eyebrow="Public Fan"
+          tone="fan"
+          action={
+            <TouchableOpacity onPress={() => router.back()} className="rounded-[18px] border border-slate-200 bg-white px-4 py-3">
+              <View className="flex-row items-center gap-2">
+                <ArrowLeft size={14} color="#334155" />
+                <Text className="text-xs font-semibold text-slate-700">Back</Text>
               </View>
-            ))
-          ) : (
-            <Text className="text-xs text-gray-500">No genre activity yet.</Text>
-          )}
-        </View>
-      </View>
-
-      <Text className="mt-5 text-base font-semibold text-gray-900">Saved Artists</Text>
-      <FlatList
-        horizontal
-        className="mt-2"
-        showsHorizontalScrollIndicator={false}
-        data={savedArtists}
-        keyExtractor={(item) => item.bandId}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            onPress={() => router.push(`/bands/${item.bandId}`)}
-            className="mr-2 w-44 rounded-xl border border-gray-200 p-3"
-          >
-            <View className="flex-row items-center">
-              <Heart size={14} color="#2563eb" />
-              <Text className="ml-1 text-xs text-gray-500">Saved</Text>
+            </TouchableOpacity>
+          }
+        >
+          <SectionCard tone="fan">
+            <View className="flex-row items-start gap-4">
+              <Avatar uri={fan.avatar} label={fan.name} size={72} tone="fan" />
+              <View className="flex-1">
+                <Text className="text-xl font-semibold text-slate-950">{fan.name}</Text>
+                <Text className="mt-2 text-sm text-slate-500">
+                  Member since {new Date(fan.memberSince).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
+                </Text>
+                <View className="mt-3 flex-row flex-wrap gap-2">
+                  <MiniBadge label={`${fan.showsAttended} shows`} tone="fan" />
+                  {gigDna ? <MiniBadge label={gigDna.label} tone="neutral" /> : null}
+                </View>
+              </View>
             </View>
-            <Text className="mt-2 font-semibold text-gray-900" numberOfLines={1}>{item.name}</Text>
-            <Text className="mt-1 text-xs text-gray-500" numberOfLines={1}>{item.location}</Text>
-          </TouchableOpacity>
-        )}
-        ListEmptyComponent={() => <Text className="text-sm text-gray-500">No saved artists yet.</Text>}
-      />
+          </SectionCard>
 
-      <Text className="mt-5 text-base font-semibold text-gray-900">Recent Activity</Text>
-      <FlatList
-        className="mt-2 flex-1"
-        data={pastShows}
-        keyExtractor={(item) => item.eventId}
-        renderItem={({ item }) => (
-          <TouchableOpacity onPress={() => router.push(`/gig/${item.eventId}`)} className="mb-2 rounded-xl border border-gray-200 p-3">
-            <View className="flex-row items-center">
-              <Ticket size={14} color="#6b7280" />
-              <Text className="ml-1 font-semibold text-gray-900">{item.title}</Text>
-            </View>
-            <Text className="mt-1 text-xs text-gray-500">
-              {item.venue.name} • {item.venue.city}
-            </Text>
-            <Text className="mt-1 text-xs text-gray-500">{new Date(item.dateTime).toLocaleDateString()}</Text>
-          </TouchableOpacity>
-        )}
-        ListEmptyComponent={() => (
-          <View className="py-8 items-center">
-            <Text className="text-sm text-gray-500">No past activity yet.</Text>
+          <View className="mt-4 flex-row gap-2">
+            <StatCard label="Top Genres" value={String(topGenres.length)} tone="fan" />
+            <StatCard label="Saved Artists" value={String(savedArtists.length)} tone="fan" />
+            <StatCard label="Activity" value={String(pastShows.length)} tone="fan" />
           </View>
-        )}
-      />
-    </View>
+        </HeroHeader>
+      }
+    >
+      <View className="gap-4">
+        <SectionCard>
+          <SectionTitle title="Top Genres" subtitle="Favorite genres emerge from attended shows." />
+          <View className="flex-row flex-wrap gap-2">
+            {topGenres.length > 0 ? (
+              topGenres.map((entry) => <MiniBadge key={entry.genre} label={`${entry.label} ${entry.attendedCount}`} tone="fan" />)
+            ) : (
+              <Text className="text-sm text-slate-500">No genre activity yet.</Text>
+            )}
+          </View>
+        </SectionCard>
+
+        <SectionCard>
+          <SectionTitle title="Saved Artists" subtitle="Artists this fan has explicitly followed." />
+          <View className="gap-3">
+            {savedArtists.length > 0 ? (
+              savedArtists.map((artist) => (
+                <RowLink
+                  key={artist.bandId}
+                  title={artist.name}
+                  subtitle={`${artist.location || "Bay Area"} • ${(artist.genres ?? []).join(", ") || "Genres pending"}`}
+                  onPress={() => router.push(`/bands/${artist.bandId}`)}
+                />
+              ))
+            ) : (
+              <Text className="text-sm text-slate-500">No saved artists yet.</Text>
+            )}
+          </View>
+        </SectionCard>
+
+        <SectionCard>
+          <SectionTitle title="Recent Activity" subtitle="Past attended shows remain accessible from the public profile." />
+          <View className="gap-3">
+            {pastShows.length > 0 ? (
+              pastShows.map((show) => (
+                <RowLink
+                  key={show.eventId}
+                  title={show.title}
+                  subtitle={`${show.venue.name} • ${show.venue.city} • ${new Date(show.dateTime).toLocaleDateString()}`}
+                  onPress={() => router.push(`/gig/${show.eventId}`)}
+                />
+              ))
+            ) : (
+              <Text className="text-sm text-slate-500">No past activity yet.</Text>
+            )}
+          </View>
+        </SectionCard>
+      </View>
+    </AppScreen>
   );
 }

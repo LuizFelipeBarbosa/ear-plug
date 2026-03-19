@@ -1,27 +1,35 @@
+import {
+  ActionButton,
+  AppScreen,
+  EmptyState,
+  HeroHeader,
+  LoadingPanel,
+  PillButton,
+  SectionCard,
+  SectionTitle,
+  StatCard,
+} from "@/components/ui/AppPrimitives";
 import { useNotifications } from "@/hooks/useNotifications";
 import { getRelativeTime } from "@ear-plug/shared/constants";
 import type { NotificationType } from "@ear-plug/shared/types";
 import { useMemo, useState } from "react";
-import { FlatList, Text, TouchableOpacity, View } from "react-native";
+import { FlatList, Text, View } from "react-native";
 
 type FilterOption = "all" | "unread" | NotificationType;
 
-const FILTERS: FilterOption[] = [
-  "all",
-  "unread",
-  "event_reminder",
-  "new_event_followed_artist",
-  "new_event_nearby",
-  "lineup_change",
-  "application_update",
-  "message",
+const FILTERS: { value: FilterOption; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "unread", label: "Unread" },
+  { value: "event_reminder", label: "Reminders" },
+  { value: "new_event_followed_artist", label: "Artists" },
+  { value: "new_event_nearby", label: "Nearby" },
+  { value: "lineup_change", label: "Updates" },
 ];
 
 export function FanNotificationsScreen() {
   const { notifications, unreadCount, isLoading, markAsRead, markAllAsRead, removeNotification } = useNotifications({
     limit: 100,
   });
-
   const [activeFilter, setActiveFilter] = useState<FilterOption>("all");
 
   const filtered = useMemo(() => {
@@ -30,104 +38,144 @@ export function FanNotificationsScreen() {
     return notifications.filter((notification) => notification.type === activeFilter);
   }, [activeFilter, notifications]);
 
-  return (
-    <View className="flex-1 bg-white">
-      <View className="px-4 pt-4 pb-3 border-b border-gray-200">
-        <Text className="text-2xl font-bold text-gray-900">Notifications</Text>
-        <Text className="text-sm text-gray-500 mt-1">{unreadCount} unread</Text>
-
-        {unreadCount > 0 ? (
-          <TouchableOpacity onPress={() => void markAllAsRead({})} className="mt-2 rounded-lg bg-blue-50 py-2">
-            <Text className="text-center text-sm font-semibold text-blue-700">Mark all as read</Text>
-          </TouchableOpacity>
-        ) : null}
-
-        <FlatList
-          className="mt-3"
-          horizontal
-          data={FILTERS}
-          keyExtractor={(item) => item}
-          showsHorizontalScrollIndicator={false}
-          renderItem={({ item }) => {
-            const active = activeFilter === item;
-            return (
-              <TouchableOpacity
-                onPress={() => setActiveFilter(item)}
-                className={`mr-2 rounded-full border px-3 py-1.5 ${
-                  active ? "border-blue-300 bg-blue-50" : "border-gray-200"
-                }`}
-              >
-                <Text className={`text-xs ${active ? "text-blue-700" : "text-gray-600"}`}>{labelForFilter(item)}</Text>
-              </TouchableOpacity>
-            );
-          }}
-        />
-      </View>
-
-      {isLoading ? (
-        <View className="flex-1 items-center justify-center">
-          <Text className="text-gray-500">Loading notifications...</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={filtered}
-          keyExtractor={(item) => item._id}
-          contentContainerStyle={{ padding: 12 }}
-          renderItem={({ item }) => (
-            <View className={`mb-3 rounded-xl border p-4 ${item.read ? "border-gray-200 bg-white" : "border-blue-200 bg-blue-50"}`}>
-              <Text className="text-sm font-semibold text-gray-900">{item.title}</Text>
-              <Text className="mt-1 text-sm text-gray-600">{item.content}</Text>
-              <Text className="mt-1 text-xs text-gray-500">{getRelativeTime(item.timestamp)}</Text>
-
-              <View className="mt-3 flex-row gap-2">
-                {!item.read ? (
-                  <TouchableOpacity
-                    onPress={() => void markAsRead(item._id)}
-                    className="flex-1 rounded-lg border border-blue-300 py-2"
-                  >
-                    <Text className="text-center text-xs font-semibold text-blue-700">Mark read</Text>
-                  </TouchableOpacity>
-                ) : null}
-
-                <TouchableOpacity
-                  onPress={() => void removeNotification(item._id)}
-                  className="flex-1 rounded-lg border border-red-300 py-2"
-                >
-                  <Text className="text-center text-xs font-semibold text-red-700">Delete</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
-          ListEmptyComponent={() => (
-            <View className="py-16 items-center">
-              <Text className="text-gray-500">No notifications.</Text>
-            </View>
-          )}
-        />
-      )}
-    </View>
+  const stats = useMemo(
+    () => ({
+      total: notifications.length,
+      unread: notifications.filter((notification) => !notification.read).length,
+      reminders: notifications.filter((notification) => notification.type === "event_reminder").length,
+    }),
+    [notifications],
   );
-}
 
-function labelForFilter(filter: FilterOption): string {
-  switch (filter) {
-    case "all":
-      return "All";
-    case "unread":
-      return "Unread";
-    case "event_reminder":
-      return "Reminders";
-    case "new_event_followed_artist":
-      return "Artists";
-    case "new_event_nearby":
-      return "Nearby";
-    case "lineup_change":
-      return "Lineup";
-    case "application_update":
-      return "Applications";
-    case "message":
-      return "Messages";
-    default:
-      return filter;
-  }
+  const grouped = useMemo(() => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const yesterday = today - 24 * 60 * 60 * 1000;
+    const lastWeek = today - 7 * 24 * 60 * 60 * 1000;
+
+    const groups = {
+      Today: [] as typeof notifications,
+      Yesterday: [] as typeof notifications,
+      "This Week": [] as typeof notifications,
+      Earlier: [] as typeof notifications,
+    };
+
+    filtered.forEach((notification) => {
+      const timestamp = new Date(notification.timestamp);
+      const day = new Date(timestamp.getFullYear(), timestamp.getMonth(), timestamp.getDate()).getTime();
+      if (day === today) {
+        groups.Today.push(notification);
+      } else if (day === yesterday) {
+        groups.Yesterday.push(notification);
+      } else if (day > lastWeek) {
+        groups["This Week"].push(notification);
+      } else {
+        groups.Earlier.push(notification);
+      }
+    });
+
+    return Object.entries(groups).filter(([, values]) => values.length > 0);
+  }, [filtered]);
+
+  return (
+    <AppScreen
+      scroll
+      header={
+        <HeroHeader
+          title="Notifications"
+          subtitle="Stay on top of reminders, nearby shows, and lineup changes."
+          eyebrow="Fan Workspace"
+          tone="fan"
+          action={
+            unreadCount > 0 ? (
+              <ActionButton
+                label="Mark all read"
+                tone="fan"
+                size="sm"
+                onPress={() => void markAllAsRead({})}
+              />
+            ) : null
+          }
+        >
+          <View className="flex-row gap-2">
+            <StatCard label="Unread" value={String(stats.unread)} tone="fan" />
+            <StatCard label="Total" value={String(stats.total)} tone="fan" />
+            <StatCard label="Reminders" value={String(stats.reminders)} tone="fan" />
+          </View>
+        </HeroHeader>
+      }
+    >
+      {isLoading ? (
+        <LoadingPanel label="Loading notifications..." tone="fan" />
+      ) : (
+        <>
+          <FlatList
+            horizontal
+            className="mt-1"
+            showsHorizontalScrollIndicator={false}
+            data={FILTERS}
+            keyExtractor={(item) => item.value}
+            renderItem={({ item }) => (
+              <PillButton
+                label={item.label}
+                active={activeFilter === item.value}
+                tone="fan"
+                onPress={() => setActiveFilter(item.value)}
+              />
+            )}
+          />
+
+          <View className="mt-5 gap-4">
+            {grouped.length > 0 ? (
+              grouped.map(([label, items]) => (
+                <View key={label}>
+                  <SectionTitle title={label} subtitle={`${items.length} ${items.length === 1 ? "notification" : "notifications"}`} />
+                  {items.map((item) => (
+                    <SectionCard key={item._id} tone={item.read ? "neutral" : "fan"}>
+                      <View className="flex-row items-start justify-between gap-3">
+                        <View className="flex-1">
+                          <Text className="text-sm font-semibold text-slate-900">{item.title}</Text>
+                          <Text className="mt-2 text-sm leading-6 text-slate-600">{item.content}</Text>
+                          <Text className="mt-3 text-xs text-slate-500">{getRelativeTime(item.timestamp)}</Text>
+                        </View>
+                        {!item.read ? (
+                          <View className="h-3 w-3 rounded-full bg-blue-600" />
+                        ) : null}
+                      </View>
+
+                      <View className="mt-4 flex-row gap-2">
+                        {!item.read ? (
+                          <View className="flex-1">
+                            <ActionButton
+                              label="Mark Read"
+                              tone="fan"
+                              variant="secondary"
+                              onPress={() => void markAsRead(item._id)}
+                            />
+                          </View>
+                        ) : null}
+                        <View className="flex-1">
+                          <ActionButton
+                            label="Delete"
+                            variant="danger"
+                            onPress={() => void removeNotification(item._id)}
+                          />
+                        </View>
+                      </View>
+                    </SectionCard>
+                  ))}
+                </View>
+              ))
+            ) : (
+              <EmptyState
+                tone="fan"
+                title="You’re all caught up"
+                message="New alerts from your followed artists and nearby shows will land here."
+              />
+            )}
+          </View>
+        </>
+      )}
+    </AppScreen>
+  );
 }

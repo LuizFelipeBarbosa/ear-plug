@@ -1,4 +1,18 @@
 import { ProfileWorkspaceSwitcher } from "@/components/ui/ProfileWorkspaceSwitcher";
+import {
+  ActionButton,
+  AppScreen,
+  Avatar,
+  EmptyState,
+  HeroHeader,
+  IconButton,
+  MiniBadge,
+  RowLink,
+  SectionCard,
+  SectionTitle,
+  SegmentedTabs,
+  StatCard,
+} from "@/components/ui/AppPrimitives";
 import { useProfileContext } from "@/context/ProfileContext";
 import { useBandPastShows, useCurrentBand } from "@/hooks/useBand";
 import { useBandMediaSlots } from "@/hooks/useBandMediaSlots";
@@ -9,8 +23,9 @@ import type { Genre } from "@ear-plug/shared/types";
 import { useAuth } from "@clerk/clerk-expo";
 import { useMutation, useQuery } from "convex/react";
 import * as ImagePicker from "expo-image-picker";
+import { Edit3, Image as ImageIcon, LogOut, ShieldCheck, Trash2 } from "lucide-react-native";
 import { useMemo, useState } from "react";
-import { Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Image, Modal, Pressable, Text, TextInput, View } from "react-native";
 
 const GENRES: Genre[] = ["indie", "rock", "jazz", "electronic", "folk", "pop", "alternative"];
 type TabType = "overview" | "media" | "shows" | "settings";
@@ -28,11 +43,7 @@ export function BandProfileScreen() {
   const canTransferOwnership = role === "owner";
 
   const members = useQuery(api.bandMembers.listMembers, band ? { bandId: band._id } : "skip") ?? [];
-  const invites = useQuery(
-    api.bandMembers.listBandInvites,
-    band && canManage ? { bandId: band._id } : "skip",
-  ) ?? [];
-
+  const invites = useQuery(api.bandMembers.listBandInvites, band && canManage ? { bandId: band._id } : "skip") ?? [];
   const { slots, generateUploadUrl, upsertSlot, clearSlot } = useBandMediaSlots(band?._id);
 
   const inviteExistingUser = useMutation(api.bandMembers.inviteExistingUser);
@@ -59,6 +70,7 @@ export function BandProfileScreen() {
   const [selectedInviteUserId, setSelectedInviteUserId] = useState<string | null>(null);
   const [deleteText, setDeleteText] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const assignableUsers = useQuery(
     api.bandMembers.searchAssignableBandInviteUsers,
@@ -67,393 +79,513 @@ export function BandProfileScreen() {
       : "skip",
   );
 
-  const deletePhrase = band ? `I CONFIRM I WANT TO DELETE ${band.name}` : "";
-
   const selectedInviteUser = useMemo(
     () => assignableUsers?.users?.find((user) => user.userId === selectedInviteUserId),
     [assignableUsers?.users, selectedInviteUserId],
   );
 
+  const deletePhrase = band ? `I CONFIRM I WANT TO DELETE ${band.name}` : "";
+
   if (!band) {
     return (
-      <View className="flex-1 items-center justify-center bg-white p-6">
-        <Text className="text-gray-500 text-center">
-          Switch to a band workspace to view this profile.
-        </Text>
-      </View>
+      <AppScreen>
+        <EmptyState
+          tone="band"
+          title="No band selected"
+          message="Open the workspace switcher from your profile to create or select a band."
+          action={<ActionButton label="Back to Personal" tone="band" onPress={setPersonalMode} />}
+        />
+      </AppScreen>
     );
   }
 
   return (
-    <ScrollView className="flex-1 bg-white" contentContainerStyle={{ padding: 16, paddingBottom: 80 }}>
-      <View className="flex-row items-center justify-between">
-        <Text className="text-2xl font-bold text-gray-900">Band Profile</Text>
-        <TouchableOpacity
-          onPress={() => {
-            setName(band.name);
-            setLocation(band.location);
-            setSelectedGenres((band.genres as Genre[] | undefined) ?? []);
-            setBio(band.bio ?? "");
-            setEditOpen(true);
-          }}
-          className="rounded-xl border border-gray-300 px-3 py-2"
+    <AppScreen
+      scroll
+      header={
+        <HeroHeader
+          title="Band Profile"
+          subtitle="Everything the band workspace needs: overview, media, shows, members, invites, and settings."
+          eyebrow="Band Workspace"
+          tone="band"
+          action={
+            <IconButton
+              icon={<Edit3 size={18} color="#ffffff" />}
+              onPress={() => {
+                setName(band.name);
+                setLocation(band.location);
+                setSelectedGenres((band.genres as Genre[] | undefined) ?? []);
+                setBio(band.bio ?? "");
+                setEditOpen(true);
+              }}
+              tone="band"
+              accessibilityLabel="Edit band profile"
+            />
+          }
         >
-          <Text className="text-xs font-semibold text-gray-700">Edit</Text>
-        </TouchableOpacity>
-      </View>
+          <SectionCard tone="band">
+            <View className="flex-row items-start gap-4">
+              <Avatar uri={band.image} label={band.name} size={72} tone="band" />
+              <View className="flex-1">
+                <Text className="text-xl font-semibold text-slate-950">{band.name}</Text>
+                <Text className="mt-2 text-sm text-slate-500">{band.location}</Text>
+                <View className="mt-3 flex-row flex-wrap gap-2">
+                  <MiniBadge label={role ?? "member"} tone="band" />
+                  {(band.genres ?? []).map((genre) => (
+                    <MiniBadge key={genre} label={genre} tone="neutral" />
+                  ))}
+                </View>
+              </View>
+            </View>
+          </SectionCard>
 
-      <View className="mt-4">
-        <ProfileWorkspaceSwitcher />
-      </View>
+          {bandWithStats ? (
+            <View className="mt-4 flex-row gap-2">
+              <StatCard label="Shows" value={String(bandWithStats.stats.showsThisMonth)} tone="band" />
+              <StatCard label="RSVPs" value={String(bandWithStats.stats.totalRsvps)} tone="band" />
+              <StatCard label="New Fans" value={String(bandWithStats.stats.newFans)} tone="band" />
+            </View>
+          ) : null}
+        </HeroHeader>
+      }
+    >
+      <SegmentedTabs
+        value={tab}
+        tone="band"
+        onChange={(value) => setTab(value as TabType)}
+        options={[
+          { value: "overview", label: "Overview" },
+          { value: "media", label: "Media" },
+          { value: "shows", label: "Shows" },
+          { value: "settings", label: "Settings" },
+        ]}
+      />
 
-      <View className="mt-4 rounded-2xl border border-gray-200 bg-gray-50 p-4">
-        <Text className="text-xl font-semibold text-gray-900">{band.name}</Text>
-        <Text className="text-sm text-gray-600 mt-1">{band.location}</Text>
-        <Text className="text-xs text-gray-500 mt-1 uppercase">Role: {role ?? "member"}</Text>
-        <Text className="text-xs text-gray-500 mt-1">
-          {(band.genres ?? []).map((genre) => genre.charAt(0).toUpperCase() + genre.slice(1)).join(" • ")}
-        </Text>
+      <View className="mt-5">
+        {tab === "overview" ? (
+          <View className="gap-4">
+            <SectionCard tone="band">
+              <SectionTitle
+                title="Workspace"
+                subtitle="Band switching and creation stay discoverable inside the profile flow."
+              />
+              <ProfileWorkspaceSwitcher />
+            </SectionCard>
 
-        {bandWithStats ? (
-          <View className="mt-3 flex-row gap-2">
-            <Metric label="Shows" value={String(bandWithStats.stats.showsThisMonth)} />
-            <Metric label="RSVPs" value={String(bandWithStats.stats.totalRsvps)} />
-            <Metric label="New Fans" value={String(bandWithStats.stats.newFans)} />
+            <SectionCard>
+              <SectionTitle title="Bio" subtitle="Your public-facing band story and positioning." />
+              <Text className="text-sm leading-6 text-slate-600">{band.bio || "No bio added yet."}</Text>
+            </SectionCard>
+
+            <SectionCard>
+              <SectionTitle title={`Members (${members.length})`} subtitle="Role hierarchy is surfaced directly from membership state." />
+              <View className="gap-3">
+                {members.map((member) => (
+                  <RowLink
+                    key={member.user._id}
+                    title={member.user.name}
+                    subtitle={member.user.location || "Bay Area"}
+                    right={<MiniBadge label={member.membership.role} tone={member.membership.role === "owner" ? "warning" : "band"} />}
+                  />
+                ))}
+              </View>
+            </SectionCard>
           </View>
         ) : null}
 
-        <View className="mt-3 flex-row gap-2">
-          <TouchableOpacity
-            onPress={async () => {
-              const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-              if (!permission.granted) return;
-
-              const result = await ImagePicker.launchImageLibraryAsync({
-                mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                quality: 0.8,
-              });
-
-              if (result.canceled || !result.assets[0]) return;
-
-              const { uploadUrl } = await generateImageUploadUrl({ bandId: band._id });
-              const uploaded = await uploadUriToConvexStorage(uploadUrl, result.assets[0].uri);
-              await setImageFromStorage({ bandId: band._id, storageId: uploaded.storageId as Id<"_storage"> });
-            }}
-            className="flex-1 rounded-lg border border-gray-300 py-2"
-          >
-            <Text className="text-center text-xs font-semibold text-gray-700">Upload Image</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => void clearBandImage({ bandId: band._id })}
-            className="flex-1 rounded-lg border border-red-300 py-2"
-          >
-            <Text className="text-center text-xs font-semibold text-red-700">Clear Image</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <View className="mt-4 flex-row">
-        <TabButton label="Overview" active={tab === "overview"} onPress={() => setTab("overview")} />
-        <TabButton label="Media" active={tab === "media"} onPress={() => setTab("media")} />
-        <TabButton label="Shows" active={tab === "shows"} onPress={() => setTab("shows")} />
-        <TabButton label="Settings" active={tab === "settings"} onPress={() => setTab("settings")} />
-      </View>
-
-      {tab === "overview" ? (
-        <View className="mt-4 rounded-xl border border-gray-200 bg-white p-4">
-          <Text className="text-sm font-semibold text-gray-900">Bio</Text>
-          <Text className="text-sm text-gray-600 mt-1">{band.bio || "No bio added yet."}</Text>
-
-          <Text className="text-sm font-semibold text-gray-900 mt-4">Members ({members.length})</Text>
-          {members.map((member) => (
-            <View key={member.user._id} className="mt-2 rounded-lg border border-gray-200 p-3">
-              <Text className="font-medium text-gray-900">{member.user.name}</Text>
-              <Text className="text-xs text-gray-500 uppercase">{member.membership.role}</Text>
-            </View>
-          ))}
-        </View>
-      ) : null}
-
-      {tab === "media" ? (
-        <View className="mt-4 rounded-xl border border-gray-200 bg-white p-4">
-          <Text className="text-sm font-semibold text-gray-900">Media Slots</Text>
-          {slots.map((slot) => (
-            <View key={slot.slotIndex} className="mt-2 rounded-lg border border-gray-200 p-3">
-              <Text className="font-medium text-gray-900">Slot #{slot.slotIndex + 1}</Text>
-              <Text className="text-xs text-gray-500 mt-1">
-                {slot.isFilled ? `${slot.mediaType} uploaded` : "Empty"}
-              </Text>
-
-              <View className="mt-2 flex-row gap-2">
-                <TouchableOpacity
-                  onPress={async () => {
-                    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-                    if (!permission.granted) return;
-                    const result = await ImagePicker.launchImageLibraryAsync({
-                      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                      quality: 0.8,
-                    });
-                    if (result.canceled || !result.assets[0]) return;
-
-                    const { uploadUrl } = await generateUploadUrl({ bandId: band._id });
-                    const uploaded = await uploadUriToConvexStorage(uploadUrl, result.assets[0].uri);
-                    await upsertSlot({
-                      bandId: band._id,
-                      slotIndex: slot.slotIndex,
-                      storageId: uploaded.storageId as Id<"_storage">,
-                      mediaType: "image",
-                    });
-                  }}
-                  className="flex-1 rounded-lg border border-gray-300 py-2"
-                >
-                  <Text className="text-center text-xs font-semibold text-gray-700">Upload</Text>
-                </TouchableOpacity>
-
-                {slot.isFilled ? (
-                  <TouchableOpacity
-                    onPress={() => void clearSlot({ bandId: band._id, slotIndex: slot.slotIndex })}
-                    className="flex-1 rounded-lg border border-red-300 py-2"
-                  >
-                    <Text className="text-center text-xs font-semibold text-red-700">Clear</Text>
-                  </TouchableOpacity>
-                ) : null}
-              </View>
-            </View>
-          ))}
-        </View>
-      ) : null}
-
-      {tab === "shows" ? (
-        <View className="mt-4 rounded-xl border border-gray-200 bg-white p-4">
-          <Text className="text-sm font-semibold text-gray-900">Past Shows</Text>
-          {pastShows.length > 0 ? (
-            pastShows.map((show) => (
-              <View key={show.eventId} className="mt-2 rounded-lg border border-gray-200 p-3">
-                <Text className="font-medium text-gray-900">{show.title}</Text>
-                <Text className="text-xs text-gray-500 mt-1">{show.venueName} • {show.venueCity}</Text>
-                <Text className="text-xs text-gray-500">{new Date(show.dateTime).toLocaleDateString()}</Text>
-              </View>
-            ))
-          ) : (
-            <Text className="mt-2 text-xs text-gray-500">No past shows yet.</Text>
-          )}
-        </View>
-      ) : null}
-
-      {tab === "settings" ? (
-        <View className="mt-4 rounded-xl border border-gray-200 bg-white p-4">
-          <Text className="text-sm font-semibold text-gray-900">Member Management</Text>
-          {members.map((member) => (
-            <View key={member.user._id} className="mt-2 rounded-lg border border-gray-200 p-3">
-              <Text className="font-medium text-gray-900">{member.user.name}</Text>
-              <Text className="text-xs text-gray-500 uppercase">{member.membership.role}</Text>
-
-              {canManage && member.membership.role !== "owner" ? (
-                <View className="mt-2 flex-row gap-2">
-                  <TouchableOpacity
-                    onPress={() =>
-                      void updateMemberRole({
-                        bandId: band._id,
-                        memberUserId: member.user._id,
-                        role: member.membership.role === "admin" ? "member" : "admin",
-                      })
-                    }
-                    className="flex-1 rounded-lg border border-gray-300 py-2"
-                  >
-                    <Text className="text-center text-xs font-semibold text-gray-700">
-                      {member.membership.role === "admin" ? "Set Member" : "Set Admin"}
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    onPress={() => void removeMember({ bandId: band._id, memberUserId: member.user._id })}
-                    className="flex-1 rounded-lg border border-red-300 py-2"
-                  >
-                    <Text className="text-center text-xs font-semibold text-red-700">Remove</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : null}
-
-              {canTransferOwnership && member.membership.role !== "owner" ? (
-                <TouchableOpacity
-                  onPress={() =>
-                    void transferOwnership({
-                      bandId: band._id,
-                      newOwnerUserId: member.user._id,
-                    })
-                  }
-                  className="mt-2 rounded-lg border border-amber-300 py-2"
-                >
-                  <Text className="text-center text-xs font-semibold text-amber-700">Transfer Ownership</Text>
-                </TouchableOpacity>
-              ) : null}
-            </View>
-          ))}
-
-          {canManage ? (
-            <>
-              <Text className="text-sm font-semibold text-gray-900 mt-5">Invite Member</Text>
-              <TextInput
-                value={inviteQuery}
-                onChangeText={(value) => {
-                  setInviteQuery(value);
-                  setSelectedInviteUserId(null);
-                }}
-                placeholder="Search users by name"
-                className="mt-2 rounded-xl border border-gray-200 px-3 py-2"
+        {tab === "media" ? (
+          <View className="gap-4">
+            <SectionCard>
+              <SectionTitle
+                title="Profile Media"
+                subtitle="Six fixed media slots, matching the web band profile contract."
               />
+              <View className="gap-3">
+                {slots.map((slot) => (
+                  <SectionCard key={slot.slotIndex} tone={slot.isFilled ? "band" : "neutral"}>
+                    <View className="flex-row items-start gap-3">
+                      <View className="h-24 w-24 overflow-hidden rounded-[20px] border border-slate-200 bg-slate-100">
+                        {slot.isFilled && slot.mediaUrl ? (
+                          <Image source={{ uri: slot.mediaUrl }} style={{ height: 96, width: 96 }} resizeMode="cover" />
+                        ) : (
+                          <View className="flex-1 items-center justify-center">
+                            <ImageIcon size={24} color="#94a3b8" />
+                          </View>
+                        )}
+                      </View>
 
-              {(assignableUsers?.users ?? []).map((candidate) => (
-                <TouchableOpacity
-                  key={candidate.userId}
-                  onPress={() => setSelectedInviteUserId(candidate.userId)}
-                  className={`mt-2 rounded-lg border p-3 ${
-                    selectedInviteUserId === candidate.userId ? "border-violet-400 bg-violet-50" : "border-gray-200"
-                  }`}
-                >
-                  <Text className="font-medium text-gray-900">{candidate.name}</Text>
-                  <Text className="text-xs text-gray-500">{candidate.inviteState}</Text>
-                </TouchableOpacity>
-              ))}
+                      <View className="flex-1">
+                        <Text className="text-sm font-semibold text-slate-900">Slot {slot.slotIndex + 1}</Text>
+                        <Text className="mt-1 text-xs text-slate-500">
+                          {slot.isFilled ? `${slot.mediaType} uploaded` : "Empty slot"}
+                        </Text>
+                        {slot.caption ? <Text className="mt-2 text-xs text-slate-500">{slot.caption}</Text> : null}
+                        {slot.location ? <Text className="mt-1 text-xs text-slate-500">{slot.location}</Text> : null}
+                      </View>
+                    </View>
 
-              <View className="mt-2 flex-row gap-2">
-                <TouchableOpacity
-                  onPress={() => setInviteRole("member")}
-                  className={`flex-1 rounded-xl border py-2 ${
-                    inviteRole === "member" ? "border-violet-400 bg-violet-50" : "border-gray-200"
-                  }`}
-                >
-                  <Text className={`text-center text-xs font-semibold ${inviteRole === "member" ? "text-violet-700" : "text-gray-600"}`}>
-                    Member
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => setInviteRole("admin")}
-                  className={`flex-1 rounded-xl border py-2 ${
-                    inviteRole === "admin" ? "border-violet-400 bg-violet-50" : "border-gray-200"
-                  }`}
-                >
-                  <Text className={`text-center text-xs font-semibold ${inviteRole === "admin" ? "text-violet-700" : "text-gray-600"}`}>
-                    Admin
-                  </Text>
-                </TouchableOpacity>
-              </View>
+                    <View className="mt-4 flex-row gap-2">
+                      <View className="flex-1">
+                        <ActionButton
+                          label={slot.isFilled ? "Replace" : "Upload"}
+                          tone="band"
+                          variant={slot.isFilled ? "secondary" : "primary"}
+                          onPress={async () => {
+                            const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+                            if (!permission.granted) return;
+                            const result = await ImagePicker.launchImageLibraryAsync({
+                              mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                              quality: 0.8,
+                            });
+                            if (result.canceled || !result.assets[0]) return;
 
-              <TouchableOpacity
-                onPress={async () => {
-                  if (!selectedInviteUser || selectedInviteUser.inviteState !== "eligible") {
-                    setError("Select an eligible user to invite.");
-                    return;
-                  }
-
-                  setError(null);
-                  await inviteExistingUser({
-                    bandId: band._id,
-                    targetUserId: selectedInviteUser.userId as Id<"users">,
-                    role: inviteRole,
-                  });
-                  setInviteQuery("");
-                  setSelectedInviteUserId(null);
-                }}
-                className="mt-3 rounded-xl bg-violet-600 py-2.5"
-              >
-                <Text className="text-center text-sm font-semibold text-white">Send Invite</Text>
-              </TouchableOpacity>
-
-              {invites.length > 0 ? (
-                <>
-                  <Text className="text-sm font-semibold text-gray-900 mt-5">Invites</Text>
-                  {invites.map((invite) => (
-                    <View key={invite._id} className="mt-2 rounded-lg border border-gray-200 p-3">
-                      <Text className="font-medium text-gray-900">{invite.targetUser?.name || invite.email}</Text>
-                      <Text className="text-xs text-gray-500 mt-1">{invite.status} • {invite.role}</Text>
-                      {invite.status === "pending" ? (
-                        <TouchableOpacity
-                          onPress={() => void revokeInvite({ inviteId: invite._id })}
-                          className="mt-2 rounded-lg border border-red-300 py-2"
-                        >
-                          <Text className="text-center text-xs font-semibold text-red-700">Revoke Invite</Text>
-                        </TouchableOpacity>
+                            const { uploadUrl } = await generateUploadUrl({ bandId: band._id });
+                            const uploaded = await uploadUriToConvexStorage(uploadUrl, result.assets[0].uri);
+                            await upsertSlot({
+                              bandId: band._id,
+                              slotIndex: slot.slotIndex,
+                              storageId: uploaded.storageId as Id<"_storage">,
+                              mediaType: "image",
+                            });
+                          }}
+                        />
+                      </View>
+                      {slot.isFilled ? (
+                        <View className="flex-1">
+                          <ActionButton
+                            label="Clear"
+                            variant="danger"
+                            onPress={() => void clearSlot({ bandId: band._id, slotIndex: slot.slotIndex })}
+                          />
+                        </View>
                       ) : null}
                     </View>
-                  ))}
-                </>
-              ) : null}
-            </>
-          ) : null}
+                  </SectionCard>
+                ))}
+              </View>
+            </SectionCard>
+          </View>
+        ) : null}
 
-          {error ? <Text className="mt-3 text-sm text-red-600">{error}</Text> : null}
-
-          {canTransferOwnership ? (
-            <View className="mt-6 rounded-xl border border-red-300 bg-red-50 p-3">
-              <Text className="text-sm font-semibold text-red-700">Danger Zone</Text>
-              <Text className="text-xs text-red-700 mt-1">Type exact confirmation phrase to delete this band.</Text>
-              <Text className="mt-2 rounded-md bg-white px-2 py-1 text-[11px] text-red-700">{deletePhrase}</Text>
-
-              <TextInput
-                value={deleteText}
-                onChangeText={setDeleteText}
-                placeholder="Confirmation phrase"
-                className="mt-2 rounded-xl border border-red-200 px-3 py-2 bg-white"
+        {tab === "shows" ? (
+          <View className="gap-4">
+            <SectionCard>
+              <SectionTitle
+                title="Past Shows"
+                subtitle="Recent confirmed shows remain accessible from the band profile surface."
               />
+              <View className="gap-3">
+                {pastShows.length > 0 ? (
+                  pastShows.map((show) => (
+                    <RowLink
+                      key={show.eventId}
+                      title={show.title}
+                      subtitle={`${show.venueName} • ${show.venueCity} • ${new Date(show.dateTime).toLocaleDateString()}`}
+                    />
+                  ))
+                ) : (
+                  <Text className="text-sm text-slate-500">No past shows yet.</Text>
+                )}
+              </View>
+            </SectionCard>
+          </View>
+        ) : null}
 
-              <TouchableOpacity
-                onPress={async () => {
-                  await deleteBand({ bandId: band._id, confirmationText: deleteText.trim() });
-                  setPersonalMode();
-                }}
-                disabled={deleteText.trim() !== deletePhrase}
-                className={`mt-2 rounded-xl py-2.5 ${
-                  deleteText.trim() === deletePhrase ? "bg-red-600" : "bg-red-300"
-                }`}
-              >
-                <Text className="text-center text-sm font-semibold text-white">Delete Band</Text>
-              </TouchableOpacity>
-            </View>
-          ) : null}
+        {tab === "settings" ? (
+          <View className="gap-4">
+            <SectionCard>
+              <SectionTitle
+                title="Band Image"
+                subtitle="Primary artwork for the band profile header and public surfaces."
+              />
+              <View className="flex-row gap-2">
+                <View className="flex-1">
+                  <ActionButton
+                    label="Upload Image"
+                    tone="band"
+                    variant="secondary"
+                    onPress={async () => {
+                      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+                      if (!permission.granted) return;
 
-          <TouchableOpacity
-            onPress={() => signOut()}
-            className="mt-6 rounded-xl border border-red-300 py-3"
-          >
-            <Text className="text-center font-semibold text-red-700">Sign Out</Text>
-          </TouchableOpacity>
-        </View>
-      ) : null}
+                      const result = await ImagePicker.launchImageLibraryAsync({
+                        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                        quality: 0.8,
+                      });
+
+                      if (result.canceled || !result.assets[0]) return;
+
+                      const { uploadUrl } = await generateImageUploadUrl({ bandId: band._id });
+                      const uploaded = await uploadUriToConvexStorage(uploadUrl, result.assets[0].uri);
+                      await setImageFromStorage({ bandId: band._id, storageId: uploaded.storageId as Id<"_storage"> });
+                    }}
+                  />
+                </View>
+                <View className="flex-1">
+                  <ActionButton label="Clear Image" variant="danger" onPress={() => void clearBandImage({ bandId: band._id })} />
+                </View>
+              </View>
+            </SectionCard>
+
+            <SectionCard>
+              <SectionTitle
+                title="Member Management"
+                subtitle="Invite users, adjust roles, remove members, and transfer ownership."
+              />
+              <View className="gap-3">
+                {members.map((member) => (
+                  <SectionCard key={member.user._id} tone="neutral">
+                    <View className="flex-row items-start gap-3">
+                      <Avatar uri={member.user.avatar} label={member.user.name} size={52} tone="band" />
+                      <View className="flex-1">
+                        <Text className="text-sm font-semibold text-slate-900">{member.user.name}</Text>
+                        <Text className="mt-1 text-xs text-slate-500">{member.user.location || "Bay Area"}</Text>
+                        <View className="mt-2">
+                          <MiniBadge label={member.membership.role} tone={member.membership.role === "owner" ? "warning" : "band"} />
+                        </View>
+                      </View>
+                    </View>
+
+                    {canManage && member.membership.role !== "owner" ? (
+                      <View className="mt-4 flex-row gap-2">
+                        <View className="flex-1">
+                          <ActionButton
+                            label={member.membership.role === "admin" ? "Set Member" : "Set Admin"}
+                            variant="secondary"
+                            onPress={() =>
+                              void updateMemberRole({
+                                bandId: band._id,
+                                memberUserId: member.user._id,
+                                role: member.membership.role === "admin" ? "member" : "admin",
+                              })
+                            }
+                          />
+                        </View>
+                        <View className="flex-1">
+                          <ActionButton
+                            label="Remove"
+                            variant="danger"
+                            onPress={() => void removeMember({ bandId: band._id, memberUserId: member.user._id })}
+                          />
+                        </View>
+                      </View>
+                    ) : null}
+
+                    {canTransferOwnership && member.membership.role !== "owner" ? (
+                      <View className="mt-2">
+                        <ActionButton
+                          label="Transfer Ownership"
+                          tone="band"
+                          onPress={() =>
+                            void transferOwnership({
+                              bandId: band._id,
+                              newOwnerUserId: member.user._id,
+                            })
+                          }
+                        />
+                      </View>
+                    ) : null}
+                  </SectionCard>
+                ))}
+              </View>
+            </SectionCard>
+
+            {canManage ? (
+              <SectionCard>
+                <SectionTitle
+                  title="Invite Member"
+                  subtitle="Search existing users and invite them directly into the band workspace."
+                />
+                <TextInput
+                  value={inviteQuery}
+                  onChangeText={(value) => {
+                    setInviteQuery(value);
+                    setSelectedInviteUserId(null);
+                    setError(null);
+                    setNotice(null);
+                  }}
+                  placeholder="Search users by name"
+                  placeholderTextColor="#94a3b8"
+                  className="rounded-[18px] border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900"
+                />
+
+                {(assignableUsers?.users ?? []).length > 0 ? (
+                  <View className="mt-3 gap-2">
+                    {assignableUsers?.users.map((candidate) => (
+                      <Pressable
+                        key={candidate.userId}
+                        onPress={() => setSelectedInviteUserId(candidate.userId)}
+                        className={`rounded-[18px] border px-4 py-3 active:opacity-70 ${selectedInviteUserId === candidate.userId ? "border-violet-200 bg-violet-50" : "border-slate-200 bg-white"}`}
+                      >
+                        <Text className="text-sm font-semibold text-slate-900">{candidate.name}</Text>
+                        <Text className="mt-1 text-xs text-slate-500">{candidate.inviteState}</Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                ) : null}
+
+                <View className="mt-4 flex-row gap-2">
+                  <View className="flex-1">
+                    <ActionButton
+                      label="Member"
+                      variant={inviteRole === "member" ? "primary" : "secondary"}
+                      tone="band"
+                      onPress={() => setInviteRole("member")}
+                    />
+                  </View>
+                  <View className="flex-1">
+                    <ActionButton
+                      label="Admin"
+                      variant={inviteRole === "admin" ? "primary" : "secondary"}
+                      tone="band"
+                      onPress={() => setInviteRole("admin")}
+                    />
+                  </View>
+                </View>
+
+                {notice ? <Text className="mt-3 text-sm text-emerald-700">{notice}</Text> : null}
+                {error ? <Text className="mt-3 text-sm text-red-600">{error}</Text> : null}
+
+                <View className="mt-4">
+                  <ActionButton
+                    label="Send Invite"
+                    tone="band"
+                    onPress={async () => {
+                      if (!selectedInviteUser || selectedInviteUser.inviteState !== "eligible") {
+                        setError("Select an eligible user to invite.");
+                        return;
+                      }
+
+                      setError(null);
+                      setNotice(null);
+                      const result = await inviteExistingUser({
+                        bandId: band._id,
+                        targetUserId: selectedInviteUser.userId as Id<"users">,
+                        role: inviteRole,
+                      });
+
+                      if (result.action === "already_member") {
+                        setError("Selected user is already a member.");
+                        return;
+                      }
+                      if (result.action === "already_pending") {
+                        setError("Selected user already has a pending invite.");
+                        return;
+                      }
+
+                      setNotice("Invite sent.");
+                      setInviteQuery("");
+                      setSelectedInviteUserId(null);
+                    }}
+                  />
+                </View>
+              </SectionCard>
+            ) : null}
+
+            {invites.length > 0 ? (
+              <SectionCard>
+                <SectionTitle title="Pending Invites" subtitle="Pending, accepted, declined, and revoked invite history." />
+                <View className="gap-3">
+                  {invites.map((invite) => (
+                    <SectionCard key={invite._id} tone="neutral">
+                      <Text className="text-sm font-semibold text-slate-900">
+                        {invite.targetUser?.name || invite.email}
+                      </Text>
+                      <Text className="mt-1 text-xs text-slate-500">
+                        {invite.status} • {invite.role}
+                      </Text>
+                      {invite.status === "pending" ? (
+                        <View className="mt-3">
+                          <ActionButton
+                            label="Revoke Invite"
+                            variant="danger"
+                            onPress={() => void revokeInvite({ inviteId: invite._id })}
+                          />
+                        </View>
+                      ) : null}
+                    </SectionCard>
+                  ))}
+                </View>
+              </SectionCard>
+            ) : null}
+
+            {canTransferOwnership ? (
+              <SectionCard tone="danger">
+                <SectionTitle
+                  title="Danger Zone"
+                  subtitle="Deleting a band removes the workspace, memberships, and associated media."
+                />
+                <Text className="text-xs text-red-700">Type the confirmation phrase exactly:</Text>
+                <Text className="mt-2 rounded-[18px] border border-red-200 bg-white px-4 py-3 text-xs text-red-700">
+                  {deletePhrase}
+                </Text>
+
+                <TextInput
+                  value={deleteText}
+                  onChangeText={setDeleteText}
+                  placeholder="Confirmation phrase"
+                  placeholderTextColor="#fca5a5"
+                  className="mt-3 rounded-[18px] border border-red-200 bg-white px-4 py-3 text-red-900"
+                />
+
+                <View className="mt-4">
+                  <ActionButton
+                    label="Delete Band"
+                    variant="danger"
+                    disabled={deleteText.trim() !== deletePhrase}
+                    icon={<Trash2 size={16} color="#ffffff" />}
+                    onPress={async () => {
+                      await deleteBand({ bandId: band._id, confirmationText: deleteText.trim() });
+                      setPersonalMode();
+                    }}
+                  />
+                </View>
+              </SectionCard>
+            ) : null}
+
+            <SectionCard>
+              <ActionButton label="Sign Out" variant="danger" icon={<LogOut size={16} color="#ffffff" />} onPress={() => signOut()} />
+            </SectionCard>
+          </View>
+        ) : null}
+      </View>
 
       <Modal visible={editOpen} transparent animationType="slide" onRequestClose={() => setEditOpen(false)}>
         <View className="flex-1 justify-end bg-black/40">
-          <View className="rounded-t-3xl bg-white p-5 max-h-[88%]">
-            <Text className="text-lg font-semibold text-gray-900">Edit Band Profile</Text>
+          <View className="max-h-[88%] rounded-t-[32px] bg-white p-5">
+            <Text className="text-lg font-semibold text-slate-950">Edit Band Profile</Text>
 
             <TextInput
               value={name}
               onChangeText={setName}
               placeholder="Band name"
-              className="mt-3 rounded-xl border border-gray-200 px-3 py-2"
+              placeholderTextColor="#94a3b8"
+              className="mt-4 rounded-[18px] border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900"
             />
 
             <TextInput
               value={location}
               onChangeText={setLocation}
               placeholder="Location"
-              className="mt-3 rounded-xl border border-gray-200 px-3 py-2"
+              placeholderTextColor="#94a3b8"
+              className="mt-3 rounded-[18px] border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900"
             />
 
             <TextInput
               value={bio}
               onChangeText={setBio}
               placeholder="Bio"
+              placeholderTextColor="#94a3b8"
               multiline
-              className="mt-3 rounded-xl border border-gray-200 px-3 py-2 h-24"
+              className="mt-3 h-28 rounded-[18px] border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900"
             />
 
-            <Text className="mt-3 text-xs font-medium text-gray-500 uppercase">Genres</Text>
-            <View className="mt-2 flex-row flex-wrap">
+            <Text className="mt-4 text-[11px] font-semibold uppercase tracking-[1.5px] text-slate-500">Genres</Text>
+            <View className="mt-3 flex-row flex-wrap gap-2">
               {GENRES.map((genre) => {
                 const active = selectedGenres.includes(genre);
                 return (
-                  <TouchableOpacity
+                  <Pressable
                     key={genre}
                     onPress={() => {
                       setSelectedGenres((current) => {
@@ -464,60 +596,37 @@ export function BandProfileScreen() {
                         return [...current, genre];
                       });
                     }}
-                    className={`mr-2 mb-2 rounded-full border px-3 py-1 ${
-                      active ? "border-violet-400 bg-violet-50" : "border-gray-200"
-                    }`}
+                    className={`rounded-full border px-3 py-2 active:opacity-70 ${active ? "border-violet-200 bg-violet-100" : "border-slate-200 bg-white"}`}
                   >
-                    <Text className={`text-xs ${active ? "text-violet-700" : "text-gray-600"}`}>
+                    <Text className={`text-xs font-semibold ${active ? "text-violet-700" : "text-slate-600"}`}>
                       {genre.charAt(0).toUpperCase() + genre.slice(1)}
                     </Text>
-                  </TouchableOpacity>
+                  </Pressable>
                 );
               })}
             </View>
 
-            <TouchableOpacity
-              onPress={async () => {
-                await updateBand({
-                  bandId: band._id,
-                  name: name.trim(),
-                  location: location.trim(),
-                  bio: bio.trim() || undefined,
-                  genres: selectedGenres,
-                });
-                setEditOpen(false);
-              }}
-              className="mt-4 rounded-xl bg-violet-600 py-3"
-            >
-              <Text className="text-center font-semibold text-white">Save</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity onPress={() => setEditOpen(false)} className="mt-2 rounded-xl border border-gray-200 py-3">
-              <Text className="text-center font-semibold text-gray-700">Cancel</Text>
-            </TouchableOpacity>
+            <View className="mt-5 gap-2">
+              <ActionButton
+                label="Save Changes"
+                tone="band"
+                icon={<ShieldCheck size={16} color="#ffffff" />}
+                onPress={async () => {
+                  await updateBand({
+                    bandId: band._id,
+                    name: name.trim(),
+                    location: location.trim(),
+                    bio: bio.trim() || undefined,
+                    genres: selectedGenres,
+                  });
+                  setEditOpen(false);
+                }}
+              />
+              <ActionButton label="Cancel" variant="secondary" onPress={() => setEditOpen(false)} />
+            </View>
           </View>
         </View>
       </Modal>
-    </ScrollView>
-  );
-}
-
-function TabButton({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      className={`mr-2 rounded-xl border px-3 py-2 ${active ? "border-violet-300 bg-violet-50" : "border-gray-200"}`}
-    >
-      <Text className={`text-xs font-semibold ${active ? "text-violet-700" : "text-gray-600"}`}>{label}</Text>
-    </TouchableOpacity>
-  );
-}
-
-function Metric({ label, value }: { label: string; value: string }) {
-  return (
-    <View className="flex-1 rounded-xl border border-gray-200 bg-white p-2">
-      <Text className="text-base font-bold text-gray-900">{value}</Text>
-      <Text className="text-[10px] text-gray-500">{label}</Text>
-    </View>
+    </AppScreen>
   );
 }

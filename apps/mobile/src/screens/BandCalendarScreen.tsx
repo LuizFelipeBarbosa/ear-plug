@@ -1,6 +1,17 @@
+import {
+  ActionButton,
+  AppScreen,
+  EmptyState,
+  HeroHeader,
+  SectionCard,
+  SectionTitle,
+  SegmentedTabs,
+  StatCard,
+} from "@/components/ui/AppPrimitives";
 import { useCurrentBand } from "@/hooks/useBand";
 import { useSharedEventsMutations } from "@/hooks/useSharedEvents";
 import { useVenues } from "@/hooks/useVenues";
+import { formatEventDate, formatEventTime } from "@ear-plug/shared/constants";
 import type { Genre } from "@ear-plug/shared/types";
 import { api } from "../../../../convex/_generated/api";
 import { useQuery } from "convex/react";
@@ -10,7 +21,6 @@ import { FlatList, Modal, Text, TextInput, TouchableOpacity, View } from "react-
 const GENRE_OPTIONS: Genre[] = ["indie", "rock", "jazz", "electronic", "folk", "pop", "alternative"];
 
 type StatusFilter = "all" | "confirmed" | "hold";
-
 type FormMode = "create_confirmed" | "create_hold" | "edit";
 
 interface EventFormState {
@@ -57,13 +67,24 @@ export function BandCalendarScreen() {
     return source.filter((event) => event.status === filter);
   }, [bandEvents, filter]);
 
+  const stats = useMemo(() => {
+    const source = bandEvents ?? [];
+    return {
+      total: source.length,
+      confirmed: source.filter((event) => event.status === "confirmed").length,
+      holds: source.filter((event) => event.status === "hold").length,
+    };
+  }, [bandEvents]);
+
   if (!activeBandId || !band) {
     return (
-      <View className="flex-1 items-center justify-center bg-white p-6">
-        <Text className="text-gray-500 text-center">
-          Select or create a band from Profile to manage shows.
-        </Text>
-      </View>
+      <AppScreen>
+        <EmptyState
+          tone="band"
+          title="Band workspace required"
+          message="Select or create a band from Profile to manage shows."
+        />
+      </AppScreen>
     );
   }
 
@@ -159,87 +180,95 @@ export function BandCalendarScreen() {
   };
 
   return (
-    <View className="flex-1 bg-white">
-      <View className="px-4 pt-4 pb-3 border-b border-gray-200">
-        <Text className="text-2xl font-bold text-gray-900">Shows</Text>
-        <Text className="text-sm text-gray-500 mt-1">Manage confirmed gigs and tentative holds.</Text>
+    <AppScreen
+      scroll
+      header={
+        <HeroHeader
+          title="Shows"
+          subtitle="Confirmed gigs and tentative holds stay in one mobile calendar surface."
+          eyebrow="Band Workspace"
+          tone="band"
+        >
+          <View className="flex-row gap-2">
+            <StatCard label="All" value={String(stats.total)} tone="band" />
+            <StatCard label="Confirmed" value={String(stats.confirmed)} tone="band" />
+            <StatCard label="Tentative" value={String(stats.holds)} tone="band" />
+          </View>
+        </HeroHeader>
+      }
+    >
+      <SegmentedTabs
+        value={filter}
+        tone="band"
+        onChange={(value) => setFilter(value as StatusFilter)}
+        options={[
+          { value: "all", label: "All", count: stats.total },
+          { value: "confirmed", label: "Confirmed", count: stats.confirmed },
+          { value: "hold", label: "Tentative", count: stats.holds },
+        ]}
+      />
 
-        <View className="mt-3 flex-row">
-          <FilterButton label="All" active={filter === "all"} onPress={() => setFilter("all")} />
-          <FilterButton
-            label="Confirmed"
-            active={filter === "confirmed"}
-            onPress={() => setFilter("confirmed")}
-          />
-          <FilterButton label="Tentative" active={filter === "hold"} onPress={() => setFilter("hold")} />
+      <View className="mt-4 flex-row gap-2">
+        <View className="flex-1">
+          <ActionButton label="New Confirmed" tone="band" onPress={openCreateConfirmed} />
         </View>
-
-        <View className="mt-3 flex-row gap-2">
-          <TouchableOpacity onPress={openCreateConfirmed} className="flex-1 rounded-xl bg-violet-600 py-2.5">
-            <Text className="text-center text-white font-semibold">New Confirmed</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={openCreateHold} className="flex-1 rounded-xl border border-violet-400 py-2.5">
-            <Text className="text-center text-violet-700 font-semibold">New Tentative</Text>
-          </TouchableOpacity>
+        <View className="flex-1">
+          <ActionButton label="New Tentative" variant="secondary" onPress={openCreateHold} />
         </View>
       </View>
 
-      <FlatList
-        data={filteredEvents}
-        keyExtractor={(item) => item._id}
-        contentContainerStyle={{ padding: 12 }}
-        renderItem={({ item }) => (
-          <View className="mb-3 rounded-xl border border-gray-200 bg-white p-4">
-            <Text className="text-base font-semibold text-gray-900">{item.title || "Untitled Gig"}</Text>
-            <Text className="mt-1 text-sm text-gray-500">{item.venue?.name || "Venue TBD"}</Text>
-            <Text className="mt-1 text-sm text-gray-500">
-              {typeof item.dateTime === "number"
-                ? new Date(item.dateTime).toLocaleString()
-                : "Date not scheduled"}
-            </Text>
-            <Text className="mt-1 text-xs uppercase text-gray-600">Status: {item.status}</Text>
+      <View className="mt-5 gap-3">
+        {filteredEvents.length > 0 ? (
+          filteredEvents.map((item) => (
+            <SectionCard key={item._id} tone={item.status === "hold" ? "warning" : "band"}>
+              <SectionTitle
+                title={item.title || "Untitled Gig"}
+                subtitle={`${item.venue?.name || "Venue TBD"} • ${typeof item.dateTime === "number" ? `${formatEventDate(item.dateTime)} · ${formatEventTime(item.dateTime)}` : "Date not scheduled"}`}
+                action={<MiniStatus status={item.status} />}
+              />
 
-            <View className="mt-3 flex-row gap-2">
-              <TouchableOpacity onPress={() => openEdit(item)} className="flex-1 rounded-lg border border-gray-300 py-2">
-                <Text className="text-center text-gray-700 font-medium">Edit</Text>
-              </TouchableOpacity>
+              <Text className="text-xs text-slate-500">
+                {typeof item.capacity === "number" ? `${item.rsvpCount}/${item.capacity} RSVPs` : `${item.rsvpCount} RSVPs`}
+              </Text>
 
-              {item.status === "hold" ? (
-                <TouchableOpacity
-                  onPress={async () => {
-                    await deleteTentative({ eventId: item._id, actingBandId: activeBandId });
-                  }}
-                  className="flex-1 rounded-lg border border-red-300 py-2"
-                >
-                  <Text className="text-center text-red-700 font-medium">Delete</Text>
-                </TouchableOpacity>
-              ) : null}
-            </View>
-          </View>
+              <View className="mt-4 flex-row gap-2">
+                <View className="flex-1">
+                  <ActionButton label="Edit" variant="secondary" onPress={() => openEdit(item)} />
+                </View>
+                {item.status === "hold" ? (
+                  <View className="flex-1">
+                    <ActionButton
+                      label="Delete"
+                      variant="danger"
+                      onPress={() => void deleteTentative({ eventId: item._id, actingBandId: activeBandId })}
+                    />
+                  </View>
+                ) : null}
+              </View>
+            </SectionCard>
+          ))
+        ) : (
+          <EmptyState
+            tone="band"
+            title="No shows in this filter"
+            message="Create a confirmed gig or a tentative hold to start building the calendar."
+          />
         )}
-        ListEmptyComponent={() => (
-          <View className="py-16 items-center">
-            <Text className="text-gray-500">No events yet.</Text>
-          </View>
-        )}
-      />
+      </View>
 
       <Modal visible={modalOpen} transparent animationType="slide" onRequestClose={() => setModalOpen(false)}>
         <View className="flex-1 justify-end bg-black/40">
-          <View className="rounded-t-3xl bg-white p-5 max-h-[88%]">
-            <Text className="text-lg font-semibold text-gray-900">
-              {mode === "create_confirmed"
-                ? "Create Confirmed Gig"
-                : mode === "create_hold"
-                  ? "Create Tentative Hold"
-                  : "Edit Gig"}
+          <View className="max-h-[88%] rounded-t-[32px] bg-white p-5">
+            <Text className="text-lg font-semibold text-slate-950">
+              {mode === "create_confirmed" ? "Create Confirmed Gig" : mode === "create_hold" ? "Create Tentative Hold" : "Edit Gig"}
             </Text>
 
             <TextInput
               value={form.title}
               onChangeText={(value) => setForm((current) => ({ ...current, title: value }))}
               placeholder="Title"
-              className="mt-3 rounded-xl border border-gray-200 px-3 py-2 text-gray-900"
+              placeholderTextColor="#94a3b8"
+              className="mt-4 rounded-[18px] border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900"
             />
 
             {mode !== "create_hold" ? (
@@ -248,21 +277,23 @@ export function BandCalendarScreen() {
                   value={form.dateTimeInput}
                   onChangeText={(value) => setForm((current) => ({ ...current, dateTimeInput: value }))}
                   placeholder="YYYY-MM-DDTHH:mm"
+                  placeholderTextColor="#94a3b8"
                   autoCapitalize="none"
-                  className="mt-3 rounded-xl border border-gray-200 px-3 py-2 text-gray-900"
+                  className="mt-3 rounded-[18px] border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900"
                 />
 
                 <TextInput
                   value={form.capacityInput}
                   onChangeText={(value) => setForm((current) => ({ ...current, capacityInput: value }))}
                   placeholder="Capacity"
+                  placeholderTextColor="#94a3b8"
                   keyboardType="number-pad"
-                  className="mt-3 rounded-xl border border-gray-200 px-3 py-2 text-gray-900"
+                  className="mt-3 rounded-[18px] border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900"
                 />
 
-                <Text className="mt-3 text-xs font-medium text-gray-500 uppercase">Venue</Text>
+                <Text className="mt-4 text-[11px] font-semibold uppercase tracking-[1.5px] text-slate-500">Venue</Text>
                 <FlatList
-                  className="mt-2 max-h-36"
+                  className="mt-3 max-h-40"
                   data={venues}
                   keyExtractor={(item) => item._id}
                   renderItem={({ item }) => {
@@ -270,57 +301,49 @@ export function BandCalendarScreen() {
                     return (
                       <TouchableOpacity
                         onPress={() => setForm((current) => ({ ...current, venueId: item._id }))}
-                        className={`mb-2 rounded-xl border px-3 py-2 ${
-                          active ? "border-violet-400 bg-violet-50" : "border-gray-200"
-                        }`}
+                        className={`mb-2 rounded-[18px] border px-4 py-3 ${active ? "border-violet-200 bg-violet-50" : "border-slate-200 bg-white"}`}
                       >
-                        <Text className="font-medium text-gray-900">{item.name}</Text>
-                        <Text className="text-xs text-gray-500">{item.city}</Text>
+                        <Text className="text-sm font-semibold text-slate-900">{item.name}</Text>
+                        <Text className="mt-1 text-xs text-slate-500">{item.city}</Text>
                       </TouchableOpacity>
                     );
                   }}
                 />
 
                 {mode === "edit" ? (
-                  <View className="mt-3 flex-row gap-2">
-                    <TouchableOpacity
-                      onPress={() => setForm((current) => ({ ...current, status: "confirmed" }))}
-                      className={`flex-1 rounded-xl border py-2 ${
-                        form.status === "confirmed" ? "border-violet-400 bg-violet-50" : "border-gray-200"
-                      }`}
-                    >
-                      <Text className={`text-center text-xs font-semibold ${form.status === "confirmed" ? "text-violet-700" : "text-gray-600"}`}>
-                        Confirmed
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => setForm((current) => ({ ...current, status: "hold" }))}
-                      className={`flex-1 rounded-xl border py-2 ${
-                        form.status === "hold" ? "border-amber-400 bg-amber-50" : "border-gray-200"
-                      }`}
-                    >
-                      <Text className={`text-center text-xs font-semibold ${form.status === "hold" ? "text-amber-700" : "text-gray-600"}`}>
-                        Tentative
-                      </Text>
-                    </TouchableOpacity>
+                  <View className="mt-4 flex-row gap-2">
+                    <View className="flex-1">
+                      <ActionButton
+                        label="Confirmed"
+                        tone="band"
+                        variant={form.status === "confirmed" ? "primary" : "secondary"}
+                        onPress={() => setForm((current) => ({ ...current, status: "confirmed" }))}
+                      />
+                    </View>
+                    <View className="flex-1">
+                      <ActionButton
+                        label="Tentative"
+                        tone="band"
+                        variant={form.status === "hold" ? "primary" : "secondary"}
+                        onPress={() => setForm((current) => ({ ...current, status: "hold" }))}
+                      />
+                    </View>
                   </View>
                 ) : null}
               </>
             ) : null}
 
-            <Text className="mt-3 text-xs font-medium text-gray-500 uppercase">Primary Genre</Text>
-            <View className="mt-2 flex-row flex-wrap">
+            <Text className="mt-4 text-[11px] font-semibold uppercase tracking-[1.5px] text-slate-500">Primary Genre</Text>
+            <View className="mt-3 flex-row flex-wrap gap-2">
               {GENRE_OPTIONS.map((value) => {
                 const active = form.genre === value;
                 return (
                   <TouchableOpacity
                     key={value}
                     onPress={() => setForm((current) => ({ ...current, genre: value }))}
-                    className={`mr-2 mb-2 rounded-full border px-3 py-1 ${
-                      active ? "border-violet-400 bg-violet-50" : "border-gray-200"
-                    }`}
+                    className={`rounded-full border px-3 py-2 ${active ? "border-violet-200 bg-violet-100" : "border-slate-200 bg-white"}`}
                   >
-                    <Text className={`text-xs ${active ? "text-violet-700" : "text-gray-600"}`}>
+                    <Text className={`text-xs font-semibold ${active ? "text-violet-700" : "text-slate-600"}`}>
                       {value.charAt(0).toUpperCase() + value.slice(1)}
                     </Text>
                   </TouchableOpacity>
@@ -328,33 +351,30 @@ export function BandCalendarScreen() {
               })}
             </View>
 
-            {error ? <Text className="mt-2 text-sm text-red-600">{error}</Text> : null}
+            {error ? <Text className="mt-3 text-sm text-red-600">{error}</Text> : null}
 
-            <TouchableOpacity
-              onPress={submit}
-              disabled={pending}
-              className="mt-4 rounded-xl bg-violet-600 py-3"
-            >
-              <Text className="text-center font-semibold text-white">{pending ? "Saving..." : "Save"}</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity onPress={() => setModalOpen(false)} className="mt-2 rounded-xl border border-gray-200 py-3">
-              <Text className="text-center font-semibold text-gray-700">Cancel</Text>
-            </TouchableOpacity>
+            <View className="mt-5 gap-2">
+              <ActionButton
+                label={pending ? "Saving..." : "Save"}
+                tone="band"
+                disabled={pending}
+                onPress={submit}
+              />
+              <ActionButton label="Cancel" variant="secondary" onPress={() => setModalOpen(false)} />
+            </View>
           </View>
         </View>
       </Modal>
-    </View>
+    </AppScreen>
   );
 }
 
-function FilterButton({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+function MiniStatus({ status }: { status: "confirmed" | "hold" }) {
   return (
-    <TouchableOpacity
-      onPress={onPress}
-      className={`mr-2 rounded-xl border px-3 py-2 ${active ? "border-violet-300 bg-violet-50" : "border-gray-200"}`}
-    >
-      <Text className={`text-xs font-semibold ${active ? "text-violet-700" : "text-gray-600"}`}>{label}</Text>
-    </TouchableOpacity>
+    <View className={`rounded-full border px-2.5 py-1 ${status === "hold" ? "border-amber-200 bg-amber-100" : "border-emerald-200 bg-emerald-100"}`}>
+      <Text className={`text-[10px] font-semibold uppercase tracking-[1.4px] ${status === "hold" ? "text-amber-700" : "text-emerald-700"}`}>
+        {status === "hold" ? "Tentative" : "Confirmed"}
+      </Text>
+    </View>
   );
 }

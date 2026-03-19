@@ -13,16 +13,11 @@ export function useCurrentBand() {
     activeBandId ? { bandId: activeBandId } : "skip",
   );
 
-  const createBand = useMutation(api.bands.create);
-  const updateBand = useMutation(api.bands.update);
-
   return {
     band,
     bandWithStats,
     isLoading: activeBandId !== undefined && band === undefined,
     activeBandId,
-    createBand,
-    updateBand,
   };
 }
 

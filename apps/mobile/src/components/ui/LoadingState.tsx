@@ -1,10 +1,15 @@
-import { ActivityIndicator, Text, View } from "react-native";
+import { AppScreen, LoadingPanel } from "@/components/ui/AppPrimitives";
 
-export function LoadingState({ label = "Loading..." }: { label?: string }) {
+export function LoadingState({
+  label = "Loading...",
+  tone = "fan",
+}: {
+  label?: string;
+  tone?: "fan" | "band" | "neutral";
+}) {
   return (
-    <View className="flex-1 items-center justify-center bg-white">
-      <ActivityIndicator size="large" color="#2563eb" />
-      <Text className="mt-3 text-sm text-gray-500">{label}</Text>
-    </View>
+    <AppScreen>
+      <LoadingPanel label={label} tone={tone} />
+    </AppScreen>
   );
 }

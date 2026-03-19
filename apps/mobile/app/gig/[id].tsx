@@ -1,9 +1,18 @@
+import {
+  ActionButton,
+  AppScreen,
+  EmptyState,
+  HeroHeader,
+  MiniBadge,
+  SectionCard,
+  SectionTitle,
+} from "@/components/ui/AppPrimitives";
 import { useProfileContext } from "@/context/ProfileContext";
 import { useEvent, useEventCheckinAccess } from "@/hooks/useEvents";
 import { formatEventDate, formatEventTime, formatPrice } from "@ear-plug/shared/constants";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft, Calendar, Heart, MapPin, QrCode, ShieldCheck, Ticket, Users } from "lucide-react-native";
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { Text, TouchableOpacity, View } from "react-native";
 import type { Id } from "../../../../convex/_generated/dataModel";
 
 export default function EventDetailsScreen() {
@@ -20,169 +29,143 @@ export default function EventDetailsScreen() {
 
   if (isLoading) {
     return (
-      <View className="flex-1 items-center justify-center bg-white">
-        <Text className="text-gray-500">Loading event...</Text>
-      </View>
+      <AppScreen>
+        <SectionCard tone="fan">
+          <Text className="text-sm text-slate-500">Loading event...</Text>
+        </SectionCard>
+      </AppScreen>
     );
   }
 
   if (!event) {
     return (
-      <View className="flex-1 items-center justify-center bg-white px-6">
-        <Text className="text-xl font-semibold text-gray-900">Event unavailable</Text>
-        <Text className="mt-2 text-center text-sm text-gray-500">
-          This event may be private, tentative, or no longer available.
-        </Text>
-        <TouchableOpacity onPress={() => router.back()} className="mt-5 rounded-xl bg-blue-600 px-4 py-2.5">
-          <Text className="font-semibold text-white">Go Back</Text>
-        </TouchableOpacity>
-      </View>
+      <AppScreen>
+        <EmptyState
+          tone="fan"
+          title="Event unavailable"
+          message="This event may be private, tentative, or no longer available."
+          action={<ActionButton label="Go Back" tone="fan" onPress={() => router.back()} />}
+        />
+      </AppScreen>
     );
   }
 
   const spotsLeft = typeof event.capacity === "number" ? Math.max(event.capacity - event.rsvpCount, 0) : null;
   const canRsvp = isFanMode && !isPast;
+  const eventStatus = event.status as string | undefined;
+  const eventStatusLabel = eventStatus === "hold" ? "Tentative" : eventStatus ?? "Confirmed";
+  const eventStatusTone: "warning" | "band" | "fan" = eventStatus === "hold" ? "warning" : isBandMode ? "band" : "fan";
 
   return (
-    <View className="flex-1 bg-white">
-      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 28 }}>
-        <View className="bg-gradient-to-br from-violet-500 to-blue-600 px-4 pb-5 pt-14">
-          <View className="flex-row items-center justify-between">
-            <TouchableOpacity
-              onPress={() => router.back()}
-              className="rounded-full border border-white/20 bg-black/20 p-2"
-            >
-              <ArrowLeft size={20} color="#ffffff" />
+    <AppScreen
+      scroll
+      header={
+        <HeroHeader
+          title={event.title || "Untitled Gig"}
+          subtitle={`${event.band?.name || "Local lineup"}${event.venue?.name ? ` • ${event.venue.name}` : ""}`}
+          eyebrow={isBandMode ? "Band Context" : "Fan Context"}
+          tone={isBandMode ? "band" : "fan"}
+          action={
+            <TouchableOpacity onPress={() => router.back()} className="rounded-[18px] border border-slate-200 bg-white px-4 py-3">
+              <View className="flex-row items-center gap-2">
+                <ArrowLeft size={14} color="#334155" />
+                <Text className="text-xs font-semibold text-slate-700">Back</Text>
+              </View>
             </TouchableOpacity>
-
-            {canRsvp ? (
-              <TouchableOpacity
-                onPress={() => void toggleLike()}
-                className={`rounded-full border p-2 ${hasLiked ? "border-pink-200 bg-pink-500" : "border-white/20 bg-black/20"}`}
-              >
-                <Heart size={20} color="#ffffff" fill={hasLiked ? "#ffffff" : "transparent"} />
-              </TouchableOpacity>
-            ) : <View />}
-          </View>
-
-          <Text className="mt-6 text-3xl font-bold text-white">{event.title || "Untitled Gig"}</Text>
-          {event.band ? (
-            <TouchableOpacity onPress={() => router.push(`/bands/${event.band?._id}`)} className="mt-2 self-start">
-              <Text className="text-sm font-semibold text-blue-100">{event.band.name}</Text>
-            </TouchableOpacity>
-          ) : null}
-        </View>
-
-        <View className="px-4 pt-5">
-          <View className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
-            <InfoRow
-              icon={<Calendar size={18} color="#2563eb" />}
-              label="Date"
-              value={typeof event.dateTime === "number" ? formatEventDate(event.dateTime) : "Date TBD"}
-            />
-            <InfoRow
-              icon={<Users size={18} color="#2563eb" />}
-              label="Capacity"
-              value={
-                typeof event.capacity === "number"
-                  ? `${event.rsvpCount} / ${event.capacity}${spotsLeft !== null ? ` (${spotsLeft} left)` : ""}`
-                  : `${event.rsvpCount} RSVPs`
-              }
-            />
-            <InfoRow
-              icon={<Ticket size={18} color="#2563eb" />}
-              label="Price"
-              value={typeof event.price === "number" ? formatPrice(event.price) : "Free"}
-            />
-            <InfoRow
-              icon={<MapPin size={18} color="#2563eb" />}
-              label="Venue"
-              value={`${event.venue?.name || "Venue TBD"}${event.venue?.city ? ` • ${event.venue.city}` : ""}`}
-              last
-            />
-          </View>
-
-          {event.description ? (
-            <View className="mt-4 rounded-2xl border border-gray-200 bg-white p-4">
-              <Text className="text-sm font-semibold text-gray-900">About this event</Text>
-              <Text className="mt-2 text-sm leading-5 text-gray-600">{event.description}</Text>
+          }
+        >
+          <SectionCard tone={isBandMode ? "band" : "fan"}>
+            <View className="flex-row flex-wrap gap-2">
+              {eventStatus ? <MiniBadge label={eventStatusLabel} tone={eventStatusTone} /> : null}
+              {hasRsvp ? <MiniBadge label="RSVP'd" tone="success" /> : null}
+              {hasLiked ? <MiniBadge label="Saved" tone="fan" /> : null}
             </View>
-          ) : null}
-        </View>
-      </ScrollView>
-
-      <View className="border-t border-gray-200 bg-white px-4 pb-8 pt-3">
-        {canRsvp ? (
-          <>
-            <TouchableOpacity
-              onPress={() => void rsvp()}
-              disabled={spotsLeft !== null && spotsLeft === 0 && !hasRsvp}
-              className={`rounded-xl py-3 ${
-                hasRsvp
-                  ? "bg-green-600"
-                  : spotsLeft !== null && spotsLeft === 0
-                    ? "bg-gray-300"
-                    : "bg-blue-600"
-              }`}
-            >
-              <Text className="text-center text-base font-semibold text-white">
-                {hasRsvp ? "You're Going" : spotsLeft !== null && spotsLeft === 0 ? "Sold Out" : "RSVP"}
-              </Text>
-            </TouchableOpacity>
-
-            {hasRsvp ? (
-              <TouchableOpacity
-                onPress={() => router.push(`/gig/${eventId}/ticket`)}
-                className="mt-2 rounded-xl border border-blue-300 py-3"
-              >
-                <View className="flex-row items-center justify-center">
-                  <QrCode size={16} color="#1d4ed8" />
-                  <Text className="ml-2 text-sm font-semibold text-blue-700">View Ticket</Text>
-                </View>
-              </TouchableOpacity>
-            ) : null}
-          </>
-        ) : canScan ? (
-          <TouchableOpacity
-            onPress={() => router.push(`/gig/${eventId}/check-in`)}
-            className="rounded-xl bg-violet-600 py-3"
-          >
-            <View className="flex-row items-center justify-center">
-              <ShieldCheck size={16} color="#ffffff" />
-              <Text className="ml-2 text-base font-semibold text-white">Open Check-In Scanner</Text>
-            </View>
-          </TouchableOpacity>
-        ) : (
-          <View className="rounded-xl border border-gray-200 bg-gray-50 py-3">
-            <Text className="text-center text-sm text-gray-600">
-              {isBandMode
-                ? "Switch to an event manager/staff band workspace for check-in access."
-                : `Event starts ${typeof event.dateTime === "number" ? formatEventTime(event.dateTime) : "soon"}.`}
+            <Text className="mt-4 text-sm leading-6 text-slate-600">
+              {event.description || "Event details will continue to fill out as the show gets closer."}
             </Text>
+          </SectionCard>
+        </HeroHeader>
+      }
+      footer={
+        <View className="border-t border-slate-200 bg-white px-4 pb-6 pt-3">
+          {canRsvp ? (
+            <>
+              <ActionButton
+                label={hasRsvp ? "You're Going" : spotsLeft !== null && spotsLeft === 0 ? "Sold Out" : "RSVP"}
+                tone="fan"
+                disabled={spotsLeft !== null && spotsLeft === 0 && !hasRsvp}
+                onPress={() => void rsvp()}
+              />
+              <View className="mt-2 flex-row gap-2">
+                <View className="flex-1">
+                  <ActionButton
+                    label={hasLiked ? "Saved" : "Save"}
+                    variant="secondary"
+                    onPress={() => void toggleLike()}
+                    icon={<Heart size={16} color={hasLiked ? "#ef4444" : "#334155"} fill={hasLiked ? "#ef4444" : "transparent"} />}
+                  />
+                </View>
+                {hasRsvp ? (
+                  <View className="flex-1">
+                    <ActionButton
+                      label="View Ticket"
+                      tone="fan"
+                      icon={<QrCode size={16} color="#ffffff" />}
+                      onPress={() => router.push(`/gig/${eventId}/ticket`)}
+                    />
+                  </View>
+                ) : null}
+              </View>
+            </>
+          ) : canScan ? (
+            <ActionButton
+              label="Open Check-In Scanner"
+              tone="band"
+              icon={<ShieldCheck size={16} color="#ffffff" />}
+              onPress={() => router.push(`/gig/${eventId}/check-in`)}
+            />
+          ) : (
+            <SectionCard>
+              <Text className="text-center text-sm text-slate-600">
+                {isBandMode
+                  ? "Switch to a staff-authorized band workspace for check-in access."
+                  : `Event starts ${typeof event.dateTime === "number" ? formatEventTime(event.dateTime) : "soon"}.`}
+              </Text>
+            </SectionCard>
+          )}
+        </View>
+      }
+    >
+      <View className="gap-4">
+        <SectionCard>
+          <SectionTitle title="Event Info" subtitle="Key info surfaces stay consistent across web and mobile." />
+          <View className="gap-3">
+            <MetaRow icon={<Calendar size={16} color="#64748b" />} label="Date" value={typeof event.dateTime === "number" ? formatEventDate(event.dateTime) : "Date TBD"} />
+            <MetaRow icon={<Users size={16} color="#64748b" />} label="Capacity" value={typeof event.capacity === "number" ? `${event.rsvpCount}/${event.capacity}${spotsLeft !== null ? ` • ${spotsLeft} left` : ""}` : `${event.rsvpCount} RSVPs`} />
+            <MetaRow icon={<Ticket size={16} color="#64748b" />} label="Price" value={typeof event.price === "number" ? formatPrice(event.price) : "Free"} />
+            <MetaRow icon={<MapPin size={16} color="#64748b" />} label="Venue" value={`${event.venue?.name || "Venue TBD"}${event.venue?.city ? ` • ${event.venue.city}` : ""}${event.isVenueAddressHidden ? " • RSVP to reveal" : ""}`} />
           </View>
-        )}
+        </SectionCard>
       </View>
-    </View>
+    </AppScreen>
   );
 }
 
-function InfoRow({
+function MetaRow({
   icon,
   label,
   value,
-  last = false,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string;
-  last?: boolean;
 }) {
   return (
-    <View className={`flex-row items-start ${last ? "" : "mb-3 border-b border-gray-200 pb-3"}`}>
-      <View className="mt-0.5">{icon}</View>
-      <View className="ml-3 flex-1">
-        <Text className="text-xs uppercase text-gray-500">{label}</Text>
-        <Text className="mt-0.5 text-sm font-medium text-gray-900">{value}</Text>
+    <View className="flex-row items-start gap-3">
+      {icon}
+      <View className="flex-1">
+        <Text className="text-[11px] font-semibold uppercase tracking-[1.5px] text-slate-500">{label}</Text>
+        <Text className="mt-1 text-sm text-slate-900">{value}</Text>
       </View>
     </View>
   );
