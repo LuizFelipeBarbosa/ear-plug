@@ -30,6 +30,13 @@ import { Image, Modal, Pressable, Text, TextInput, View } from "react-native";
 const GENRES: Genre[] = ["indie", "rock", "jazz", "electronic", "folk", "pop", "alternative"];
 type TabType = "overview" | "media" | "shows" | "settings";
 
+function wrapLongTokens(value?: string | null): string {
+  if (!value) return "";
+  return value.replace(/\S{16,}/g, (token) =>
+    token.replace(/(.{12})/g, "$1\u200B")
+  );
+}
+
 export function BandProfileScreen() {
   const { signOut } = useAuth();
   const { band, bandWithStats } = useCurrentBand();
@@ -174,7 +181,9 @@ export function BandProfileScreen() {
 
             <SectionCard>
               <SectionTitle title="Bio" subtitle="Your public-facing band story and positioning." />
-              <Text className="text-sm leading-6 text-slate-600">{band.bio || "No bio added yet."}</Text>
+              <Text className="w-full flex-shrink text-sm leading-6 text-slate-600">
+                {band.bio ? wrapLongTokens(band.bio) : "No bio added yet."}
+              </Text>
             </SectionCard>
 
             <SectionCard>

@@ -57,10 +57,31 @@ export function MobileTabRail({
   buttonClassName,
 }: MobileTabRailProps) {
   const styles = TONE_STYLES[tone];
+  const shouldFillWidth = items.length <= 4;
+  const fillWidthColumnsClass =
+    items.length <= 1
+      ? "grid-cols-1"
+      : items.length === 2
+        ? "grid-cols-2"
+        : items.length === 3
+          ? "grid-cols-3"
+          : "grid-cols-4";
 
   return (
-    <div className={cn("overflow-x-auto no-scrollbar", className)}>
-      <div className={cn("flex min-w-full items-center gap-1 px-4", railClassName)}>
+    <div
+      className={cn(
+        shouldFillWidth ? "overflow-hidden" : "overflow-x-auto no-scrollbar",
+        className,
+      )}
+    >
+      <div
+        className={cn(
+          shouldFillWidth
+            ? `grid w-full ${fillWidthColumnsClass} gap-1 px-4`
+            : "flex min-w-full items-center gap-1 px-4",
+          railClassName,
+        )}
+      >
         {items.map((item) => {
           const Icon = item.icon;
           const isActive = item.id === activeTab;
@@ -72,7 +93,10 @@ export function MobileTabRail({
               onClick={() => onChange(item.id)}
               disabled={item.disabled}
               className={cn(
-                "relative inline-flex shrink-0 items-center gap-2 rounded-xl px-4 py-3 text-sm font-medium transition-colors touch-target-sm",
+                "relative inline-flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-medium transition-colors touch-target-sm",
+                shouldFillWidth
+                  ? "w-full min-w-0 justify-center gap-1.5 px-2"
+                  : "shrink-0",
                 isActive
                   ? styles.activeText
                   : "text-muted-foreground hover:text-foreground",
@@ -81,7 +105,9 @@ export function MobileTabRail({
               )}
             >
               {Icon ? <Icon className="w-4 h-4" /> : null}
-              <span className="whitespace-nowrap">{item.label}</span>
+              <span className={cn("whitespace-nowrap", shouldFillWidth && "truncate")}>
+                {item.label}
+              </span>
               {item.count !== undefined && item.count !== null ? (
                 <span
                   className={cn(

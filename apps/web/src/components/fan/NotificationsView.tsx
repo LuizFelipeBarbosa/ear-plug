@@ -242,57 +242,59 @@ export function FanNotificationsView() {
       {/* Filter Pills */}
       <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-xl border-b border-border">
         <div className="px-4 py-3">
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-            <div className="flex items-center gap-1.5 pr-2 border-r border-border">
-              <Filter className="w-4 h-4 text-muted-foreground" />
-              <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">
-                Filter
-              </span>
-            </div>
-            {FILTER_OPTIONS.map((option) => {
-              const count =
-                option.value === "all"
-                  ? stats.all
-                  : option.value === "unread"
-                  ? stats.unread
-                  : option.value === "event_reminder"
-                  ? stats.reminders
-                  : option.value === "new_event_followed_artist"
-                  ? stats.artists
-                  : option.value === "new_event_nearby"
-                  ? stats.nearby
-                  : option.value === "lineup_change"
-                  ? stats.updates
-                  : 0;
+          <div className="overflow-x-auto no-scrollbar pb-1">
+            <div className="flex min-w-max items-center gap-2">
+              <div className="flex shrink-0 items-center gap-1.5 border-r border-border pr-2">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">
+                  Filter
+                </span>
+              </div>
+              {FILTER_OPTIONS.map((option) => {
+                const count =
+                  option.value === "all"
+                    ? stats.all
+                    : option.value === "unread"
+                    ? stats.unread
+                    : option.value === "event_reminder"
+                    ? stats.reminders
+                    : option.value === "new_event_followed_artist"
+                    ? stats.artists
+                    : option.value === "new_event_nearby"
+                    ? stats.nearby
+                    : option.value === "lineup_change"
+                    ? stats.updates
+                    : 0;
 
-              return (
-                <button
-                  key={option.value}
-                  onClick={() => setActiveFilter(option.value)}
-                  className={cn(
-                    "flex items-center gap-1.5 px-3 py-2 text-xs font-medium whitespace-nowrap rounded-xl transition-colors transition-shadow border touch-target-sm",
-                    activeFilter === option.value
-                      ? "bg-fan text-white border-fan shadow-md shadow-fan/20"
-                      : "bg-card border-border text-muted-foreground hover:border-fan/30 hover:text-foreground"
-                  )}
-                >
-                  <option.icon className="w-3.5 h-3.5" />
-                  {option.label}
-                  {count > 0 && (
-                    <span
-                      className={cn(
-                        "ml-0.5 px-1.5 py-0.5 text-[10px] rounded-full font-semibold",
-                        activeFilter === option.value
-                          ? "bg-white/20 text-white"
-                          : "bg-muted text-muted-foreground"
-                      )}
-                    >
-                      {count > 99 ? "99+" : count}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
+                return (
+                  <button
+                    key={option.value}
+                    onClick={() => setActiveFilter(option.value)}
+                    className={cn(
+                      "touch-target-sm inline-flex shrink-0 items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-medium whitespace-nowrap transition-colors transition-shadow",
+                      activeFilter === option.value
+                        ? "border-fan bg-fan text-white shadow-md shadow-fan/20"
+                        : "bg-card border-border text-muted-foreground hover:border-fan/30 hover:text-foreground"
+                    )}
+                  >
+                    <option.icon className="h-3.5 w-3.5" />
+                    {option.label}
+                    {count > 0 && (
+                      <span
+                        className={cn(
+                          "ml-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
+                          activeFilter === option.value
+                            ? "bg-white/20 text-white"
+                            : "bg-muted text-muted-foreground"
+                        )}
+                      >
+                        {count > 99 ? "99+" : count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>

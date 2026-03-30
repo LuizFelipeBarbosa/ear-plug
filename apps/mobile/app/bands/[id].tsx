@@ -19,6 +19,13 @@ import { Text, TouchableOpacity, View } from "react-native";
 import { api } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
 
+function wrapLongTokens(value?: string | null): string {
+  if (!value) return "";
+  return value.replace(/\S{16,}/g, (token) =>
+    token.replace(/(.{12})/g, "$1\u200B")
+  );
+}
+
 export default function PublicBandProfileScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -122,7 +129,9 @@ export default function PublicBandProfileScreen() {
               <Avatar uri={profile.band.image} label={profile.band.name} size={72} tone="band" />
               <View className="flex-1">
                 <Text className="text-xl font-semibold text-slate-950">{profile.band.name}</Text>
-                <Text className="mt-2 text-sm leading-6 text-slate-600">{profile.band.bio || "No public bio yet."}</Text>
+                <Text className="mt-2 w-full flex-shrink text-sm leading-6 text-slate-600">
+                  {profile.band.bio ? wrapLongTokens(profile.band.bio) : "No public bio yet."}
+                </Text>
                 <View className="mt-3 flex-row flex-wrap gap-2">
                   {genres.map((genre) => (
                     <MiniBadge key={genre} label={genre} tone="band" />
