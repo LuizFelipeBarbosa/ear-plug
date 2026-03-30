@@ -16,7 +16,15 @@ config.resolver.nodeModulesPaths = [
   path.resolve(workspaceRoot, "node_modules"),
 ];
 
-// Ensure we can resolve workspace packages
-config.resolver.disableHierarchicalLookup = true;
+// pnpm keeps workspace dependencies behind symlinks. Be explicit for Metro so
+// scoped packages used from app source always resolve from the mobile app.
+config.resolver.unstable_enableSymlinks = true;
+config.resolver.extraNodeModules = {
+  ...(config.resolver.extraNodeModules || {}),
+  "@clerk/clerk-expo": path.resolve(projectRoot, "node_modules/@clerk/clerk-expo"),
+};
+
+// Keep Metro's default hierarchical resolution so pnpm transitive
+// dependencies remain reachable from symlinked workspace packages.
 
 module.exports = withNativeWind(config, { input: "./global.css" });

@@ -1,298 +1,157 @@
 import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  SafeAreaView,
-  Alert,
-  Linking,
-} from "react-native";
-import { useLocalSearchParams, router } from "expo-router";
-import { useQuery, useMutation } from "convex/react";
-import { api } from "../../../../convex/_generated/api";
-import {
-  ArrowLeft,
-  Heart,
-  Share2,
-  MapPin,
-  Calendar,
-  Clock,
-  Users,
-  DollarSign,
-} from "lucide-react-native";
+  ActionButton,
+  AppScreen,
+  EmptyState,
+  HeroHeader,
+  MiniBadge,
+  SectionCard,
+  SectionTitle,
+} from "@/components/ui/AppPrimitives";
+import { useProfileContext } from "@/context/ProfileContext";
+import { useEvent, useEventCheckinAccess } from "@/hooks/useEvents";
+import { formatEventDate, formatEventTime, formatPrice } from "@ear-plug/shared/constants";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { ArrowLeft, Calendar, Heart, MapPin, QrCode, ShieldCheck, Ticket, Users } from "lucide-react-native";
+import { Text, TouchableOpacity, View } from "react-native";
 import type { Id } from "../../../../convex/_generated/dataModel";
 
 export default function EventDetailsScreen() {
+  const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const eventId = id as Id<"events">;
+  const { mode } = useProfileContext();
 
-  const event = useQuery(api.events.getById, { eventId });
-  const eventStatus = useQuery(api.events.getUserEventStatus, { eventId });
-  const rsvpMutation = useMutation(api.events.rsvp);
-  const toggleLikeMutation = useMutation(api.events.toggleLike);
-  const webAppUrl = process.env.EXPO_PUBLIC_WEB_APP_URL;
+  const { event, hasRsvp, hasLiked, isLoading, rsvp, toggleLike } = useEvent(eventId);
+  const { canScan } = useEventCheckinAccess(eventId);
+  const isBandMode = mode === "band";
+  const isFanMode = mode === "personal";
+  const isPast = typeof event?.dateTime === "number" ? event.dateTime < Date.now() : false;
 
-  const hasRsvp = eventStatus?.hasRsvp ?? false;
-  const hasLiked = eventStatus?.hasLiked ?? false;
-
-  const handleRsvp = async () => {
-    await rsvpMutation({ eventId });
-  };
-
-  const handleToggleLike = async () => {
-    await toggleLikeMutation({ eventId });
-  };
-
-  const handleOpenWebTicket = async () => {
-    if (!webAppUrl) {
-      Alert.alert("Ticket link unavailable", "Web ticket URL is not configured.");
-      return;
-    }
-
-    const normalizedBaseUrl = webAppUrl.endsWith("/")
-      ? webAppUrl.slice(0, -1)
-      : webAppUrl;
-    const ticketUrl = `${normalizedBaseUrl}/gig/${eventId}/ticket`;
-
-    const supported = await Linking.canOpenURL(ticketUrl);
-    if (!supported) {
-      Alert.alert("Cannot open ticket", "Your device cannot open this ticket link.");
-      return;
-    }
-
-    await Linking.openURL(ticketUrl);
-  };
-
-  const formatDate = (timestamp: number) => {
-    return new Date(timestamp).toLocaleDateString("en-US", {
-      weekday: "long",
-      month: "long",
-      day: "numeric",
-      year: "numeric",
-    });
-  };
-
-  const formatTime = (timestamp: number) => {
-    return new Date(timestamp).toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    });
-  };
-
-  const formatPrice = (cents: number) => {
-    if (cents === 0) return "Free";
-    return `$${(cents / 100).toFixed(2)}`;
-  };
-
-  if (event === undefined) {
+  if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 items-center justify-center bg-white">
-        <View className="w-12 h-12 rounded-full bg-primary-500 animate-pulse" />
-      </SafeAreaView>
+      <AppScreen>
+        <SectionCard tone="fan">
+          <Text className="text-sm text-slate-500">Loading event...</Text>
+        </SectionCard>
+      </AppScreen>
     );
   }
 
-  if (event === null) {
+  if (!event) {
     return (
-      <SafeAreaView className="flex-1 items-center justify-center bg-white px-6">
-        <Text className="text-xl font-semibold text-gray-900 text-center">
-          This gig is not available
-        </Text>
-        <Text className="text-sm text-gray-500 text-center mt-2 mb-6">
-          Tentative gigs are only visible in the band Shows workspace.
-        </Text>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          className="px-5 py-3 rounded-xl bg-primary-600"
-        >
-          <Text className="text-white font-semibold">Go Back</Text>
-        </TouchableOpacity>
-      </SafeAreaView>
+      <AppScreen>
+        <EmptyState
+          tone="fan"
+          title="Event unavailable"
+          message="This event may be private, tentative, or no longer available."
+          action={<ActionButton label="Go Back" tone="fan" onPress={() => router.back()} />}
+        />
+      </AppScreen>
     );
   }
 
-  const spotsLeft = event.capacity - event.rsvpCount;
-  const fillPercentage = Math.min((event.rsvpCount / event.capacity) * 100, 100);
+  const spotsLeft = typeof event.capacity === "number" ? Math.max(event.capacity - event.rsvpCount, 0) : null;
+  const canRsvp = isFanMode && !isPast;
+  const eventStatus = event.status as string | undefined;
+  const eventStatusLabel = eventStatus === "hold" ? "Tentative" : eventStatus ?? "Confirmed";
+  const eventStatusTone: "warning" | "band" | "fan" = eventStatus === "hold" ? "warning" : isBandMode ? "band" : "fan";
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
-      <ScrollView className="flex-1">
-        {/* Header Image */}
-        <View className="h-72 bg-gradient-to-br from-primary-500 to-accent-500">
-          {/* Actions */}
-          <View className="absolute top-4 left-4 right-4 flex-row justify-between z-10">
-            <TouchableOpacity
-              onPress={() => router.back()}
-              className="p-2 rounded-full bg-black/20"
-            >
-              <ArrowLeft size={24} color="#fff" />
+    <AppScreen
+      scroll
+      header={
+        <HeroHeader
+          title={event.title || "Untitled Gig"}
+          subtitle={`${event.band?.name || "Local lineup"}${event.venue?.name ? ` • ${event.venue.name}` : ""}`}
+          eyebrow={isBandMode ? "Band Context" : "Fan Context"}
+          tone={isBandMode ? "band" : "fan"}
+          action={
+            <TouchableOpacity onPress={() => router.back()} className="rounded-[18px] border border-slate-200 bg-white px-4 py-3">
+              <View className="flex-row items-center gap-2">
+                <ArrowLeft size={14} color="#334155" />
+                <Text className="text-xs font-semibold text-slate-700">Back</Text>
+              </View>
             </TouchableOpacity>
-            <View className="flex-row">
-              <TouchableOpacity className="p-2 rounded-full bg-black/20 mr-2">
-                <Share2 size={24} color="#fff" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleToggleLike}
-                className={`p-2 rounded-full ${
-                  hasLiked ? "bg-accent-500" : "bg-black/20"
-                }`}
-              >
-                <Heart
-                  size={24}
-                  color="#fff"
-                  fill={hasLiked ? "#fff" : "transparent"}
-                />
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-
-        {/* Content */}
-        <View className="p-6">
-          {/* Band Info */}
-          {event.band && (
-            <View className="flex-row items-center mb-4">
-              <View className="w-12 h-12 rounded-full bg-gradient-to-br from-primary-400 to-accent-400" />
-              <View className="ml-3">
-                <Text className="font-semibold text-gray-900">
-                  {event.band.name}
-                </Text>
-                <Text className="text-sm text-primary-600">
-                  {/* Display genres (handle both new and legacy format) */}
-                  {(event.genres && event.genres.length > 0
-                    ? event.genres
-                    : event.genre ? [event.genre] : []
-                  ).map((g: string) => g.charAt(0).toUpperCase() + g.slice(1)).join(" • ")}
-                </Text>
-              </View>
-            </View>
-          )}
-
-          {/* Title */}
-          <Text className="text-2xl font-bold text-gray-900 mb-4">
-            {event.title}
-          </Text>
-
-          {/* Details Grid */}
-          <View className="flex-row flex-wrap mb-6">
-            <DetailCard
-              icon={<Calendar size={20} color="#7c3aed" />}
-              label="Date"
-              value={formatDate(event.dateTime)}
-            />
-            <DetailCard
-              icon={<Clock size={20} color="#7c3aed" />}
-              label="Time"
-              value={formatTime(event.dateTime)}
-            />
-            <DetailCard
-              icon={<Users size={20} color="#7c3aed" />}
-              label="RSVPs"
-              value={`${event.rsvpCount} / ${event.capacity}`}
-            />
-            <DetailCard
-              icon={<DollarSign size={20} color="#7c3aed" />}
-              label="Ticket"
-              value={event.price ? formatPrice(event.price) : "Free"}
-            />
-          </View>
-
-          {/* RSVP Progress */}
-          <View className="bg-gray-50 rounded-xl p-4 mb-6">
-            <View className="flex-row justify-between mb-2">
-              <Text className="text-sm text-gray-600">
-                {spotsLeft} spots remaining
-              </Text>
-              <Text className="text-sm text-gray-500">
-                {Math.round(fillPercentage)}% full
-              </Text>
-            </View>
-            <View className="h-2 bg-gray-200 rounded-full overflow-hidden">
-              <View
-                className="h-full bg-gradient-to-r from-primary-500 to-accent-500 rounded-full"
-                style={{ width: `${fillPercentage}%` }}
-              />
-            </View>
-          </View>
-
-          {/* Venue */}
-          {event.venue && (
-            <View className="mb-6">
-              <Text className="text-lg font-semibold text-gray-900 mb-3">
-                Venue
-              </Text>
-              <View className="bg-gray-50 rounded-xl p-4">
-                <View className="flex-row items-start">
-                  <MapPin size={20} color="#7c3aed" />
-                  <View className="ml-3">
-                    <Text className="font-medium text-gray-900">
-                      {event.venue.name}
-                    </Text>
-                    <Text className="text-sm text-gray-500">
-                      {event.venue.address}
-                    </Text>
-                    <Text className="text-sm text-gray-500">
-                      {event.venue.city} • Capacity: {event.venue.capacity}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            </View>
-          )}
-
-          {/* Description */}
-          {event.description && (
-            <View className="mb-6">
-              <Text className="text-lg font-semibold text-gray-900 mb-3">
-                About
-              </Text>
-              <Text className="text-gray-600 leading-relaxed">
-                {event.description}
-              </Text>
-            </View>
-          )}
-        </View>
-      </ScrollView>
-
-      {/* RSVP Button */}
-      <View className="p-4 border-t border-gray-200 pb-8">
-        <TouchableOpacity
-          onPress={handleRsvp}
-          disabled={spotsLeft <= 0 && !hasRsvp}
-          className={`py-4 rounded-xl ${
-            hasRsvp
-              ? "bg-green-500"
-              : spotsLeft <= 0
-                ? "bg-gray-300"
-                : "bg-primary-600"
-          }`}
+          }
         >
-          <Text className="text-white text-center text-lg font-semibold">
-            {hasRsvp
-              ? "You're Going! ✓"
-              : spotsLeft <= 0
-                ? "Sold Out"
-                : "RSVP to Event"}
-          </Text>
-        </TouchableOpacity>
-
-        {hasRsvp && (
-          <TouchableOpacity
-            onPress={handleOpenWebTicket}
-            className="mt-3 py-3 rounded-xl border border-primary-600"
-          >
-            <Text className="text-primary-700 text-center text-sm font-semibold">
-              Open Web Ticket
+          <SectionCard tone={isBandMode ? "band" : "fan"}>
+            <View className="flex-row flex-wrap gap-2">
+              {eventStatus ? <MiniBadge label={eventStatusLabel} tone={eventStatusTone} /> : null}
+              {hasRsvp ? <MiniBadge label="RSVP'd" tone="success" /> : null}
+              {hasLiked ? <MiniBadge label="Saved" tone="fan" /> : null}
+            </View>
+            <Text className="mt-4 text-sm leading-6 text-slate-600">
+              {event.description || "Event details will continue to fill out as the show gets closer."}
             </Text>
-          </TouchableOpacity>
-        )}
+          </SectionCard>
+        </HeroHeader>
+      }
+      footer={
+        <View className="border-t border-slate-200 bg-white px-4 pb-6 pt-3">
+          {canRsvp ? (
+            <>
+              <ActionButton
+                label={hasRsvp ? "You're Going" : spotsLeft !== null && spotsLeft === 0 ? "Sold Out" : "RSVP"}
+                tone="fan"
+                disabled={spotsLeft !== null && spotsLeft === 0 && !hasRsvp}
+                onPress={() => void rsvp()}
+              />
+              <View className="mt-2 flex-row gap-2">
+                <View className="flex-1">
+                  <ActionButton
+                    label={hasLiked ? "Saved" : "Save"}
+                    variant="secondary"
+                    onPress={() => void toggleLike()}
+                    icon={<Heart size={16} color={hasLiked ? "#ef4444" : "#334155"} fill={hasLiked ? "#ef4444" : "transparent"} />}
+                  />
+                </View>
+                {hasRsvp ? (
+                  <View className="flex-1">
+                    <ActionButton
+                      label="View Ticket"
+                      tone="fan"
+                      icon={<QrCode size={16} color="#ffffff" />}
+                      onPress={() => router.push(`/gig/${eventId}/ticket`)}
+                    />
+                  </View>
+                ) : null}
+              </View>
+            </>
+          ) : canScan ? (
+            <ActionButton
+              label="Open Check-In Scanner"
+              tone="band"
+              icon={<ShieldCheck size={16} color="#ffffff" />}
+              onPress={() => router.push(`/gig/${eventId}/check-in`)}
+            />
+          ) : (
+            <SectionCard>
+              <Text className="text-center text-sm text-slate-600">
+                {isBandMode
+                  ? "Switch to a staff-authorized band workspace for check-in access."
+                  : `Event starts ${typeof event.dateTime === "number" ? formatEventTime(event.dateTime) : "soon"}.`}
+              </Text>
+            </SectionCard>
+          )}
+        </View>
+      }
+    >
+      <View className="gap-4">
+        <SectionCard>
+          <SectionTitle title="Event Info" subtitle="Key info surfaces stay consistent across web and mobile." />
+          <View className="gap-3">
+            <MetaRow icon={<Calendar size={16} color="#64748b" />} label="Date" value={typeof event.dateTime === "number" ? formatEventDate(event.dateTime) : "Date TBD"} />
+            <MetaRow icon={<Users size={16} color="#64748b" />} label="Capacity" value={typeof event.capacity === "number" ? `${event.rsvpCount}/${event.capacity}${spotsLeft !== null ? ` • ${spotsLeft} left` : ""}` : `${event.rsvpCount} RSVPs`} />
+            <MetaRow icon={<Ticket size={16} color="#64748b" />} label="Price" value={typeof event.price === "number" ? formatPrice(event.price) : "Free"} />
+            <MetaRow icon={<MapPin size={16} color="#64748b" />} label="Venue" value={`${event.venue?.name || "Venue TBD"}${event.venue?.city ? ` • ${event.venue.city}` : ""}${event.isVenueAddressHidden ? " • RSVP to reveal" : ""}`} />
+          </View>
+        </SectionCard>
       </View>
-    </SafeAreaView>
+    </AppScreen>
   );
 }
 
-function DetailCard({
+function MetaRow({
   icon,
   label,
   value,
@@ -302,13 +161,11 @@ function DetailCard({
   value: string;
 }) {
   return (
-    <View className="w-1/2 p-1">
-      <View className="bg-gray-50 rounded-xl p-4">
-        <View className="flex-row items-center mb-1">
-          {icon}
-          <Text className="text-sm text-gray-500 ml-2">{label}</Text>
-        </View>
-        <Text className="font-semibold text-gray-900">{value}</Text>
+    <View className="flex-row items-start gap-3">
+      {icon}
+      <View className="flex-1">
+        <Text className="text-[11px] font-semibold uppercase tracking-[1.5px] text-slate-500">{label}</Text>
+        <Text className="mt-1 text-sm text-slate-900">{value}</Text>
       </View>
     </View>
   );

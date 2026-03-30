@@ -1,36 +1,55 @@
+import { useProfileContext } from "@/context/ProfileContext";
+import { useBandConversations } from "@/hooks/useMessages";
+import { useNotifications } from "@/hooks/useNotifications";
 import { Tabs } from "expo-router";
-import { useQuery } from "convex/react";
-import { api } from "../../../../convex/_generated/api";
 import {
-  Map,
-  Calendar,
+  BarChart3,
   Bell,
-  User,
+  Calendar,
   LayoutDashboard,
+  Map,
   MessageCircle,
+  User,
 } from "lucide-react-native";
 
 export default function TabsLayout() {
-  const user = useQuery(api.users.getCurrentUser);
-  const isFan = user?.role === "fan";
+  const { mode } = useProfileContext();
+  const isFan = mode === "personal";
+  const { unreadCount: notificationsUnread } = useNotifications();
+  const { unreadCount: messagesUnread, pendingInviteCount } = useBandConversations();
+  const inboxBadge = messagesUnread + pendingInviteCount;
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: "#7c3aed",
-        tabBarInactiveTintColor: "#9ca3af",
+        tabBarActiveTintColor: isFan ? "#2563eb" : "#7c3aed",
+        tabBarInactiveTintColor: "#94a3b8",
         tabBarStyle: {
           backgroundColor: "#ffffff",
-          borderTopWidth: 1,
-          borderTopColor: "#e5e7eb",
+          borderTopWidth: 0,
+          borderTopColor: "transparent",
           paddingTop: 8,
           paddingBottom: 8,
-          height: 70,
+          height: 72,
+          shadowColor: "#0f172a",
+          shadowOffset: { width: 0, height: -6 },
+          shadowOpacity: 0.05,
+          shadowRadius: 12,
+          elevation: 10,
         },
         tabBarLabelStyle: {
           fontSize: 11,
-          fontWeight: "500",
+          fontWeight: "600",
+        },
+        tabBarItemStyle: {
+          paddingTop: 1,
+        },
+        tabBarBadgeStyle: {
+          backgroundColor: isFan ? "#2563eb" : "#7c3aed",
+          color: "#ffffff",
+          fontSize: 10,
+          fontWeight: "700",
         },
       }}
     >
@@ -39,30 +58,41 @@ export default function TabsLayout() {
         options={{
           title: isFan ? "Discover" : "Dashboard",
           tabBarIcon: ({ color, size }) =>
-            isFan ? (
-              <Map size={size} color={color} />
-            ) : (
-              <LayoutDashboard size={size} color={color} />
-            ),
+            isFan ? <Map size={size} color={color} /> : <LayoutDashboard size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="calendar"
         options={{
-          title: isFan ? "My Events" : "Shows",
+          title: isFan ? "Calendar" : "Shows",
           tabBarIcon: ({ color, size }) => <Calendar size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="analytics"
+        options={{
+          href: isFan ? null : "/analytics",
+          title: "Analytics",
+          tabBarIcon: ({ color, size }) => <BarChart3 size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="messages"
         options={{
-          title: isFan ? "Notifications" : "Messages",
+          title: isFan ? "Alerts" : "Inbox",
+          tabBarBadge: isFan
+            ? notificationsUnread > 0
+              ? notificationsUnread > 99
+                ? "99+"
+                : notificationsUnread
+              : undefined
+            : inboxBadge > 0
+              ? inboxBadge > 99
+                ? "99+"
+                : inboxBadge
+              : undefined,
           tabBarIcon: ({ color, size }) =>
-            isFan ? (
-              <Bell size={size} color={color} />
-            ) : (
-              <MessageCircle size={size} color={color} />
-            ),
+            isFan ? <Bell size={size} color={color} /> : <MessageCircle size={size} color={color} />,
         }}
       />
       <Tabs.Screen

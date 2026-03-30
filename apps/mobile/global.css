@@ -1,3 +1,129 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  :root {
+    --radius: 0.625rem;
+    /* Monochrome shell (OKLCH, zero chroma) */
+    --background: 0.985 0 0;
+    --foreground: 0.205 0 0;
+    --card: 0.995 0 0;
+    --card-foreground: 0.205 0 0;
+    --popover: 0.995 0 0;
+    --popover-foreground: 0.205 0 0;
+    --primary: 0.54 0.205 262;
+    --primary-foreground: 0.985 0 0;
+    --secondary: 0.58 0.225 304;
+    --secondary-foreground: 0.985 0 0;
+    --muted: 0.96 0 0;
+    --muted-foreground: 0.5 0 0;
+    --accent: 0.96 0 0;
+    --accent-foreground: 0.205 0 0;
+    --destructive: 0.62 0.23 26;
+    --destructive-foreground: 0.985 0 0;
+    --border: 0.922 0 0;
+    --input: 0.922 0 0;
+    --ring: 0.54 0.205 262;
+    --fan-accent: 37 99 235;
+    --band-accent: 124 58 237;
+    --like-accent: 239 68 68;
+    --success-accent: 22 163 74;
+  }
+}
+
+@layer utilities {
+  .bg-background {
+    background-color: oklch(var(--background));
+  }
+  .bg-card {
+    background-color: oklch(var(--card));
+  }
+  .bg-muted {
+    background-color: oklch(var(--muted));
+  }
+  .bg-fan {
+    background-color: #2563eb;
+  }
+  .bg-band {
+    background-color: #7c3aed;
+  }
+  .bg-success {
+    background-color: #16a34a;
+  }
+  .bg-like {
+    background-color: #ef4444;
+  }
+  
+  .text-foreground {
+    color: oklch(var(--foreground));
+  }
+  .text-card-foreground {
+    color: oklch(var(--card-foreground));
+  }
+  .text-muted-foreground {
+    color: oklch(var(--muted-foreground));
+  }
+  .text-fan {
+    color: #2563eb;
+  }
+  .text-band {
+    color: #7c3aed;
+  }
+  .text-success {
+    color: #16a34a;
+  }
+  .text-like {
+    color: #ef4444;
+  }
+  
+  .border-border {
+    border-color: oklch(var(--border));
+  }
+  .border-fan {
+    border-color: #2563eb;
+  }
+  .border-band {
+    border-color: #7c3aed;
+  }
+  
+  /* Touch targets */
+  .touch-target {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .touch-target-sm {
+    min-width: 36px;
+    min-height: 36px;
+  }
+  
+  /* No scrollbar */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  /* Shimmer animation */
+  .animate-shimmer {
+    background: linear-gradient(
+      90deg,
+      oklch(var(--muted)) 0%,
+      oklch(var(--card)) 50%,
+      oklch(var(--muted)) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s linear infinite;
+  }
+  
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+  }
+}
