@@ -98,20 +98,15 @@ export function BandMediaSlotsGrid({ slots, onSelect }: BandMediaSlotsGridProps)
               </div>
             )}
 
-            {/* Meta Overlay */}
-            {(slot.location || slot.caption) && (
+            {/* Location Overlay */}
+            {slot.location && (
               <div className="absolute inset-x-0 bottom-0 px-3 py-2.5 bg-gradient-to-t from-black/85 via-black/35 to-transparent">
-                {slot.location ? (
-                  <div className="mb-1 flex items-center gap-1.5">
-                    <MapPin className="h-3 w-3 shrink-0 text-white/70" />
-                    <p className="truncate text-[10px] font-medium text-white/85">
-                      {slot.location}
-                    </p>
-                  </div>
-                ) : null}
-                {slot.caption ? (
-                  <p className="text-[10px] text-white truncate">{slot.caption}</p>
-                ) : null}
+                <div className="flex items-center gap-1.5">
+                  <MapPin className="h-3 w-3 shrink-0 text-white/70" />
+                  <p className="truncate text-[10px] font-medium text-white/85">
+                    {slot.location}
+                  </p>
+                </div>
               </div>
             )}
           </motion.button>
