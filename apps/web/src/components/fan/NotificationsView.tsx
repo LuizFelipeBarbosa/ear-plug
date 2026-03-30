@@ -372,17 +372,26 @@ export function FanNotificationsView() {
                             {notification.content}
                           </p>
 
-                          {/* Action hint for linked events */}
-                          {notification.eventId && (
-                            <div className="flex items-center gap-1 mt-2 text-xs text-fan">
-                              <span>View event</span>
-                              <ChevronRight className="w-3 h-3" />
+                          {notification.eventId ? (
+                            <div className="mt-3 flex flex-wrap items-center gap-2">
+                              <Link
+                                href={`/gig/${notification.eventId}`}
+                                onClick={() => {
+                                  if (!notification.read) {
+                                    markAsRead(notification._id as any);
+                                  }
+                                }}
+                                className="inline-flex items-center gap-1 rounded-lg border border-fan/20 bg-fan/10 px-2.5 py-1.5 text-xs font-medium text-fan transition-colors hover:bg-fan/15"
+                              >
+                                View event
+                                <ChevronRight className="w-3 h-3" />
+                              </Link>
                             </div>
-                          )}
+                          ) : null}
                         </div>
 
                         {/* Actions */}
-                        <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="ml-auto flex shrink-0 flex-row gap-1 opacity-100 transition-opacity sm:flex-col sm:self-start sm:opacity-0 sm:group-hover:opacity-100">
                           {!notification.read && (
                             <button
                               onClick={() => markAsRead(notification._id as any)}
@@ -401,19 +410,6 @@ export function FanNotificationsView() {
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
-
-                        {/* Link overlay */}
-                        {notification.eventId && (
-                          <Link
-                            href={`/gig/${notification.eventId}`}
-                            onClick={() => {
-                              if (!notification.read) {
-                                markAsRead(notification._id as any);
-                              }
-                            }}
-                            className="absolute inset-0 z-10"
-                          />
-                        )}
                       </div>
                     ))}
                   </div>

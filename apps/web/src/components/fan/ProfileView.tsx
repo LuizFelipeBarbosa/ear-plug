@@ -29,6 +29,7 @@ import { useCurrentUser } from "@/hooks/useUser";
 import { useSavedBands } from "@/hooks/useBand";
 import { useProfileContext } from "@/hooks/useProfileContext";
 import { EditProfileModal } from "@/components/ui/EditProfileModal";
+import { MobileTabRail } from "@/components/ui/MobileTabRail";
 import { ThemeToggleRow } from "@/components/ui/ThemeToggle";
 import { CreateBandForm } from "@/components/band/CreateBandForm";
 import { PastShowFlyerSection } from "@/components/events/PastShowFlyerSection";
@@ -246,34 +247,18 @@ export function FanProfileView() {
 
       {/* Tab Navigation */}
       <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-xl border-b border-border">
-        <div className="flex items-center px-4">
-          {[
-            { id: "overview" as const, label: "Overview", icon: Users },
-            { id: "saved" as const, label: "Saved", icon: Heart },
-            { id: "activity" as const, label: "Activity", icon: Zap },
-            { id: "settings" as const, label: "Settings", icon: Settings },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={cn(
-                "relative flex items-center gap-1.5 px-4 py-3 text-sm font-medium transition-colors touch-target-sm",
-                activeTab === tab.id ? "text-fan" : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <tab.icon className="w-4 h-4" />
-              <span className="hidden sm:inline">{tab.label}</span>
-              <span className="sm:hidden">{tab.label.slice(0, 4)}</span>
-              {activeTab === tab.id && (
-                <motion.div
-                  layoutId="activeTabIndicator"
-                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-fan rounded-full"
-                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                />
-              )}
-            </button>
-          ))}
-        </div>
+        <MobileTabRail
+          items={[
+            { id: "overview", label: "Overview", icon: Users },
+            { id: "saved", label: "Saved", icon: Heart },
+            { id: "activity", label: "Activity", icon: Zap },
+            { id: "settings", label: "Settings", icon: Settings },
+          ]}
+          activeTab={activeTab}
+          onChange={(tabId) => setActiveTab(tabId as TabType)}
+          layoutId="activeTabIndicator"
+          tone="fan"
+        />
       </div>
 
       {/* Tab Content */}
@@ -330,7 +315,7 @@ export function FanProfileView() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="absolute right-0 top-0 h-full w-full max-w-md bg-card border-l border-border overflow-y-auto"
+              className="absolute right-0 top-0 h-full w-full max-w-md overflow-y-auto border-l border-border bg-card safe-area-inset-bottom"
             >
               {/* Workspace Menu Header */}
               <div className="sticky top-0 z-10 bg-card/95 backdrop-blur-xl border-b border-border p-4 flex items-center justify-between">
@@ -343,7 +328,7 @@ export function FanProfileView() {
                 </button>
               </div>
 
-              <div className="p-4 space-y-6">
+              <div className="space-y-6 p-4 pb-6">
                 {/* Band Creation Section */}
                 <section>
                   <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
@@ -423,7 +408,7 @@ export function FanProfileView() {
                               </p>
                             </div>
                           </div>
-                          <div className="flex gap-2 mt-3">
+                          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                             <button
                               onClick={() => handleAcceptInvite(invite._id, invite.bandId)}
                               disabled={processingInviteId === invite._id}

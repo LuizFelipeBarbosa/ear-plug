@@ -132,23 +132,25 @@ interface GigModalTabsProps {
 
 export function GigModalTabs({ activeTab, onChange }: GigModalTabsProps) {
   return (
-    <div className="flex gap-1 mt-4">
-      {GIG_MODAL_TABS.map((tab) => (
-        <button
-          key={tab.id}
-          type="button"
-          onClick={() => onChange(tab.id)}
-          className={cn(
-            "flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium rounded-lg transition-all",
-            activeTab === tab.id
-              ? "bg-band text-white"
-              : "text-muted-foreground hover:text-foreground hover:bg-muted",
-          )}
-        >
-          <tab.icon className="w-3.5 h-3.5" />
-          {tab.label}
-        </button>
-      ))}
+    <div className="mt-4 -mx-1 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="flex min-w-max gap-2 px-1">
+        {GIG_MODAL_TABS.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => onChange(tab.id)}
+            className={cn(
+              "flex shrink-0 items-center justify-center gap-1.5 rounded-full px-4 py-2 text-xs font-medium transition-all",
+              activeTab === tab.id
+                ? "bg-band text-white shadow-sm shadow-band/20"
+                : "border border-border bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground",
+            )}
+          >
+            <tab.icon className="w-3.5 h-3.5" />
+            <span>{tab.label}</span>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -205,21 +207,23 @@ export function GigDetailsSection({
               fill
               className="object-cover"
             />
-            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="px-4 py-2 bg-white text-black text-sm font-medium rounded-xl hover:bg-white/90"
-              >
-                Change
-              </button>
-              <button
-                type="button"
-                onClick={onRemoveImage}
-                className="px-4 py-2 bg-red-500 text-white text-sm font-medium rounded-xl hover:bg-red-600"
-              >
-                Remove
-              </button>
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/50 to-transparent p-3">
+              <div className="flex flex-wrap justify-end gap-2 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="px-3 py-2 bg-white text-black text-sm font-medium rounded-xl hover:bg-white/90"
+                >
+                  Change
+                </button>
+                <button
+                  type="button"
+                  onClick={onRemoveImage}
+                  className="px-3 py-2 bg-red-500 text-white text-sm font-medium rounded-xl hover:bg-red-600"
+                >
+                  Remove
+                </button>
+              </div>
             </div>
           </div>
         ) : (
@@ -283,7 +287,7 @@ export function GigDetailsSection({
         {errors.title && <p className="text-xs text-red-500 mt-1">{errors.title}</p>}
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
           <label className="block text-xs font-semibold text-muted-foreground mb-2">
             Date {!isTentative && <span className="text-band">*</span>}
@@ -333,7 +337,7 @@ export function GigDetailsSection({
         error={errors.venue}
       />
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
           <label className="block text-xs font-semibold text-muted-foreground mb-2">
             Capacity {!isTentative && <span className="text-band">*</span>}
@@ -473,31 +477,31 @@ export function GigSettingsSection({
         <label className="block text-xs font-semibold text-muted-foreground mb-2">
           Event Status
         </label>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <button
             type="button"
             onClick={() => onStatusChange("confirmed")}
             className={cn(
-              "px-4 py-3 text-sm font-medium rounded-xl border-2 transition-all",
+              "flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium rounded-xl border-2 transition-all",
               formData.status === "confirmed"
                 ? "bg-success text-white border-success"
                 : "bg-card border-border text-muted-foreground hover:border-success/50",
             )}
           >
-            <Check className="w-4 h-4 inline mr-2" />
+            <Check className="w-4 h-4" />
             Confirmed
           </button>
           <button
             type="button"
             onClick={() => onStatusChange("hold")}
             className={cn(
-              "px-4 py-3 text-sm font-medium rounded-xl border-2 transition-all",
+              "flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium rounded-xl border-2 transition-all",
               formData.status === "hold"
                 ? "bg-amber-500 text-white border-amber-500"
                 : "bg-card border-border text-muted-foreground hover:border-amber-500/50",
             )}
           >
-            <AlertCircle className="w-4 h-4 inline mr-2" />
+            <AlertCircle className="w-4 h-4" />
             Tentative
           </button>
         </div>
@@ -507,7 +511,7 @@ export function GigSettingsSection({
         <label className="block text-xs font-semibold text-muted-foreground mb-2">
           Address Visibility
         </label>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <button
             type="button"
             onClick={() => onAddressVisibilityChange("public")}

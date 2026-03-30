@@ -146,7 +146,7 @@ function ConversationsList({
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="flex gap-2">
+                  <div className="flex flex-col gap-2 sm:flex-row">
                     <button
                       type="button"
 
@@ -373,14 +373,14 @@ function ConversationView({
       </header>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+      <div className="flex-1 overflow-y-auto px-4 py-4 pb-28 space-y-4 sm:pb-24">
         {isLoading ? (
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (
               <div
                 key={i}
                 className={cn(
-                  "max-w-[75%] p-4 animate-shimmer rounded-2xl",
+                  "max-w-[84%] p-4 animate-shimmer rounded-2xl sm:max-w-[75%]",
                   i % 2 === 0 ? "ml-auto bg-band/20" : "bg-muted"
                 )}
               >
@@ -409,7 +409,7 @@ function ConversationView({
       </div>
 
       {/* Input */}
-      <div className="sticky bottom-0 bg-card/95 backdrop-blur-xl border-t border-border px-4 py-4">
+      <div className="sticky bottom-0 border-t border-border bg-card/95 px-4 pb-4 pt-3 backdrop-blur-xl safe-area-inset-bottom">
         <div className="flex items-end gap-2">
           <textarea
             value={newMessage}
@@ -452,7 +452,7 @@ function MessageBubble({ message }: { message: any }) {
     <div className={cn("flex", isOwn ? "justify-end" : "justify-start")}>
       <div
         className={cn(
-          "max-w-[75%] px-4 py-3 rounded-2xl",
+          "max-w-[84%] px-4 py-3 rounded-2xl sm:max-w-[75%]",
           isOwn
             ? "bg-band text-white rounded-br-md"
             : "bg-card border border-border text-foreground rounded-bl-md"

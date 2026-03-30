@@ -173,7 +173,7 @@ export function BandDashboard() {
           className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm"
         >
           <div className="p-5">
-            <div className="flex items-start gap-4">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
               {/* Band Image */}
               <div className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-gradient-to-br from-band/20 to-fan/20 border border-band/20">
                 {bandWithStats.image ? (
@@ -193,7 +193,7 @@ export function BandDashboard() {
 
               {/* Band Info */}
               <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-2">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <h1 className="text-xl font-bold text-foreground truncate">
                       {bandWithStats.name}
@@ -218,22 +218,22 @@ export function BandDashboard() {
                 </div>
 
                 {/* Quick Stats Row */}
-                <div className="flex items-center gap-4 mt-4">
-                  <div className="flex items-center gap-1.5">
+                <div className="mt-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
+                  <div className="flex items-center gap-1.5 rounded-xl border border-border/60 bg-muted/30 px-3 py-2">
                     <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
                     <span className="text-sm font-medium text-foreground">
                       {bandWithStats.stats.showsThisMonth}
                     </span>
                     <span className="text-xs text-muted-foreground">shows</span>
                   </div>
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 rounded-xl border border-border/60 bg-muted/30 px-3 py-2">
                     <Users className="w-3.5 h-3.5 text-muted-foreground" />
                     <span className="text-sm font-medium text-foreground">
                       {bandWithStats.stats.totalRsvps}
                     </span>
                     <span className="text-xs text-muted-foreground">RSVPs</span>
                   </div>
-                  <div className="flex items-center gap-1.5">
+                  <div className="col-span-2 flex items-center gap-1.5 rounded-xl border border-border/60 bg-muted/30 px-3 py-2 sm:col-span-1">
                     <TrendingUp className="w-3.5 h-3.5 text-muted-foreground" />
                     <span className="text-sm font-medium text-foreground">
                       +{bandWithStats.stats.newFans}
@@ -246,8 +246,8 @@ export function BandDashboard() {
           </div>
 
           {/* Action Bar */}
-          <div className="border-t border-border/50 px-5 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-3 border-t border-border/50 px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap items-center gap-2">
               {hasNotifications && (
                 <Link
                   href="/messages"
@@ -268,7 +268,7 @@ export function BandDashboard() {
             {canManageShows && (
               <Link
                 href="/calendar"
-                className="flex items-center gap-1.5 text-xs font-medium text-band hover:text-band/80 transition-colors"
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-band hover:text-band/80 transition-colors"
               >
                 <Plus className="w-3.5 h-3.5" />
                 Create Gig
@@ -314,7 +314,7 @@ export function BandDashboard() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <StatCard
               icon={<Users className="w-4 h-4" />}
               value={analytics?.totalRsvps ?? 0}
@@ -400,19 +400,21 @@ export function BandDashboard() {
               {/* Pending Invites */}
               {pendingCohostInvites.slice(0, 1).map((invite) => (
                 <Link key={invite._id} href="/messages">
-                  <div className="bg-card border border-band/20 p-3 rounded-xl flex items-center gap-3 hover:bg-muted/50 transition-colors">
-                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-band/20 to-fan/20 flex items-center justify-center flex-shrink-0">
-                      <UserPlus className="w-5 h-5 text-band" />
+                  <div className="rounded-xl border border-band/20 bg-card p-3 transition-colors hover:bg-muted/50">
+                    <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center">
+                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-band/20 to-fan/20 flex items-center justify-center flex-shrink-0">
+                        <UserPlus className="w-5 h-5 text-band" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">
+                          Co-host invite from {invite.hostBand?.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {invite.event?.title || "Untitled Gig"}
+                        </p>
+                      </div>
+                      <span className="w-2 h-2 rounded-full bg-band flex-shrink-0" />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">
-                        Co-host invite from {invite.hostBand?.name}
-                      </p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {invite.event?.title || "Untitled Gig"}
-                      </p>
-                    </div>
-                    <span className="w-2 h-2 rounded-full bg-band flex-shrink-0" />
                   </div>
                 </Link>
               ))}
@@ -421,38 +423,40 @@ export function BandDashboard() {
               {conversations.slice(0, hasNotifications ? 1 : 2).map((conv) => (
                 <Link key={conv._id} href="/messages">
                   <div className={cn(
-                    "bg-card border p-3 rounded-xl flex items-center gap-3 hover:bg-muted/50 transition-colors",
+                    "bg-card border p-3 rounded-xl hover:bg-muted/50 transition-colors",
                     conv.unreadCount > 0 ? "border-band/20" : "border-border"
                   )}>
-                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-band/20 to-fan/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                      {conv.venue?.images?.[0] ? (
-                        <Image
-                          src={conv.venue.images[0]}
-                          alt={conv.venue.name}
-                          width={40}
-                          height={40}
-                          className="object-cover w-full h-full"
-                        />
-                      ) : (
-                        <MapPin className="w-4 h-4 text-band/50" />
+                    <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center">
+                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-band/20 to-fan/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                        {conv.venue?.images?.[0] ? (
+                          <Image
+                            src={conv.venue.images[0]}
+                            alt={conv.venue.name}
+                            width={40}
+                            height={40}
+                            className="object-cover w-full h-full"
+                          />
+                        ) : (
+                          <MapPin className="w-4 h-4 text-band/50" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={cn(
+                          "text-sm font-medium truncate",
+                          conv.unreadCount > 0 ? "text-band" : "text-foreground"
+                        )}>
+                          {conv.venue?.name || "Unknown Venue"}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {conv.lastMessagePreview || "No messages yet"}
+                        </p>
+                      </div>
+                      {conv.unreadCount > 0 && (
+                        <span className="min-w-[20px] h-5 bg-band text-white text-[10px] font-semibold flex items-center justify-center px-1.5 rounded-full flex-shrink-0">
+                          {conv.unreadCount}
+                        </span>
                       )}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className={cn(
-                        "text-sm font-medium truncate",
-                        conv.unreadCount > 0 ? "text-band" : "text-foreground"
-                      )}>
-                        {conv.venue?.name || "Unknown Venue"}
-                      </p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {conv.lastMessagePreview || "No messages yet"}
-                      </p>
-                    </div>
-                    {conv.unreadCount > 0 && (
-                      <span className="min-w-[20px] h-5 bg-band text-white text-[10px] font-semibold flex items-center justify-center px-1.5 rounded-full flex-shrink-0">
-                        {conv.unreadCount}
-                      </span>
-                    )}
                   </div>
                 </Link>
               ))}
@@ -516,7 +520,7 @@ export function BandDashboard() {
 
         {/* Quick Actions Footer */}
         <motion.div variants={panelFade} className="mt-6">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <QuickActionCard
               href="/calendar"
               icon={<Calendar className="w-5 h-5" />}

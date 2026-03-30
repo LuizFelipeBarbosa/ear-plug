@@ -141,7 +141,7 @@ export function BandAnalyticsView() {
         <section>
           <motion.div
             variants={ANIMATION_VARIANTS.item}
-            className="flex items-center justify-between mb-3"
+            className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between"
           >
             <h2 className="text-sm font-semibold text-foreground">
               Performance Overview
@@ -206,7 +206,7 @@ export function BandAnalyticsView() {
         <motion.section variants={ANIMATION_VARIANTS.item}>
           <div className="bg-card border border-border rounded-2xl overflow-hidden">
             <div className="p-4 border-b border-border/50">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-lg bg-band/10 flex items-center justify-center">
                     <TrendingUp className="w-4 h-4 text-band" />
@@ -220,7 +220,7 @@ export function BandAnalyticsView() {
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 text-xs">
+                <div className="flex flex-wrap items-center gap-3 text-xs">
                   <span className="flex items-center gap-1.5">
                     <span
                       className="w-2.5 h-2.5 rounded-sm"
