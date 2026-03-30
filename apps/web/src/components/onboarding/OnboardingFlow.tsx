@@ -4,6 +4,42 @@ import { SignIn, SignUp, useAuth } from "@clerk/nextjs";
 import { ArrowRight, Headphones } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+const AUTH_APPEARANCE = {
+  variables: { colorPrimary: "#7c3aed" },
+  elements: {
+    rootBox: "w-full",
+    cardBox: "w-full",
+    card: "w-full shadow-none bg-transparent",
+    main: "w-full",
+    headerTitle: "text-zinc-50",
+    headerSubtitle: "text-zinc-100/90",
+    form: "w-full",
+    formContainer: "w-full",
+    formFieldRow: "w-full",
+    formFieldLabel: "text-zinc-100",
+    formFieldInput:
+      "w-full min-w-0 flex-1 basis-0 bg-white/30 border-white/40 text-zinc-50 placeholder:text-zinc-200 focus:border-zinc-100",
+    formFieldInputGroup: "flex w-full min-w-0 items-stretch",
+    formInputGroup: "flex w-full min-w-0 items-stretch",
+    phoneInputBox: "flex w-full min-w-0 flex-1 items-stretch",
+    formButtonPrimary:
+      "bg-zinc-50 text-zinc-900 font-medium hover:bg-zinc-200",
+    socialButtons: "w-full",
+    socialButtonsBlockButton:
+      "bg-white/30 border-white/40 text-zinc-50 hover:bg-white/40",
+    footerActionLink: "text-zinc-50 hover:text-zinc-200",
+    dividerLine: "bg-white/30",
+    dividerText: "text-zinc-200",
+    identityPreview: "bg-white/20 border-white/30",
+    identityPreviewText: "text-zinc-50",
+    identityPreviewEditButton: "text-zinc-50",
+    formFieldSuccessText: "text-green-200",
+    formFieldErrorText: "text-red-200",
+    alert: "bg-red-500/20 border-red-200/40 text-red-100",
+    alertText: "text-red-100",
+  },
+} as const;
+
 export function OnboardingFlow({ overlay }: { overlay?: ReactNode }) {
   const { isSignedIn } = useAuth();
   const [authMode, setAuthMode] = useState<"sign-in" | "sign-up">("sign-up");
@@ -114,62 +150,12 @@ function AuthCard({
         {mode === "sign-up" ? (
           <SignUp
             routing="hash"
-            appearance={{
-              variables: { colorPrimary: "#7c3aed" },
-              elements: {
-                rootBox: "w-full",
-                card: "shadow-none bg-transparent",
-                headerTitle: "text-zinc-50",
-                headerSubtitle: "text-zinc-100/90",
-                formFieldLabel: "text-zinc-100",
-                formFieldInput:
-                  "bg-white/30 border-white/40 text-zinc-50 placeholder:text-zinc-200 focus:border-zinc-100",
-                formButtonPrimary:
-                  "bg-zinc-50 text-zinc-900 font-medium hover:bg-zinc-200",
-                socialButtonsBlockButton:
-                  "bg-white/30 border-white/40 text-zinc-50 hover:bg-white/40",
-                footerActionLink: "text-zinc-50 hover:text-zinc-200",
-                dividerLine: "bg-white/30",
-                dividerText: "text-zinc-200",
-                identityPreview: "bg-white/20 border-white/30",
-                identityPreviewText: "text-zinc-50",
-                identityPreviewEditButton: "text-zinc-50",
-                formFieldSuccessText: "text-green-200",
-                formFieldErrorText: "text-red-200",
-                alert: "bg-red-500/20 border-red-200/40 text-red-100",
-                alertText: "text-red-100",
-              },
-            }}
+            appearance={AUTH_APPEARANCE}
           />
         ) : (
           <SignIn
             routing="hash"
-            appearance={{
-              variables: { colorPrimary: "#7c3aed" },
-              elements: {
-                rootBox: "w-full",
-                card: "shadow-none bg-transparent",
-                headerTitle: "text-zinc-50",
-                headerSubtitle: "text-zinc-100/90",
-                formFieldLabel: "text-zinc-100",
-                formFieldInput:
-                  "bg-white/30 border-white/40 text-zinc-50 placeholder:text-zinc-200 focus:border-zinc-100",
-                formButtonPrimary:
-                  "bg-zinc-50 text-zinc-900 font-medium hover:bg-zinc-200",
-                socialButtonsBlockButton:
-                  "bg-white/30 border-white/40 text-zinc-50 hover:bg-white/40",
-                footerActionLink: "text-zinc-50 hover:text-zinc-200",
-                dividerLine: "bg-white/30",
-                dividerText: "text-zinc-200",
-                identityPreview: "bg-white/20 border-white/30",
-                identityPreviewText: "text-zinc-50",
-                identityPreviewEditButton: "text-zinc-50",
-                formFieldSuccessText: "text-green-200",
-                formFieldErrorText: "text-red-200",
-                alert: "bg-red-500/20 border-red-200/40 text-red-100",
-                alertText: "text-red-100",
-              },
-            }}
+            appearance={AUTH_APPEARANCE}
           />
         )}{" "}
       </div>{" "}
