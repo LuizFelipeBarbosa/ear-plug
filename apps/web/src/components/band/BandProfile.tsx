@@ -36,6 +36,7 @@ import { EditBandProfileModal } from "@/components/band/EditBandProfileModal";
 import { BandMediaSlotsSection } from "@/components/band/slots/BandMediaSlotsSection";
 import { PastShowFlyerSection } from "@/components/events/PastShowFlyerSection";
 import { ProfileWorkspaceSwitcher } from "@/components/profile/ProfileWorkspaceSwitcher";
+import { MobileTabRail } from "@/components/ui/MobileTabRail";
 import { AvatarImage } from "@/components/ui/OptimizedImage";
 import { GENRE_COLORS } from "@ear-plug/shared/constants";
 import { getInitials } from "@ear-plug/shared/utils";
@@ -424,10 +425,12 @@ export function BandProfileView() {
 
           {/* Quick Stats Row */}
           {stats && (
-            <div className="grid grid-cols-3 gap-3 mt-5 pt-4 border-t border-border/50">
+            <div className="mt-5 grid grid-cols-2 gap-3 border-t border-border/50 pt-4 sm:grid-cols-3">
               <QuickStat icon={Calendar} value={stats.showsThisMonth} label="This Month" />
               <QuickStat icon={Heart} value={stats.newFans} label="Followers" />
-              <QuickStat icon={Ticket} value={stats.totalRsvps} label="Total RSVPs" />
+              <div className="col-span-2 sm:col-span-1">
+                <QuickStat icon={Ticket} value={stats.totalRsvps} label="Total RSVPs" />
+              </div>
             </div>
           )}
         </motion.div>
@@ -435,34 +438,18 @@ export function BandProfileView() {
 
       {/* Tab Navigation */}
       <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-xl border-b border-border">
-        <div className="flex items-center px-4">
-          {[
-            { id: "overview" as const, label: "Overview", icon: Sparkles },
-            { id: "media" as const, label: "Media", icon: ImageIcon },
-            { id: "shows" as const, label: "Shows", icon: Calendar },
-            { id: "settings" as const, label: "Settings", icon: Settings },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={cn(
-                "relative flex items-center gap-1.5 px-4 py-3 text-sm font-medium transition-colors touch-target-sm",
-                activeTab === tab.id ? "text-band" : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <tab.icon className="w-4 h-4" />
-              <span className="hidden sm:inline">{tab.label}</span>
-              <span className="sm:hidden">{tab.label.slice(0, 4)}</span>
-              {activeTab === tab.id && (
-                <motion.div
-                  layoutId="activeBandTabIndicator"
-                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-band rounded-full"
-                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                />
-              )}
-            </button>
-          ))}
-        </div>
+        <MobileTabRail
+          items={[
+            { id: "overview", label: "Overview", icon: Sparkles },
+            { id: "media", label: "Media", icon: ImageIcon },
+            { id: "shows", label: "Shows", icon: Calendar },
+            { id: "settings", label: "Settings", icon: Settings },
+          ]}
+          activeTab={activeTab}
+          onChange={(tabId) => setActiveTab(tabId as TabType)}
+          layoutId="activeBandTabIndicator"
+          tone="band"
+        />
       </div>
 
       {/* Tab Content */}
@@ -519,7 +506,7 @@ export function BandProfileView() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="absolute right-0 top-0 h-full w-full max-w-md bg-card border-l border-border overflow-y-auto"
+              className="absolute right-0 top-0 h-full w-full max-w-md overflow-y-auto border-l border-border bg-card safe-area-inset-bottom"
             >
               {/* Panel Header */}
               <div className="sticky top-0 z-10 bg-card/95 backdrop-blur-xl border-b border-border p-4 flex items-center justify-between">
@@ -538,7 +525,7 @@ export function BandProfileView() {
                 </motion.button>
               </div>
 
-              <div className="p-4 space-y-6">
+              <div className="space-y-6 p-4 pb-6">
                 {/* Members Section */}
                 <section>
                   <h4 className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
@@ -559,7 +546,7 @@ export function BandProfileView() {
                       members.map((entry) => (
                         <div
                           key={entry.membership._id}
-                          className="flex items-center justify-between gap-3 p-3 bg-card border border-border rounded-xl"
+                          className="flex flex-col gap-3 rounded-xl border border-border bg-card p-3 sm:flex-row sm:items-center sm:justify-between"
                         >
                           <div className="flex items-center gap-3 min-w-0">
                             <AvatarImage
@@ -584,7 +571,7 @@ export function BandProfileView() {
                               </div>
                             </div>
                           </div>
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex flex-wrap items-center gap-1.5 sm:justify-end">
                             {canManageMembers && entry.membership.role !== "owner" && (
                               <>
                                 <button
@@ -725,7 +712,7 @@ export function BandProfileView() {
                           )}
                         </div>
 
-                        <div className="flex gap-2">
+                        <div className="flex flex-col gap-2 sm:flex-row">
                           <select
                             value={inviteRole}
                             onChange={(event) => setInviteRole(event.target.value as "admin" | "member")}
@@ -798,7 +785,7 @@ export function BandProfileView() {
                           {invites.map((invite) => (
                             <div
                               key={invite._id}
-                              className="flex items-center justify-between p-2.5 bg-card border border-border rounded-xl"
+                              className="flex flex-col gap-2 rounded-xl border border-border bg-card p-2.5 sm:flex-row sm:items-center sm:justify-between"
                             >
                               <div className="flex items-center gap-2 min-w-0">
                                 <AvatarImage

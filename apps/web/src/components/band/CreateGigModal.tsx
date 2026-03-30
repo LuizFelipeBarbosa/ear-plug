@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   X,
   Check,
@@ -25,7 +25,7 @@ import {
   parseGigFormNumbers,
   validateGigForm,
 } from "@/components/band/GigFormShared";
-import { fadeFast, presenceSyncNoInitial } from "@/lib/motion/presets";
+import { GigModalShell } from "@/components/band/GigModalShell";
 import { api } from "../../../../../convex/_generated/api";
 import type { EventStatus } from "@ear-plug/shared/types";
 
@@ -206,68 +206,59 @@ export function CreateGigModal({
   };
 
   return (
-    <AnimatePresence {...presenceSyncNoInitial}>
-      {isOpen ? (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-6">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={fadeFast}
-            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-            onClick={handleClose}
-          />
-
-          <motion.div
-            initial={{ y: "6%", opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: "6%", opacity: 0 }}
-            transition={{ duration: 0.16, ease: [0.25, 0.1, 0.25, 1] }}
-            className="relative w-full max-w-lg max-h-[90vh] bg-card border border-border sm:rounded-3xl rounded-t-3xl overflow-hidden shadow-2xl flex flex-col"
-          >
-        {/* Header */}
-        <div className="sticky top-0 z-10 bg-card/95 backdrop-blur-xl border-b border-border p-4">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
+    <GigModalShell
+      isOpen={isOpen}
+      onClose={handleClose}
+      closeDisabled={isSubmitting}
+      labelledBy="create-gig-modal-title"
+    >
+      <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+        <div className="border-b border-border bg-card/95 px-4 pt-4 backdrop-blur-xl">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex min-w-0 items-start gap-3">
               <div
                 className={cn(
-                  "w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 border-2",
+                  "flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border-2 sm:h-12 sm:w-12",
                   isTentative
-                    ? "bg-amber-500/10 border-amber-500/40 text-amber-500"
-                    : "bg-emerald-500/10 border-emerald-500/40 text-emerald-500"
+                    ? "border-amber-500/40 bg-amber-500/10 text-amber-500"
+                    : "border-emerald-500/40 bg-emerald-500/10 text-emerald-500",
                 )}
               >
                 {isTentative ? (
-                  <Clock3 className="w-6 h-6" />
+                  <Clock3 className="w-5 h-5 sm:w-6 sm:h-6" />
                 ) : (
-                  <Check className="w-6 h-6" />
+                  <Check className="w-5 h-5 sm:w-6 sm:h-6" />
                 )}
               </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-bold text-foreground">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2
+                    id="create-gig-modal-title"
+                    className="text-base font-bold text-foreground sm:text-lg"
+                  >
                     {isTentative ? "Create Tentative Gig" : "Create Confirmed Gig"}
                   </h2>
                   <span
                     className={cn(
-                      "px-2 py-0.5 text-[10px] font-bold rounded-full border",
+                      "rounded-full border px-2 py-0.5 text-[10px] font-bold",
                       isTentative
-                        ? "bg-amber-500/10 text-amber-600 border-amber-500/40"
-                        : "bg-emerald-500/10 text-emerald-600 border-emerald-500/40"
+                        ? "border-amber-500/40 bg-amber-500/10 text-amber-600"
+                        : "border-emerald-500/40 bg-emerald-500/10 text-emerald-600",
                     )}
                   >
                     {isTentative ? "Draft" : "Published"}
                   </span>
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <p className="mt-1 text-xs text-muted-foreground">
                   Add a new show for {bandName}
                 </p>
               </div>
             </div>
             <button
+              type="button"
               onClick={handleClose}
               disabled={isSubmitting}
-              className="p-2 bg-muted border border-border rounded-xl text-muted-foreground hover:text-foreground transition-colors"
+              className="shrink-0 rounded-xl border border-border bg-muted p-2 text-muted-foreground transition-colors hover:text-foreground"
             >
               <X className="w-5 h-5" />
             </button>
@@ -276,155 +267,162 @@ export function CreateGigModal({
           <GigModalTabs activeTab={activeTab} onChange={setActiveTab} />
         </div>
 
-        {/* Content */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 space-y-4">
-          {submitError && (
-            <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-sm flex items-start gap-2">
-              <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-              <span>{submitError}</span>
-            </div>
-          )}
+        <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-24 pt-4 sm:pb-8">
+          <div className="space-y-4">
+            {submitError && (
+              <div className="flex items-start gap-2 rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-500">
+                <AlertCircle className="mt-0.5 w-4 h-4 flex-shrink-0" />
+                <span>{submitError}</span>
+              </div>
+            )}
 
-          {activeTab === "details" && (
-            <GigDetailsSection
-              formData={formData}
-              errors={errors}
-              venue={venue}
-              coverImage={coverImage}
-              isDragging={isDragging}
-              setIsDragging={setIsDragging}
-              fileInputRef={fileInputRef}
-              onImageSelect={handleImageSelect}
-              onRemoveImage={removeImage}
-              onUpdateField={updateField}
-              onVenueChange={setVenue}
-              onGenresChange={(genres) =>
-                setFormData((prev) => ({ ...prev, genres }))
-              }
-              clearError={clearFieldError}
-            />
-          )}
+            {activeTab === "details" && (
+              <GigDetailsSection
+                formData={formData}
+                errors={errors}
+                venue={venue}
+                coverImage={coverImage}
+                isDragging={isDragging}
+                setIsDragging={setIsDragging}
+                fileInputRef={fileInputRef}
+                onImageSelect={handleImageSelect}
+                onRemoveImage={removeImage}
+                onUpdateField={updateField}
+                onVenueChange={setVenue}
+                onGenresChange={(genres) =>
+                  setFormData((prev) => ({ ...prev, genres }))
+                }
+                clearError={clearFieldError}
+              />
+            )}
 
-          {/* Lineup Tab */}
-          {activeTab === "lineup" && (
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="space-y-4"
-            >
-              {/* Current Lineup */}
-              <div>
-                <h3 className="text-sm font-semibold text-muted-foreground mb-3">Current Lineup</h3>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between p-3 bg-band/10 border border-band/30 rounded-xl">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-band/20 rounded-lg flex items-center justify-center">
-                        <Music className="w-5 h-5 text-band" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-foreground">{bandName}</p>
-                        <p className="text-xs text-band">Host Band</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {selectedCohostBands.map((band) => (
-                    <div
-                      key={band._id}
-                      className="flex items-center justify-between p-3 bg-card border border-border rounded-xl"
-                    >
+            {activeTab === "lineup" && (
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="space-y-4"
+              >
+                <div>
+                  <h3 className="mb-3 text-sm font-semibold text-muted-foreground">
+                    Current Lineup
+                  </h3>
+                  <div className="space-y-2">
+                    <div className="rounded-xl border border-band/30 bg-band/10 p-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center">
-                          <Music className="w-5 h-5 text-muted-foreground" />
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-band/20">
+                          <Music className="w-5 h-5 text-band" />
                         </div>
                         <div>
-                          <p className="font-medium text-foreground">{band.name}</p>
-                          <p className="text-xs text-muted-foreground">Co-host</p>
+                          <p className="font-medium text-foreground">{bandName}</p>
+                          <p className="text-xs text-band">Host Band</p>
                         </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setSelectedCohostBandIds((prev) => prev.filter((id) => id !== band._id))
-                        }
-                        className="px-3 py-1.5 text-xs text-red-500 bg-red-500/10 rounded-lg hover:bg-red-500/20 transition-colors"
+                    </div>
+
+                    {selectedCohostBands.map((band) => (
+                      <div
+                        key={band._id}
+                        className="flex flex-col gap-3 rounded-xl border border-border bg-card p-3 sm:flex-row sm:items-center sm:justify-between"
                       >
-                        Remove
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Add Co-host */}
-              <div>
-                <h3 className="text-sm font-semibold text-muted-foreground mb-3">Invite Co-host</h3>
-                <div className="space-y-2">
-                  <input
-                    type="text"
-                    value={cohostSearch}
-                    onChange={(e) => setCohostSearch(e.target.value)}
-                    placeholder="Search bands..."
-                    className="w-full px-4 py-3 bg-muted border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-band"
-                  />
-                  {cohostResults.length > 0 && (
-                    <div className="border border-border rounded-xl overflow-hidden">
-                      {cohostResults.map((band) => (
-                        <button
-                          key={band._id}
-                          type="button"
-                          onClick={() => {
-                            setSelectedCohostBandIds((prev) => [...prev, band._id]);
-                            setCohostSearch("");
-                          }}
-                          className="w-full flex items-center justify-between p-3 hover:bg-muted transition-colors border-b border-border last:border-b-0"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-muted rounded-lg flex items-center justify-center">
-                              <Music className="w-4 h-4 text-muted-foreground" />
-                            </div>
-                            <span className="font-medium text-foreground">{band.name}</span>
+                        <div className="flex min-w-0 items-center gap-3">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted">
+                            <Music className="w-5 h-5 text-muted-foreground" />
                           </div>
-                          <span className="text-xs text-band flex items-center gap-1">
-                            <UserPlus className="w-3 h-3" />
-                            Invite
-                          </span>
+                          <div className="min-w-0">
+                            <p className="truncate font-medium text-foreground">{band.name}</p>
+                            <p className="text-xs text-muted-foreground">Co-host</p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setSelectedCohostBandIds((prev) =>
+                              prev.filter((id) => id !== band._id),
+                            )
+                          }
+                          className="w-full rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-500 transition-colors hover:bg-red-500/20 sm:w-auto"
+                        >
+                          Remove
                         </button>
-                      ))}
-                    </div>
-                  )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            </motion.div>
-          )}
 
-          {activeTab === "settings" && (
-            <GigSettingsSection
-              formData={formData}
-              onStatusChange={(status) =>
-                setFormData((prev) => ({ ...prev, status }))
-              }
-              onAddressVisibilityChange={(addressVisibility) =>
-                setFormData((prev) => ({ ...prev, addressVisibility }))
-              }
-            />
-          )}
+                <div>
+                  <h3 className="mb-3 text-sm font-semibold text-muted-foreground">
+                    Invite Co-host
+                  </h3>
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      value={cohostSearch}
+                      onChange={(e) => setCohostSearch(e.target.value)}
+                      placeholder="Search bands..."
+                      className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground placeholder:text-muted-foreground focus:border-band focus:outline-none"
+                    />
+                    {cohostResults.length > 0 && (
+                      <div className="overflow-hidden rounded-xl border border-border">
+                        {cohostResults.map((band) => (
+                          <button
+                            key={band._id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedCohostBandIds((prev) => [...prev, band._id]);
+                              setCohostSearch("");
+                            }}
+                            className="flex w-full flex-wrap items-center justify-between gap-3 border-b border-border p-3 text-left transition-colors hover:bg-muted last:border-b-0"
+                          >
+                            <div className="flex min-w-0 items-center gap-3">
+                              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted">
+                                <Music className="w-4 h-4 text-muted-foreground" />
+                              </div>
+                              <span className="truncate font-medium text-foreground">
+                                {band.name}
+                              </span>
+                            </div>
+                            <span className="flex shrink-0 items-center gap-1 text-xs text-band">
+                              <UserPlus className="w-3 h-3" />
+                              Invite
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            )}
 
-          {/* Footer Actions */}
-          <div className="sticky bottom-0 bg-card pt-2 pb-4 border-t border-border flex gap-3">
+            {activeTab === "settings" && (
+              <GigSettingsSection
+                formData={formData}
+                onStatusChange={(status) =>
+                  setFormData((prev) => ({ ...prev, status }))
+                }
+                onAddressVisibilityChange={(addressVisibility) =>
+                  setFormData((prev) => ({ ...prev, addressVisibility }))
+                }
+              />
+            )}
+          </div>
+        </div>
+
+        <div className="safe-area-inset-bottom border-t border-border bg-card/95 px-4 pb-4 pt-3 backdrop-blur-xl">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <button
               type="button"
               onClick={handleClose}
               disabled={isSubmitting}
-              className="flex-1 py-3 bg-muted text-foreground font-medium rounded-xl hover:bg-muted/80 transition-colors"
+              className="w-full rounded-xl bg-muted py-3 font-medium text-foreground transition-colors hover:bg-muted/80"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex-1 py-3 bg-band text-white font-medium rounded-xl hover:bg-band/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-band py-3 font-medium text-white transition-colors hover:bg-band/90 disabled:opacity-50"
             >
               {isSubmitting ? (
                 <>
@@ -436,10 +434,8 @@ export function CreateGigModal({
               )}
             </button>
           </div>
-        </form>
-          </motion.div>
         </div>
-      ) : null}
-    </AnimatePresence>
+      </form>
+    </GigModalShell>
   );
 }

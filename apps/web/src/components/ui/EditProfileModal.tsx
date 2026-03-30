@@ -4,11 +4,12 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { X, Camera, Check, User, Music, Sparkles, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { fadeFast, panelFade, presenceSyncNoInitial } from "@/lib/motion/presets";
+import { panelFade } from "@/lib/motion/presets";
 import { GENRES, GENRE_COLORS } from "@ear-plug/shared/constants";
 import type { Genre } from "@ear-plug/shared/types";
 import Image from "next/image";
 import { CityAutocomplete } from "@/components/ui/CityAutocomplete";
+import { ResponsiveSheetModal } from "@/components/ui/ResponsiveSheetModal";
 
 interface EditProfileModalProps {
   isOpen: boolean;
@@ -92,17 +93,6 @@ export function EditProfileModal({
       }
     };
   }, []);
-
-  // Handle escape key
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isOpen) {
-        onClose();
-      }
-    };
-    window.addEventListener("keydown", handleEscape);
-    return () => window.removeEventListener("keydown", handleEscape);
-  }, [isOpen, onClose]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -190,54 +180,44 @@ export function EditProfileModal({
   const canSelectMoreGenres = selectedGenresCount < 5;
 
   return (
-    <AnimatePresence {...presenceSyncNoInitial}>
-      {isOpen ? (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
-          {/* Backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={fadeFast}
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={onClose}
-          />
-
-          {/* Modal */}
-          <motion.div
-            variants={panelFade}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            className="relative w-full max-w-lg mx-4 bg-card border border-border rounded-t-3xl sm:rounded-3xl max-h-[90vh] overflow-hidden shadow-2xl"
-          >
-            {/* Header */}
-            <div className="sticky top-0 z-10 bg-card/95 backdrop-blur-xl border-b border-border px-5 py-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-fan/10 border border-fan/20 rounded-xl flex items-center justify-center">
-                  <Sparkles className="w-5 h-5 text-fan" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold text-foreground">Edit Profile</h2>
-                  <p className="text-xs text-muted-foreground">
-                    Update your personal information
-                  </p>
-                </div>
-                </div>
-              <button
-
-                onClick={onClose}
-                className="p-2.5 hover:bg-muted border border-border hover:border-fan/30 rounded-xl transition-colors touch-target"
-              >
-                <X className="w-5 h-5 text-muted-foreground" />
-              </button>
+    <ResponsiveSheetModal
+      isOpen={isOpen}
+      onClose={onClose}
+      closeDisabled={isSaving}
+      labelledBy="edit-profile-modal-title"
+    >
+      <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+        <div className="border-b border-border bg-card/95 px-4 py-4 backdrop-blur-xl sm:px-5">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-fan/20 bg-fan/10">
+                <Sparkles className="w-5 h-5 text-fan" />
+              </div>
+              <div className="min-w-0">
+                <h2
+                  id="edit-profile-modal-title"
+                  className="text-base font-bold text-foreground sm:text-lg"
+                >
+                  Edit Profile
+                </h2>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Update your personal information
+                </p>
+              </div>
             </div>
-
-            {/* Form */}
-            <form
-              onSubmit={handleSubmit}
-              className="p-5 space-y-6 overflow-y-auto max-h-[calc(90vh-80px)]"
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSaving}
+              className="touch-target shrink-0 rounded-xl border border-border bg-muted p-2 text-muted-foreground transition-colors hover:text-foreground"
             >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-24 pt-4 sm:px-5 sm:pb-8">
+          <div className="space-y-6">
               {/* Avatar Section */}
               <div className="flex flex-col items-center">
                 <div className="relative">
@@ -400,56 +380,55 @@ export function EditProfileModal({
                   </p>
                 )}
               </div>
+            </div>
+          </div>
 
-              {/* Error Message */}
-              <AnimatePresence>
-                {error && (
-                  <motion.div
-                    variants={panelFade}
-                    initial="hidden"
-                    animate="visible"
-                    exit="exit"
-                    className="p-4 bg-red-500/5 border border-red-500/20 rounded-xl"
-                  >
-                    <p className="text-sm text-red-500 text-center">{error}</p>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+        <div className="safe-area-inset-bottom border-t border-border bg-card/95 px-4 pb-4 pt-3 backdrop-blur-xl sm:px-5">
+          <AnimatePresence>
+            {error ? (
+              <motion.div
+                variants={panelFade}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                className="mb-3 rounded-xl border border-red-500/20 bg-red-500/5 p-4"
+              >
+                <p className="text-center text-sm text-red-500">{error}</p>
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
 
-              {/* Actions */}
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={onClose}
-
-                  className="flex-1 py-3.5 px-4 bg-muted border border-border text-muted-foreground font-medium rounded-xl hover:bg-muted/80 transition-colors touch-target"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSaving}
-                  className={cn(
-                    "flex-1 py-3.5 px-4 bg-fan text-white font-medium rounded-xl transition-colors transition-shadow touch-target flex items-center justify-center gap-2",
-                    isSaving
-                      ? "opacity-70 cursor-not-allowed"
-                      : "hover:bg-fan/90 shadow-lg shadow-fan/25"
-                  )}
-                >
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    "Save Changes"
-                  )}
-                </button>
-              </div>
-            </form>
-          </motion.div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSaving}
+              className="touch-target w-full rounded-xl border border-border bg-muted px-4 py-3.5 font-medium text-muted-foreground transition-colors hover:bg-muted/80"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSaving}
+              className={cn(
+                "touch-target flex w-full items-center justify-center gap-2 rounded-xl bg-fan px-4 py-3.5 font-medium text-white transition-colors transition-shadow",
+                isSaving
+                  ? "cursor-not-allowed opacity-70"
+                  : "shadow-lg shadow-fan/25 hover:bg-fan/90"
+              )}
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save Changes"
+              )}
+            </button>
+          </div>
         </div>
-      ) : null}
-    </AnimatePresence>
+      </form>
+    </ResponsiveSheetModal>
   );
 }

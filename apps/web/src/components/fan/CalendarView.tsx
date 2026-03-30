@@ -16,6 +16,7 @@ import {
 import { useQuery } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import { EventCard } from "@/components/events/EventCard";
+import { MobileTabRail } from "@/components/ui/MobileTabRail";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { panelFade, presenceSyncNoInitial } from "@/lib/motion/presets";
@@ -129,14 +130,15 @@ export function FanCalendarView() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1, duration: 0.3 }}
-          className="grid grid-cols-3 gap-3 mt-5"
+          className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3"
         >
-          {tabs.map((tab) => (
+          {tabs.map((tab, index) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={cn(
-                "flex flex-col items-center p-3 rounded-xl border transition-colors",
+                "flex flex-col items-center rounded-xl border p-3 transition-colors",
+                index === tabs.length - 1 ? "col-span-2 sm:col-span-1" : "",
                 activeTab === tab.id
                   ? "bg-fan/10 border-fan/30 text-fan"
                   : "bg-card border-border text-muted-foreground hover:border-fan/20"
@@ -213,7 +215,7 @@ export function FanCalendarView() {
                   </div>
 
                   {/* Arrow */}
-                  <ChevronRight className="w-5 h-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                  <ChevronRight className="w-5 h-5 text-muted-foreground opacity-100 transition-opacity flex-shrink-0 sm:opacity-0 sm:group-hover:opacity-100" />
                 </div>
               </div>
             </Link>
@@ -223,43 +225,13 @@ export function FanCalendarView() {
 
       {/* Tab Navigation */}
       <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-xl border-b border-border">
-        <div className="flex items-center px-4">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={cn(
-                "relative flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors touch-target-sm",
-                activeTab === tab.id
-                  ? "text-fan"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <tab.icon className="w-4 h-4" />
-              <span className="hidden sm:inline">{tab.label}</span>
-              <span className="sm:hidden">{tab.label.slice(0, 4)}</span>
-              {tab.count > 0 && (
-                <span
-                  className={cn(
-                    "text-[10px] px-1.5 py-0.5 rounded-full font-semibold",
-                    activeTab === tab.id
-                      ? "bg-fan/20 text-fan"
-                      : "bg-muted text-muted-foreground"
-                  )}
-                >
-                  {tab.count}
-                </span>
-              )}
-              {activeTab === tab.id && (
-                <motion.div
-                  layoutId="calendarActiveTab"
-                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-fan rounded-full"
-                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                />
-              )}
-            </button>
-          ))}
-        </div>
+        <MobileTabRail
+          items={tabs}
+          activeTab={activeTab}
+          onChange={(tabId) => setActiveTab(tabId as EventTab)}
+          layoutId="calendarActiveTab"
+          tone="fan"
+        />
       </div>
 
       {/* Events List */}

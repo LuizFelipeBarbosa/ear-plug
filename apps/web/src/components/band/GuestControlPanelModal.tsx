@@ -5,6 +5,7 @@ import Link from "next/link";
 import { X, Search, Users, Clock, Check, Trash2, Crown, UserCheck, ChevronRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AvatarImage } from "@/components/ui/OptimizedImage";
+import { ResponsiveSheetModal } from "@/components/ui/ResponsiveSheetModal";
 import { cn } from "@/lib/utils";
 import { useEventGuestList } from "@/hooks/useEvents";
 import type { GuestFilterType } from "@ear-plug/shared/types";
@@ -119,32 +120,20 @@ export function GuestControlPanelModal({
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center sm:p-6">
-      {/* Backdrop */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-        onClick={onClose}
-      />
-
-      {/* Modal */}
-      <motion.div
-        initial={{ y: "100%", opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        exit={{ y: "100%", opacity: 0 }}
-        transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        className="relative w-full max-w-2xl max-h-[90vh] sm:max-h-[85vh] bg-card border border-border sm:rounded-3xl rounded-t-3xl overflow-hidden shadow-2xl"
-      >
-        {/* Header */}
-        <div className="sticky top-0 z-10 bg-card/95 backdrop-blur-xl border-b border-border p-4">
+    <ResponsiveSheetModal
+      isOpen={isOpen}
+      onClose={onClose}
+      labelledBy="guest-control-panel-title"
+      panelClassName="sm:max-w-2xl"
+    >
+      <div className="border-b border-border bg-card/95 p-4 backdrop-blur-xl">
           <div className="flex items-start justify-between gap-4">
-            <div>
-              <h2 className="text-lg font-bold text-foreground">
+            <div className="min-w-0">
+              <h2
+                id="guest-control-panel-title"
+                className="text-lg font-bold text-foreground"
+              >
                 Guest List
               </h2>
               <p className="text-sm text-muted-foreground mt-0.5 line-clamp-1">
@@ -154,23 +143,23 @@ export function GuestControlPanelModal({
             <button
               type="button"
               onClick={onClose}
-              className="p-2 bg-muted border border-border rounded-xl text-muted-foreground hover:text-foreground hover:border-band/30 transition-colors"
+              className="touch-target rounded-xl border border-border bg-muted p-2 text-muted-foreground transition-colors hover:text-foreground hover:border-band/30"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-3 gap-2 mt-4">
-            <div className="bg-muted/50 rounded-xl p-3 text-center">
+          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <div className="rounded-xl bg-muted/50 p-3 text-center">
               <p className="text-lg font-bold text-foreground">{stats.total}</p>
               <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Total</p>
             </div>
-            <div className="bg-muted/50 rounded-xl p-3 text-center">
+            <div className="rounded-xl bg-muted/50 p-3 text-center">
               <p className="text-lg font-bold text-band">{stats.onList}</p>
               <p className="text-[10px] text-muted-foreground uppercase tracking-wide">On List</p>
             </div>
-            <div className="bg-success/10 rounded-xl p-3 text-center border border-success/20">
+            <div className="col-span-2 rounded-xl border border-success/20 bg-success/10 p-3 text-center sm:col-span-1">
               <p className="text-lg font-bold text-success">{stats.attended}</p>
               <p className="text-[10px] text-success uppercase tracking-wide">Checked In</p>
             </div>
@@ -178,7 +167,7 @@ export function GuestControlPanelModal({
         </div>
 
         {/* Search & Filters */}
-        <div className="p-4 border-b border-border space-y-3">
+        <div className="border-b border-border p-4 space-y-3">
           {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -253,7 +242,7 @@ export function GuestControlPanelModal({
         </div>
 
         {/* Guest List */}
-        <div className="overflow-y-auto max-h-[50vh] p-2">
+        <div className="flex-1 overflow-y-auto overscroll-contain p-2 sm:p-3">
           {isLoading ? (
             <div className="space-y-2 p-2">
               {[1, 2, 3, 4].map((row) => (
@@ -290,57 +279,57 @@ export function GuestControlPanelModal({
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, x: -100 }}
                       className={cn(
-                        "p-3 flex items-center gap-3 rounded-xl transition-colors",
+                        "rounded-xl p-3 transition-colors",
                         guest.rsvpType === "attended"
                           ? "bg-success/5 border border-success/20"
                           : "bg-card border border-border"
                       )}
                     >
-                      {/* Avatar */}
-                      <Link
-                        href={`/fans/${guest.userId}`}
-                        className="flex-shrink-0"
-                      >
-                        <div className="relative">
-                          <AvatarImage
-                            src={guest.avatar}
-                            alt={guest.name}
-                            fallbackText={guest.name}
-                            size={44}
-                            className={cn(
-                              "border-2 rounded-xl",
-                              guest.rsvpType === "attended"
-                                ? "border-success"
-                                : "border-border"
-                            )}
-                          />
-                          {guest.rsvpType === "attended" && (
-                            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-success rounded-full border-2 border-card flex items-center justify-center">
-                              <Check className="w-2.5 h-2.5 text-white" />
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex min-w-0 items-start gap-3">
+                          <Link
+                            href={`/fans/${guest.userId}`}
+                            className="flex-shrink-0"
+                          >
+                            <div className="relative">
+                              <AvatarImage
+                                src={guest.avatar}
+                                alt={guest.name}
+                                fallbackText={guest.name}
+                                size={44}
+                                className={cn(
+                                  "rounded-xl border-2",
+                                  guest.rsvpType === "attended"
+                                    ? "border-success"
+                                    : "border-border"
+                                )}
+                              />
+                              {guest.rsvpType === "attended" ? (
+                                <div className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full border-2 border-card bg-success">
+                                  <Check className="w-2.5 h-2.5 text-white" />
+                                </div>
+                              ) : null}
                             </div>
-                          )}
-                        </div>
-                      </Link>
+                          </Link>
 
-                      {/* Info */}
-                      <Link
-                        href={`/fans/${guest.userId}`}
-                        className="flex-1 min-w-0"
-                      >
-                        <p className="font-medium text-foreground text-sm truncate">
-                          {guest.name}
-                        </p>
-                        <div className="flex items-center gap-2 mt-0.5 text-[11px] text-muted-foreground">
-                          <Clock className="w-3 h-3" />
-                          <span>RSVP&apos;d {formatGuestDate(guest.rsvpedAt)}</span>
+                          <Link
+                            href={`/fans/${guest.userId}`}
+                            className="min-w-0 flex-1"
+                          >
+                            <p className="truncate text-sm font-medium text-foreground">
+                              {guest.name}
+                            </p>
+                            <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                              <Clock className="w-3 h-3" />
+                              <span>RSVP&apos;d {formatGuestDate(guest.rsvpedAt)}</span>
+                            </div>
+                          </Link>
                         </div>
-                      </Link>
 
-                      {/* Status & Actions */}
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-col gap-2 sm:items-end">
                         <span
                           className={cn(
-                            "px-2 py-1 text-[10px] font-semibold rounded-lg",
+                            "w-fit rounded-lg px-2 py-1 text-[10px] font-semibold",
                             guest.rsvpType === "attended"
                               ? "bg-success/15 text-success"
                               : "bg-muted text-muted-foreground"
@@ -349,8 +338,8 @@ export function GuestControlPanelModal({
                           {guest.rsvpType === "attended" ? "Checked In" : "On List"}
                         </span>
 
-                        {canManage && (
-                          <div className="flex items-center gap-1">
+                          {canManage && (
+                          <div className="flex flex-wrap items-center gap-1">
                             <button
                               type="button"
                               disabled={isBusy}
@@ -385,6 +374,7 @@ export function GuestControlPanelModal({
                           </div>
                         )}
                       </div>
+                      </div>
                     </motion.div>
                   );
                 })}
@@ -392,7 +382,6 @@ export function GuestControlPanelModal({
             </div>
           )}
         </div>
-      </motion.div>
-    </div>
+    </ResponsiveSheetModal>
   );
 }

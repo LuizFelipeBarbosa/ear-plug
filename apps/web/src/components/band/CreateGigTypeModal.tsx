@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   CheckCircle2,
   HelpCircle,
@@ -11,7 +11,7 @@ import {
   CalendarClock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { fadeFast, panelFade, presenceSyncNoInitial } from "@/lib/motion/presets";
+import { GigModalShell } from "@/components/band/GigModalShell";
 
 interface CreateGigTypeModalProps {
   isOpen: boolean;
@@ -50,226 +50,187 @@ export function CreateGigTypeModal({
   onSelect,
 }: CreateGigTypeModalProps) {
   return (
-    <AnimatePresence {...presenceSyncNoInitial}>
-      {isOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
-          {/* Backdrop */}
-          <motion.button
-            type="button"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={fadeFast}
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={onClose}
-            aria-label="Close gig type chooser"
-          />
+    <GigModalShell
+      isOpen={isOpen}
+      onClose={onClose}
+      panelClassName="sm:max-w-md"
+      labelledBy="create-gig-type-modal-title"
+    >
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className="relative border-b border-border bg-gradient-to-br from-muted/50 to-muted px-4 py-4 sm:px-6 sm:py-5">
+          <div className="absolute top-0 right-0 h-32 w-32 translate-x-1/3 -translate-y-1/2 rounded-full bg-band/5 blur-3xl" />
 
-          {/* Modal */}
-          <motion.div
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            variants={panelFade}
-            className="relative w-full max-w-md bg-card border border-border shadow-2xl rounded-2xl overflow-hidden"
-          >
-            {/* Header */}
-            <div className="relative px-6 py-5 border-b border-border bg-gradient-to-br from-muted/50 to-muted">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-band/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
-
-              <div className="relative flex items-start justify-between">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className="w-8 h-8 rounded-lg bg-band/10 flex items-center justify-center">
-                      <Sparkles className="w-4 h-4 text-band" />
-                    </div>
-                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                      New Gig
-                    </span>
-                  </div>
-                  <h2 className="text-xl font-bold text-foreground">
-                    Create a Show
-                  </h2>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Choose how you want to start
-                  </p>
+          <div className="relative flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <div className="mb-1 flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-band/10">
+                  <Sparkles className="w-4 h-4 text-band" />
                 </div>
-
-                <motion.button
-                  type="button"
-
-                  onClick={onClose}
-                  className="p-2 hover:bg-muted border border-border hover:border-band/30 transition-colors rounded-xl"
-                >
-                  <X className="w-5 h-5 text-muted-foreground" />
-                </motion.button>
+                <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  New Gig
+                </span>
               </div>
-            </div>
-
-            {/* Options */}
-            <div className="p-6 space-y-4">
-              {/* Tentative Option */}
-              <motion.button
-                type="button"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.1 }}
-
-                onClick={() => onSelect("tentative")}
-                className={cn(
-                  "w-full text-left p-5 rounded-2xl border-2 transition-colors transition-shadow group relative overflow-hidden",
-                  "bg-card hover:shadow-lg",
-                  STATUS_COLORS.tentative.border,
-                  STATUS_COLORS.tentative.bgHover,
-                  "hover:border-amber-500/60",
-                )}
+              <h2
+                id="create-gig-type-modal-title"
+                className="text-lg font-bold text-foreground sm:text-xl"
               >
-                {/* Background gradient on hover */}
-                <div
-                  className={cn(
-                    "absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity",
-                    STATUS_COLORS.tentative.bgLight,
-                  )}
-                />
-
-                <div className="relative flex items-start gap-4">
-                  <div
-                    className={cn(
-                      "w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 transition-colors",
-                      STATUS_COLORS.tentative.bgLight,
-                      STATUS_COLORS.tentative.border,
-                      "border-2",
-                    )}
-                  >
-                    <CalendarClock
-                      className={cn(
-                        "w-7 h-7",
-                        STATUS_COLORS.tentative.text,
-                      )}
-                    />
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-bold text-foreground">
-                        Tentative Gig
-                      </h3>
-                      <span
-                        className={cn(
-                          "px-2 py-0.5 text-[10px] font-bold rounded-full",
-                          STATUS_COLORS.tentative.bgLight,
-                          STATUS_COLORS.tentative.text,
-                          STATUS_COLORS.tentative.border,
-                          "border",
-                        )}
-                      >
-                        Draft
-                      </span>
-                    </div>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
-                      Start with a placeholder. Perfect for holds, potential
-                      dates, or ideas you&apos;re not ready to announce.
-                    </p>
-                    <div className="flex items-center gap-3 mt-3">
-                      <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <Clock className="w-3.5 h-3.5" />
-                        Private
-                      </span>
-                      <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <HelpCircle className="w-3.5 h-3.5" />
-                        Flexible
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </motion.button>
-
-              {/* Confirmed Option */}
-              <motion.button
-                type="button"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.2 }}
-
-                onClick={() => onSelect("confirmed")}
-                className={cn(
-                  "w-full text-left p-5 rounded-2xl border-2 transition-colors transition-shadow group relative overflow-hidden",
-                  "bg-card hover:shadow-lg",
-                  STATUS_COLORS.confirmed.border,
-                  STATUS_COLORS.confirmed.bgHover,
-                  "hover:border-emerald-500/60",
-                )}
-              >
-                {/* Background gradient on hover */}
-                <div
-                  className={cn(
-                    "absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity",
-                    STATUS_COLORS.confirmed.bgLight,
-                  )}
-                />
-
-                <div className="relative flex items-start gap-4">
-                  <div
-                    className={cn(
-                      "w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 transition-colors",
-                      STATUS_COLORS.confirmed.bgLight,
-                      STATUS_COLORS.confirmed.border,
-                      "border-2",
-                    )}
-                  >
-                    <CalendarCheck
-                      className={cn(
-                        "w-7 h-7",
-                        STATUS_COLORS.confirmed.text,
-                      )}
-                    />
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-bold text-foreground">
-                        Confirmed Gig
-                      </h3>
-                      <span
-                        className={cn(
-                          "px-2 py-0.5 text-[10px] font-bold rounded-full",
-                          STATUS_COLORS.confirmed.bgLight,
-                          STATUS_COLORS.confirmed.text,
-                          STATUS_COLORS.confirmed.border,
-                          "border",
-                        )}
-                      >
-                        Published
-                      </span>
-                    </div>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
-                      Book it! Add all the details and make it visible to fans.
-                      Ready to promote right away.
-                    </p>
-                    <div className="flex items-center gap-3 mt-3">
-                      <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        Public
-                      </span>
-                      <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <Sparkles className="w-3.5 h-3.5" />
-                        Ready to share
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </motion.button>
-            </div>
-
-            {/* Footer */}
-            <div className="px-6 py-4 bg-muted/30 border-t border-border">
-              <p className="text-xs text-muted-foreground text-center">
-                You can always change a tentative gig to confirmed later
+                Create a Show
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Choose how you want to start
               </p>
             </div>
-          </motion.div>
+
+            <motion.button
+              type="button"
+              onClick={onClose}
+              className="shrink-0 rounded-xl border border-border p-2 transition-colors hover:border-band/30 hover:bg-muted"
+            >
+              <X className="w-5 h-5 text-muted-foreground" />
+            </motion.button>
+          </div>
         </div>
-      ) : null}
-    </AnimatePresence>
+
+        <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-6 pt-4 sm:px-6 sm:pt-6">
+          <div className="space-y-4">
+            <motion.button
+              type="button"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.1 }}
+              onClick={() => onSelect("tentative")}
+              className={cn(
+                "group relative w-full overflow-hidden rounded-2xl border-2 bg-card p-4 text-left transition-colors transition-shadow hover:shadow-lg sm:p-5",
+                STATUS_COLORS.tentative.border,
+                STATUS_COLORS.tentative.bgHover,
+                "hover:border-amber-500/60",
+              )}
+            >
+              <div
+                className={cn(
+                  "absolute inset-0 opacity-0 transition-opacity group-hover:opacity-100",
+                  STATUS_COLORS.tentative.bgLight,
+                )}
+              />
+
+              <div className="relative flex items-start gap-3 sm:gap-4">
+                <div
+                  className={cn(
+                    "flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border-2 transition-colors sm:h-14 sm:w-14",
+                    STATUS_COLORS.tentative.bgLight,
+                    STATUS_COLORS.tentative.border,
+                  )}
+                >
+                  <CalendarClock
+                    className={cn("w-6 h-6 sm:w-7 sm:h-7", STATUS_COLORS.tentative.text)}
+                  />
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <div className="mb-1 flex flex-wrap items-center gap-2">
+                    <h3 className="font-bold text-foreground">Tentative Gig</h3>
+                    <span
+                      className={cn(
+                        "rounded-full border px-2 py-0.5 text-[10px] font-bold",
+                        STATUS_COLORS.tentative.bgLight,
+                        STATUS_COLORS.tentative.text,
+                        STATUS_COLORS.tentative.border,
+                      )}
+                    >
+                      Draft
+                    </span>
+                  </div>
+                  <p className="text-sm leading-relaxed text-muted-foreground">
+                    Start with a placeholder. Perfect for holds, potential dates, or
+                    ideas you&apos;re not ready to announce.
+                  </p>
+                  <div className="mt-3 flex flex-wrap items-center gap-2 sm:gap-3">
+                    <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Clock className="w-3.5 h-3.5" />
+                      Private
+                    </span>
+                    <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <HelpCircle className="w-3.5 h-3.5" />
+                      Flexible
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </motion.button>
+
+            <motion.button
+              type="button"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.2 }}
+              onClick={() => onSelect("confirmed")}
+              className={cn(
+                "group relative w-full overflow-hidden rounded-2xl border-2 bg-card p-4 text-left transition-colors transition-shadow hover:shadow-lg sm:p-5",
+                STATUS_COLORS.confirmed.border,
+                STATUS_COLORS.confirmed.bgHover,
+                "hover:border-emerald-500/60",
+              )}
+            >
+              <div
+                className={cn(
+                  "absolute inset-0 opacity-0 transition-opacity group-hover:opacity-100",
+                  STATUS_COLORS.confirmed.bgLight,
+                )}
+              />
+
+              <div className="relative flex items-start gap-3 sm:gap-4">
+                <div
+                  className={cn(
+                    "flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border-2 transition-colors sm:h-14 sm:w-14",
+                    STATUS_COLORS.confirmed.bgLight,
+                    STATUS_COLORS.confirmed.border,
+                  )}
+                >
+                  <CalendarCheck
+                    className={cn("w-6 h-6 sm:w-7 sm:h-7", STATUS_COLORS.confirmed.text)}
+                  />
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <div className="mb-1 flex flex-wrap items-center gap-2">
+                    <h3 className="font-bold text-foreground">Confirmed Gig</h3>
+                    <span
+                      className={cn(
+                        "rounded-full border px-2 py-0.5 text-[10px] font-bold",
+                        STATUS_COLORS.confirmed.bgLight,
+                        STATUS_COLORS.confirmed.text,
+                        STATUS_COLORS.confirmed.border,
+                      )}
+                    >
+                      Published
+                    </span>
+                  </div>
+                  <p className="text-sm leading-relaxed text-muted-foreground">
+                    Book it. Add the details, make it visible to fans, and publish it
+                    when it&apos;s ready to promote.
+                  </p>
+                  <div className="mt-3 flex flex-wrap items-center gap-2 sm:gap-3">
+                    <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      Public
+                    </span>
+                    <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Sparkles className="w-3.5 h-3.5" />
+                      Ready to share
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </motion.button>
+
+            <div className="rounded-xl border border-border bg-muted/30 px-4 py-3">
+              <p className="text-center text-xs text-muted-foreground">
+                You can always change a tentative gig to confirmed later.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </GigModalShell>
   );
 }

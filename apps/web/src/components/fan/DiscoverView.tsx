@@ -309,7 +309,7 @@ export function FanDiscoverView() {
           initial="visible"
           animate={viewMode === "map" ? "visible" : "hidden"}
           className={cn(
-            "absolute inset-0 flex flex-col",
+            "absolute inset-0 flex flex-col [--discover-sheet-height:clamp(16rem,42svh,22rem)] sm:[--discover-sheet-height:35%]",
             viewMode === "map" ? "pointer-events-auto" : "pointer-events-none"
           )}
         >
@@ -375,7 +375,7 @@ export function FanDiscoverView() {
                       }}
                       onClose={() => setSelectedEventId(null)}
                     >
-                      <div className="w-[260px]">
+                      <div className="w-[min(280px,calc(100vw-2rem))]">
                         <EventCard event={selectedEvent} variant="compact" showLikeButton={false} />
                       </div>
                     </MapInfoWindow>
@@ -399,7 +399,7 @@ export function FanDiscoverView() {
             {!hasLocation && !locationLoading && (
               <button
                 onClick={requestPosition}
-                className="absolute bottom-4 left-4 flex items-center gap-2 px-4 py-2.5 bg-card/90 backdrop-blur-xl border border-border rounded-xl shadow-lg text-sm font-medium text-foreground hover:bg-card transition-colors"
+                className="absolute left-4 bottom-[calc(var(--discover-sheet-height)+1rem+env(safe-area-inset-bottom,0px))] flex items-center gap-2 rounded-xl border border-border bg-card/90 px-4 py-2.5 text-sm font-medium text-foreground shadow-lg backdrop-blur-xl transition-colors hover:bg-card"
                 style={{ color: "oklch(var(--foreground))" }}
               >
                 <Navigation className="w-4 h-4 text-fan" />
@@ -409,7 +409,7 @@ export function FanDiscoverView() {
           </div>
 
           {/* Bottom Sheet - Events Preview */}
-          <div className="h-[35%] bg-card border-t border-border flex flex-col">
+          <div className="safe-area-inset-bottom flex h-[var(--discover-sheet-height)] min-h-[15rem] max-h-[22rem] flex-col border-t border-border bg-card sm:max-h-none">
             <div className="w-full py-2 flex items-center justify-center border-b border-border/50">
               <div className="w-8 h-1 bg-border rounded-full" />
             </div>

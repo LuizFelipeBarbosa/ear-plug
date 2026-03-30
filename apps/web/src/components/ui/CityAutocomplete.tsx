@@ -610,11 +610,11 @@ export function CityAutocomplete({
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-foreground truncate">{selectedVenue.name}</p>
                 <p className="text-xs text-muted-foreground truncate">{selectedVenue.address}</p>
-                <div className="flex items-center gap-2 mt-2">
+                <div className="mt-2 flex flex-wrap items-center gap-2">
                   <span className="text-[10px] bg-muted text-muted-foreground px-2 py-1 rounded-md">
                     {selectedVenue.city}
                   </span>
-                  <span className="text-[10px] text-muted-foreground">
+                  <span className="break-all text-[10px] text-muted-foreground">
                     {selectedVenue.coordinates.lat.toFixed(4)}, {selectedVenue.coordinates.lng.toFixed(4)}
                   </span>
                 </div>
@@ -636,7 +636,7 @@ export function CityAutocomplete({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
                 transition={{ duration: 0.15 }}
-                className="absolute z-50 left-0 right-0 top-full mt-2 bg-card border border-border shadow-xl rounded-xl overflow-hidden"
+                className="absolute left-0 right-0 top-full z-[80] mt-2 max-h-[min(18rem,40vh)] overflow-y-auto overscroll-contain rounded-xl border border-border bg-card shadow-xl"
               >
                 {venueSuggestions.map((suggestion, index) => (
                   <motion.button
@@ -671,7 +671,7 @@ export function CityAutocomplete({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
                 transition={{ duration: 0.15 }}
-                className="absolute z-50 left-0 right-0 top-full mt-2 bg-card border border-border shadow-xl rounded-xl overflow-hidden"
+                className="absolute left-0 right-0 top-full z-[80] mt-2 max-h-[min(18rem,40vh)] overflow-y-auto overscroll-contain rounded-xl border border-border bg-card shadow-xl"
               >
                 {citySuggestions.map((suggestion, index) => (
                   <motion.button
