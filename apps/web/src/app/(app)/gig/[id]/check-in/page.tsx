@@ -38,6 +38,31 @@ interface CheckInPageProps {
   params: { id: string };
 }
 
+interface TicketScannerController {
+  stop(): Promise<void>;
+  clear(): void;
+}
+
+async function disposeTicketScanner(
+  scanner: TicketScannerController | null
+): Promise<void> {
+  if (!scanner) {
+    return;
+  }
+
+  try {
+    await scanner.stop();
+  } catch {
+    // The scanner can be in a transitional or already-stopped state during route exit.
+  }
+
+  try {
+    scanner.clear();
+  } catch {
+    // Clear can also throw if the underlying element was already torn down.
+  }
+}
+
 function formatResultMessage(result: EventTicketScanResult): string {
   switch (result.status) {
     case "checked_in":
@@ -165,6 +190,13 @@ export default function EventCheckinPage({ params }: CheckInPageProps) {
             // Ignore frame-level decode misses
           }
         );
+
+        if (cancelled) {
+          await disposeTicketScanner(scanner);
+          if (scannerRef.current === scanner) {
+            scannerRef.current = null;
+          }
+        }
       } catch (error) {
         if (!cancelled) {
           setScannerError(
@@ -184,10 +216,7 @@ export default function EventCheckinPage({ params }: CheckInPageProps) {
       scannerRef.current = null;
 
       if (scanner) {
-        void scanner
-          .stop()
-          .catch(() => {})
-          .then(() => scanner.clear().catch(() => undefined));
+        void disposeTicketScanner(scanner);
       }
     };
   }, [canScan, submitScan]);

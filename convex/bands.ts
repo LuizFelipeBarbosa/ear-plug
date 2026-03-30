@@ -4,7 +4,7 @@
  * @module convex/bands
  */
 
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
@@ -63,9 +63,45 @@ function validateSocialLinks(
 ): void {
   for (const [key, value] of Object.entries(links)) {
     if (value && !isValidSocialUrl(value)) {
-      throw new Error(`Invalid URL for ${key}: must use http or https protocol`);
+      throw new ConvexError({
+        code: "invalid_social_link",
+        message: `Invalid URL for ${key}: must use http or https.`,
+      });
     }
   }
+}
+
+function normalizeSocialLinks(
+  links:
+    | {
+        spotify?: string;
+        appleMusic?: string;
+        instagram?: string;
+        tiktok?: string;
+        youtube?: string;
+        website?: string;
+      }
+    | undefined
+) {
+  if (!links) {
+    return undefined;
+  }
+
+  const normalized = Object.fromEntries(
+    Object.entries(links).flatMap(([key, value]) => {
+      const trimmedValue = value?.trim();
+      return trimmedValue ? [[key, trimmedValue]] : [];
+    })
+  ) as {
+    spotify?: string;
+    appleMusic?: string;
+    instagram?: string;
+    tiktok?: string;
+    youtube?: string;
+    website?: string;
+  };
+
+  return Object.keys(normalized).length > 0 ? normalized : undefined;
 }
 
 function uniqueById<T extends { _id: unknown }>(docs: T[]): T[] {
@@ -393,26 +429,55 @@ export const create = mutation({
   },
   handler: async (ctx, args) => {
     const user = await requireAuthenticatedUser(ctx);
+    const name = args.name.trim();
+    const location = args.location.trim();
+    const creationCode = args.creationCode.trim();
+    const bio = args.bio?.trim();
+    const socialLinks = normalizeSocialLinks(args.socialLinks);
 
-    if (args.creationCode.trim() !== BAND_CREATION_ACCESS_CODE) {
-      throw new Error("Invalid band creation code.");
+    if (!name) {
+      throw new ConvexError({
+        code: "invalid_band_name",
+        message: "Band name is required.",
+      });
     }
 
-    if (args.socialLinks) {
-      validateSocialLinks(args.socialLinks);
+    if (!location) {
+      throw new ConvexError({
+        code: "invalid_band_location",
+        message: "Location is required.",
+      });
+    }
+
+    if (creationCode !== BAND_CREATION_ACCESS_CODE) {
+      throw new ConvexError({
+        code: "invalid_band_creation_code",
+        message: "The band creation code is incorrect.",
+      });
+    }
+
+    if (args.genres.length === 0) {
+      throw new ConvexError({
+        code: "invalid_band_genres",
+        message: "Select at least one genre.",
+      });
+    }
+
+    if (socialLinks) {
+      validateSocialLinks(socialLinks);
     }
 
     const now = Date.now();
 
     const bandId = await ctx.db.insert("bands", {
       userId: user._id,
-      name: args.name,
+      name,
       genres: args.genres,
-      location: args.location,
+      location,
       image: args.image,
-      bio: args.bio,
+      bio: bio || undefined,
       memberCount: args.memberCount,
-      socialLinks: args.socialLinks,
+      socialLinks,
       createdAt: now,
     });
 

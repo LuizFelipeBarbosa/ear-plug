@@ -82,35 +82,6 @@ const SOCIAL_LINKS = [
   { key: "website", label: "Website", icon: Globe, placeholder: "https://yourband.com" },
 ] as const;
 
-// Animation variants
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.05,
-      delayChildren: 0.1,
-    },
-  },
-  exit: {
-    opacity: 0,
-    transition: { duration: 0.15 },
-  },
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 16 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      type: "spring" as const,
-      stiffness: 400,
-      damping: 30,
-    },
-  },
-};
-
 const slideVariants = {
   enter: (direction: number) => ({
     x: direction > 0 ? 50 : -50,
@@ -131,6 +102,35 @@ const slideVariants = {
     transition: { duration: 0.15 },
   }),
 };
+
+function sanitizeSocialLinks(socialLinks: FormData["socialLinks"]): FormData["socialLinks"] | undefined {
+  const normalized = Object.fromEntries(
+    Object.entries(socialLinks).flatMap(([key, value]) => {
+      const trimmedValue = value?.trim();
+      return trimmedValue ? [[key, trimmedValue]] : [];
+    })
+  ) as FormData["socialLinks"];
+
+  return Object.keys(normalized).length > 0 ? normalized : undefined;
+}
+
+function getCreateBandErrorMessage(error: unknown): string {
+  if (error && typeof error === "object" && "data" in error) {
+    const data = (error as { data?: unknown }).data;
+    if (data && typeof data === "object") {
+      const message = "message" in data ? (data as { message?: unknown }).message : undefined;
+      if (typeof message === "string" && message.trim().length > 0) {
+        return message;
+      }
+    }
+  }
+
+  if (error instanceof Error && error.message.trim().length > 0) {
+    return error.message;
+  }
+
+  return "Failed to create band. Please try again.";
+}
 
 export function CreateBandForm() {
   const router = useRouter();
@@ -196,6 +196,8 @@ export function CreateBandForm() {
     setIsSubmitting(true);
     setError(null);
 
+    const socialLinks = sanitizeSocialLinks(formData.socialLinks);
+
     try {
       const bandId = await createBand({
         name: formData.name.trim(),
@@ -204,16 +206,13 @@ export function CreateBandForm() {
         genres: formData.genres,
         bio: formData.bio.trim() || undefined,
         memberCount: formData.memberCount || undefined,
-        socialLinks:
-          Object.keys(formData.socialLinks).length > 0
-            ? formData.socialLinks
-            : undefined,
+        socialLinks,
       });
 
       setBandMode(bandId);
       router.push("/home");
-    } catch (err: any) {
-      setError(err.message || "Failed to create band. Please try again.");
+    } catch (err) {
+      setError(getCreateBandErrorMessage(err));
     } finally {
       setIsSubmitting(false);
     }
@@ -276,16 +275,14 @@ export function CreateBandForm() {
         transition={{ delay: 0.1 }}
         className="px-4 py-4 border-y border-border bg-card/30 backdrop-blur-sm"
       >
-        <div className="max-w-lg mx-auto">
-          <div className="flex items-start justify-between">
+        <div className="mx-auto flex max-w-lg items-start justify-center">
             {STEPS.map((step, index) => {
               const isActive = index === currentStepIndex;
               const isCompleted = index < currentStepIndex;
-              const isUpcoming = index > currentStepIndex;
 
               return (
-                <div key={step.id} className="flex items-start flex-1 last:flex-0">
-                  <div className="flex flex-col items-center">
+                <div key={step.id} className="flex items-start">
+                  <div className="flex w-[58px] flex-col items-center sm:w-[72px]">
                     <motion.div
                       className={cn(
                         "w-10 h-10 flex items-center justify-center rounded-xl transition-all duration-300 border",
@@ -308,7 +305,7 @@ export function CreateBandForm() {
                     </motion.div>
                     <span
                       className={cn(
-                        "text-[10px] font-medium mt-1.5 transition-colors",
+                        "mt-1.5 text-center text-[10px] font-medium leading-tight transition-colors",
                         isActive || isCompleted ? "text-band" : "text-muted-foreground"
                       )}
                     >
@@ -316,7 +313,7 @@ export function CreateBandForm() {
                     </span>
                   </div>
                   {index < STEPS.length - 1 && (
-                    <div className="flex-1 h-0.5 mx-2 mt-5 bg-muted rounded-full overflow-hidden">
+                    <div className="mx-2 mt-5 h-0.5 w-5 rounded-full bg-muted overflow-hidden sm:w-8">
                       <motion.div
                         className="h-full bg-band"
                         initial={{ width: "0%" }}
@@ -328,13 +325,12 @@ export function CreateBandForm() {
                 </div>
               );
             })}
-          </div>
         </div>
       </motion.div>
 
       {/* Form Content */}
       <main className="px-4 pt-6 max-w-lg mx-auto">
-        <AnimatePresence mode="wait" custom={direction}>
+        <AnimatePresence mode="wait" custom={direction} initial={false}>
           <motion.div
             key={currentStep}
             custom={direction}
@@ -344,13 +340,8 @@ export function CreateBandForm() {
             exit="exit"
           >
             {currentStep === "basics" && (
-              <motion.div
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
-                className="space-y-6"
-              >
-                <motion.div variants={itemVariants}>
+              <div className="space-y-6">
+                <div>
                   <label className="flex items-center gap-2 text-sm font-medium text-foreground mb-2">
                     <Music className="w-4 h-4 text-muted-foreground" />
                     Band Name <span className="text-red-500">*</span>
@@ -362,9 +353,9 @@ export function CreateBandForm() {
                     placeholder="e.g., The Wavelengths"
                     className="w-full px-4 py-3.5 bg-muted/50 border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-band/50 focus:bg-band/[0.02] focus:ring-2 focus:ring-band/10 transition-all"
                   />
-                </motion.div>
+                </div>
 
-                <motion.div variants={itemVariants}>
+                <div>
                   <label className="flex items-center gap-2 text-sm font-medium text-foreground mb-2">
                     <MapPin className="w-4 h-4 text-muted-foreground" />
                     Location <span className="text-red-500">*</span>
@@ -376,9 +367,9 @@ export function CreateBandForm() {
                     label=""
                     required
                   />
-                </motion.div>
+                </div>
 
-                <motion.div variants={itemVariants}>
+                <div>
                   <label className="flex items-center gap-2 text-sm font-medium text-foreground mb-2">
                     <Sparkles className="w-4 h-4 text-muted-foreground" />
                     Band Creation Code <span className="text-red-500">*</span>
@@ -395,26 +386,21 @@ export function CreateBandForm() {
                   <p className="mt-1.5 text-xs text-muted-foreground">
                     Temporary gate to prevent unauthorized band creation.
                   </p>
-                </motion.div>
+                </div>
 
-                <motion.div variants={itemVariants} className="pt-2">
+                <div className="pt-2">
                   <div className="p-4 bg-band/5 border border-band/20 rounded-xl">
                     <p className="text-sm text-muted-foreground">
                       <span className="font-medium text-foreground">Tip:</span> Choose a memorable name that reflects your music style. Your location helps venues and fans find you.
                     </p>
                   </div>
-                </motion.div>
-              </motion.div>
+                </div>
+              </div>
             )}
 
             {currentStep === "genre" && (
-              <motion.div
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
-                className="space-y-4"
-              >
-                <motion.div variants={itemVariants} className="flex items-center justify-between">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
                   <label className="flex items-center gap-2 text-sm font-medium text-foreground">
                     <Mic2 className="w-4 h-4 text-muted-foreground" />
                     Select Genres
@@ -429,10 +415,10 @@ export function CreateBandForm() {
                   >
                     {formData.genres.length}/5 selected
                   </span>
-                </motion.div>
+                </div>
 
-                <motion.div variants={itemVariants} className="grid grid-cols-2 gap-2">
-                  {GENRES.map((genre, index) => {
+                <div className="grid grid-cols-2 gap-2">
+                  {GENRES.map((genre) => {
                     const isSelected = formData.genres.includes(genre.value);
                     const isDisabled = !isSelected && formData.genres.length >= 5;
 
@@ -442,9 +428,6 @@ export function CreateBandForm() {
                         type="button"
                         onClick={() => !isDisabled && toggleGenre(genre.value)}
                         disabled={isDisabled}
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: index * 0.02 }}
                         whileHover={!isDisabled ? { scale: 1.02 } : {}}
                         whileTap={!isDisabled ? { scale: 0.98 } : {}}
                         className={cn(
@@ -464,13 +447,9 @@ export function CreateBandForm() {
                         }
                       >
                         {isSelected && (
-                          <motion.div
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            className="absolute top-2 right-2"
-                          >
+                          <div className="absolute top-2 right-2">
                             <Check className="w-3.5 h-3.5" />
-                          </motion.div>
+                          </div>
                         )}
                         <span
                           className={cn(
@@ -483,28 +462,19 @@ export function CreateBandForm() {
                       </motion.button>
                     );
                   })}
-                </motion.div>
+                </div>
 
                 {formData.genres.length >= 5 && (
-                  <motion.p
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    className="text-xs text-band"
-                  >
+                  <p className="text-xs text-band">
                     Maximum 5 genres selected. Deselect one to choose another.
-                  </motion.p>
+                  </p>
                 )}
-              </motion.div>
+              </div>
             )}
 
             {currentStep === "details" && (
-              <motion.div
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
-                className="space-y-6"
-              >
-                <motion.div variants={itemVariants}>
+              <div className="space-y-6">
+                <div>
                   <label className="flex items-center gap-2 text-sm font-medium text-foreground mb-2">
                     <FileText className="w-4 h-4 text-muted-foreground" />
                     Bio <span className="text-muted-foreground font-normal">(Optional)</span>
@@ -519,9 +489,9 @@ export function CreateBandForm() {
                   <p className="text-xs text-muted-foreground mt-1.5 text-right">
                     {formData.bio.length}/500 characters
                   </p>
-                </motion.div>
+                </div>
 
-                <motion.div variants={itemVariants}>
+                <div>
                   <label className="flex items-center gap-2 text-sm font-medium text-foreground mb-4">
                     <Users className="w-4 h-4 text-muted-foreground" />
                     Number of Members
@@ -529,7 +499,6 @@ export function CreateBandForm() {
                   <div className="flex items-center justify-center gap-6">
                     <motion.button
                       type="button"
-
                       onClick={() =>
                         setFormData({
                           ...formData,
@@ -550,7 +519,6 @@ export function CreateBandForm() {
                     </motion.span>
                     <motion.button
                       type="button"
-
                       onClick={() =>
                         setFormData({
                           ...formData,
@@ -562,28 +530,23 @@ export function CreateBandForm() {
                       <Plus className="w-5 h-5" />
                     </motion.button>
                   </div>
-                </motion.div>
-              </motion.div>
+                </div>
+              </div>
             )}
 
             {currentStep === "social" && (
-              <motion.div
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
-                className="space-y-4"
-              >
-                <motion.p variants={itemVariants} className="text-sm text-muted-foreground">
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
                   Add your social links to help fans find you online{" "}
                   <span className="text-muted-foreground">(Optional)</span>
-                </motion.p>
+                </p>
 
-                {SOCIAL_LINKS.map((social, index) => {
+                {SOCIAL_LINKS.map((social) => {
                   const Icon = social.icon;
                   const value = formData.socialLinks[social.key as keyof typeof formData.socialLinks] || "";
 
                   return (
-                    <motion.div key={social.key} variants={itemVariants}>
+                    <div key={social.key}>
                       <label className="flex items-center gap-2 text-sm font-medium text-foreground mb-2">
                         <Icon className="w-4 h-4 text-muted-foreground" />
                         {social.label}
@@ -610,21 +573,17 @@ export function CreateBandForm() {
                           )}
                         />
                         {value && (
-                          <motion.div
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            className="absolute right-3 top-1/2 -translate-y-1/2"
-                          >
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2">
                             <div className="w-5 h-5 bg-band/10 rounded-full flex items-center justify-center">
                               <Check className="w-3 h-3 text-band" />
                             </div>
-                          </motion.div>
+                          </div>
                         )}
                       </div>
-                    </motion.div>
+                    </div>
                   );
                 })}
-              </motion.div>
+              </div>
             )}
           </motion.div>
         </AnimatePresence>
