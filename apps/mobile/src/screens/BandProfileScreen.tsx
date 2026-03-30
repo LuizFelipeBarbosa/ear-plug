@@ -125,7 +125,7 @@ export function BandProfileScreen() {
         >
           <SectionCard tone="band">
             <View className="flex-row items-start gap-4">
-              <Avatar uri={band.image} label={band.name} size={72} tone="band" />
+              <Avatar uri={band.image} label={band.name} size={64} tone="band" />
               <View className="flex-1">
                 <Text className="text-xl font-semibold text-slate-950">{band.name}</Text>
                 <Text className="mt-2 text-sm text-slate-500">{band.location}</Text>
@@ -204,7 +204,7 @@ export function BandProfileScreen() {
                 {slots.map((slot) => (
                   <SectionCard key={slot.slotIndex} tone={slot.isFilled ? "band" : "neutral"}>
                     <View className="flex-row items-start gap-3">
-                      <View className="h-24 w-24 overflow-hidden rounded-[20px] border border-slate-200 bg-slate-100">
+                      <View className="h-24 w-24 overflow-hidden rounded-[18px] border border-slate-200 bg-slate-100">
                         {slot.isFilled && slot.mediaUrl ? (
                           <Image source={{ uri: slot.mediaUrl }} style={{ height: 96, width: 96 }} resizeMode="cover" />
                         ) : (
@@ -552,7 +552,7 @@ export function BandProfileScreen() {
 
       <Modal visible={editOpen} transparent animationType="slide" onRequestClose={() => setEditOpen(false)}>
         <View className="flex-1 justify-end bg-black/40">
-          <View className="max-h-[88%] rounded-t-[32px] bg-white p-5">
+          <View className="max-h-[88%] rounded-t-[24px] bg-white p-5">
             <Text className="text-lg font-semibold text-slate-950">Edit Band Profile</Text>
 
             <TextInput
@@ -560,7 +560,7 @@ export function BandProfileScreen() {
               onChangeText={setName}
               placeholder="Band name"
               placeholderTextColor="#94a3b8"
-              className="mt-4 rounded-[18px] border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900"
+              className="mt-4 min-h-[48px] rounded-[18px] border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900"
             />
 
             <TextInput
@@ -568,7 +568,7 @@ export function BandProfileScreen() {
               onChangeText={setLocation}
               placeholder="Location"
               placeholderTextColor="#94a3b8"
-              className="mt-3 rounded-[18px] border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900"
+              className="mt-3 min-h-[48px] rounded-[18px] border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900"
             />
 
             <TextInput

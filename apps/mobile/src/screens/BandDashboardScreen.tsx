@@ -116,20 +116,20 @@ export function BandDashboardScreen() {
   return (
     <AppScreen scroll>
       {/* Header Background */}
-      <View className="absolute top-0 left-0 right-0 h-64 overflow-hidden">
+      <View className="absolute top-0 left-0 right-0 h-56 overflow-hidden">
         <View className="absolute inset-0 bg-gradient-to-b from-band/10 via-band/5 to-transparent" />
-        <View className="absolute top-0 right-0 w-96 h-96 bg-band/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
-        <View className="absolute top-0 left-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl -translate-y-1/2 -translate-x-1/3" />
+        <View className="absolute top-0 right-0 h-72 w-72 rounded-full bg-band/10 blur-3xl -translate-y-1/2 translate-x-1/3" />
+        <View className="absolute top-0 left-0 h-48 w-48 rounded-full bg-emerald-500/5 blur-3xl -translate-x-1/3 -translate-y-1/2" />
       </View>
 
       {/* Main Content */}
-      <View className="relative -mt-4">
+      <View className="relative -mt-2">
         {/* Band Header Card */}
         <Card className="overflow-hidden">
           <View className="p-4">
             <View className="flex-row items-start gap-4">
               {/* Band Image */}
-              <View className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-gradient-to-br from-band/20 to-fan/20 border border-band/20 items-center justify-center">
+              <View className="h-14 w-14 overflow-hidden rounded-[18px] border border-band/20 bg-gradient-to-br from-band/20 to-fan/20 items-center justify-center flex-shrink-0">
                 {bandWithStats.image ? (
                   <Image source={{ uri: bandWithStats.image }} className="w-full h-full" resizeMode="cover" />
                 ) : (
@@ -141,7 +141,7 @@ export function BandDashboardScreen() {
               <View className="flex-1 min-w-0">
                 <View className="flex-row items-start justify-between gap-2">
                   <View className="flex-1">
-                    <Text className="text-xl font-bold text-foreground truncate">
+                    <Text className="text-[22px] font-bold text-foreground truncate">
                       {bandWithStats.name}
                     </Text>
                     <Text className="text-sm text-muted-foreground mt-0.5">
@@ -187,14 +187,14 @@ export function BandDashboardScreen() {
               {hasNotifications && (
                 <TouchableOpacity
                   onPress={() => router.push("/messages")}
-                  className="flex-row items-center gap-1.5 px-3 py-1.5 bg-band/10 rounded-lg"
+                  className="flex-row items-center gap-1.5 rounded-full bg-band/10 px-3 py-1.5"
                 >
                   <Bell size={14} color="#7c3aed" />
                   <Text className="text-xs font-medium text-band">{totalNotifications} new</Text>
                 </TouchableOpacity>
               )}
               {confirmedShows.length > 0 && (
-                <View className="flex-row items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 rounded-lg">
+                <View className="flex-row items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1.5">
                   <CheckCircle2 size={14} color="#16a34a" />
                   <Text className="text-xs font-medium text-emerald-600">{confirmedShows.length} confirmed</Text>
                 </View>
@@ -331,7 +331,7 @@ export function BandDashboardScreen() {
               {pendingCohostInvites.slice(0, 1).map((invite) => (
                 <TouchableOpacity key={invite._id} onPress={() => router.push("/messages")}>
                   <Card tone="band" className="flex-row items-center gap-3 p-3">
-                    <View className="w-10 h-10 rounded-lg bg-gradient-to-br from-band/20 to-fan/20 flex items-center justify-center flex-shrink-0">
+                    <View className="h-10 w-10 rounded-[14px] bg-gradient-to-br from-band/20 to-fan/20 flex items-center justify-center flex-shrink-0">
                       <UserPlus size={20} color="#7c3aed" />
                     </View>
                     <View className="flex-1 min-w-0">
@@ -354,7 +354,7 @@ export function BandDashboardScreen() {
                     tone={conv.unreadCount > 0 ? "band" : "neutral"} 
                     className="flex-row items-center gap-3 p-3"
                   >
-                    <View className="w-10 h-10 rounded-lg bg-gradient-to-br from-band/20 to-fan/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    <View className="h-10 w-10 rounded-[14px] bg-gradient-to-br from-band/20 to-fan/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
                       {conv.venue?.images?.[0] ? (
                         <Image source={{ uri: conv.venue.images[0] }} className="w-full h-full" resizeMode="cover" />
                       ) : (
@@ -502,7 +502,7 @@ function NextShowCard({ show }: { show: any }) {
             </View>
           </View>
 
-          <View className={cn("w-12 h-12 rounded-xl items-center justify-center flex-shrink-0", colors.bgLight)}>
+          <View className={cn("h-12 w-12 rounded-[16px] items-center justify-center flex-shrink-0", colors.bgLight)}>
             <Text className={cn("text-lg font-bold", colors.text)}>
               {new Date(show.dateTime).getDate()}
             </Text>
@@ -583,7 +583,7 @@ function QuickActionCard({
   };
 
   return (
-    <TouchableOpacity onPress={onPress} className={cn("flex-1 p-4 rounded-xl border", colorClasses[color])}>
+    <TouchableOpacity onPress={onPress} className={cn("flex-1 rounded-[18px] border p-4", colorClasses[color])}>
       <View className="flex-row items-center gap-3">
         <View className="w-10 h-10 rounded-lg bg-white/50 items-center justify-center">
           {icon}
@@ -661,13 +661,13 @@ function CreateBandPrompt() {
   return (
     <View className="flex-1 items-center justify-center p-6 relative overflow-hidden">
       {/* Background accent */}
-      <View className="absolute top-0 left-0 w-96 h-96 bg-band/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
-      <View className="absolute bottom-0 right-0 w-96 h-96 bg-band/5 rounded-full blur-3xl translate-x-1/2 translate-y-1/2" />
+      <View className="absolute top-0 left-0 h-72 w-72 rounded-full bg-band/10 blur-3xl -translate-x-1/2 -translate-y-1/2" />
+      <View className="absolute bottom-0 right-0 h-72 w-72 rounded-full bg-band/5 blur-3xl translate-x-1/2 translate-y-1/2" />
 
       <View className="items-center max-w-sm relative z-10">
         {/* Icon */}
-        <View className="w-24 h-24 border border-band flex items-center justify-center mb-6 rounded-xl relative">
-          <View className="absolute inset-0 bg-band/5 rounded-xl" />
+        <View className="relative mb-6 h-24 w-24 items-center justify-center rounded-[18px] border border-band">
+          <View className="absolute inset-0 rounded-[18px] bg-band/5" />
           <Music size={48} color="#7c3aed" />
         </View>
 
@@ -694,9 +694,9 @@ function DashboardSkeleton() {
   return (
     <View className="relative">
       {/* Header Skeleton */}
-      <View className="bg-card border border-border rounded-2xl p-4 animate-shimmer">
+      <View className="rounded-[20px] border border-border bg-card p-4 animate-shimmer">
         <View className="flex-row items-start gap-4">
-          <View className="w-16 h-16 rounded-xl bg-muted" />
+          <View className="h-16 w-16 rounded-[18px] bg-muted" />
           <View className="flex-1 space-y-2">
             <View className="h-6 w-32 bg-muted rounded" />
             <View className="h-4 w-48 bg-muted rounded" />
@@ -712,7 +712,7 @@ function DashboardSkeleton() {
       {/* Stats Skeleton */}
       <View className="flex-row gap-3 mt-5">
         {[...Array(2)].map((_, i) => (
-          <View key={i} className="flex-1 bg-card border border-border p-4 rounded-xl animate-shimmer">
+          <View key={i} className="flex-1 rounded-[18px] border border-border bg-card p-4 animate-shimmer">
             <View className="w-8 h-8 bg-muted rounded-lg mb-2" />
             <View className="h-6 w-12 bg-muted rounded" />
             <View className="h-3 w-20 bg-muted rounded mt-1" />
@@ -721,7 +721,7 @@ function DashboardSkeleton() {
       </View>
 
       {/* Section Skeleton */}
-      <View className="bg-card border border-border rounded-2xl p-4 mt-5 animate-shimmer">
+      <View className="mt-5 rounded-[20px] border border-border bg-card p-4 animate-shimmer">
         <View className="h-5 w-32 bg-muted rounded mb-3" />
         <View className="gap-2">
           <View className="h-16 bg-muted rounded-lg" />

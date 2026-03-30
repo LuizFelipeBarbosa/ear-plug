@@ -101,29 +101,29 @@ export function FanDiscoverScreen() {
   return (
     <AppScreen
       header={
-        <View className="bg-card border-b border-border">
+        <View className="border-b border-slate-200 bg-white">
           {/* Search Bar */}
-          <View className="p-3">
+          <View className="px-4 pb-3 pt-3">
             <View className="flex-row items-center gap-2">
               {/* Search Input */}
               <View className="flex-1 relative">
                 <View className="absolute left-3 top-1/2 -translate-y-1/2">
-                  <Search size={16} color="#9ca3af" />
+                  <Search size={16} color="#64748b" />
                 </View>
                 <TextInput
                   placeholder="Search events, bands, or venues..."
-                  placeholderTextColor="#9ca3af"
+                  placeholderTextColor="#64748b"
                   value={searchQuery}
                   onChangeText={setSearchQuery}
                   autoCapitalize="none"
-                  className="w-full pl-9 pr-9 py-2.5 bg-muted border border-border/50 rounded-xl text-sm text-foreground"
+                  className="min-h-[48px] w-full rounded-[18px] border border-slate-200 bg-slate-50 pl-10 pr-10 text-sm text-slate-900"
                 />
                 {searchQuery && (
                   <TouchableOpacity
                     onPress={() => setSearchQuery("")}
                     className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5"
                   >
-                    <X size={14} color="#9ca3af" />
+                    <X size={14} color="#64748b" />
                   </TouchableOpacity>
                 )}
               </View>
@@ -132,17 +132,17 @@ export function FanDiscoverScreen() {
               <TouchableOpacity
                 onPress={() => setShowFilters(!showFilters)}
                 className={cn(
-                  "relative p-2.5 border rounded-xl items-center justify-center w-11 h-11",
+                  "relative h-11 w-11 items-center justify-center rounded-[18px] border",
                   showFilters
                     ? "bg-fan border-fan"
                     : activeFilterCount > 0
                     ? "bg-fan/10 border-fan/30"
-                    : "bg-card border-border"
+                    : "bg-white border-slate-200"
                 )}
               >
                 <SlidersHorizontal 
                   size={18} 
-                  color={showFilters ? "#ffffff" : activeFilterCount > 0 ? "#2563eb" : "#6b7280"} 
+                  color={showFilters ? "#ffffff" : activeFilterCount > 0 ? "#2563eb" : "#475569"} 
                 />
                 {activeFilterCount > 0 && !showFilters && (
                   <View className="absolute -top-1 -right-1 w-5 h-5 bg-fan rounded-full items-center justify-center">
@@ -154,7 +154,7 @@ export function FanDiscoverScreen() {
 
             {/* Filters Panel */}
             {showFilters && (
-              <View className="mt-3 space-y-4">
+              <View className="mt-4 gap-4">
                 {/* Genre Filter */}
                 <View>
                   <View className="flex-row items-center justify-between mb-2">
@@ -233,14 +233,14 @@ export function FanDiscoverScreen() {
           </View>
 
           {/* View Toggle & Results Count */}
-          <View className="px-3 pb-3 flex-row items-center justify-between">
+          <View className="flex-row items-center justify-between px-4 pb-3">
             {/* View Mode Toggle */}
-            <View className="flex-row items-center gap-1 p-1 bg-muted rounded-xl">
+            <View className="flex-row items-center gap-1 rounded-[18px] bg-slate-100 p-1">
               <TouchableOpacity
                 onPress={() => setViewMode("map")}
                 className={cn(
-                  "flex-row items-center gap-1.5 px-3 py-1.5 rounded-lg",
-                  viewMode === "map" ? "bg-fan shadow-sm" : ""
+                  "flex-row items-center gap-1.5 rounded-[14px] px-3 py-2",
+                  viewMode === "map" ? "bg-fan" : ""
                 )}
               >
                 <MapIcon size={14} color={viewMode === "map" ? "#ffffff" : "#6b7280"} />
@@ -251,8 +251,8 @@ export function FanDiscoverScreen() {
               <TouchableOpacity
                 onPress={() => setViewMode("list")}
                 className={cn(
-                  "flex-row items-center gap-1.5 px-3 py-1.5 rounded-lg",
-                  viewMode === "list" ? "bg-fan shadow-sm" : ""
+                  "flex-row items-center gap-1.5 rounded-[14px] px-3 py-2",
+                  viewMode === "list" ? "bg-fan" : ""
                 )}
               >
                 <List size={14} color={viewMode === "list" ? "#ffffff" : "#6b7280"} />
@@ -277,7 +277,7 @@ export function FanDiscoverScreen() {
       <View className="flex-1">
         {/* Map View */}
         {viewMode === "map" && (
-          <View className="flex-1 -mx-3">
+          <View className="flex-1 -mx-4">
             <View className="flex-1">
               <MapView 
                 style={{ flex: 1 }} 
@@ -306,21 +306,21 @@ export function FanDiscoverScreen() {
               {!hasLocation && !locationLoading && (
                 <TouchableOpacity
                   onPress={requestPosition}
-                  className="absolute bottom-4 left-4 flex-row items-center gap-2 px-4 py-2.5 bg-card/90 border border-border rounded-xl shadow-lg"
+                  className="absolute bottom-4 left-4 flex-row items-center gap-2 rounded-[18px] border border-slate-200 bg-white px-4 py-2.5"
                 >
                   <Navigation size={16} color="#2563eb" />
-                  <Text className="text-sm font-medium text-foreground">Enable location</Text>
+                  <Text className="text-sm font-medium text-slate-900">Enable location</Text>
                 </TouchableOpacity>
               )}
             </View>
 
             {/* Bottom Sheet - Events Preview */}
-            <View className="h-[35%] bg-card border-t border-border">
-              <View className="w-full py-2 items-center border-b border-border/50">
-                <View className="w-8 h-1 bg-border rounded-full" />
+            <View className="h-[34%] border-t border-slate-200 bg-white">
+              <View className="w-full items-center border-b border-slate-200/80 py-2">
+                <View className="h-1 w-8 rounded-full bg-slate-300" />
               </View>
 
-              <View className="flex-1 px-3 pt-3">
+              <View className="flex-1 px-4 pt-3">
                 <View className="flex-row items-center justify-between mb-3">
                   <Text className="text-sm font-semibold text-foreground">
                     {useDistanceFilter && hasLocation
@@ -328,7 +328,7 @@ export function FanDiscoverScreen() {
                       : "Nearby Events"}
                   </Text>
                   {!isLoading && displayEvents && displayEvents.length > 0 && (
-                    <View className="px-2 py-1 bg-fan/10 rounded-full">
+                    <View className="rounded-full bg-fan/10 px-2 py-1">
                       <Text className="text-[10px] font-medium text-fan">
                         {displayEvents.length} event{displayEvents.length !== 1 ? "s" : ""}
                       </Text>
@@ -349,12 +349,12 @@ export function FanDiscoverScreen() {
                     isLoading ? (
                       <View className="space-y-2">
                         {[1, 2, 3].map((i) => (
-                          <View key={i} className="h-16 bg-muted border border-border rounded-xl" />
+                          <View key={i} className="h-16 rounded-[18px] border border-slate-200 bg-slate-100" />
                         ))}
                       </View>
                     ) : (
                       <View className="h-full flex-col items-center justify-center py-8">
-                        <View className="w-12 h-12 bg-muted rounded-full items-center justify-center mb-3">
+                        <View className="mb-3 h-12 w-12 items-center justify-center rounded-full bg-slate-100">
                           <MapIcon size={20} color="#9ca3af" />
                         </View>
                         <Text className="text-sm font-medium text-foreground mb-1">No events found</Text>
@@ -387,12 +387,12 @@ export function FanDiscoverScreen() {
               isLoading ? (
                 <View className="space-y-3">
                   {[1, 2, 3, 4, 5].map((i) => (
-                    <View key={i} className="h-24 bg-muted border border-border rounded-xl animate-shimmer" />
+                    <View key={i} className="h-24 rounded-[20px] border border-slate-200 bg-slate-100 animate-shimmer" />
                   ))}
                 </View>
               ) : (
                 <View className="flex-col items-center justify-center py-16 px-6">
-                  <View className="w-16 h-16 bg-muted rounded-2xl items-center justify-center mb-4">
+                  <View className="mb-4 h-16 w-16 items-center justify-center rounded-[20px] bg-slate-100">
                     <List size={28} color="#9ca3af" />
                   </View>
                   <Text className="text-lg font-semibold text-foreground mb-2">No events found</Text>

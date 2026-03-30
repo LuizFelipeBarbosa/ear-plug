@@ -9,6 +9,7 @@ import {
   MiniBadge,
   SectionCard,
   SectionTitle,
+  StatCard,
 } from "@/components/ui/AppPrimitives";
 import { useConversation, useBandConversations } from "@/hooks/useMessages";
 import { useCurrentUser } from "@/hooks/useUser";
@@ -48,16 +49,16 @@ function ConversationInbox({ onSelect }: { onSelect: (id: Id<"conversations">) =
           tone="band"
         >
           <View className="flex-row gap-2">
-            <SectionCard tone="band">
-              <Text className="text-xs font-semibold uppercase tracking-[1.5px] text-violet-700">Unread</Text>
-              <Text className="mt-2 text-3xl font-bold text-slate-950">
-                {conversations.reduce((sum, conversation) => sum + conversation.unreadCount, 0)}
-              </Text>
-            </SectionCard>
-            <SectionCard tone="warning">
-              <Text className="text-xs font-semibold uppercase tracking-[1.5px] text-amber-700">Invites</Text>
-              <Text className="mt-2 text-3xl font-bold text-slate-950">{pendingCohostInvites.length}</Text>
-            </SectionCard>
+            <StatCard
+              label="Unread"
+              value={conversations.reduce((sum, conversation) => sum + conversation.unreadCount, 0)}
+              tone="band"
+            />
+            <StatCard
+              label="Invites"
+              value={pendingCohostInvites.length}
+              tone="warning"
+            />
           </View>
         </HeroHeader>
       }
@@ -198,7 +199,7 @@ function ConversationThread({
               placeholder="Type a message"
               placeholderTextColor="#94a3b8"
               multiline
-              className="max-h-28 flex-1 rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900"
+              className="max-h-28 flex-1 rounded-[18px] border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900"
             />
             <IconButton
               icon={<Send size={18} color="#ffffff" />}
@@ -247,7 +248,7 @@ function ConversationThread({
             const isOwn = user?._id === item.sender?._id;
             return (
               <View className={`mb-3 ${isOwn ? "items-end" : "items-start"}`}>
-                <View className={`max-w-[86%] rounded-[24px] px-4 py-3 ${isOwn ? "bg-violet-600" : "border border-slate-200 bg-white"}`}>
+                <View className={`max-w-[86%] rounded-[20px] px-4 py-3 ${isOwn ? "bg-violet-600" : "border border-slate-200 bg-white"}`}>
                   <Text className={`text-xs font-semibold ${isOwn ? "text-violet-100" : "text-slate-500"}`}>
                     {item.sender?.name || "Unknown"}
                   </Text>

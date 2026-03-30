@@ -103,7 +103,7 @@ export function FanProfileScreen() {
         >
           <SectionCard tone="fan">
             <View className="flex-row items-start gap-4">
-              <Avatar uri={user.avatar} label={user.name} size={72} tone="fan" />
+              <Avatar uri={user.avatar} label={user.name} size={64} tone="fan" />
               <View className="flex-1">
                 <Text className="text-xl font-semibold text-slate-950">{user.name}</Text>
                 <View className="mt-2 flex-row items-center gap-2">
@@ -347,7 +347,7 @@ export function FanProfileScreen() {
 
       <Modal visible={editOpen} transparent animationType="slide" onRequestClose={() => setEditOpen(false)}>
         <View className="flex-1 justify-end bg-black/40">
-          <View className="max-h-[88%] rounded-t-[32px] bg-white p-5">
+          <View className="max-h-[88%] rounded-t-[24px] bg-white p-5">
             <Text className="text-lg font-semibold text-slate-950">Edit Profile</Text>
 
             <TextInput
@@ -355,7 +355,7 @@ export function FanProfileScreen() {
               onChangeText={setName}
               placeholder="Name"
               placeholderTextColor="#94a3b8"
-              className="mt-4 rounded-[18px] border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900"
+              className="mt-4 min-h-[48px] rounded-[18px] border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900"
             />
 
             <TextInput
@@ -363,7 +363,7 @@ export function FanProfileScreen() {
               onChangeText={setLocation}
               placeholder="Location"
               placeholderTextColor="#94a3b8"
-              className="mt-3 rounded-[18px] border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900"
+              className="mt-3 min-h-[48px] rounded-[18px] border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900"
             />
 
             <Text className="mt-4 text-[11px] font-semibold uppercase tracking-[1.5px] text-slate-500">
