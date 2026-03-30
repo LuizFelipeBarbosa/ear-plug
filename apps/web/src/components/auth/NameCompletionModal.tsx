@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useUser } from "@clerk/nextjs";
-import { useMutation } from "convex/react";
+import { useAction, useMutation } from "convex/react";
 import {
   composePersonalName,
   getPersonalNameValidationError,
@@ -19,6 +19,7 @@ interface NameCompletionModalProps {
 
 export function NameCompletionModal({ isOpen }: NameCompletionModalProps) {
   const { user: clerkUser } = useUser();
+  const updateClerkPersonalName = useAction(api.users.updateClerkPersonalName);
   const upsertUser = useMutation(api.users.upsertUser);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -53,7 +54,7 @@ export function NameCompletionModal({ isOpen }: NameCompletionModalProps) {
     setError(null);
 
     try {
-      await clerkUser.update({
+      await updateClerkPersonalName({
         firstName: normalizedFirstName,
         lastName: normalizedLastName,
       });

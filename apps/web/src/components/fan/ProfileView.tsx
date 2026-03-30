@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { SignOutButton, useUser } from "@clerk/nextjs";
-import { useMutation, useQuery } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import {
@@ -67,6 +67,7 @@ function capitalizeGenre(genre: Genre | null): string {
 export function FanProfileView() {
   const router = useRouter();
   const { user: clerkUser } = useUser();
+  const updateClerkPersonalName = useAction(api.users.updateClerkPersonalName);
   const { user, updateProfile } = useCurrentUser();
   const { savedBands } = useSavedBands();
   const { setBandMode } = useProfileContext();
@@ -131,7 +132,7 @@ export function FanProfileView() {
         await clearAvatar({});
       }
 
-      await clerkUser.update({
+      await updateClerkPersonalName({
         firstName: normalizedFirstName,
         lastName: normalizedLastName,
       });
@@ -147,6 +148,7 @@ export function FanProfileView() {
       clearAvatar,
       generateAvatarUploadUrl,
       setAvatarFromStorage,
+      updateClerkPersonalName,
       updateProfile,
     ]
   );

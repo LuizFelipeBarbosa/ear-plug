@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Modal, Text, TextInput, View } from "react-native";
 import { useUser } from "@clerk/clerk-expo";
-import { useMutation } from "convex/react";
+import { useAction, useMutation } from "convex/react";
 import {
   composePersonalName,
   getPersonalNameValidationError,
@@ -17,6 +17,7 @@ interface NameCompletionModalProps {
 
 export function NameCompletionModal({ visible }: NameCompletionModalProps) {
   const { user: clerkUser } = useUser();
+  const updateClerkPersonalName = useAction(api.users.updateClerkPersonalName);
   const upsertUser = useMutation(api.users.upsertUser);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -51,7 +52,7 @@ export function NameCompletionModal({ visible }: NameCompletionModalProps) {
     setError(null);
 
     try {
-      await clerkUser.update({
+      await updateClerkPersonalName({
         firstName: normalizedFirstName,
         lastName: normalizedLastName,
       });

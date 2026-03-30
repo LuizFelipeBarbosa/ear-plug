@@ -6,6 +6,7 @@
 
 import { v } from "convex/values";
 import {
+  action,
   query,
   mutation,
   internalMutation,
@@ -43,6 +44,7 @@ const MOST_VIEWED_SAVED_ARTISTS_LIMIT = 12;
 const SAVED_ARTISTS_LIMIT = 24;
 const IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
+const CLERK_USERS_API_BASE = "https://api.clerk.com/v1/users";
 
 function isGenreValue(value: string): value is GenreValue {
   return (GENRE_VALUES as readonly string[]).includes(value);
@@ -73,6 +75,31 @@ function getGigDnaTier(attendedShows: number): "Headliner" | "Regular" | "Rising
 
 function normalizeStoredEmail(email: string): string {
   return email.trim().toLowerCase();
+}
+
+async function getClerkErrorMessage(response: Response): Promise<string> {
+  try {
+    const payload = (await response.json()) as
+      | { errors?: Array<{ message?: string }> }
+      | { message?: string };
+
+    if ("errors" in payload && Array.isArray(payload.errors)) {
+      const firstMessage = payload.errors.find(
+        (error) => typeof error.message === "string" && error.message.length > 0
+      )?.message;
+      if (firstMessage) {
+        return firstMessage;
+      }
+    }
+
+    if ("message" in payload && typeof payload.message === "string") {
+      return payload.message;
+    }
+  } catch {
+    // Ignore non-JSON error responses.
+  }
+
+  return `Clerk request failed with status ${response.status}.`;
 }
 
 /**
@@ -519,6 +546,51 @@ export const updateProfile = mutation({
     await ctx.db.patch(user._id, updates);
 
     return user._id;
+  },
+});
+
+/**
+ * Updates the authenticated user's personal name in Clerk through the Backend API.
+ * This bypasses Frontend API restrictions that depend on enabled dashboard fields.
+ */
+export const updateClerkPersonalName = action({
+  args: {
+    firstName: v.string(),
+    lastName: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const secret = process.env.CLERK_SECRET_KEY;
+    if (!secret) {
+      throw new Error(
+        "CLERK_SECRET_KEY is required in Convex environment to update Clerk names."
+      );
+    }
+
+    const response = await fetch(
+      `${CLERK_USERS_API_BASE}/${encodeURIComponent(identity.subject)}`,
+      {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${secret}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          first_name: args.firstName,
+          last_name: args.lastName,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(await getClerkErrorMessage(response));
+    }
+
+    return { clerkId: identity.subject };
   },
 });
 

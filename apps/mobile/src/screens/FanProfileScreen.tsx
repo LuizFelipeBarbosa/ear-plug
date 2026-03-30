@@ -29,7 +29,7 @@ import {
   splitPersonalName,
 } from "@ear-plug/shared/utils";
 import { useAuth, useUser } from "@clerk/clerk-expo";
-import { useMutation, useQuery } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { Edit3, Heart, LogOut, MapPin, Ticket, Warehouse, Music4, ArrowRight } from "lucide-react-native";
@@ -44,6 +44,7 @@ export function FanProfileScreen() {
   const router = useRouter();
   const { signOut } = useAuth();
   const { user: clerkUser } = useUser();
+  const updateClerkPersonalName = useAction(api.users.updateClerkPersonalName);
   const { setBandMode } = useProfileContext();
   const { user, updateProfile, isLoading } = useCurrentUser();
   const { savedBands } = useSavedBands();
@@ -481,7 +482,7 @@ export function FanProfileScreen() {
                   setPendingSave(true);
                   setSaveError(null);
                   try {
-                    await clerkUser.update({
+                    await updateClerkPersonalName({
                       firstName: normalizedFirstName,
                       lastName: normalizedLastName,
                     });
