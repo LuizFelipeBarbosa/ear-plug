@@ -16,7 +16,13 @@ import {
 } from "./utils/permissions";
 
 const PROFILE_VIEW_DEDUPE_WINDOW_MS = 6 * 60 * 60 * 1000;
-const IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const IMAGE_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/jpg",
+  "image/pjpeg",
+  "image/png",
+  "image/webp",
+]);
 const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
 
 /** Validator for music genre field */
@@ -497,7 +503,7 @@ export const setImageFromStorage = mutation({
       throw new Error("Uploaded band image file not found.");
     }
 
-    const mimeType = metadata.contentType ?? "";
+    const mimeType = (metadata.contentType ?? "").toLowerCase();
     if (!IMAGE_MIME_TYPES.has(mimeType)) {
       throw new Error("Unsupported image format. Use JPEG, PNG, or WEBP.");
     }

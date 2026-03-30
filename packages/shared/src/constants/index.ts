@@ -35,6 +35,55 @@ export const GENRE_COLORS: Record<Genre, string> = {
 };
 
 /**
+ * Supported MIME types for image uploads across avatars, band images, and band media slots.
+ */
+export const IMAGE_UPLOAD_MIME_TYPES = [
+  "image/jpeg",
+  "image/jpg",
+  "image/pjpeg",
+  "image/png",
+  "image/webp",
+] as const;
+
+/**
+ * Supported MIME types for band profile slot video uploads.
+ */
+export const BAND_MEDIA_VIDEO_MIME_TYPES = [
+  "video/mp4",
+  "video/webm",
+  "video/quicktime",
+] as const;
+
+/**
+ * File input accept string for image uploads.
+ */
+export const IMAGE_FILE_INPUT_ACCEPT =
+  ".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp";
+
+/**
+ * File input accept string for band profile slot media uploads.
+ */
+export const BAND_MEDIA_FILE_INPUT_ACCEPT = [
+  IMAGE_FILE_INPUT_ACCEPT,
+  ".mp4,.webm,.mov,video/mp4,video/webm,video/quicktime",
+].join(",");
+
+/**
+ * Maximum size for image uploads.
+ */
+export const MAX_IMAGE_UPLOAD_BYTES = 10 * 1024 * 1024;
+
+/**
+ * Maximum size for band profile slot video uploads.
+ */
+export const MAX_BAND_MEDIA_VIDEO_UPLOAD_BYTES = 150 * 1024 * 1024;
+
+/**
+ * Maximum duration for band profile slot video uploads.
+ */
+export const MAX_BAND_MEDIA_VIDEO_DURATION_SECONDS = 90;
+
+/**
  * Default map center coordinates.
  * Centers on the Oakland/Berkeley area of San Francisco Bay Area.
  */

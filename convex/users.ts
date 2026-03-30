@@ -42,7 +42,13 @@ const GIG_DNA_NOUN_BY_GENRE: Record<GenreValue, string> = {
 
 const MOST_VIEWED_SAVED_ARTISTS_LIMIT = 12;
 const SAVED_ARTISTS_LIMIT = 24;
-const IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const IMAGE_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/jpg",
+  "image/pjpeg",
+  "image/png",
+  "image/webp",
+]);
 const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
 const CLERK_USERS_API_BASE = "https://api.clerk.com/v1/users";
 
@@ -443,7 +449,7 @@ export const upsertUser = mutation({
         name: args.name,
       };
 
-      if (args.avatar !== undefined) {
+      if (args.avatar !== undefined && !existingUser.avatarStorageId) {
         updates.avatar = args.avatar;
       }
 
@@ -622,7 +628,7 @@ export const setAvatarFromStorage = mutation({
       throw new Error("Uploaded avatar file not found.");
     }
 
-    const mimeType = metadata.contentType ?? "";
+    const mimeType = (metadata.contentType ?? "").toLowerCase();
     if (!IMAGE_MIME_TYPES.has(mimeType)) {
       throw new Error("Unsupported image format. Use JPEG, PNG, or WEBP.");
     }

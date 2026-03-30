@@ -17,13 +17,24 @@ import { useProfileContext } from "@/context/ProfileContext";
 import { useBandPastShows, useCurrentBand } from "@/hooks/useBand";
 import { useBandMediaSlots } from "@/hooks/useBandMediaSlots";
 import { uploadUriToConvexStorage } from "@/lib/convexUpload";
+import {
+  validatePickedBandSlotAsset,
+  validatePickedImageAsset,
+} from "@/lib/mediaUpload";
 import { api } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
 import type { Genre } from "@ear-plug/shared/types";
 import { useAuth } from "@clerk/clerk-expo";
 import { useMutation, useQuery } from "convex/react";
 import * as ImagePicker from "expo-image-picker";
-import { Edit3, Image as ImageIcon, LogOut, ShieldCheck, Trash2 } from "lucide-react-native";
+import {
+  Edit3,
+  Image as ImageIcon,
+  LogOut,
+  Play,
+  ShieldCheck,
+  Trash2,
+} from "lucide-react-native";
 import { useMemo, useState } from "react";
 import { Image, Modal, Pressable, Text, TextInput, View } from "react-native";
 
@@ -214,8 +225,20 @@ export function BandProfileScreen() {
                   <SectionCard key={slot.slotIndex} tone={slot.isFilled ? "band" : "neutral"}>
                     <View className="flex-row items-start gap-3">
                       <View className="h-24 w-24 overflow-hidden rounded-[18px] border border-slate-200 bg-slate-100">
-                        {slot.isFilled && slot.mediaUrl ? (
+                        {slot.isFilled && slot.mediaUrl && slot.mediaType === "image" ? (
                           <Image source={{ uri: slot.mediaUrl }} style={{ height: 96, width: 96 }} resizeMode="cover" />
+                        ) : slot.isFilled && slot.mediaType === "video" ? (
+                          <View className="h-24 w-24 items-center justify-center bg-slate-900">
+                            <Play size={22} color="#ffffff" fill="#ffffff" />
+                            <Text className="mt-2 text-[11px] font-semibold uppercase tracking-[1px] text-white/80">
+                              Video
+                            </Text>
+                            {slot.durationSeconds ? (
+                              <Text className="mt-1 text-[10px] text-white/60">
+                                {slot.durationSeconds}s
+                              </Text>
+                            ) : null}
+                          </View>
                         ) : (
                           <View className="flex-1 items-center justify-center">
                             <ImageIcon size={24} color="#94a3b8" />
@@ -243,19 +266,37 @@ export function BandProfileScreen() {
                             const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
                             if (!permission.granted) return;
                             const result = await ImagePicker.launchImageLibraryAsync({
-                              mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                              mediaTypes: ImagePicker.MediaTypeOptions.All,
                               quality: 0.8,
                             });
                             if (result.canceled || !result.assets[0]) return;
 
-                            const { uploadUrl } = await generateUploadUrl({ bandId: band._id });
-                            const uploaded = await uploadUriToConvexStorage(uploadUrl, result.assets[0].uri);
-                            await upsertSlot({
-                              bandId: band._id,
-                              slotIndex: slot.slotIndex,
-                              storageId: uploaded.storageId as Id<"_storage">,
-                              mediaType: "image",
-                            });
+                            try {
+                              const asset = result.assets[0];
+                              const validatedAsset = validatePickedBandSlotAsset(asset);
+                              const { uploadUrl } = await generateUploadUrl({ bandId: band._id });
+                              const uploaded = await uploadUriToConvexStorage(
+                                uploadUrl,
+                                asset.uri,
+                                validatedAsset.mimeType,
+                              );
+                              await upsertSlot({
+                                bandId: band._id,
+                                slotIndex: slot.slotIndex,
+                                storageId: uploaded.storageId as Id<"_storage">,
+                                mediaType: validatedAsset.mediaType,
+                                durationSeconds: validatedAsset.durationSeconds,
+                              });
+                              setError(null);
+                              setNotice(`Slot ${slot.slotIndex + 1} updated.`);
+                            } catch (uploadError) {
+                              setNotice(null);
+                              setError(
+                                uploadError instanceof Error
+                                  ? uploadError.message
+                                  : "Failed to upload media.",
+                              );
+                            }
                           }}
                         />
                       </View>
@@ -264,7 +305,20 @@ export function BandProfileScreen() {
                           <ActionButton
                             label="Clear"
                             variant="danger"
-                            onPress={() => void clearSlot({ bandId: band._id, slotIndex: slot.slotIndex })}
+                            onPress={async () => {
+                              try {
+                                await clearSlot({ bandId: band._id, slotIndex: slot.slotIndex });
+                                setError(null);
+                                setNotice(`Slot ${slot.slotIndex + 1} cleared.`);
+                              } catch (clearError) {
+                                setNotice(null);
+                                setError(
+                                  clearError instanceof Error
+                                    ? clearError.message
+                                    : "Failed to clear media slot.",
+                                );
+                              }
+                            }}
                           />
                         </View>
                       ) : null}
@@ -272,6 +326,9 @@ export function BandProfileScreen() {
                   </SectionCard>
                 ))}
               </View>
+
+              {notice ? <Text className="text-sm text-emerald-700">{notice}</Text> : null}
+              {error ? <Text className="text-sm text-red-600">{error}</Text> : null}
             </SectionCard>
           </View>
         ) : null}
@@ -324,16 +381,56 @@ export function BandProfileScreen() {
 
                       if (result.canceled || !result.assets[0]) return;
 
-                      const { uploadUrl } = await generateImageUploadUrl({ bandId: band._id });
-                      const uploaded = await uploadUriToConvexStorage(uploadUrl, result.assets[0].uri);
-                      await setImageFromStorage({ bandId: band._id, storageId: uploaded.storageId as Id<"_storage"> });
+                      try {
+                        const asset = result.assets[0];
+                        const { mimeType } = validatePickedImageAsset(asset, "Image");
+                        const { uploadUrl } = await generateImageUploadUrl({ bandId: band._id });
+                        const uploaded = await uploadUriToConvexStorage(
+                          uploadUrl,
+                          asset.uri,
+                          mimeType,
+                        );
+                        await setImageFromStorage({
+                          bandId: band._id,
+                          storageId: uploaded.storageId as Id<"_storage">,
+                        });
+                        setError(null);
+                        setNotice("Band image updated.");
+                      } catch (uploadError) {
+                        setNotice(null);
+                        setError(
+                          uploadError instanceof Error
+                            ? uploadError.message
+                            : "Failed to upload band image.",
+                        );
+                      }
                     }}
                   />
                 </View>
                 <View className="flex-1">
-                  <ActionButton label="Clear Image" variant="danger" onPress={() => void clearBandImage({ bandId: band._id })} />
+                  <ActionButton
+                    label="Clear Image"
+                    variant="danger"
+                    onPress={async () => {
+                      try {
+                        await clearBandImage({ bandId: band._id });
+                        setError(null);
+                        setNotice("Band image cleared.");
+                      } catch (clearError) {
+                        setNotice(null);
+                        setError(
+                          clearError instanceof Error
+                            ? clearError.message
+                            : "Failed to clear band image.",
+                        );
+                      }
+                    }}
+                  />
                 </View>
               </View>
+
+              {notice ? <Text className="mt-3 text-sm text-emerald-700">{notice}</Text> : null}
+              {error ? <Text className="mt-3 text-sm text-red-600">{error}</Text> : null}
             </SectionCard>
 
             <SectionCard>

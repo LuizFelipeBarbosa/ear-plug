@@ -109,10 +109,6 @@ export function FanProfileView() {
       avatarFile?: File;
       removeAvatar?: boolean;
     }) => {
-      if (!clerkUser) {
-        throw new Error("Account details are still loading.");
-      }
-
       const validationError = getPersonalNameValidationError(
         data.firstName,
         data.lastName,
@@ -123,6 +119,11 @@ export function FanProfileView() {
 
       const normalizedFirstName = normalizePersonalNamePart(data.firstName);
       const normalizedLastName = normalizePersonalNamePart(data.lastName);
+      const currentFirstName = normalizePersonalNamePart(clerkUser?.firstName);
+      const currentLastName = normalizePersonalNamePart(clerkUser?.lastName);
+      const shouldUpdateClerkName =
+        normalizedFirstName !== currentFirstName ||
+        normalizedLastName !== currentLastName;
 
       if (data.avatarFile) {
         const { uploadUrl } = await generateAvatarUploadUrl({});
@@ -132,11 +133,18 @@ export function FanProfileView() {
         await clearAvatar({});
       }
 
-      await updateClerkPersonalName({
-        firstName: normalizedFirstName,
-        lastName: normalizedLastName,
-      });
-      await clerkUser.reload();
+      if (shouldUpdateClerkName) {
+        if (!clerkUser) {
+          throw new Error("Account details are still loading.");
+        }
+
+        await updateClerkPersonalName({
+          firstName: normalizedFirstName,
+          lastName: normalizedLastName,
+        });
+        await clerkUser.reload();
+      }
+
       await updateProfile({
         name: composePersonalName(normalizedFirstName, normalizedLastName),
         location: data.location,

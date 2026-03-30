@@ -8,15 +8,15 @@ import type {
   BandMediaSlotIndex,
   BandPostMediaType,
 } from "@ear-plug/shared/types";
-const IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
-const VIDEO_MIME_TYPES = new Set([
-  "video/mp4",
-  "video/webm",
-  "video/quicktime",
-]);
-const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
-const MAX_VIDEO_SIZE_BYTES = 150 * 1024 * 1024;
-const MAX_VIDEO_DURATION_SECONDS = 90;
+import {
+  BAND_MEDIA_VIDEO_MIME_TYPES,
+  IMAGE_UPLOAD_MIME_TYPES,
+  MAX_BAND_MEDIA_VIDEO_DURATION_SECONDS,
+  MAX_BAND_MEDIA_VIDEO_UPLOAD_BYTES,
+  MAX_IMAGE_UPLOAD_BYTES,
+} from "@ear-plug/shared/constants";
+const IMAGE_MIME_TYPES = new Set<string>(IMAGE_UPLOAD_MIME_TYPES);
+const VIDEO_MIME_TYPES = new Set<string>(BAND_MEDIA_VIDEO_MIME_TYPES);
 const MAX_CAPTION_LENGTH = 120;
 const MAX_LOCATION_LENGTH = 200;
 export interface BandProfileSlot {
@@ -100,7 +100,7 @@ async function validateFile(
     if (!IMAGE_MIME_TYPES.has(file.type)) {
       throw new Error("Image format must be JPEG, PNG, or WEBP.");
     }
-    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+    if (file.size > MAX_IMAGE_UPLOAD_BYTES) {
       throw new Error("Image size must be 10 MB or less.");
     }
     return {};
@@ -108,11 +108,11 @@ async function validateFile(
   if (!VIDEO_MIME_TYPES.has(file.type)) {
     throw new Error("Video format must be MP4, WEBM, or MOV.");
   }
-  if (file.size > MAX_VIDEO_SIZE_BYTES) {
+  if (file.size > MAX_BAND_MEDIA_VIDEO_UPLOAD_BYTES) {
     throw new Error("Video size must be 150 MB or less.");
   }
   const duration = await getVideoDuration(file);
-  if (duration <= 0 || duration > MAX_VIDEO_DURATION_SECONDS) {
+  if (duration <= 0 || duration > MAX_BAND_MEDIA_VIDEO_DURATION_SECONDS) {
     throw new Error("Videos must be at most 90 seconds.");
   }
   return { durationSeconds: Math.ceil(duration) };

@@ -19,6 +19,7 @@ import { useSavedBands } from "@/hooks/useBand";
 import { useCurrentUser } from "@/hooks/useUser";
 import { useSavedVenues } from "@/hooks/useVenues";
 import { uploadUriToConvexStorage } from "@/lib/convexUpload";
+import { validatePickedImageAsset } from "@/lib/mediaUpload";
 import { api } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
 import type { Genre } from "@ear-plug/shared/types";
@@ -443,14 +444,40 @@ export function FanProfileScreen() {
 
                     if (result.canceled || !result.assets[0]) return;
 
-                    const { uploadUrl } = await generateAvatarUploadUrl({});
-                    const uploaded = await uploadUriToConvexStorage(uploadUrl, result.assets[0].uri);
-                    await setAvatarFromStorage({ storageId: uploaded.storageId as Id<"_storage"> });
+                    try {
+                      const asset = result.assets[0];
+                      const { mimeType } = validatePickedImageAsset(asset, "Image");
+                      const { uploadUrl } = await generateAvatarUploadUrl({});
+                      const uploaded = await uploadUriToConvexStorage(
+                        uploadUrl,
+                        asset.uri,
+                        mimeType,
+                      );
+                      await setAvatarFromStorage({ storageId: uploaded.storageId as Id<"_storage"> });
+                      setSaveError(null);
+                    } catch (error) {
+                      setSaveError(
+                        error instanceof Error ? error.message : "Failed to upload avatar.",
+                      );
+                    }
                   }}
                 />
               </View>
               <View className="flex-1">
-                <ActionButton label="Clear Avatar" variant="danger" onPress={() => void clearAvatar({})} />
+                <ActionButton
+                  label="Clear Avatar"
+                  variant="danger"
+                  onPress={async () => {
+                    try {
+                      await clearAvatar({});
+                      setSaveError(null);
+                    } catch (error) {
+                      setSaveError(
+                        error instanceof Error ? error.message : "Failed to clear avatar.",
+                      );
+                    }
+                  }}
+                />
               </View>
             </View>
 
@@ -478,15 +505,22 @@ export function FanProfileScreen() {
 
                   const normalizedFirstName = normalizePersonalNamePart(firstName);
                   const normalizedLastName = normalizePersonalNamePart(lastName);
+                  const currentFirstName = normalizePersonalNamePart(clerkUser?.firstName);
+                  const currentLastName = normalizePersonalNamePart(clerkUser?.lastName);
+                  const shouldUpdateClerkName =
+                    normalizedFirstName !== currentFirstName ||
+                    normalizedLastName !== currentLastName;
 
                   setPendingSave(true);
                   setSaveError(null);
                   try {
-                    await updateClerkPersonalName({
-                      firstName: normalizedFirstName,
-                      lastName: normalizedLastName,
-                    });
-                    await clerkUser.reload();
+                    if (shouldUpdateClerkName) {
+                      await updateClerkPersonalName({
+                        firstName: normalizedFirstName,
+                        lastName: normalizedLastName,
+                      });
+                      await clerkUser.reload();
+                    }
                     await updateProfile({
                       name: composePersonalName(
                         normalizedFirstName,

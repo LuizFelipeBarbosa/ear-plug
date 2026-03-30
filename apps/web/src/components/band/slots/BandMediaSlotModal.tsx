@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { CityAutocomplete } from "@/components/ui/CityAutocomplete";
 import { cn } from "@/lib/utils";
 import type { BandMediaSlotIndex, BandPostMediaType } from "@ear-plug/shared/types";
+import { BAND_MEDIA_FILE_INPUT_ACCEPT } from "@ear-plug/shared/constants";
 
 const MAX_CAPTION_LENGTH = 120;
 const PLACEHOLDER_SRC = "/images/band-slot-placeholder.svg";
@@ -161,7 +162,7 @@ export function BandMediaSlotModal({ slot, onClose, onSave, onClear }: BandMedia
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime"
+              accept={BAND_MEDIA_FILE_INPUT_ACCEPT}
               className="hidden"
               onChange={handleFileChange}
             />

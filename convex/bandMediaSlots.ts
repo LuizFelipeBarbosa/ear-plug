@@ -23,7 +23,13 @@ const slotIndexValidator = v.union(
 
 const mediaTypeValidator = v.union(v.literal("image"), v.literal("video"));
 
-const IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const IMAGE_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/jpg",
+  "image/pjpeg",
+  "image/png",
+  "image/webp",
+]);
 const VIDEO_MIME_TYPES = new Set(["video/mp4", "video/webm", "video/quicktime"]);
 
 const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
@@ -232,7 +238,7 @@ export const upsertSlot = mutation({
       throw new Error("Uploaded media file not found");
     }
 
-    const mimeType = metadata.contentType ?? "";
+    const mimeType = (metadata.contentType ?? "").toLowerCase();
     if (!mimeType) {
       throw new Error("Uploaded media is missing a content type");
     }

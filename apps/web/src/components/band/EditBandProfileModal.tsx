@@ -27,13 +27,18 @@ import { MobileTabRail } from "@/components/ui/MobileTabRail";
 import { ResponsiveSheetModal } from "@/components/ui/ResponsiveSheetModal";
 import { cn } from "@/lib/utils";
 import { panelFade, presenceSyncNoInitial } from "@/lib/motion/presets";
-import { GENRES, GENRE_COLORS } from "@ear-plug/shared/constants";
+import {
+  GENRES,
+  GENRE_COLORS,
+  IMAGE_FILE_INPUT_ACCEPT,
+  IMAGE_UPLOAD_MIME_TYPES,
+  MAX_IMAGE_UPLOAD_BYTES,
+} from "@ear-plug/shared/constants";
 import type { Genre } from "@ear-plug/shared/types";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { uploadToConvexStorage } from "@/lib/convexUpload";
 
-const IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
-const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
+const IMAGE_MIME_TYPES = new Set<string>(IMAGE_UPLOAD_MIME_TYPES);
 
 interface EditBandProfileModalProps {
   isOpen: boolean;
@@ -230,7 +235,7 @@ export function EditBandProfileModal({
       setImageError("Image format must be JPEG, PNG, or WEBP.");
       return;
     }
-    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+    if (file.size > MAX_IMAGE_UPLOAD_BYTES) {
       setImageError("Image size must be 10 MB or less.");
       return;
     }
@@ -369,7 +374,7 @@ export function EditBandProfileModal({
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="image/jpeg,image/png,image/webp"
+                  accept={IMAGE_FILE_INPUT_ACCEPT}
                   className="hidden"
                   onChange={(event) => {
                     const file = event.target.files?.[0];

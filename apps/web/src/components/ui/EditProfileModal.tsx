@@ -5,7 +5,13 @@ import { X, Camera, Check, User, Music, Sparkles, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { panelFade } from "@/lib/motion/presets";
-import { GENRES, GENRE_COLORS } from "@ear-plug/shared/constants";
+import {
+  GENRES,
+  GENRE_COLORS,
+  IMAGE_FILE_INPUT_ACCEPT,
+  IMAGE_UPLOAD_MIME_TYPES,
+  MAX_IMAGE_UPLOAD_BYTES,
+} from "@ear-plug/shared/constants";
 import {
   composePersonalName,
   getPersonalNameValidationError,
@@ -37,8 +43,7 @@ interface ProfileFormData {
   removeAvatar?: boolean;
 }
 
-const IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
-const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
+const IMAGE_MIME_TYPES = new Set<string>(IMAGE_UPLOAD_MIME_TYPES);
 
 export function EditProfileModal({
   isOpen,
@@ -124,7 +129,11 @@ export function EditProfileModal({
       });
       onClose();
     } catch (err) {
-      setError("Failed to save profile. Please try again.");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to save profile. Please try again.",
+      );
     } finally {
       setIsSaving(false);
     }
@@ -159,7 +168,7 @@ export function EditProfileModal({
       return;
     }
 
-    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+    if (file.size > MAX_IMAGE_UPLOAD_BYTES) {
       setAvatarError("Image size must be 10 MB or less.");
       return;
     }
@@ -265,7 +274,7 @@ export function EditProfileModal({
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="image/jpeg,image/png,image/webp"
+                  accept={IMAGE_FILE_INPUT_ACCEPT}
                   className="hidden"
                   onChange={(event) => {
                     const file = event.target.files?.[0];
