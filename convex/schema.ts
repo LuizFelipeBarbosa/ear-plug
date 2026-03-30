@@ -75,6 +75,22 @@ const eventAddressVisibilityValidator = v.union(
 );
 
 /**
+ * Validator for a single event RSVP poll option.
+ */
+const eventPollOptionValidator = v.object({
+  id: v.string(),
+  label: v.string(),
+});
+
+/**
+ * Validator for an optional event RSVP poll.
+ */
+const eventPollValidator = v.object({
+  question: v.string(),
+  options: v.array(eventPollOptionValidator),
+});
+
+/**
  * Validator for open date status.
  * - "open": Available for applications
  * - "pending": Has applications under review
@@ -401,6 +417,8 @@ export default defineSchema({
      * Optional for backward compatibility; treat missing as "public".
      */
     addressVisibility: v.optional(eventAddressVisibilityValidator),
+    /** Optional RSVP poll configuration */
+    poll: v.optional(eventPollValidator),
   })
     .index("by_band", ["bandId"])
     .index("by_venue", ["venueId"])
@@ -471,6 +489,10 @@ export default defineSchema({
     attendanceStatus: v.optional(v.union(v.literal("on_list"), v.literal("attended"))),
     /** Unix timestamp when the RSVP was marked attended */
     attendedAt: v.optional(v.number()),
+    /** Selected poll option id for the related event poll */
+    pollAnswerOptionId: v.optional(v.string()),
+    /** Unix timestamp when the RSVP poll was answered */
+    pollAnsweredAt: v.optional(v.number()),
   })
     .index("by_user", ["userId"])
     .index("by_event", ["eventId"])

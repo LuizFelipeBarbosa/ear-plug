@@ -16,6 +16,8 @@ import { useProfileContext } from "@/hooks/useProfileContext";
 import { GigModalShell } from "@/components/band/GigModalShell";
 import {
   createGigFormData,
+  createEmptyGigPollOption,
+  buildEventPollFromForm,
   GigBandSearchInput,
   GigDetailsSection,
   type GigFormData,
@@ -34,6 +36,7 @@ import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import type {
   EventAddressVisibility,
+  EventPoll,
   EventStatus,
   Genre,
 } from "@ear-plug/shared/types";
@@ -51,6 +54,9 @@ interface EditableEvent {
   description?: string;
   status?: EventStatus;
   addressVisibility?: EventAddressVisibility;
+  poll?: EventPoll;
+  pollHasResponses?: boolean;
+  pollResponseCount?: number;
   venue?: {
     name: string;
     address: string;
@@ -143,6 +149,15 @@ export function EditGigModal({
       description: event.description ?? "",
       status: event.status === "hold" ? "hold" : "confirmed",
       addressVisibility: event.addressVisibility ?? "public",
+      pollEnabled: !!event.poll,
+      pollQuestion: event.poll?.question ?? "",
+      pollOptions:
+        event.poll?.options && event.poll.options.length >= 2
+          ? event.poll.options.map((option) => ({
+              id: option.id,
+              label: option.label,
+            }))
+          : [createEmptyGigPollOption(), createEmptyGigPollOption()],
     });
     setVenue(
       event.venue
@@ -310,6 +325,7 @@ export function EditGigModal({
         price: parsedPrice,
         status: formData.status,
         addressVisibility: formData.addressVisibility,
+        poll: formData.pollEnabled ? buildEventPollFromForm(formData) : null,
       });
       onSuccess?.();
       onClose();
@@ -494,12 +510,53 @@ export function EditGigModal({
             {activeTab === "settings" && (
               <GigSettingsSection
                 formData={formData}
+                errors={errors}
                 onStatusChange={(status) =>
                   setFormData((prev) => ({ ...prev, status }))
                 }
                 onAddressVisibilityChange={(addressVisibility) =>
                   setFormData((prev) => ({ ...prev, addressVisibility }))
                 }
+                onPollEnabledChange={(pollEnabled) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    pollEnabled,
+                    pollQuestion: pollEnabled ? prev.pollQuestion : "",
+                    pollOptions: pollEnabled
+                      ? prev.pollOptions.length >= 2
+                        ? prev.pollOptions
+                        : [createEmptyGigPollOption(), createEmptyGigPollOption()]
+                      : [createEmptyGigPollOption(), createEmptyGigPollOption()],
+                  }))
+                }
+                onPollQuestionChange={(pollQuestion) =>
+                  setFormData((prev) => ({ ...prev, pollQuestion }))
+                }
+                onPollOptionChange={(optionId, value) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    pollOptions: prev.pollOptions.map((option) =>
+                      option.id === optionId ? { ...option, label: value } : option,
+                    ),
+                  }))
+                }
+                onAddPollOption={() =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    pollOptions: [...prev.pollOptions, createEmptyGigPollOption()],
+                  }))
+                }
+                onRemovePollOption={(optionId) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    pollOptions: prev.pollOptions.filter(
+                      (option) => option.id !== optionId,
+                    ),
+                  }))
+                }
+                clearError={clearFieldError}
+                pollLocked={event.pollHasResponses}
+                pollResponseCount={event.pollResponseCount ?? 0}
                 dangerSlot={
                   wasTentative ? (
                     <div className="border-t border-border pt-4">

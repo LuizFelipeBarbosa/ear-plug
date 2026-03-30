@@ -6,18 +6,26 @@
 
 "use client";
 
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useQuery, useMutation, useConvex } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import type {
   EventCheckinAssignableUser,
   EventCheckinStaff,
+  EventPoll,
   EventTicketScanResult,
   Genre,
   GuestFilterType,
   MyEventTicketPayload,
 } from "@ear-plug/shared/types";
 import type { Id } from "../../../../convex/_generated/dataModel";
+
+interface EventPollPromptState {
+  eventId: Id<"events">;
+  eventTitle: string;
+  question: string;
+  options: EventPoll["options"];
+}
 
 /**
  * Hook for listing upcoming events with optional genre filtering.
@@ -90,31 +98,110 @@ export function useEvent(eventId: Id<"events"> | undefined) {
   /** Event document with band and venue data */
   const event = useQuery(api.events.getById, eventId ? { eventId } : "skip");
 
-  /** User's RSVP and like status for this event */
-  const eventStatus = useQuery(
-    api.events.getUserEventStatus,
-    eventId ? { eventId } : "skip",
-  );
-
-  /** Mutation to toggle RSVP status */
-  const rsvp = useMutation(api.events.rsvp);
-
-  /** Mutation to toggle like status */
-  const toggleLike = useMutation(api.events.toggleLike);
+  const interaction = useEventInteraction(eventId);
 
   return {
     /** The event document with band and venue data */
     event,
-    /** True if the user has RSVP'd to this event */
-    hasRsvp: eventStatus?.hasRsvp ?? false,
-    /** True if the user has liked this event */
-    hasLiked: eventStatus?.hasLiked ?? false,
     /** True while the event query is loading */
     isLoading: event === undefined,
-    /** Function to toggle RSVP status for this event */
-    rsvp: () => eventId && rsvp({ eventId }),
-    /** Function to toggle like status for this event */
-    toggleLike: () => eventId && toggleLike({ eventId }),
+    ...interaction,
+  };
+}
+
+export function useEventInteraction(eventId: Id<"events"> | undefined) {
+  const eventStatus = useQuery(
+    api.events.getUserEventStatus,
+    eventId ? { eventId } : "skip",
+  );
+  const rsvpMutation = useMutation(api.events.rsvp);
+  const toggleLikeMutation = useMutation(api.events.toggleLike);
+  const submitPollResponseMutation = useMutation(
+    api.events.submitEventPollResponse,
+  );
+  const [pollPrompt, setPollPrompt] = useState<EventPollPromptState | null>(
+    null,
+  );
+
+  const rsvp = useCallback(async () => {
+    if (!eventId) return undefined;
+    const result = await rsvpMutation({ eventId });
+
+    if (result.action === "added" && result.pollPrompt) {
+      setPollPrompt({
+        eventId,
+        eventTitle: result.pollPrompt.eventTitle,
+        question: result.pollPrompt.question,
+        options: result.pollPrompt.options,
+      });
+    } else if (result.action === "removed") {
+      setPollPrompt(null);
+    }
+
+    return result;
+  }, [eventId, rsvpMutation]);
+
+  const toggleLike = useCallback(async () => {
+    if (!eventId) return undefined;
+    return toggleLikeMutation({ eventId });
+  }, [eventId, toggleLikeMutation]);
+
+  const submitPollResponse = useCallback(
+    async (optionId: string) => {
+      if (!eventId) return undefined;
+      const result = await submitPollResponseMutation({ eventId, optionId });
+      setPollPrompt(null);
+      return result;
+    },
+    [eventId, submitPollResponseMutation],
+  );
+
+  const dismissPollPrompt = useCallback(() => {
+    setPollPrompt(null);
+  }, []);
+
+  const openPendingPollPrompt = useCallback(
+    (
+      event:
+        | {
+            title?: string;
+            poll?: EventPoll;
+          }
+        | null
+        | undefined,
+    ) => {
+      if (
+        !eventId ||
+        !event?.poll ||
+        !eventStatus?.hasPendingPoll ||
+        !eventStatus.canAnswerPoll
+      ) {
+        return;
+      }
+
+      setPollPrompt({
+        eventId,
+        eventTitle: event.title?.trim() || "Untitled Gig",
+        question: event.poll.question,
+        options: event.poll.options,
+      });
+    },
+    [eventId, eventStatus?.canAnswerPoll, eventStatus?.hasPendingPoll],
+  );
+
+  return {
+    eventStatus,
+    hasRsvp: eventStatus?.hasRsvp ?? false,
+    hasLiked: eventStatus?.hasLiked ?? false,
+    hasPendingPoll: eventStatus?.hasPendingPoll ?? false,
+    selectedPollOptionId: eventStatus?.selectedPollOptionId,
+    canAnswerPoll: eventStatus?.canAnswerPoll ?? false,
+    pollPrompt,
+    rsvp,
+    toggleLike,
+    submitPollResponse,
+    dismissPollPrompt,
+    openPendingPollPrompt,
   };
 }
 

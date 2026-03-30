@@ -12,7 +12,9 @@ import { useQuery } from "convex/react";
 import { type VenueLocationData } from "@/components/ui/CityAutocomplete";
 import { useSharedEvents } from "@/hooks/useSharedEvents";
 import {
+  buildEventPollFromForm,
   createGigFormData,
+  createEmptyGigPollOption,
   GigBandSearchInput,
   GigDetailsSection,
   GigLineupItem,
@@ -194,6 +196,7 @@ export function CreateGigModal({
         price: parsedPrice,
         status: formData.status,
         addressVisibility: formData.addressVisibility,
+        poll: buildEventPollFromForm(formData),
       });
 
       onSuccess?.();
@@ -341,12 +344,51 @@ export function CreateGigModal({
             {activeTab === "settings" && (
               <GigSettingsSection
                 formData={formData}
+                errors={errors}
                 onStatusChange={(status) =>
                   setFormData((prev) => ({ ...prev, status }))
                 }
                 onAddressVisibilityChange={(addressVisibility) =>
                   setFormData((prev) => ({ ...prev, addressVisibility }))
                 }
+                onPollEnabledChange={(pollEnabled) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    pollEnabled,
+                    pollQuestion: pollEnabled ? prev.pollQuestion : "",
+                    pollOptions: pollEnabled
+                      ? prev.pollOptions.length >= 2
+                        ? prev.pollOptions
+                        : [createEmptyGigPollOption(), createEmptyGigPollOption()]
+                      : [createEmptyGigPollOption(), createEmptyGigPollOption()],
+                  }))
+                }
+                onPollQuestionChange={(pollQuestion) =>
+                  setFormData((prev) => ({ ...prev, pollQuestion }))
+                }
+                onPollOptionChange={(optionId, value) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    pollOptions: prev.pollOptions.map((option) =>
+                      option.id === optionId ? { ...option, label: value } : option,
+                    ),
+                  }))
+                }
+                onAddPollOption={() =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    pollOptions: [...prev.pollOptions, createEmptyGigPollOption()],
+                  }))
+                }
+                onRemovePollOption={(optionId) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    pollOptions: prev.pollOptions.filter(
+                      (option) => option.id !== optionId,
+                    ),
+                  }))
+                }
+                clearError={clearFieldError}
               />
             )}
           </div>
