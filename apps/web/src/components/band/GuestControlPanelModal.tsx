@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { X, Search, Users, Clock, Check, Trash2, Crown, UserCheck, ChevronRight } from "lucide-react";
+import { X, Search, Users, Clock, Check, Trash2, Crown, UserCheck } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AvatarImage } from "@/components/ui/OptimizedImage";
 import { ResponsiveSheetModal } from "@/components/ui/ResponsiveSheetModal";
@@ -51,6 +51,7 @@ export function GuestControlPanelModal({
     guests,
     capReached,
     cap,
+    counts,
     totalCount,
     canManage,
     isLoading,
@@ -63,15 +64,6 @@ export function GuestControlPanelModal({
   );
 
   const isEmpty = !isLoading && guests.length === 0;
-
-  // Calculate stats
-  const stats = useMemo(() => {
-    return {
-      total: totalCount,
-      onList: guests.filter((g) => g.rsvpType === "on_list").length,
-      attended: guests.filter((g) => g.rsvpType === "attended").length,
-    };
-  }, [guests, totalCount]);
 
   const handleToggleAttendance = async (guest: (typeof guests)[number]) => {
     if (!canManage) return;
@@ -128,260 +120,279 @@ export function GuestControlPanelModal({
       panelClassName="sm:max-w-2xl"
     >
       <div className="border-b border-border bg-card/95 p-4 backdrop-blur-xl">
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <h2
-                id="guest-control-panel-title"
-                className="text-lg font-bold text-foreground"
-              >
-                Guest List
-              </h2>
-              <p className="text-sm text-muted-foreground mt-0.5 line-clamp-1">
-                {eventTitle}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={onClose}
-              className="touch-target rounded-xl border border-border bg-muted p-2 text-muted-foreground transition-colors hover:text-foreground hover:border-band/30"
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h2
+              id="guest-control-panel-title"
+              className="text-lg font-bold text-foreground"
             >
-              <X className="w-5 h-5" />
-            </button>
+              Guest List
+            </h2>
+            <p className="mt-0.5 line-clamp-1 text-sm text-muted-foreground">
+              {eventTitle}
+            </p>
           </div>
-
-          {/* Stats */}
-          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
-            <div className="rounded-xl bg-muted/50 p-3 text-center">
-              <p className="text-lg font-bold text-foreground">{stats.total}</p>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Total</p>
-            </div>
-            <div className="rounded-xl bg-muted/50 p-3 text-center">
-              <p className="text-lg font-bold text-band">{stats.onList}</p>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">On List</p>
-            </div>
-            <div className="col-span-2 rounded-xl border border-success/20 bg-success/10 p-3 text-center sm:col-span-1">
-              <p className="text-lg font-bold text-success">{stats.attended}</p>
-              <p className="text-[10px] text-success uppercase tracking-wide">Checked In</p>
-            </div>
-          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="touch-target rounded-xl border border-border bg-muted p-2 text-muted-foreground transition-colors hover:border-band/30 hover:text-foreground"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
 
-        {/* Search & Filters */}
-        <div className="border-b border-border p-4 space-y-3">
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search guests by name..."
-              className="w-full pl-10 pr-4 py-2.5 bg-muted border border-border rounded-xl text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-band/50 transition-colors"
-            />
+        <div className="mt-4 grid grid-cols-3 gap-2">
+          <div className="rounded-xl border border-border/80 bg-muted/40 px-2 py-3 text-center">
+            <p className="text-base font-bold text-foreground sm:text-lg">
+              {counts.total}
+            </p>
+            <p className="mt-1 text-[9px] uppercase tracking-[0.18em] text-muted-foreground sm:text-[10px]">
+              Total
+            </p>
           </div>
+          <div className="rounded-xl border border-band/15 bg-band/5 px-2 py-3 text-center">
+            <p className="text-base font-bold text-band sm:text-lg">
+              {counts.onList}
+            </p>
+            <p className="mt-1 text-[9px] uppercase tracking-[0.18em] text-muted-foreground sm:text-[10px]">
+              On List
+            </p>
+          </div>
+          <div className="rounded-xl border border-success/20 bg-success/10 px-2 py-3 text-center">
+            <p className="text-base font-bold text-success sm:text-lg">
+              {counts.attended}
+            </p>
+            <p className="mt-1 text-[9px] uppercase tracking-[0.18em] text-success sm:text-[10px]">
+              Checked In
+            </p>
+          </div>
+        </div>
+      </div>
 
-          {/* Filter Pills */}
-          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-            {FILTERS.map((option) => {
-              const Icon = option.icon;
-              const count =
-                option.value === "all"
-                  ? stats.total
-                  : option.value === "on_list"
-                  ? stats.onList
-                  : stats.attended;
+      <div className="space-y-3 border-b border-border p-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search guests by name..."
+            className="w-full rounded-xl border border-border bg-muted py-2.5 pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground transition-colors focus:border-band/50 focus:outline-none"
+          />
+        </div>
 
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => setFilter(option.value)}
+        <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap">
+          {FILTERS.map((option) => {
+            const Icon = option.icon;
+            const count =
+              option.value === "all"
+                ? counts.total
+                : option.value === "on_list"
+                  ? counts.onList
+                  : counts.attended;
+
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setFilter(option.value)}
+                className={cn(
+                  "flex min-h-[58px] min-w-0 flex-col items-center justify-center gap-1 rounded-xl border px-2 py-2 text-center transition-all sm:min-h-0 sm:w-auto sm:flex-row sm:gap-1.5 sm:px-3 sm:py-2",
+                  filter === option.value
+                    ? "border-band bg-band text-white shadow-md shadow-band/20"
+                    : "border-border bg-card text-muted-foreground hover:border-band/30"
+                )}
+              >
+                <Icon className="h-3.5 w-3.5 shrink-0" />
+                <span className="min-w-0 text-[10px] font-medium leading-tight sm:text-xs">
+                  {option.label}
+                </span>
+                <span
                   className={cn(
-                    "flex items-center gap-1.5 px-3 py-2 text-xs font-medium whitespace-nowrap rounded-xl transition-all border",
-                    filter === option.value
-                      ? "bg-band text-white border-band shadow-md shadow-band/20"
-                      : "bg-card border-border text-muted-foreground hover:border-band/30"
+                    "rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
+                    filter === option.value ? "bg-white/20" : "bg-muted"
                   )}
                 >
-                  <Icon className="w-3.5 h-3.5" />
-                  {option.label}
-                  <span
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {!canManage && (
+          <div className="flex items-center gap-2 rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-500">
+            <Crown className="h-4 w-4 flex-shrink-0" />
+            Read-only: only owners and admins can manage attendance
+          </div>
+        )}
+        {capReached && (
+          <div className="flex items-center gap-2 rounded-xl border border-band/20 bg-band/10 px-3 py-2 text-xs text-band">
+            <Users className="h-4 w-4 flex-shrink-0" />
+            Showing latest {cap} RSVPs
+          </div>
+        )}
+        {error && (
+          <div className="flex items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-500">
+            <X className="h-4 w-4 flex-shrink-0" />
+            {error}
+          </div>
+        )}
+        {capReached && totalCount > counts.total ? (
+          <p className="text-[11px] text-muted-foreground">
+            Event has {totalCount} total RSVPs. Attendance tools below show the latest {cap}.
+          </p>
+        ) : null}
+      </div>
+
+      <div className="flex-1 overflow-y-auto overscroll-contain p-3">
+        {isLoading ? (
+          <div className="space-y-2">
+            {[1, 2, 3, 4].map((row) => (
+              <div
+                key={row}
+                className="h-24 rounded-2xl border border-border bg-muted animate-shimmer"
+              />
+            ))}
+          </div>
+        ) : isEmpty ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-muted">
+              <Users className="h-6 w-6 text-muted-foreground" />
+            </div>
+            <p className="mb-1 text-sm font-medium text-foreground">
+              No guests found
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Try adjusting your search or filter
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <AnimatePresence mode="popLayout">
+              {guests.map((guest) => {
+                const isBusy = activeRsvpId === guest.rsvpId;
+                const isDeleting = deletingId === guest.rsvpId;
+
+                return (
+                  <motion.div
+                    key={guest.rsvpId}
+                    layout
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, x: -100 }}
                     className={cn(
-                      "ml-1 px-1.5 py-0.5 text-[10px] rounded-full",
-                      filter === option.value
-                        ? "bg-white/20"
-                        : "bg-muted"
+                      "rounded-2xl border p-3.5 transition-colors",
+                      guest.rsvpType === "attended"
+                        ? "border-success/20 bg-success/5"
+                        : "border-border bg-card"
                     )}
                   >
-                    {count}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+                    <div className="flex min-w-0 items-start gap-3">
+                      <Link
+                        href={`/fans/${guest.userId}`}
+                        className="flex-shrink-0"
+                      >
+                        <div className="relative">
+                          <AvatarImage
+                            src={guest.avatar}
+                            alt={guest.name}
+                            fallbackText={guest.name}
+                            size={44}
+                            className={cn(
+                              "rounded-xl border-2",
+                              guest.rsvpType === "attended"
+                                ? "border-success"
+                                : "border-border"
+                            )}
+                          />
+                          {guest.rsvpType === "attended" ? (
+                            <div className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full border-2 border-card bg-success">
+                              <Check className="h-2.5 w-2.5 text-white" />
+                            </div>
+                          ) : null}
+                        </div>
+                      </Link>
 
-          {/* Alerts */}
-          {!canManage && (
-            <div className="flex items-center gap-2 px-3 py-2 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs text-amber-500">
-              <Crown className="w-4 h-4 flex-shrink-0" />
-              Read-only: only owners and admins can manage attendance
-            </div>
-          )}
-          {capReached && (
-            <div className="flex items-center gap-2 px-3 py-2 bg-band/10 border border-band/20 rounded-xl text-xs text-band">
-              <Users className="w-4 h-4 flex-shrink-0" />
-              Showing latest {cap} RSVPs
-            </div>
-          )}
-          {error && (
-            <div className="flex items-center gap-2 px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-xl text-xs text-red-500">
-              <X className="w-4 h-4 flex-shrink-0" />
-              {error}
-            </div>
-          )}
-        </div>
+                      <Link
+                        href={`/fans/${guest.userId}`}
+                        className="min-w-0 flex-1"
+                      >
+                        <p className="truncate text-sm font-semibold text-foreground">
+                          {guest.name}
+                        </p>
+                        <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+                          <Clock className="h-3 w-3 shrink-0" />
+                          <span className="min-w-0">
+                            RSVP&apos;d {formatGuestDate(guest.rsvpedAt)}
+                          </span>
+                        </div>
+                      </Link>
+                    </div>
 
-        {/* Guest List */}
-        <div className="flex-1 overflow-y-auto overscroll-contain p-2 sm:p-3">
-          {isLoading ? (
-            <div className="space-y-2 p-2">
-              {[1, 2, 3, 4].map((row) => (
-                <div
-                  key={row}
-                  className="h-16 bg-muted border border-border rounded-xl animate-shimmer"
-                />
-              ))}
-            </div>
-          ) : isEmpty ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="w-12 h-12 bg-muted rounded-xl flex items-center justify-center mb-3">
-                <Users className="w-6 h-6 text-muted-foreground" />
-              </div>
-              <p className="text-sm font-medium text-foreground mb-1">
-                No guests found
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Try adjusting your search or filter
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-1">
-              <AnimatePresence mode="popLayout">
-                {guests.map((guest) => {
-                  const isBusy = activeRsvpId === guest.rsvpId;
-                  const isDeleting = deletingId === guest.rsvpId;
-
-                  return (
-                    <motion.div
-                      key={guest.rsvpId}
-                      layout
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, x: -100 }}
+                    <div
                       className={cn(
-                        "rounded-xl p-3 transition-colors",
+                        "mt-3 flex items-center gap-3 border-t pt-3",
                         guest.rsvpType === "attended"
-                          ? "bg-success/5 border border-success/20"
-                          : "bg-card border border-border"
+                          ? "border-success/15"
+                          : "border-border/70",
+                        canManage ? "justify-between" : "justify-start"
                       )}
                     >
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="flex min-w-0 items-start gap-3">
-                          <Link
-                            href={`/fans/${guest.userId}`}
-                            className="flex-shrink-0"
-                          >
-                            <div className="relative">
-                              <AvatarImage
-                                src={guest.avatar}
-                                alt={guest.name}
-                                fallbackText={guest.name}
-                                size={44}
-                                className={cn(
-                                  "rounded-xl border-2",
-                                  guest.rsvpType === "attended"
-                                    ? "border-success"
-                                    : "border-border"
-                                )}
-                              />
-                              {guest.rsvpType === "attended" ? (
-                                <div className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full border-2 border-card bg-success">
-                                  <Check className="w-2.5 h-2.5 text-white" />
-                                </div>
-                              ) : null}
-                            </div>
-                          </Link>
-
-                          <Link
-                            href={`/fans/${guest.userId}`}
-                            className="min-w-0 flex-1"
-                          >
-                            <p className="truncate text-sm font-medium text-foreground">
-                              {guest.name}
-                            </p>
-                            <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
-                              <Clock className="w-3 h-3" />
-                              <span>RSVP&apos;d {formatGuestDate(guest.rsvpedAt)}</span>
-                            </div>
-                          </Link>
-                        </div>
-
-                      <div className="flex flex-col gap-2 sm:items-end">
-                        <span
-                          className={cn(
-                            "w-fit rounded-lg px-2 py-1 text-[10px] font-semibold",
-                            guest.rsvpType === "attended"
-                              ? "bg-success/15 text-success"
-                              : "bg-muted text-muted-foreground"
-                          )}
-                        >
-                          {guest.rsvpType === "attended" ? "Checked In" : "On List"}
-                        </span>
-
-                          {canManage && (
-                          <div className="flex flex-wrap items-center gap-1">
-                            <button
-                              type="button"
-                              disabled={isBusy}
-                              onClick={() => handleToggleAttendance(guest)}
-                              className={cn(
-                                "p-2 rounded-lg transition-colors",
-                                guest.rsvpType === "attended"
-                                  ? "bg-muted text-muted-foreground hover:bg-muted/80"
-                                  : "bg-band/10 text-band hover:bg-band/20",
-                                isBusy && "opacity-50 cursor-not-allowed"
-                              )}
-                              title={
-                                guest.rsvpType === "attended"
-                                  ? "Mark as not attended"
-                                  : "Mark as attended"
-                              }
-                            >
-                              <UserCheck className="w-4 h-4" />
-                            </button>
-                            <button
-                              type="button"
-                              disabled={isDeleting}
-                              onClick={() => handleRemoveGuest(guest)}
-                              className={cn(
-                                "p-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors",
-                                isDeleting && "opacity-50 cursor-not-allowed"
-                              )}
-                              title="Remove from list"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
+                      <span
+                        className={cn(
+                          "inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]",
+                          guest.rsvpType === "attended"
+                            ? "bg-success/15 text-success"
+                            : "bg-muted text-muted-foreground"
                         )}
-                      </div>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </AnimatePresence>
-            </div>
-          )}
-        </div>
+                      >
+                        {guest.rsvpType === "attended" ? "Checked In" : "On List"}
+                      </span>
+
+                      {canManage ? (
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            disabled={isBusy}
+                            onClick={() => handleToggleAttendance(guest)}
+                            className={cn(
+                              "touch-target rounded-lg p-2 transition-colors",
+                              guest.rsvpType === "attended"
+                                ? "bg-muted text-muted-foreground hover:bg-muted/80"
+                                : "bg-band/10 text-band hover:bg-band/20",
+                              isBusy && "cursor-not-allowed opacity-50"
+                            )}
+                            title={
+                              guest.rsvpType === "attended"
+                                ? "Mark as not attended"
+                                : "Mark as attended"
+                            }
+                          >
+                            <UserCheck className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isDeleting}
+                            onClick={() => handleRemoveGuest(guest)}
+                            className={cn(
+                              "touch-target rounded-lg bg-red-500/10 p-2 text-red-500 transition-colors hover:bg-red-500/20",
+                              isDeleting && "cursor-not-allowed opacity-50"
+                            )}
+                            title="Remove from list"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+          </div>
+        )}
+      </div>
     </ResponsiveSheetModal>
   );
 }

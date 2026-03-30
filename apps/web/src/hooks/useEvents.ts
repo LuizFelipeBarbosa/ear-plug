@@ -217,6 +217,7 @@ export function useEventGuestList(
     guests: guestsResult?.guests ?? [],
     capReached: guestsResult?.capReached ?? false,
     cap: guestsResult?.cap ?? 500,
+    counts: guestsResult?.counts ?? { total: 0, onList: 0, attended: 0 },
     totalCount: guestsResult?.totalCount ?? 0,
     canManage: guestsResult?.canManage ?? false,
     isLoading:

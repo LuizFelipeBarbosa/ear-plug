@@ -1872,8 +1872,24 @@ export const listEventGuests = query({
       })
     );
 
-    const guests = guestsWithUsers
-      .filter((guest): guest is NonNullable<typeof guest> => guest !== null)
+    const allGuests = guestsWithUsers.filter(
+      (guest): guest is NonNullable<typeof guest> => guest !== null,
+    );
+
+    const counts = allGuests.reduce(
+      (totals, guest) => {
+        totals.total += 1;
+        if (guest.rsvpType === "attended") {
+          totals.attended += 1;
+        } else {
+          totals.onList += 1;
+        }
+        return totals;
+      },
+      { total: 0, onList: 0, attended: 0 },
+    );
+
+    const guests = allGuests
       .filter((guest) => {
         if (filterType !== "all" && guest.rsvpType !== filterType) {
           return false;
@@ -1891,6 +1907,7 @@ export const listEventGuests = query({
       guests,
       capReached,
       cap: GUEST_LIST_CAP,
+      counts,
       totalCount: access.event.rsvpCount,
       canManage: access.canManageGuestList,
     };
