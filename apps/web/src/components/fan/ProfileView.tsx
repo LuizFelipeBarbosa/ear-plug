@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { SignOutButton } from "@clerk/nextjs";
+import { SignOutButton, useUser } from "@clerk/nextjs";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
@@ -42,7 +42,13 @@ import {
 } from "@/components/fan/profile/FanProfilePrimitives";
 import { ProfileWorkspaceSwitcher } from "@/components/profile/ProfileWorkspaceSwitcher";
 import { GENRE_COLORS } from "@ear-plug/shared/constants";
-import { getInitials } from "@ear-plug/shared/utils";
+import {
+  composePersonalName,
+  getInitials,
+  getPersonalNameValidationError,
+  normalizePersonalNamePart,
+  splitPersonalName,
+} from "@ear-plug/shared/utils";
 import type { Genre } from "@ear-plug/shared/types";
 import { cn } from "@/lib/utils";
 import { panelFade, presenceSyncNoInitial } from "@/lib/motion/presets";
@@ -60,6 +66,7 @@ function capitalizeGenre(genre: Genre | null): string {
 
 export function FanProfileView() {
   const router = useRouter();
+  const { user: clerkUser } = useUser();
   const { user, updateProfile } = useCurrentUser();
   const { savedBands } = useSavedBands();
   const { setBandMode } = useProfileContext();
@@ -94,12 +101,28 @@ export function FanProfileView() {
 
   const handleSaveProfile = useCallback(
     async (data: {
-      name: string;
+      firstName: string;
+      lastName: string;
       location?: string;
       topGenres?: Genre[];
       avatarFile?: File;
       removeAvatar?: boolean;
     }) => {
+      if (!clerkUser) {
+        throw new Error("Account details are still loading.");
+      }
+
+      const validationError = getPersonalNameValidationError(
+        data.firstName,
+        data.lastName,
+      );
+      if (validationError) {
+        throw new Error(validationError);
+      }
+
+      const normalizedFirstName = normalizePersonalNamePart(data.firstName);
+      const normalizedLastName = normalizePersonalNamePart(data.lastName);
+
       if (data.avatarFile) {
         const { uploadUrl } = await generateAvatarUploadUrl({});
         const uploadData = await uploadToConvexStorage(uploadUrl, data.avatarFile);
@@ -108,24 +131,44 @@ export function FanProfileView() {
         await clearAvatar({});
       }
 
+      await clerkUser.update({
+        firstName: normalizedFirstName,
+        lastName: normalizedLastName,
+      });
+      await clerkUser.reload();
       await updateProfile({
-        name: data.name,
+        name: composePersonalName(normalizedFirstName, normalizedLastName),
         location: data.location,
         topGenres: data.topGenres,
       });
     },
-    [clearAvatar, generateAvatarUploadUrl, setAvatarFromStorage, updateProfile]
+    [
+      clerkUser,
+      clearAvatar,
+      generateAvatarUploadUrl,
+      setAvatarFromStorage,
+      updateProfile,
+    ]
   );
 
-  const editModalInitialData = useMemo(
-    () => ({
-      name: user?.name ?? "",
+  const editModalInitialData = useMemo(() => {
+    const fallbackName = splitPersonalName(user?.name);
+
+    return {
+      firstName: clerkUser?.firstName ?? fallbackName.firstName,
+      lastName: clerkUser?.lastName ?? fallbackName.lastName,
       location: user?.location,
       avatar: user?.avatar,
       topGenres: (user?.topGenres as Genre[] | undefined) ?? undefined,
-    }),
-    [user?.avatar, user?.location, user?.name, user?.topGenres]
-  );
+    };
+  }, [
+    clerkUser?.firstName,
+    clerkUser?.lastName,
+    user?.avatar,
+    user?.location,
+    user?.name,
+    user?.topGenres,
+  ]);
 
   useEffect(() => {
     return () => {

@@ -5,9 +5,14 @@ import { ClerkLoaded, ClerkProvider, useAuth, useUser } from "@clerk/clerk-expo"
 import { ConvexProviderWithClerk } from "convex/react-clerk";
 import { ConvexReactClient } from "convex/react";
 import { useMutation, useQuery } from "convex/react";
+import {
+  composePersonalName,
+  hasRequiredPersonalName,
+} from "@ear-plug/shared/utils";
 import * as SecureStore from "expo-secure-store";
 import { Text } from "react-native";
 import { api } from "../../../convex/_generated/api";
+import { NameCompletionModal } from "@/components/auth/NameCompletionModal";
 import { AppScreen, HeroHeader, LoadingPanel, SectionCard } from "@/components/ui/AppPrimitives";
 import { MobileProfileContextProvider } from "@/context/ProfileContext";
 import { getEnv, getMissingRequiredEnv } from "@/lib/env";
@@ -61,15 +66,21 @@ function EnvErrorScreen() {
 
 function UserBootstrap({ children }: { children: React.ReactNode }) {
   const { isLoaded, isSignedIn } = useAuth();
-  const { user: clerkUser } = useUser();
+  const { isLoaded: isClerkUserLoaded, user: clerkUser } = useUser();
   const convexUser = useQuery(api.users.getCurrentUser);
   const upsertUser = useMutation(api.users.upsertUser);
   const attemptedFor = useRef<string | null>(null);
   const [isBootstrapping, setIsBootstrapping] = useState(false);
+  const needsNameCompletion =
+    isLoaded &&
+    isSignedIn &&
+    Boolean(clerkUser) &&
+    !hasRequiredPersonalName(clerkUser?.firstName, clerkUser?.lastName);
 
   useEffect(() => {
     if (!isLoaded || !isSignedIn || !clerkUser) return;
     if (convexUser === undefined) return;
+    if (needsNameCompletion) return;
 
     if (convexUser === null && attemptedFor.current !== clerkUser.id) {
       attemptedFor.current = clerkUser.id;
@@ -79,7 +90,7 @@ function UserBootstrap({ children }: { children: React.ReactNode }) {
         clerkId: clerkUser.id,
         email: clerkUser.primaryEmailAddress?.emailAddress || "",
         phoneNumber: clerkUser.primaryPhoneNumber?.phoneNumber,
-        name: clerkUser.fullName || clerkUser.firstName || "User",
+        name: composePersonalName(clerkUser.firstName, clerkUser.lastName),
         avatar: clerkUser.imageUrl,
       })
         .catch((error) => {
@@ -90,13 +101,24 @@ function UserBootstrap({ children }: { children: React.ReactNode }) {
           setIsBootstrapping(false);
         });
     }
-  }, [clerkUser, convexUser, isLoaded, isSignedIn, upsertUser]);
+  }, [clerkUser, convexUser, isLoaded, isSignedIn, needsNameCompletion, upsertUser]);
 
-  if (isBootstrapping) {
+  if ((isSignedIn && !isClerkUserLoaded) || isBootstrapping) {
     return (
       <AppScreen>
         <LoadingPanel label="Syncing account..." tone="fan" />
       </AppScreen>
+    );
+  }
+
+  if (needsNameCompletion) {
+    return (
+      <>
+        <AppScreen>
+          <LoadingPanel label="Complete your profile to continue..." tone="fan" />
+        </AppScreen>
+        <NameCompletionModal visible />
+      </>
     );
   }
 

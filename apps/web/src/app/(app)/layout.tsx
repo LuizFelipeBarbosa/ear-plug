@@ -4,6 +4,11 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth, useUser } from "@clerk/nextjs";
 import { useMutation } from "convex/react";
+import {
+  composePersonalName,
+  hasRequiredPersonalName,
+} from "@ear-plug/shared/utils";
+import { NameCompletionModal } from "@/components/auth/NameCompletionModal";
 import { useCurrentUser } from "@/hooks/useUser";
 import { ProfileContextProvider } from "@/hooks/useProfileContext";
 import { BottomNav } from "@/components/navigation/BottomNav";
@@ -12,10 +17,14 @@ import { api } from "../../../../../convex/_generated/api";
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { isLoaded, isSignedIn } = useAuth();
-  const { user: clerkUser } = useUser();
+  const { isLoaded: isClerkUserLoaded, user: clerkUser } = useUser();
   const { user, isLoading } = useCurrentUser();
   const upsertUser = useMutation(api.users.upsertUser);
   const [isCreatingUser, setIsCreatingUser] = useState(false);
+  const needsNameCompletion =
+    isSignedIn &&
+    Boolean(clerkUser) &&
+    !hasRequiredPersonalName(clerkUser?.firstName, clerkUser?.lastName);
 
   useEffect(() => {
     // Redirect to onboarding if not authenticated
@@ -31,6 +40,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         isLoaded &&
         isSignedIn &&
         clerkUser &&
+        !needsNameCompletion &&
         !isLoading &&
         user === null &&
         !isCreatingUser
@@ -42,7 +52,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             clerkId: clerkUser.id,
             email: clerkUser.primaryEmailAddress?.emailAddress || "",
             phoneNumber: clerkUser.primaryPhoneNumber?.phoneNumber,
-            name: clerkUser.fullName || clerkUser.firstName || "User",
+            name: composePersonalName(
+              clerkUser.firstName,
+              clerkUser.lastName,
+            ),
             avatar: clerkUser.imageUrl,
           });
         } catch (error) {
@@ -59,14 +72,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     isLoaded,
     isSignedIn,
     clerkUser,
+    needsNameCompletion,
     isLoading,
     user,
     isCreatingUser,
     upsertUser,
   ]);
 
-  // Show loading state while auth loads, Convex loads, or user is being created
-  if (!isLoaded || isLoading || isCreatingUser) {
+  if (
+    !isLoaded ||
+    (isSignedIn && !isClerkUserLoaded) ||
+    (!needsNameCompletion && (isLoading || isCreatingUser))
+  ) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-pulse">
@@ -81,7 +98,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return null;
   }
 
-  // Still waiting for user to be created (query hasn't returned yet)
+  if (needsNameCompletion) {
+    return (
+      <div className="min-h-screen bg-background">
+        <NameCompletionModal isOpen />
+      </div>
+    );
+  }
+
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">

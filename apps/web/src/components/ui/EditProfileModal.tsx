@@ -6,6 +6,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { panelFade } from "@/lib/motion/presets";
 import { GENRES, GENRE_COLORS } from "@ear-plug/shared/constants";
+import {
+  composePersonalName,
+  getPersonalNameValidationError,
+} from "@ear-plug/shared/utils";
 import type { Genre } from "@ear-plug/shared/types";
 import Image from "next/image";
 import { CityAutocomplete } from "@/components/ui/CityAutocomplete";
@@ -16,7 +20,8 @@ interface EditProfileModalProps {
   onClose: () => void;
   onSave: (data: ProfileFormData) => Promise<void>;
   initialData: {
-    name: string;
+    firstName: string;
+    lastName: string;
     location?: string;
     avatar?: string;
     topGenres?: Genre[];
@@ -24,7 +29,8 @@ interface EditProfileModalProps {
 }
 
 interface ProfileFormData {
-  name: string;
+  firstName: string;
+  lastName: string;
   location?: string;
   topGenres?: Genre[];
   avatarFile?: File;
@@ -43,7 +49,8 @@ export function EditProfileModal({
   const latestInitialDataRef = useRef(initialData);
   const wasOpenRef = useRef(false);
   const [formData, setFormData] = useState<ProfileFormData>({
-    name: initialData.name,
+    firstName: initialData.firstName,
+    lastName: initialData.lastName,
     location: initialData.location,
     topGenres: initialData.topGenres,
   });
@@ -72,7 +79,8 @@ export function EditProfileModal({
         avatarObjectUrlRef.current = null;
       }
       setFormData({
-        name: currentInitialData.name,
+        firstName: currentInitialData.firstName,
+        lastName: currentInitialData.lastName,
         location: currentInitialData.location,
         topGenres: currentInitialData.topGenres,
       });
@@ -98,8 +106,12 @@ export function EditProfileModal({
     e.preventDefault();
     setError(null);
 
-    if (!formData.name.trim()) {
-      setError("Please enter your name");
+    const validationError = getPersonalNameValidationError(
+      formData.firstName,
+      formData.lastName,
+    );
+    if (validationError) {
+      setError(validationError);
       return;
     }
 
@@ -232,7 +244,12 @@ export function EditProfileModal({
                       />
                     ) : (
                       <span className="text-4xl font-bold text-fan">
-                        {formData.name?.charAt(0).toUpperCase() || "?"}
+                        {composePersonalName(
+                          formData.firstName,
+                          formData.lastName,
+                        )
+                          .charAt(0)
+                          .toUpperCase() || "?"}
                       </span>
                     )}
                   </div>
@@ -281,30 +298,57 @@ export function EditProfileModal({
 
               {/* Form Fields */}
               <div className="space-y-4">
-                {/* Name Field */}
                 <div>
                   <label className="flex items-center gap-2 text-sm font-medium text-foreground mb-2">
                     <User className="w-4 h-4 text-muted-foreground" />
-                    Display Name
+                    Name
                   </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={formData.name}
-                      onChange={(e) => handleFieldChange("name", e.target.value)}
-                      placeholder="Your name"
-                      className={cn(
-                        "w-full px-4 py-3.5 bg-muted/50 border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none transition-colors transition-shadow",
-                        touched.name && !formData.name.trim()
-                          ? "border-red-500/50 focus:border-red-500"
-                          : "border-border focus:border-fan/50 focus:bg-fan/[0.02] focus:ring-2 focus:ring-fan/10"
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={formData.firstName}
+                        onChange={(e) =>
+                          handleFieldChange("firstName", e.target.value)
+                        }
+                        placeholder="First name"
+                        autoComplete="given-name"
+                        className={cn(
+                          "w-full px-4 py-3.5 bg-muted/50 border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none transition-colors transition-shadow",
+                          touched.firstName && !formData.firstName.trim()
+                            ? "border-red-500/50 focus:border-red-500"
+                            : "border-border focus:border-fan/50 focus:bg-fan/[0.02] focus:ring-2 focus:ring-fan/10"
+                        )}
+                      />
+                      {touched.firstName && !formData.firstName.trim() && (
+                        <p className="text-xs text-red-500 mt-1.5 ml-1">
+                          First name is required
+                        </p>
                       )}
-                    />
-                    {touched.name && !formData.name.trim() && (
-                      <p className="text-xs text-red-500 mt-1.5 ml-1">
-                        Name is required
-                      </p>
-                    )}
+                    </div>
+
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={formData.lastName}
+                        onChange={(e) =>
+                          handleFieldChange("lastName", e.target.value)
+                        }
+                        placeholder="Last name"
+                        autoComplete="family-name"
+                        className={cn(
+                          "w-full px-4 py-3.5 bg-muted/50 border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none transition-colors transition-shadow",
+                          touched.lastName && !formData.lastName.trim()
+                            ? "border-red-500/50 focus:border-red-500"
+                            : "border-border focus:border-fan/50 focus:bg-fan/[0.02] focus:ring-2 focus:ring-fan/10"
+                        )}
+                      />
+                      {touched.lastName && !formData.lastName.trim() && (
+                        <p className="text-xs text-red-500 mt-1.5 ml-1">
+                          Last name is required
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
 

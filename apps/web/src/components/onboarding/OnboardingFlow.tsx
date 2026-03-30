@@ -1,36 +1,13 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import { SignIn, SignUp, useAuth, useUser } from "@clerk/nextjs";
-import { useMutation } from "convex/react";
-import { api } from "../../../../../convex/_generated/api";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { SignIn, SignUp, useAuth } from "@clerk/nextjs";
 import { ArrowRight, Headphones } from "lucide-react";
 import { cn } from "@/lib/utils";
-export function OnboardingFlow() {
-  const router = useRouter();
+
+export function OnboardingFlow({ overlay }: { overlay?: ReactNode }) {
   const { isSignedIn } = useAuth();
-  const { user: clerkUser } = useUser();
-  const upsertUser = useMutation(api.users.upsertUser);
   const [authMode, setAuthMode] = useState<"sign-in" | "sign-up">("sign-up");
-  useEffect(() => {
-    async function syncAndRedirect() {
-      if (!isSignedIn || !clerkUser) return;
-      try {
-        await upsertUser({
-          clerkId: clerkUser.id,
-          email: clerkUser.primaryEmailAddress?.emailAddress || "",
-          phoneNumber: clerkUser.primaryPhoneNumber?.phoneNumber,
-          name: clerkUser.fullName || clerkUser.firstName || "User",
-          avatar: clerkUser.imageUrl,
-        });
-      } catch (error) {
-        console.error("Failed to sync user", error);
-      } finally {
-        router.push("/home");
-      }
-    }
-    void syncAndRedirect();
-  }, [isSignedIn, clerkUser, upsertUser, router]);
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-black">
       {" "}
@@ -50,7 +27,9 @@ export function OnboardingFlow() {
           </header>{" "}
           <main className="flex flex-1 items-center justify-center py-6">
             {" "}
-            <AuthCard mode={authMode} onModeChange={setAuthMode} />{" "}
+            {!isSignedIn ? (
+              <AuthCard mode={authMode} onModeChange={setAuthMode} />
+            ) : null}{" "}
           </main>{" "}
           <footer className="text-center">
             {" "}
@@ -62,6 +41,7 @@ export function OnboardingFlow() {
           </footer>{" "}
         </div>{" "}
       </div>{" "}
+      {overlay}
     </div>
   );
 }
@@ -160,7 +140,6 @@ function AuthCard({
                 alertText: "text-red-100",
               },
             }}
-            afterSignUpUrl="/home"
           />
         ) : (
           <SignIn
@@ -191,7 +170,6 @@ function AuthCard({
                 alertText: "text-red-100",
               },
             }}
-            afterSignInUrl="/home"
           />
         )}{" "}
       </div>{" "}

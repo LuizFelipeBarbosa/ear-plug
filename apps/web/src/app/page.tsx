@@ -2,24 +2,27 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@clerk/nextjs";
-import { useCurrentUser } from "@/hooks/useUser";
+import { useAuth, useUser } from "@clerk/nextjs";
+import { hasRequiredPersonalName } from "@ear-plug/shared/utils";
+import { NameCompletionModal } from "@/components/auth/NameCompletionModal";
 import { OnboardingFlow } from "@/components/onboarding/OnboardingFlow";
 
 export default function HomePage() {
   const router = useRouter();
   const { isLoaded, isSignedIn } = useAuth();
-  const { user, isLoading } = useCurrentUser();
+  const { isLoaded: isClerkUserLoaded, user: clerkUser } = useUser();
+  const needsNameCompletion =
+    isSignedIn &&
+    Boolean(clerkUser) &&
+    !hasRequiredPersonalName(clerkUser?.firstName, clerkUser?.lastName);
 
   useEffect(() => {
-    // If user is authenticated and has completed onboarding, redirect to home
-    if (isLoaded && isSignedIn && user && !isLoading) {
+    if (isLoaded && isClerkUserLoaded && isSignedIn && !needsNameCompletion) {
       router.push("/home");
     }
-  }, [isLoaded, isSignedIn, user, isLoading, router]);
+  }, [isClerkUserLoaded, isLoaded, isSignedIn, needsNameCompletion, router]);
 
-  // Show loading state while checking auth
-  if (!isLoaded || (isSignedIn && isLoading)) {
+  if (!isLoaded || (isSignedIn && !isClerkUserLoaded)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-pulse">
@@ -29,6 +32,9 @@ export default function HomePage() {
     );
   }
 
-  // Show onboarding for new or unauthenticated users
-  return <OnboardingFlow />;
+  return (
+    <OnboardingFlow
+      overlay={needsNameCompletion ? <NameCompletionModal isOpen /> : undefined}
+    />
+  );
 }

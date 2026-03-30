@@ -22,7 +22,13 @@ import { uploadUriToConvexStorage } from "@/lib/convexUpload";
 import { api } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
 import type { Genre } from "@ear-plug/shared/types";
-import { useAuth } from "@clerk/clerk-expo";
+import {
+  composePersonalName,
+  getPersonalNameValidationError,
+  normalizePersonalNamePart,
+  splitPersonalName,
+} from "@ear-plug/shared/utils";
+import { useAuth, useUser } from "@clerk/clerk-expo";
 import { useMutation, useQuery } from "convex/react";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
@@ -37,6 +43,7 @@ type ProfileTab = "overview" | "saved" | "activity" | "settings";
 export function FanProfileScreen() {
   const router = useRouter();
   const { signOut } = useAuth();
+  const { user: clerkUser } = useUser();
   const { setBandMode } = useProfileContext();
   const { user, updateProfile, isLoading } = useCurrentUser();
   const { savedBands } = useSavedBands();
@@ -50,11 +57,21 @@ export function FanProfileScreen() {
 
   const [tab, setTab] = useState<ProfileTab>("overview");
   const [editOpen, setEditOpen] = useState(false);
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [location, setLocation] = useState("");
   const [selectedGenres, setSelectedGenres] = useState<Genre[]>([]);
   const [pendingSave, setPendingSave] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+
+  const editableName = useMemo(() => {
+    const fallbackName = splitPersonalName(user?.name);
+
+    return {
+      firstName: clerkUser?.firstName ?? fallbackName.firstName,
+      lastName: clerkUser?.lastName ?? fallbackName.lastName,
+    };
+  }, [clerkUser?.firstName, clerkUser?.lastName, user?.name]);
 
   const stats = useMemo(() => {
     const memberSince = user
@@ -90,7 +107,8 @@ export function FanProfileScreen() {
             <IconButton
               icon={<Edit3 size={18} color="#ffffff" />}
               onPress={() => {
-                setName(user.name);
+                setFirstName(editableName.firstName);
+                setLastName(editableName.lastName);
                 setLocation(user.location ?? "");
                 setSelectedGenres((user.topGenres as Genre[] | undefined) ?? []);
                 setSaveError(null);
@@ -331,7 +349,8 @@ export function FanProfileScreen() {
                   label="Edit Profile"
                   tone="fan"
                   onPress={() => {
-                    setName(user.name);
+                    setFirstName(editableName.firstName);
+                    setLastName(editableName.lastName);
                     setLocation(user.location ?? "");
                     setSelectedGenres((user.topGenres as Genre[] | undefined) ?? []);
                     setSaveError(null);
@@ -351,10 +370,22 @@ export function FanProfileScreen() {
             <Text className="text-lg font-semibold text-slate-950">Edit Profile</Text>
 
             <TextInput
-              value={name}
-              onChangeText={setName}
-              placeholder="Name"
+              value={firstName}
+              onChangeText={setFirstName}
+              placeholder="First name"
               placeholderTextColor="#94a3b8"
+              autoComplete="name-given"
+              textContentType="givenName"
+              className="mt-4 min-h-[48px] rounded-[18px] border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900"
+            />
+
+            <TextInput
+              value={lastName}
+              onChangeText={setLastName}
+              placeholder="Last name"
+              placeholderTextColor="#94a3b8"
+              autoComplete="name-family"
+              textContentType="familyName"
               className="mt-4 min-h-[48px] rounded-[18px] border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900"
             />
 
@@ -430,11 +461,36 @@ export function FanProfileScreen() {
                 tone="fan"
                 disabled={pendingSave}
                 onPress={async () => {
+                  if (!clerkUser) {
+                    setSaveError("Account details are still loading.");
+                    return;
+                  }
+
+                  const validationError = getPersonalNameValidationError(
+                    firstName,
+                    lastName,
+                  );
+                  if (validationError) {
+                    setSaveError(validationError);
+                    return;
+                  }
+
+                  const normalizedFirstName = normalizePersonalNamePart(firstName);
+                  const normalizedLastName = normalizePersonalNamePart(lastName);
+
                   setPendingSave(true);
                   setSaveError(null);
                   try {
+                    await clerkUser.update({
+                      firstName: normalizedFirstName,
+                      lastName: normalizedLastName,
+                    });
+                    await clerkUser.reload();
                     await updateProfile({
-                      name: name.trim(),
+                      name: composePersonalName(
+                        normalizedFirstName,
+                        normalizedLastName,
+                      ),
                       location: location.trim() || undefined,
                       topGenres: selectedGenres,
                     });
