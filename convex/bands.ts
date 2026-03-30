@@ -16,6 +16,7 @@ import {
 } from "./utils/permissions";
 
 const PROFILE_VIEW_DEDUPE_WINDOW_MS = 6 * 60 * 60 * 1000;
+const BAND_CREATION_ACCESS_CODE = "190304";
 const IMAGE_MIME_TYPES = new Set([
   "image/jpeg",
   "image/jpg",
@@ -361,6 +362,7 @@ export const getBandWithStats = query({
  * Requires authentication.
  *
  * @param name - Band name (1-100 characters)
+ * @param creationCode - Temporary access code required to create a band
  * @param genres - Array of music genres (1-5)
  * @param location - Band's home location
  * @param image - Optional profile image URL
@@ -381,6 +383,7 @@ export const getBandWithStats = query({
 export const create = mutation({
   args: {
     name: v.string(),
+    creationCode: v.string(),
     genres: v.array(genreValidator),
     location: v.string(),
     image: v.optional(v.string()),
@@ -391,6 +394,10 @@ export const create = mutation({
   handler: async (ctx, args) => {
     const user = await requireAuthenticatedUser(ctx);
 
+    if (args.creationCode.trim() !== BAND_CREATION_ACCESS_CODE) {
+      throw new Error("Invalid band creation code.");
+    }
+
     if (args.socialLinks) {
       validateSocialLinks(args.socialLinks);
     }
@@ -399,7 +406,13 @@ export const create = mutation({
 
     const bandId = await ctx.db.insert("bands", {
       userId: user._id,
-      ...args,
+      name: args.name,
+      genres: args.genres,
+      location: args.location,
+      image: args.image,
+      bio: args.bio,
+      memberCount: args.memberCount,
+      socialLinks: args.socialLinks,
       createdAt: now,
     });
 

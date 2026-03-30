@@ -154,7 +154,7 @@ export function BandDashboard() {
   return (
     <div className="min-h-screen pb-24 bg-background">
       {/* Header Background */}
-      <div className="relative overflow-hidden">
+      <div className="relative h-24 overflow-hidden sm:h-64">
         <div className="absolute inset-0 bg-gradient-to-b from-band/10 via-band/5 to-transparent h-64" />
         <div className="absolute top-0 right-0 w-96 h-96 bg-band/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
         <div className="absolute top-0 left-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl -translate-y-1/2 -translate-x-1/3" />
@@ -165,7 +165,7 @@ export function BandDashboard() {
         variants={panelFade}
         initial="hidden"
         animate="visible"
-        className="relative px-4 -mt-56"
+        className="relative mx-auto w-full max-w-5xl px-4 pt-4 sm:-mt-56 sm:pt-0"
       >
         {/* Band Header Card */}
         <motion.div
@@ -218,22 +218,22 @@ export function BandDashboard() {
                 </div>
 
                 {/* Quick Stats Row */}
-                <div className="mt-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
-                  <div className="flex items-center gap-1.5 rounded-xl border border-border/60 bg-muted/30 px-3 py-2">
+                <div className="mt-4 grid grid-cols-1 gap-3 text-sm min-[360px]:grid-cols-2 sm:grid-cols-3">
+                  <div className="flex items-center gap-1.5 rounded-xl border border-border/60 bg-muted/30 px-3 py-2 min-w-0">
                     <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
                     <span className="text-sm font-medium text-foreground">
                       {bandWithStats.stats.showsThisMonth}
                     </span>
                     <span className="text-xs text-muted-foreground">shows</span>
                   </div>
-                  <div className="flex items-center gap-1.5 rounded-xl border border-border/60 bg-muted/30 px-3 py-2">
+                  <div className="flex items-center gap-1.5 rounded-xl border border-border/60 bg-muted/30 px-3 py-2 min-w-0">
                     <Users className="w-3.5 h-3.5 text-muted-foreground" />
                     <span className="text-sm font-medium text-foreground">
                       {bandWithStats.stats.totalRsvps}
                     </span>
                     <span className="text-xs text-muted-foreground">RSVPs</span>
                   </div>
-                  <div className="col-span-2 flex items-center gap-1.5 rounded-xl border border-border/60 bg-muted/30 px-3 py-2 sm:col-span-1">
+                  <div className="flex items-center gap-1.5 rounded-xl border border-border/60 bg-muted/30 px-3 py-2 min-w-0">
                     <TrendingUp className="w-3.5 h-3.5 text-muted-foreground" />
                     <span className="text-sm font-medium text-foreground">
                       +{bandWithStats.stats.newFans}
@@ -280,7 +280,7 @@ export function BandDashboard() {
         {/* Next Show Highlight */}
         {nextShow && (
           <motion.div variants={panelFade} className="mt-5">
-            <div className="flex items-center justify-between mb-3">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-band" />
                 <h2 className="text-sm font-semibold text-foreground">Next Up</h2>
@@ -300,7 +300,7 @@ export function BandDashboard() {
 
         {/* Stats Overview */}
         <motion.div variants={panelFade} className="mt-5">
-          <div className="flex items-center justify-between mb-3">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <BarChart3 className="w-4 h-4 text-band" />
               <h2 className="text-sm font-semibold text-foreground">Performance</h2>
@@ -350,7 +350,7 @@ export function BandDashboard() {
         {/* Upcoming Shows Preview */}
         {(confirmedShows.length > 0 || tentativeShows.length > 0) && (
           <motion.div variants={panelFade} className="mt-5">
-            <div className="flex items-center justify-between mb-3">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-band" />
                 <h2 className="text-sm font-semibold text-foreground">Upcoming Shows</h2>
@@ -382,7 +382,7 @@ export function BandDashboard() {
         {/* Messages & Invites Preview */}
         {(hasNotifications || conversations.length > 0) && (
           <motion.div variants={panelFade} className="mt-5">
-            <div className="flex items-center justify-between mb-3">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <MessageCircle className="w-4 h-4 text-band" />
                 <h2 className="text-sm font-semibold text-foreground">Messages</h2>
@@ -895,11 +895,11 @@ function CreateBandPrompt() {
 function DashboardSkeleton() {
   return (
     <div className="min-h-screen pb-24 bg-background">
-      <div className="relative overflow-hidden">
+      <div className="relative h-24 overflow-hidden sm:h-64">
         <div className="absolute inset-0 bg-gradient-to-b from-band/10 via-band/5 to-transparent h-64" />
       </div>
 
-      <div className="relative px-4 -mt-56 space-y-5">
+      <div className="relative mx-auto w-full max-w-5xl space-y-5 px-4 pt-4 sm:-mt-56 sm:pt-0">
         {/* Header Skeleton */}
         <div className="bg-card border border-border rounded-2xl p-5 animate-shimmer">
           <div className="flex items-start gap-4">
@@ -917,7 +917,7 @@ function DashboardSkeleton() {
         </div>
 
         {/* Stats Skeleton */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 min-[360px]:grid-cols-2">
           {[...Array(4)].map((_, i) => (
             <div key={i} className="bg-card border border-border p-4 rounded-xl animate-shimmer">
               <div className="w-8 h-8 bg-muted rounded-lg mb-2" />

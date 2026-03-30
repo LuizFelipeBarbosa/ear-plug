@@ -590,7 +590,10 @@ export function BandProfileScreen() {
 
             {invites.length > 0 ? (
               <SectionCard>
-                <SectionTitle title="Pending Invites" subtitle="Pending, accepted, declined, and revoked invite history." />
+                <SectionTitle
+                  title="Pending Invites"
+                  subtitle="Invites disappear automatically once they are accepted, revoked, declined, or expired."
+                />
                 <View className="gap-3">
                   {invites.map((invite) => (
                     <SectionCard key={invite._id} tone="neutral">

@@ -31,6 +31,7 @@ type Step = "basics" | "genre" | "details" | "social";
 
 interface FormData {
   name: string;
+  creationCode: string;
   location: string;
   genres: Genre[];
   bio: string;
@@ -143,6 +144,7 @@ export function CreateBandForm() {
 
   const [formData, setFormData] = useState<FormData>({
     name: "",
+    creationCode: "",
     location: "",
     genres: [],
     bio: "",
@@ -155,7 +157,11 @@ export function CreateBandForm() {
   const canProceed = useCallback(() => {
     switch (currentStep) {
       case "basics":
-        return formData.name.trim().length > 0 && formData.location.trim().length > 0;
+        return (
+          formData.name.trim().length > 0 &&
+          formData.creationCode.trim().length > 0 &&
+          formData.location.trim().length > 0
+        );
       case "genre":
         return formData.genres.length > 0;
       case "details":
@@ -193,6 +199,7 @@ export function CreateBandForm() {
     try {
       const bandId = await createBand({
         name: formData.name.trim(),
+        creationCode: formData.creationCode.trim(),
         location: formData.location.trim(),
         genres: formData.genres,
         bio: formData.bio.trim() || undefined,
@@ -369,6 +376,25 @@ export function CreateBandForm() {
                     label=""
                     required
                   />
+                </motion.div>
+
+                <motion.div variants={itemVariants}>
+                  <label className="flex items-center gap-2 text-sm font-medium text-foreground mb-2">
+                    <Sparkles className="w-4 h-4 text-muted-foreground" />
+                    Band Creation Code <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="password"
+                    value={formData.creationCode}
+                    onChange={(e) =>
+                      setFormData({ ...formData, creationCode: e.target.value })
+                    }
+                    placeholder="Enter temporary access code"
+                    className="w-full px-4 py-3.5 bg-muted/50 border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-band/50 focus:bg-band/[0.02] focus:ring-2 focus:ring-band/10 transition-all"
+                  />
+                  <p className="mt-1.5 text-xs text-muted-foreground">
+                    Temporary gate to prevent unauthorized band creation.
+                  </p>
                 </motion.div>
 
                 <motion.div variants={itemVariants} className="pt-2">

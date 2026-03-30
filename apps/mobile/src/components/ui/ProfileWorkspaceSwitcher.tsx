@@ -62,6 +62,7 @@ export function ProfileWorkspaceSwitcher() {
   const [open, setOpen] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [name, setName] = useState("");
+  const [creationCode, setCreationCode] = useState("");
   const [location, setLocation] = useState("");
   const [genre, setGenre] = useState<Genre>("indie");
   const [pendingCreate, setPendingCreate] = useState(false);
@@ -75,6 +76,7 @@ export function ProfileWorkspaceSwitcher() {
 
   const resetCreateForm = () => {
     setName("");
+    setCreationCode("");
     setLocation("");
     setGenre("indie");
     setCreateError(null);
@@ -140,6 +142,15 @@ export function ProfileWorkspaceSwitcher() {
                     className="mt-3 rounded-[18px] border border-slate-200 bg-white px-4 py-3 text-slate-900"
                   />
 
+                  <TextInput
+                    value={creationCode}
+                    onChangeText={setCreationCode}
+                    placeholder="Band creation code"
+                    placeholderTextColor="#94a3b8"
+                    secureTextEntry
+                    className="mt-3 rounded-[18px] border border-slate-200 bg-white px-4 py-3 text-slate-900"
+                  />
+
                   <Text className="mt-4 text-[11px] font-semibold uppercase tracking-[1.5px] text-slate-500">
                     Primary Genre
                   </Text>
@@ -163,8 +174,8 @@ export function ProfileWorkspaceSwitcher() {
                       tone="band"
                       disabled={pendingCreate}
                       onPress={async () => {
-                        if (!name.trim() || !location.trim()) {
-                          setCreateError("Band name and location are required.");
+                        if (!name.trim() || !location.trim() || !creationCode.trim()) {
+                          setCreateError("Band name, location, and creation code are required.");
                           return;
                         }
 
@@ -174,6 +185,7 @@ export function ProfileWorkspaceSwitcher() {
                         try {
                           const createdBandId = await createBand({
                             name: name.trim(),
+                            creationCode: creationCode.trim(),
                             location: location.trim(),
                             genres: [genre],
                           });

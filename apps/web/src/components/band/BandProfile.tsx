@@ -425,12 +425,10 @@ export function BandProfileView() {
 
           {/* Quick Stats Row */}
           {stats && (
-            <div className="mt-5 grid grid-cols-2 gap-3 border-t border-border/50 pt-4 sm:grid-cols-3">
+            <div className="mt-5 grid grid-cols-3 gap-2 border-t border-border/50 pt-4 sm:gap-3">
               <QuickStat icon={Calendar} value={stats.showsThisMonth} label="This Month" />
               <QuickStat icon={Heart} value={stats.newFans} label="Followers" />
-              <div className="col-span-2 sm:col-span-1">
-                <QuickStat icon={Ticket} value={stats.totalRsvps} label="Total RSVPs" />
-              </div>
+              <QuickStat icon={Ticket} value={stats.totalRsvps} label="Total RSVPs" />
             </div>
           )}
         </motion.div>
@@ -904,10 +902,12 @@ function QuickStat({
   label: string;
 }) {
   return (
-    <div className="flex flex-col items-center text-center">
-      <Icon className="w-4 h-4 text-muted-foreground mb-1" />
-      <span className="font-semibold text-foreground text-lg">{value}</span>
-      <span className="text-[10px] text-muted-foreground uppercase tracking-wide">{label}</span>
+    <div className="flex min-w-0 flex-col items-center px-1 text-center">
+      <Icon className="mb-1 h-4 w-4 text-muted-foreground" />
+      <span className="text-base font-semibold text-foreground sm:text-lg">{value}</span>
+      <span className="text-[9px] uppercase tracking-wide text-muted-foreground sm:text-[10px]">
+        {label}
+      </span>
     </div>
   );
 }

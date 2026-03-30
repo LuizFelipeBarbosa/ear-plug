@@ -396,8 +396,15 @@ export const listBandInvites = query({
       .order("desc")
       .collect();
 
+    const pendingInvites = invites.filter((invite) => {
+      return (
+        invite.status === "pending" &&
+        effectiveInviteStatus(invite.status, invite.expiresAt, now) === "pending"
+      );
+    });
+
     const invitesWithUsers = await Promise.all(
-      invites.map(async (invite) => {
+      pendingInvites.map(async (invite) => {
         const targetUser = await ctx.db.get(invite.targetUserId);
         const invitedByUser = await ctx.db.get(invite.invitedBy);
         return {
