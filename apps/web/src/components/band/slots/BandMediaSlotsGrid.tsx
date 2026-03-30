@@ -1,6 +1,6 @@
 "use client";
 
-import { Play, Plus, ImageIcon } from "lucide-react";
+import { Play, Plus, ImageIcon, MapPin } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import type { BandProfileSlot } from "@/hooks/useBandMediaSlots";
@@ -98,10 +98,20 @@ export function BandMediaSlotsGrid({ slots, onSelect }: BandMediaSlotsGridProps)
               </div>
             )}
 
-            {/* Caption Overlay */}
-            {slot.caption && (
-              <div className="absolute inset-x-0 bottom-0 px-3 py-2 bg-gradient-to-t from-black/80 to-transparent">
-                <p className="text-[10px] text-white truncate">{slot.caption}</p>
+            {/* Meta Overlay */}
+            {(slot.location || slot.caption) && (
+              <div className="absolute inset-x-0 bottom-0 px-3 py-2.5 bg-gradient-to-t from-black/85 via-black/35 to-transparent">
+                {slot.location ? (
+                  <div className="mb-1 flex items-center gap-1.5">
+                    <MapPin className="h-3 w-3 shrink-0 text-white/70" />
+                    <p className="truncate text-[10px] font-medium text-white/85">
+                      {slot.location}
+                    </p>
+                  </div>
+                ) : null}
+                {slot.caption ? (
+                  <p className="text-[10px] text-white truncate">{slot.caption}</p>
+                ) : null}
               </div>
             )}
           </motion.button>

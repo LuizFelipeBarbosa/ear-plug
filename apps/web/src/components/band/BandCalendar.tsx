@@ -154,6 +154,7 @@ export function BandCalendarView() {
   const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const openCreateModalTimerRef = useRef<number | null>(null);
+  const initializedMonthForBandRef = useRef<string | null>(null);
 
   const activeMembership = bands.find((entry) => entry.band._id === band?._id);
   const canManageShows =
@@ -250,6 +251,15 @@ export function BandCalendarView() {
     return { confirmed, tentative, total: confirmed + tentative };
   }, [scheduledEvents, unscheduledTentatives]);
 
+  const earliestScheduledEvent = useMemo(() => {
+    if (scheduledEvents.length === 0) {
+      return null;
+    }
+    return [...scheduledEvents].sort(
+      (a, b) => (a.dateTime as number) - (b.dateTime as number),
+    )[0] ?? null;
+  }, [scheduledEvents]);
+
   const hasListEvents =
     Object.keys(groupedEvents).length > 0 || unscheduledTentatives.length > 0;
   const hasMonthEvents = scheduledEventsInViewMonth.length > 0;
@@ -284,6 +294,28 @@ export function BandCalendarView() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (!band?._id) {
+      initializedMonthForBandRef.current = null;
+      return;
+    }
+    if (events === undefined) {
+      return;
+    }
+    if (initializedMonthForBandRef.current === band._id) {
+      return;
+    }
+    initializedMonthForBandRef.current = band._id;
+    if (!earliestScheduledEvent?.dateTime) {
+      setSelectedDateKey(null);
+      return;
+    }
+
+    const earliestDate = new Date(earliestScheduledEvent.dateTime as number);
+    setViewMonth(new Date(earliestDate.getFullYear(), earliestDate.getMonth(), 1));
+    setSelectedDateKey(toLocalDateKey(earliestDate.getTime()));
+  }, [band?._id, earliestScheduledEvent, events]);
 
   if (isLoading) {
     return <CalendarSkeleton />;
