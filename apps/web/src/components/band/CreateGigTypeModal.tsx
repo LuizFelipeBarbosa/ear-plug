@@ -5,13 +5,13 @@ import {
   CheckCircle2,
   HelpCircle,
   Clock,
-  X,
   Sparkles,
   CalendarCheck,
   CalendarClock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { GigModalShell } from "@/components/band/GigModalShell";
+import { GigModalHeader } from "@/components/band/GigFormShared";
 
 interface CreateGigTypeModalProps {
   isOpen: boolean;
@@ -57,37 +57,18 @@ export function CreateGigTypeModal({
       labelledBy="create-gig-type-modal-title"
     >
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <div className="relative border-b border-border bg-gradient-to-br from-muted/50 to-muted px-4 py-4 sm:px-6 sm:py-5">
+        <div className="relative bg-gradient-to-br from-muted/50 to-muted">
           <div className="absolute top-0 right-0 h-32 w-32 translate-x-1/3 -translate-y-1/2 rounded-full bg-band/5 blur-3xl" />
-
-          <div className="relative flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <div className="mb-1 flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-band/10">
-                  <Sparkles className="w-4 h-4 text-band" />
-                </div>
-                <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  New Gig
-                </span>
-              </div>
-              <h2
-                id="create-gig-type-modal-title"
-                className="text-lg font-bold text-foreground sm:text-xl"
-              >
-                Create a Show
-              </h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Choose how you want to start
-              </p>
-            </div>
-
-            <motion.button
-              type="button"
-              onClick={onClose}
-              className="shrink-0 rounded-xl border border-border p-2 transition-colors hover:border-band/30 hover:bg-muted"
-            >
-              <X className="w-5 h-5 text-muted-foreground" />
-            </motion.button>
+          <div className="relative">
+            <GigModalHeader
+              labelledBy="create-gig-type-modal-title"
+              title="Create a Show"
+              description="Choose how you want to start."
+              icon={Sparkles}
+              onClose={onClose}
+              tone="neutral"
+              eyebrow="New Gig"
+            />
           </div>
         </div>
 

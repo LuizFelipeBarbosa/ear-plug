@@ -8,13 +8,16 @@ import {
   Calendar,
   Check,
   Clock,
+  Loader2,
   DollarSign,
   Eye,
   EyeOff,
   FileText,
   ImageIcon,
   Music,
+  Search,
   Users,
+  X,
   type LucideIcon,
 } from "lucide-react";
 import { CityAutocomplete, type VenueLocationData } from "@/components/ui/CityAutocomplete";
@@ -30,6 +33,8 @@ export const MAX_EVENT_GENRES = 3;
 
 export type GigModalTab = "details" | "lineup" | "settings";
 
+export type GigModalTone = "confirmed" | "tentative" | "neutral";
+
 interface GigModalTabOption {
   id: GigModalTab;
   label: string;
@@ -41,6 +46,31 @@ export const GIG_MODAL_TABS: GigModalTabOption[] = [
   { id: "lineup", label: "Lineup", icon: Music },
   { id: "settings", label: "Settings", icon: Eye },
 ];
+
+const GIG_MODAL_TONE_STYLES: Record<
+  GigModalTone,
+  {
+    icon: string;
+    badge: string;
+    eyebrow: string;
+  }
+> = {
+  confirmed: {
+    icon: "border-emerald-500/40 bg-emerald-500/10 text-emerald-500",
+    badge: "border-emerald-500/40 bg-emerald-500/10 text-emerald-600",
+    eyebrow: "text-emerald-600/80",
+  },
+  tentative: {
+    icon: "border-amber-500/40 bg-amber-500/10 text-amber-500",
+    badge: "border-amber-500/40 bg-amber-500/10 text-amber-600",
+    eyebrow: "text-amber-600/80",
+  },
+  neutral: {
+    icon: "border-band/30 bg-band/10 text-band",
+    badge: "border-border bg-muted text-muted-foreground",
+    eyebrow: "text-muted-foreground",
+  },
+};
 
 export interface GigFormData {
   title: string;
@@ -151,6 +181,269 @@ export function GigModalTabs({ activeTab, onChange }: GigModalTabsProps) {
           </button>
         ))}
       </div>
+    </div>
+  );
+}
+
+interface GigModalHeaderProps {
+  labelledBy: string;
+  title: string;
+  description: string;
+  icon: LucideIcon;
+  onClose: () => void;
+  closeDisabled?: boolean;
+  tone?: GigModalTone;
+  badgeLabel?: string;
+  eyebrow?: string;
+}
+
+export function GigModalHeader({
+  labelledBy,
+  title,
+  description,
+  icon: Icon,
+  onClose,
+  closeDisabled = false,
+  tone = "neutral",
+  badgeLabel,
+  eyebrow,
+}: GigModalHeaderProps) {
+  const toneStyles = GIG_MODAL_TONE_STYLES[tone];
+
+  return (
+    <div className="border-b border-border bg-card/95 px-4 pt-4 backdrop-blur-xl">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex min-w-0 items-start gap-3">
+          <div
+            className={cn(
+              "flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border-2 sm:h-12 sm:w-12",
+              toneStyles.icon,
+            )}
+          >
+            <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
+          </div>
+          <div className="min-w-0">
+            {eyebrow ? (
+              <p
+                className={cn(
+                  "mb-1 text-[11px] font-semibold uppercase tracking-[0.18em]",
+                  toneStyles.eyebrow,
+                )}
+              >
+                {eyebrow}
+              </p>
+            ) : null}
+            <div className="flex flex-wrap items-center gap-2">
+              <h2
+                id={labelledBy}
+                className="text-base font-bold text-foreground sm:text-lg"
+              >
+                {title}
+              </h2>
+              {badgeLabel ? (
+                <span
+                  className={cn(
+                    "rounded-full border px-2 py-0.5 text-[10px] font-bold",
+                    toneStyles.badge,
+                  )}
+                >
+                  {badgeLabel}
+                </span>
+              ) : null}
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">{description}</p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          disabled={closeDisabled}
+          className="shrink-0 rounded-xl border border-border bg-muted p-2 text-muted-foreground transition-colors hover:border-band/30 hover:text-foreground disabled:opacity-50"
+        >
+          <X className="h-5 w-5" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export function GigModalErrorAlert({ message }: { message: string }) {
+  return (
+    <div className="flex items-start gap-2 rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-500">
+      <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+      <span>{message}</span>
+    </div>
+  );
+}
+
+interface GigModalFooterProps {
+  onCancel: () => void;
+  cancelDisabled?: boolean;
+  primaryLabel: string;
+  primaryBusyLabel: string;
+  primaryDisabled?: boolean;
+  isBusy?: boolean;
+}
+
+export function GigModalFooter({
+  onCancel,
+  cancelDisabled = false,
+  primaryLabel,
+  primaryBusyLabel,
+  primaryDisabled = false,
+  isBusy = false,
+}: GigModalFooterProps) {
+  return (
+    <div className="safe-area-inset-bottom border-t border-border bg-card/95 px-4 pb-4 pt-3 backdrop-blur-xl">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={cancelDisabled}
+          className="w-full rounded-xl bg-muted py-3 font-medium text-foreground transition-colors hover:bg-muted/80 disabled:opacity-50"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={primaryDisabled}
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-band py-3 font-medium text-white transition-colors hover:bg-band/90 disabled:opacity-50"
+        >
+          {isBusy ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              {primaryBusyLabel}
+            </>
+          ) : (
+            primaryLabel
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+interface GigSectionCardProps {
+  title: string;
+  description?: string;
+  children: ReactNode;
+}
+
+export function GigSectionCard({
+  title,
+  description,
+  children,
+}: GigSectionCardProps) {
+  return (
+    <section className="rounded-2xl border border-border bg-card/70 p-4 shadow-sm">
+      <div className="mb-3">
+        <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+        {description ? (
+          <p className="mt-1 text-xs text-muted-foreground">{description}</p>
+        ) : null}
+      </div>
+      <div className="space-y-2">{children}</div>
+    </section>
+  );
+}
+
+type GigLineupItemTone = "host" | "accepted" | "pending";
+
+interface GigLineupItemProps {
+  name: string;
+  subtitle: string;
+  tone?: GigLineupItemTone;
+  actionLabel?: string;
+  onAction?: () => void;
+  actionDisabled?: boolean;
+}
+
+export function GigLineupItem({
+  name,
+  subtitle,
+  tone = "accepted",
+  actionLabel,
+  onAction,
+  actionDisabled = false,
+}: GigLineupItemProps) {
+  const toneClasses =
+    tone === "host"
+      ? {
+          card: "border-band/30 bg-band/10",
+          iconWrap: "bg-band/20",
+          icon: "text-band",
+          subtitle: "text-band",
+        }
+      : tone === "pending"
+        ? {
+            card: "border-amber-500/20 bg-amber-500/5",
+            iconWrap: "bg-amber-500/10",
+            icon: "text-amber-500",
+            subtitle: "text-amber-500",
+          }
+        : {
+            card: "border-border bg-card",
+            iconWrap: "bg-muted",
+            icon: "text-muted-foreground",
+            subtitle: "text-success",
+          };
+
+  return (
+    <div
+      className={cn(
+        "flex flex-col gap-3 rounded-xl border p-3 sm:flex-row sm:items-center sm:justify-between",
+        toneClasses.card,
+      )}
+    >
+      <div className="flex min-w-0 items-center gap-3">
+        <div
+          className={cn(
+            "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg",
+            toneClasses.iconWrap,
+          )}
+        >
+          <Music className={cn("h-5 w-5", toneClasses.icon)} />
+        </div>
+        <div className="min-w-0">
+          <p className="truncate font-medium text-foreground">{name}</p>
+          <p className={cn("text-xs", toneClasses.subtitle)}>{subtitle}</p>
+        </div>
+      </div>
+      {actionLabel && onAction ? (
+        <button
+          type="button"
+          onClick={onAction}
+          disabled={actionDisabled}
+          className="w-full rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-500 transition-colors hover:bg-red-500/20 disabled:opacity-50 sm:w-auto"
+        >
+          {actionLabel}
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+interface GigBandSearchInputProps {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+}
+
+export function GigBandSearchInput({
+  value,
+  onChange,
+  placeholder = "Search bands...",
+}: GigBandSearchInputProps) {
+  return (
+    <div className="relative">
+      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      <input
+        type="text"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        className="w-full rounded-xl border border-border bg-muted px-4 py-3 pl-10 text-foreground placeholder:text-muted-foreground focus:border-band focus:outline-none"
+      />
     </div>
   );
 }

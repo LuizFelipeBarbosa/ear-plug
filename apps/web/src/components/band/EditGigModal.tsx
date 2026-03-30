@@ -2,9 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  X,
   AlertCircle,
-  Loader2,
+  Check,
   Trash2,
   Music,
   UserPlus,
@@ -17,10 +16,16 @@ import { useProfileContext } from "@/hooks/useProfileContext";
 import { GigModalShell } from "@/components/band/GigModalShell";
 import {
   createGigFormData,
+  GigBandSearchInput,
   GigDetailsSection,
   type GigFormData,
+  GigLineupItem,
+  GigModalErrorAlert,
+  GigModalFooter,
+  GigModalHeader,
   type GigModalTab,
   GigModalTabs,
+  GigSectionCard,
   GigSettingsSection,
   parseGigFormNumbers,
   validateGigForm,
@@ -353,40 +358,24 @@ export function EditGigModal({
       labelledBy="edit-gig-modal-title"
     >
       <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
-        <div className="border-b border-border bg-card/95 px-4 pt-4 backdrop-blur-xl">
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <h2
-                id="edit-gig-modal-title"
-                className="text-base font-bold text-foreground sm:text-lg"
-              >
-                Manage Event
-              </h2>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Update event details and settings
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isBusy}
-              className="shrink-0 rounded-xl border border-border bg-muted p-2 text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
+        <GigModalHeader
+          labelledBy="edit-gig-modal-title"
+          title={event.title?.trim() || "Manage Event"}
+          description="Update details, lineup, and settings."
+          icon={formData.status === "hold" ? AlertCircle : Check}
+          onClose={onClose}
+          closeDisabled={isBusy}
+          tone={formData.status === "hold" ? "tentative" : "confirmed"}
+          badgeLabel={formData.status === "hold" ? "Tentative" : "Confirmed"}
+          eyebrow="Gig Editor"
+        />
+        <div className="border-b border-border bg-card/95 px-4 pb-4 backdrop-blur-xl">
           <GigModalTabs activeTab={activeTab} onChange={setActiveTab} />
         </div>
 
         <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-24 pt-4 sm:pb-8">
           <div className="space-y-4">
-            {submitError && (
-              <div className="flex items-start gap-2 rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-500">
-                <AlertCircle className="mt-0.5 w-4 h-4 flex-shrink-0" />
-                <span>{submitError}</span>
-              </div>
-            )}
+            {submitError ? <GigModalErrorAlert message={submitError} /> : null}
 
             {activeTab === "details" && (
               <GigDetailsSection
@@ -415,133 +404,90 @@ export function EditGigModal({
                 exit={{ opacity: 0, x: -20 }}
                 className="space-y-4"
               >
-                <div>
-                  <h3 className="mb-3 text-sm font-semibold text-muted-foreground">
-                    Current Lineup
-                  </h3>
-                  <div className="space-y-2">
-                    {cohostRoster?.hostBand && (
-                      <div className="rounded-xl border border-band/30 bg-band/10 p-3">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-band/20">
-                            <Music className="w-5 h-5 text-band" />
-                          </div>
-                          <div>
-                            <p className="font-medium text-foreground">
-                              {cohostRoster.hostBand.name}
-                            </p>
-                            <p className="text-xs text-band">Host Band</p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
+                <GigSectionCard
+                  title="Current Lineup"
+                  description="Manage the host band, accepted co-hosts, and any outstanding invitations."
+                >
+                  {cohostRoster?.hostBand ? (
+                    <GigLineupItem
+                      name={cohostRoster.hostBand.name}
+                      subtitle="Host Band"
+                      tone="host"
+                    />
+                  ) : null}
 
-                    {(cohostRoster?.acceptedInvites?.length ?? 0) > 0 &&
-                      cohostRoster?.acceptedInvites.map((invite) => (
-                        <div
-                          key={invite._id}
-                          className="flex flex-col gap-3 rounded-xl border border-border bg-card p-3 sm:flex-row sm:items-center sm:justify-between"
+                  {cohostRoster?.acceptedInvites.map((invite) => (
+                    <GigLineupItem
+                      key={invite._id}
+                      name={invite.invitedBand?.name ?? "Band"}
+                      subtitle="Co-host"
+                      tone="accepted"
+                      actionLabel="Revoke"
+                      onAction={() => handleRevokeCohostInvite(invite._id)}
+                      actionDisabled={activeInviteMutationId === `revoke-${invite._id}`}
+                    />
+                  ))}
+
+                  {(cohostRoster?.pendingInvites ?? []).map((invite) => (
+                    <GigLineupItem
+                      key={invite._id}
+                      name={invite.invitedBand?.name ?? "Band"}
+                      subtitle="Pending"
+                      tone="pending"
+                      actionLabel="Cancel"
+                      onAction={() => handleRevokeCohostInvite(invite._id)}
+                      actionDisabled={activeInviteMutationId === `revoke-${invite._id}`}
+                    />
+                  ))}
+
+                  {(cohostRoster?.acceptedInvites?.length ?? 0) === 0 &&
+                  (cohostRoster?.pendingInvites?.length ?? 0) === 0 ? (
+                    <div className="rounded-xl border border-dashed border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+                      No co-host bands have been added yet.
+                    </div>
+                  ) : null}
+                </GigSectionCard>
+
+                <GigSectionCard
+                  title="Invite Co-host"
+                  description="Search for bands and send new co-host invitations from the event roster."
+                >
+                  <GigBandSearchInput
+                    value={cohostSearch}
+                    onChange={setCohostSearch}
+                    placeholder="Search bands to invite..."
+                  />
+                  {cohostSearchResults.length > 0 ? (
+                    <div className="overflow-hidden rounded-xl border border-border">
+                      {cohostSearchResults.map((band) => (
+                        <button
+                          key={band._id}
+                          type="button"
+                          onClick={() => handleInviteCohostBand(band._id)}
+                          disabled={activeInviteMutationId === `invite-${band._id}`}
+                          className="flex w-full flex-wrap items-center justify-between gap-3 border-b border-border p-3 text-left transition-colors hover:bg-muted last:border-b-0 disabled:opacity-50"
                         >
                           <div className="flex min-w-0 items-center gap-3">
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted">
-                              <Music className="w-5 h-5 text-muted-foreground" />
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted">
+                              <Music className="w-4 h-4 text-muted-foreground" />
                             </div>
-                            <div className="min-w-0">
-                              <p className="truncate font-medium text-foreground">
-                                {invite.invitedBand?.name ?? "Band"}
-                              </p>
-                              <p className="text-xs text-success">Co-host</p>
-                            </div>
+                            <span className="truncate font-medium text-foreground">
+                              {band.name}
+                            </span>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => handleRevokeCohostInvite(invite._id)}
-                            disabled={activeInviteMutationId === `revoke-${invite._id}`}
-                            className="w-full rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-500 transition-colors hover:bg-red-500/20 disabled:opacity-50 sm:w-auto"
-                          >
-                            Revoke
-                          </button>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-
-                {(cohostRoster?.pendingInvites?.length ?? 0) > 0 && (
-                  <div>
-                    <h3 className="mb-3 text-sm font-semibold text-muted-foreground">
-                      Pending Invites
-                    </h3>
-                    <div className="space-y-2">
-                      {cohostRoster?.pendingInvites.map((invite) => (
-                        <div
-                          key={invite._id}
-                          className="flex flex-col gap-3 rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 sm:flex-row sm:items-center sm:justify-between"
-                        >
-                          <div className="flex min-w-0 items-center gap-3">
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-500/10">
-                              <Music className="w-5 h-5 text-amber-500" />
-                            </div>
-                            <div className="min-w-0">
-                              <p className="truncate font-medium text-foreground">
-                                {invite.invitedBand?.name ?? "Band"}
-                              </p>
-                              <p className="text-xs text-amber-500">Pending</p>
-                            </div>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => handleRevokeCohostInvite(invite._id)}
-                            disabled={activeInviteMutationId === `revoke-${invite._id}`}
-                            className="w-full rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-500 transition-colors hover:bg-red-500/20 disabled:opacity-50 sm:w-auto"
-                          >
-                            Cancel
-                          </button>
-                        </div>
+                          <span className="flex shrink-0 items-center gap-1 text-xs text-band">
+                            <UserPlus className="w-3 h-3" />
+                            Invite
+                          </span>
+                        </button>
                       ))}
                     </div>
-                  </div>
-                )}
-
-                <div>
-                  <h3 className="mb-3 text-sm font-semibold text-muted-foreground">
-                    Invite Co-host
-                  </h3>
-                  <div className="space-y-2">
-                    <input
-                      type="text"
-                      value={cohostSearch}
-                      onChange={(e) => setCohostSearch(e.target.value)}
-                      placeholder="Search bands..."
-                      className="w-full rounded-xl border border-border bg-muted px-4 py-3 text-foreground placeholder:text-muted-foreground focus:border-band focus:outline-none"
-                    />
-                    {cohostSearchResults.length > 0 && (
-                      <div className="overflow-hidden rounded-xl border border-border">
-                        {cohostSearchResults.map((band) => (
-                          <button
-                            key={band._id}
-                            type="button"
-                            onClick={() => handleInviteCohostBand(band._id)}
-                            disabled={activeInviteMutationId === `invite-${band._id}`}
-                            className="flex w-full flex-wrap items-center justify-between gap-3 border-b border-border p-3 text-left transition-colors hover:bg-muted last:border-b-0"
-                          >
-                            <div className="flex min-w-0 items-center gap-3">
-                              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted">
-                                <Music className="w-4 h-4 text-muted-foreground" />
-                              </div>
-                              <span className="truncate font-medium text-foreground">
-                                {band.name}
-                              </span>
-                            </div>
-                            <span className="flex shrink-0 items-center gap-1 text-xs text-band">
-                              <UserPlus className="w-3 h-3" />
-                              Invite
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
+                  ) : cohostSearch.trim() ? (
+                    <div className="rounded-xl border border-dashed border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+                      No matching bands found.
+                    </div>
+                  ) : null}
+                </GigSectionCard>
               </motion.div>
             )}
 
@@ -574,32 +520,14 @@ export function EditGigModal({
           </div>
         </div>
 
-        <div className="safe-area-inset-bottom border-t border-border bg-card/95 px-4 pb-4 pt-3 backdrop-blur-xl">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isBusy}
-              className="w-full rounded-xl bg-muted py-3 font-medium text-foreground transition-colors hover:bg-muted/80"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isBusy}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-band py-3 font-medium text-white transition-colors hover:bg-band/90 disabled:opacity-50"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                "Save Changes"
-              )}
-            </button>
-          </div>
-        </div>
+        <GigModalFooter
+          onCancel={onClose}
+          cancelDisabled={isBusy}
+          primaryLabel="Save Changes"
+          primaryBusyLabel="Saving..."
+          primaryDisabled={isBusy}
+          isBusy={isSubmitting}
+        />
       </form>
     </GigModalShell>
   );
