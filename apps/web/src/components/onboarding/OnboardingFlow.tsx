@@ -10,7 +10,6 @@ const LOGIN_BACKGROUND_POSTER_SRC = "/media/login-background-poster.png";
 
 export function OnboardingFlow({ overlay }: { overlay?: ReactNode }) {
   const { isSignedIn } = useAuth();
-  const [authMode, setAuthMode] = useState<"sign-in" | "sign-up">("sign-up");
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-black">
@@ -30,9 +29,7 @@ export function OnboardingFlow({ overlay }: { overlay?: ReactNode }) {
             </div>
           </header>
           <main className="flex flex-1 items-center justify-center py-6">
-            {!isSignedIn ? (
-              <AuthCard mode={authMode} onModeChange={setAuthMode} />
-            ) : null}
+            {!isSignedIn ? <CustomAuthPanel /> : null}
           </main>
           <footer className="text-center">
             <p className="text-xs text-zinc-200/80">
@@ -92,13 +89,4 @@ function VideoBackground() {
       <div className="absolute inset-0 bg-black/60" />
     </div>
   );
-}
-function AuthCard({
-  mode,
-  onModeChange,
-}: {
-  mode: "sign-in" | "sign-up";
-  onModeChange: (mode: "sign-in" | "sign-up") => void;
-}) {
-  return <CustomAuthPanel mode={mode} onModeChange={onModeChange} />;
 }
