@@ -1,8 +1,8 @@
 "use client";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { SignIn, SignUp, useAuth } from "@clerk/nextjs";
-import { ArrowRight, Headphones } from "lucide-react";
-import { BrandMark, BrandWordmark } from "@/components/branding/BrandLogo";
+import { ArrowRight } from "lucide-react";
+import { BrandWordmark } from "@/components/branding/BrandLogo";
 import { cn } from "@/lib/utils";
 
 const LOGIN_BACKGROUND_VIDEO_SRC = "/media/login-background.mov";
@@ -56,7 +56,7 @@ export function OnboardingFlow({ overlay }: { overlay?: ReactNode }) {
         {" "}
         <div className="mx-auto flex min-h-screen max-w-xl flex-col px-6 py-8">
           <header className="pt-2 text-center">
-            <div className="mx-auto flex w-fit flex-col items-center gap-3">
+            <div className="mx-auto flex w-fit flex-col items-center">
               <div className="rounded-[32px] border border-white/15 bg-black/35 px-5 py-4 shadow-[0_30px_80px_rgba(0,0,0,0.45)] backdrop-blur-xl">
                 <BrandWordmark
                   theme="dark"
@@ -64,15 +64,6 @@ export function OnboardingFlow({ overlay }: { overlay?: ReactNode }) {
                   className="w-[12.5rem] sm:w-[14.5rem]"
                   sizes="(max-width: 640px) 200px, 232px"
                 />
-              </div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/8 px-3.5 py-1.5 text-[11px] font-medium uppercase tracking-[0.22em] text-zinc-100/85 backdrop-blur-sm">
-                <BrandMark
-                  theme="dark"
-                  decorative
-                  className="w-5"
-                  sizes="20px"
-                />
-                Listen Local
               </div>
             </div>
           </header>
@@ -153,11 +144,6 @@ function AuthCard({
 }) {
   return (
     <div className="w-full max-w-md animate-fade-in">
-      <div className="mb-4 text-center">
-        <span className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/15 px-4 py-1.5 text-xs font-medium text-zinc-50 backdrop-blur-sm">
-          <Headphones className="h-4 w-4" /> EarPlug Fan Access
-        </span>
-      </div>
       <div className="rounded-xl border border-white/30 bg-white/15 p-1 shadow-soft backdrop-blur-md">
         {" "}
         {mode === "sign-up" ? (
