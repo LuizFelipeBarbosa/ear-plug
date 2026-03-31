@@ -35,6 +35,9 @@ export default function SpotifyConnectionsPage() {
           </div>
 
           <UserProfile
+            additionalOAuthScopes={{
+              spotify: ["user-top-read", "user-follow-read"],
+            }}
             appearance={WEB_AUTH_CLERK_APPEARANCE}
             path="/profile/connections"
             routing="path"

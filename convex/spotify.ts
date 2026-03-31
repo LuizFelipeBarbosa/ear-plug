@@ -326,9 +326,9 @@ async function getClerkSpotifyAccessToken(
 
   if (!token) {
     throw new ConvexError({
-      code: "spotify_not_connected",
+      code: "spotify_reconnect_required",
       message:
-        "Connect Spotify in account settings before syncing personalization.",
+        "Spotify is linked, but Clerk has no provider token yet. Reconnect Spotify from Profile > Connections and approve the Spotify scopes, then sync again.",
     });
   }
 
