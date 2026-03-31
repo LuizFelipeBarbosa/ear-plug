@@ -44,6 +44,7 @@ interface Notification {
   read: boolean;
   timestamp: number;
   eventId?: string;
+  event?: { _id: string } | null;
   bandId?: string;
   venueId?: string;
 }
@@ -374,7 +375,7 @@ export function FanNotificationsView() {
                             {notification.content}
                           </p>
 
-                          {notification.eventId ? (
+                          {notification.eventId && notification.event ? (
                             <div className="mt-3 flex flex-wrap items-center gap-2">
                               <Link
                                 href={`/gig/${notification.eventId}`}

@@ -762,10 +762,10 @@ async function resolveEventBandAccess(
 async function resolveEventCheckinAccess(
   ctx: QueryCtx | MutationCtx,
   eventId: Id<"events">
-): Promise<EventCheckinAccess> {
+): Promise<EventCheckinAccess | null> {
   const event = await ctx.db.get(eventId);
   if (!event) {
-    throw new Error("Event not found");
+    return null;
   }
 
   const user = await requireAuthenticatedUser(ctx);
@@ -1701,6 +1701,14 @@ export const getEventCheckinAccess = query({
   args: { eventId: v.id("events") },
   handler: async (ctx, args) => {
     const access = await resolveEventCheckinAccess(ctx, args.eventId);
+    if (!access) {
+      return {
+        canScan: false,
+        canManageStaff: false,
+        role: null,
+        managerBandIds: [],
+      };
+    }
     return {
       canScan: access.canScan,
       canManageStaff: access.canManageStaff,
@@ -1965,7 +1973,7 @@ export const scanEventTicket = mutation({
   },
   handler: async (ctx, args) => {
     const access = await resolveEventCheckinAccess(ctx, args.eventId);
-    if (!access.canScan) {
+    if (!access || !access.canScan) {
       throw new Error("Not authorized to scan tickets for this event");
     }
 
