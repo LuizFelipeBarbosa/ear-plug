@@ -685,17 +685,6 @@ export const clearAvatar = mutation({
   },
 });
 
-/**
- * Increments the current user's shows attended counter.
- * Called when a user attends an event they RSVP'd to.
- * Requires authentication.
- *
- * @throws Error if not authenticated or user not found
- *
- * @example
- * const incrementShows = useMutation(api.users.incrementShowsAttended);
- * await incrementShows();
- */
 export const incrementShowsAttended = internalMutation({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {

@@ -64,6 +64,23 @@ function capitalizeGenre(genre: Genre | null): string {
   return genre.charAt(0).toUpperCase() + genre.slice(1);
 }
 
+function getActionErrorMessage(error: unknown, fallback: string): string {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "data" in error &&
+    typeof (error as { data?: { message?: unknown } }).data?.message === "string"
+  ) {
+    return (error as { data: { message: string } }).data.message;
+  }
+
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return fallback;
+}
+
 export function FanProfileView() {
   const router = useRouter();
   const { user: clerkUser } = useUser();
@@ -795,6 +812,69 @@ function SettingsTab({
   onOpenWorkspaceMenu: () => void;
   pendingInvitesCount: number;
 }) {
+  const spotifyPersonalization = useQuery(api.spotify.getSpotifyPersonalization);
+  const syncSpotifyPersonalization = useAction(
+    api.spotify.syncSpotifyPersonalization,
+  );
+  const clearSpotifyPersonalization = useMutation(
+    api.spotify.clearSpotifyPersonalization,
+  );
+  const [isSyncingSpotify, setIsSyncingSpotify] = useState(false);
+  const [isClearingSpotify, setIsClearingSpotify] = useState(false);
+  const [spotifyNotice, setSpotifyNotice] = useState<string | null>(null);
+  const [spotifyError, setSpotifyError] = useState<string | null>(null);
+
+  const handleSpotifySync = useCallback(async () => {
+    setSpotifyError(null);
+    setSpotifyNotice(null);
+    setIsSyncingSpotify(true);
+
+    try {
+      const result = await syncSpotifyPersonalization({});
+      const topArtistName = result.topArtists[0]?.name;
+      setSpotifyNotice(
+        topArtistName
+          ? `Spotify taste synced. ${topArtistName} is now influencing discovery.`
+          : "Spotify taste synced.",
+      );
+    } catch (error) {
+      setSpotifyError(getActionErrorMessage(error, "We couldn't sync Spotify right now."));
+    } finally {
+      setIsSyncingSpotify(false);
+    }
+  }, [syncSpotifyPersonalization]);
+
+  const handleSpotifyClear = useCallback(async () => {
+    setSpotifyError(null);
+    setSpotifyNotice(null);
+    setIsClearingSpotify(true);
+
+    try {
+      await clearSpotifyPersonalization({});
+      setSpotifyNotice("Stored Spotify personalization was cleared.");
+    } catch (error) {
+      setSpotifyError(
+        getActionErrorMessage(
+          error,
+          "We couldn't clear Spotify personalization right now.",
+        ),
+      );
+    } finally {
+      setIsClearingSpotify(false);
+    }
+  }, [clearSpotifyPersonalization]);
+
+  const hasSpotifyPersonalization =
+    spotifyPersonalization !== undefined && spotifyPersonalization !== null;
+  const spotifyLastSyncedLabel = hasSpotifyPersonalization
+    ? new Date(spotifyPersonalization.lastSyncedAt).toLocaleString("en-US", {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      })
+    : null;
+
   return (
     <motion.div
       variants={panelFade}
@@ -808,6 +888,139 @@ function SettingsTab({
         <FanSectionTitle icon={Settings} title="Appearance" />
         <div className="bg-card border border-border rounded-xl p-4">
           <ThemeToggleRow />
+        </div>
+      </div>
+
+      {/* Spotify */}
+      <div>
+        <FanSectionTitle icon={Music} title="Spotify" />
+        <div className="rounded-xl border border-border bg-card p-4">
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium text-foreground">
+                    Fan Taste Sync
+                  </p>
+                  <span className="rounded-full border border-fan/20 bg-fan/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-fan">
+                    Web only
+                  </span>
+                </div>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                  Connect Spotify, then sync your top artists to improve local
+                  show ranking and reveal Spotify picks in discovery.
+                </p>
+              </div>
+              {spotifyLastSyncedLabel ? (
+                <span className="rounded-full border border-border bg-muted px-2.5 py-1 text-[10px] font-medium text-muted-foreground">
+                  Synced {spotifyLastSyncedLabel}
+                </span>
+              ) : null}
+            </div>
+
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Link
+                href="/profile/connections"
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-border bg-background px-4 py-3 text-sm font-medium text-foreground transition-colors hover:border-fan/30 hover:text-fan"
+              >
+                Manage Spotify Connection
+                <ChevronRight className="h-4 w-4" />
+              </Link>
+              <button
+                type="button"
+                onClick={() => void handleSpotifySync()}
+                disabled={isSyncingSpotify}
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-fan px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-fan/90 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {isSyncingSpotify ? "Syncing Spotify..." : "Sync from Spotify"}
+              </button>
+            </div>
+
+            {spotifyError ? (
+              <div className="rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3">
+                <p className="text-sm text-red-500">{spotifyError}</p>
+              </div>
+            ) : null}
+
+            {spotifyNotice ? (
+              <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3">
+                <p className="text-sm text-emerald-600">{spotifyNotice}</p>
+              </div>
+            ) : null}
+
+            {spotifyPersonalization === undefined ? (
+              <div className="rounded-xl border border-dashed border-border px-4 py-4 text-sm text-muted-foreground">
+                Loading Spotify sync state...
+              </div>
+            ) : hasSpotifyPersonalization ? (
+              <div className="space-y-4 rounded-xl border border-border/70 bg-muted/20 p-4">
+                <div className="flex flex-wrap gap-2">
+                  {spotifyPersonalization.topGenres.map((genre) => (
+                    <span
+                      key={genre}
+                      className="rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide"
+                      style={{
+                        color: GENRE_COLORS[genre as Genre],
+                        borderColor: `${GENRE_COLORS[genre as Genre]}33`,
+                        backgroundColor: `${GENRE_COLORS[genre as Genre]}14`,
+                      }}
+                    >
+                      {genre}
+                    </span>
+                  ))}
+                </div>
+
+                {spotifyPersonalization.topArtists.length > 0 ? (
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                      Top Spotify Artists
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {spotifyPersonalization.topArtists.map((artist) => (
+                        <span
+                          key={artist.spotifyArtistId}
+                          className="rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-foreground"
+                        >
+                          {artist.name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">
+                      {spotifyPersonalization.matchedBandCount} local band
+                      {spotifyPersonalization.matchedBandCount === 1 ? "" : "s"} matched
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Matches come from band Spotify links first, then exact
+                      band-name equality.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void handleSpotifyClear()}
+                    disabled={isClearingSpotify}
+                    className="inline-flex items-center justify-center rounded-xl border border-border bg-background px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:border-red-500/30 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {isClearingSpotify ? "Clearing..." : "Clear Personalization"}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-dashed border-border px-4 py-4">
+                <p className="text-sm font-medium text-foreground">
+                  No Spotify taste synced yet
+                </p>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                  Connect Spotify in account settings, then return here and run
+                  your first sync.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

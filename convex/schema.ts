@@ -196,6 +196,16 @@ const socialLinksValidator = v.object({
 });
 
 /**
+ * Validator for a Spotify top-artist preview row saved for personalization UI.
+ */
+const spotifyTopArtistPreviewValidator = v.object({
+  spotifyArtistId: v.string(),
+  name: v.string(),
+  imageUrl: v.optional(v.string()),
+  externalUrl: v.optional(v.string()),
+});
+
+/**
  * Validator for geographic coordinates.
  * Used for venue locations and distance calculations.
  */
@@ -250,6 +260,26 @@ export default defineSchema({
     .index("by_email", ["email"])
     .index("by_phone_number", ["phoneNumber"])
     .index("by_role", ["role"]),
+
+  // ==================== SPOTIFY PROFILES ====================
+  /**
+   * Derived Spotify personalization state for a user.
+   *
+   * Stores sync timestamps and normalized taste data only.
+   * OAuth tokens remain in Clerk and are never persisted in Convex.
+   */
+  spotifyProfiles: defineTable({
+    /** Reference to the owning user */
+    userId: v.id("users"),
+    /** Unix timestamp when Spotify taste was last synced */
+    lastSyncedAt: v.number(),
+    /** Derived Ear-Plug genres from Spotify top artists */
+    topGenres: v.array(genreValidator),
+    /** Preview of top Spotify artists for settings UI */
+    topArtists: v.array(spotifyTopArtistPreviewValidator),
+    /** Local bands matched from Spotify artist ids / names */
+    matchedBandIds: v.array(v.id("bands")),
+  }).index("by_user", ["userId"]),
 
   // ==================== BANDS ====================
   /**

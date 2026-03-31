@@ -13,7 +13,7 @@ import { GenreFilter } from "@/components/ui/GenreFilter";
 import { DistanceSlider } from "@/components/ui/DistanceSlider";
 import { fadeFast, panelFade, presenceSyncNoInitial } from "@/lib/motion/presets";
 import { DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM } from "@ear-plug/shared/constants";
-import type { Genre } from "@ear-plug/shared/types";
+import type { Genre, SpotifyPersonalizationReason } from "@ear-plug/shared/types";
 import { cn } from "@/lib/utils";
 import { loadGoogleMapsApiKey } from "@/lib/google/ensurePlacesLibrary";
 import type { Id } from "../../../../../convex/_generated/dataModel";
@@ -49,6 +49,7 @@ interface DisplayEvent {
   isVenueAddressHidden?: boolean;
   cohostBands?: { name: string; image?: string }[];
   distance?: number;
+  personalizationReason?: SpotifyPersonalizationReason;
 }
 
 export function FanDiscoverView() {

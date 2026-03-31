@@ -5,6 +5,7 @@ import { Heart, Check } from "lucide-react";
 import { EventImage } from "@/components/ui/OptimizedImage";
 import { EventPollPrompt } from "@/components/events/EventPollPrompt";
 import { formatEventDate, formatEventTime } from "@ear-plug/shared/constants";
+import type { SpotifyPersonalizationReason } from "@ear-plug/shared/types";
 import { cn } from "@/lib/utils";
 import type { RoleTone } from "@/lib/ui/roleTone";
 import type { Id } from "../../../../../convex/_generated/dataModel";
@@ -21,6 +22,7 @@ interface EventCardProps {
     band?: { name: string; image?: string } | null;
     venue?: { name?: string; city?: string; address?: string } | null;
     isVenueAddressHidden?: boolean;
+    personalizationReason?: SpotifyPersonalizationReason;
     attendanceStatus?: "on_list" | "attended";
     attendedAt?: number;
   };
@@ -137,6 +139,13 @@ export function EventCard({
             >
               {displayDate} • {displayTime}
             </p>
+            {event.personalizationReason ? (
+              <span className="mt-2 inline-flex rounded-full border border-fan/20 bg-fan/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-fan">
+                {event.personalizationReason === "spotify_artist_match"
+                  ? "Spotify pick: artist match"
+                  : "Spotify pick: genre match"}
+              </span>
+            ) : null}
             {showAttendanceStatus && (
               <span
                 className={cn(

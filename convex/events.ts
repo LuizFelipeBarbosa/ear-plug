@@ -71,6 +71,14 @@ type EventPoll = {
   question: string;
   options: EventPollOption[];
 };
+type GenreValue =
+  | "indie"
+  | "rock"
+  | "jazz"
+  | "electronic"
+  | "folk"
+  | "pop"
+  | "alternative";
 
 const guestFilterTypeValidator = v.union(
   v.literal("all"),
@@ -92,6 +100,9 @@ interface ViewerContext {
   memberBandIds: Set<Id<"bands">>;
   rsvpEventIds: Set<Id<"events">>;
   cohostEventIds: Set<Id<"events">>;
+  hasSpotifyPersonalization: boolean;
+  personalizedGenres: GenreValue[];
+  matchedBandIds: Set<Id<"bands">>;
 }
 
 interface EventBandAccess {
@@ -234,6 +245,87 @@ function eventMatchesGenre(
     return event.genres.includes(genre);
   }
   return event.genre === genre;
+}
+
+function getEventGenres(
+  event: Pick<Doc<"events">, "genres" | "genre">,
+): GenreValue[] {
+  if (event.genres && event.genres.length > 0) {
+    return event.genres.filter(
+      (genre): genre is GenreValue =>
+        genre === "indie" ||
+        genre === "rock" ||
+        genre === "jazz" ||
+        genre === "electronic" ||
+        genre === "folk" ||
+        genre === "pop" ||
+        genre === "alternative",
+    );
+  }
+
+  if (event.genre) {
+    return [event.genre];
+  }
+
+  return [];
+}
+
+function mergePreferredGenres(
+  spotifyGenres?: readonly GenreValue[],
+  userGenres?: readonly GenreValue[],
+): GenreValue[] {
+  const merged: GenreValue[] = [];
+
+  for (const genre of spotifyGenres ?? []) {
+    if (!merged.includes(genre)) {
+      merged.push(genre);
+    }
+  }
+
+  for (const genre of userGenres ?? []) {
+    if (!merged.includes(genre)) {
+      merged.push(genre);
+    }
+  }
+
+  return merged.slice(0, 5);
+}
+
+function getEventPersonalizationMetadata(
+  event: Pick<Doc<"events">, "bandId" | "genres" | "genre">,
+  viewerContext: ViewerContext,
+): {
+  score: number;
+  personalizationReason?: "spotify_artist_match" | "spotify_genre_match";
+} {
+  if (!viewerContext.hasSpotifyPersonalization) {
+    return { score: 0 };
+  }
+
+  let score = 0;
+  let personalizationReason:
+    | "spotify_artist_match"
+    | "spotify_genre_match"
+    | undefined;
+
+  if (viewerContext.matchedBandIds.has(event.bandId)) {
+    score += 100;
+    personalizationReason = "spotify_artist_match";
+  }
+
+  const eventGenres = getEventGenres(event);
+  const overlapCount = eventGenres.filter((genre) =>
+    viewerContext.personalizedGenres.includes(genre),
+  ).length;
+
+  if (overlapCount > 0) {
+    score += overlapCount * 10;
+    if (!personalizationReason) {
+      personalizationReason = "spotify_genre_match";
+    }
+  }
+
+  return { score, personalizationReason };
 }
 
 function sortEventsByDate<T extends { dateTime: number }>(
@@ -680,10 +772,13 @@ async function buildViewerContext(ctx: QueryCtx): Promise<ViewerContext> {
       memberBandIds: new Set<Id<"bands">>(),
       rsvpEventIds: new Set<Id<"events">>(),
       cohostEventIds: new Set<Id<"events">>(),
+      hasSpotifyPersonalization: false,
+      personalizedGenres: [],
+      matchedBandIds: new Set<Id<"bands">>(),
     };
   }
 
-  const [memberships, rsvps] = await Promise.all([
+  const [memberships, rsvps, spotifyProfile] = await Promise.all([
     ctx.db
       .query("bandMemberships")
       .withIndex("by_user", (q) => q.eq("userId", user._id))
@@ -692,6 +787,10 @@ async function buildViewerContext(ctx: QueryCtx): Promise<ViewerContext> {
       .query("rsvps")
       .withIndex("by_user", (q) => q.eq("userId", user._id))
       .collect(),
+    ctx.db
+      .query("spotifyProfiles")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .unique(),
   ]);
 
   const memberBandIds = new Set(memberships.map((membership) => membership.bandId));
@@ -716,6 +815,11 @@ async function buildViewerContext(ctx: QueryCtx): Promise<ViewerContext> {
     memberBandIds,
     rsvpEventIds: new Set(rsvps.map((rsvp) => rsvp.eventId)),
     cohostEventIds,
+    hasSpotifyPersonalization: Boolean(spotifyProfile),
+    personalizedGenres: spotifyProfile
+      ? mergePreferredGenres(spotifyProfile.topGenres, user.topGenres)
+      : [],
+    matchedBandIds: new Set(spotifyProfile?.matchedBandIds ?? []),
   };
 }
 
@@ -914,16 +1018,38 @@ export const listUpcoming = query({
     const limit = args.limit || 50;
     const viewerContext = await buildViewerContext(ctx);
     const cache = createEventHydrationCache();
-    const events = (await listUpcomingPublicEvents(ctx, { limit, scanLimit: limit * 4 })).slice(
-      0,
-      limit
+    const events = await listUpcomingPublicEvents(ctx, {
+      limit,
+      scanLimit: Math.max(limit * 8, 250),
+    });
+    const hydrated = await Promise.all(
+      events.map(async (event) => {
+        const hydratedEvent = applyAddressMask(
+          await hydratePublicEvent(ctx, event, cache),
+          viewerContext,
+        );
+        const personalization = getEventPersonalizationMetadata(
+          hydratedEvent,
+          viewerContext,
+        );
+
+        return {
+          ...hydratedEvent,
+          personalizationReason: personalization.personalizationReason,
+          _personalizationScore: personalization.score,
+        };
+      }),
     );
 
-    return await Promise.all(
-      events.map(async (event) =>
-        applyAddressMask(await hydratePublicEvent(ctx, event, cache), viewerContext)
-      )
-    );
+    return hydrated
+      .sort((a, b) => {
+        if (b._personalizationScore !== a._personalizationScore) {
+          return b._personalizationScore - a._personalizationScore;
+        }
+        return a.dateTime - b.dateTime;
+      })
+      .slice(0, limit)
+      .map(({ _personalizationScore, ...event }) => event);
   },
 });
 
@@ -957,14 +1083,35 @@ export const listByGenre = query({
         scanLimit: Math.max(limit * 8, 250),
       })
     )
-      .filter((event) => eventMatchesGenre(event, args.genre))
-      .slice(0, limit);
+      .filter((event) => eventMatchesGenre(event, args.genre));
+    const hydrated = await Promise.all(
+      filteredEvents.map(async (event) => {
+        const hydratedEvent = applyAddressMask(
+          await hydratePublicEvent(ctx, event, cache),
+          viewerContext,
+        );
+        const personalization = getEventPersonalizationMetadata(
+          hydratedEvent,
+          viewerContext,
+        );
 
-    return await Promise.all(
-      filteredEvents.map(async (event) =>
-        applyAddressMask(await hydratePublicEvent(ctx, event, cache), viewerContext)
-      )
+        return {
+          ...hydratedEvent,
+          personalizationReason: personalization.personalizationReason,
+          _personalizationScore: personalization.score,
+        };
+      }),
     );
+
+    return hydrated
+      .sort((a, b) => {
+        if (b._personalizationScore !== a._personalizationScore) {
+          return b._personalizationScore - a._personalizationScore;
+        }
+        return a.dateTime - b.dateTime;
+      })
+      .slice(0, limit)
+      .map(({ _personalizationScore, ...event }) => event);
   },
 });
 
@@ -2390,17 +2537,36 @@ export const listNearby = query({
           return null;
         }
 
-        return {
+        const maskedEvent = {
           ...applyAddressMask(hydrated, viewerContext),
           distance: Math.round(distance * 10) / 10,
+        };
+        const personalization = getEventPersonalizationMetadata(
+          maskedEvent,
+          viewerContext,
+        );
+
+        return {
+          ...maskedEvent,
+          personalizationReason: personalization.personalizationReason,
+          _personalizationScore: personalization.score,
         };
       })
     );
 
     return eventsWithDistance
       .filter((e): e is NonNullable<typeof e> => e !== null)
-      .sort((a, b) => a.distance - b.distance)
-      .slice(0, limit);
+      .sort((a, b) => {
+        if (b._personalizationScore !== a._personalizationScore) {
+          return b._personalizationScore - a._personalizationScore;
+        }
+        if (a.distance !== b.distance) {
+          return a.distance - b.distance;
+        }
+        return a.dateTime - b.dateTime;
+      })
+      .slice(0, limit)
+      .map(({ _personalizationScore, ...event }) => event);
   },
 });
 
