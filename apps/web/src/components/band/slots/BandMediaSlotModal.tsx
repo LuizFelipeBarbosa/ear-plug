@@ -223,10 +223,7 @@ export function BandMediaSlotModal({ slot, onClose, onSave, onClear }: BandMedia
           {previewMediaUrl && hasOverlayMeta ? (
             <div
               className={cn(
-                "pointer-events-none absolute inset-x-0 z-10 bg-gradient-to-t from-black/85 via-black/35 to-transparent px-4 text-white",
-                previewMediaType === "video"
-                  ? "bottom-14 pt-16 pb-4 sm:bottom-16"
-                  : "bottom-0 pt-16 pb-4"
+                "pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/85 via-black/35 to-transparent px-4 pb-4 pt-16 text-white"
               )}
             >
               <div className="max-w-[24rem] space-y-2">

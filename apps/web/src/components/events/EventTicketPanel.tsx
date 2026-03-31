@@ -102,6 +102,23 @@ export function EventTicketPanel({
     };
   }, [qrValue]);
 
+  useEffect(() => {
+    if (!showFullQr) {
+      return;
+    }
+
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+    };
+  }, [showFullQr]);
+
   const config = useMemo(() => {
     if (!ticket) return null;
     return statusConfig(ticket.status);
@@ -340,14 +357,18 @@ export function EventTicketPanel({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-background/95 backdrop-blur-xl flex items-center justify-center p-6"
+            className="fixed inset-0 z-[70] flex items-start justify-center overflow-y-auto bg-background/98 px-4 backdrop-blur-xl sm:items-center sm:p-6"
+            style={{
+              paddingTop: "calc(env(safe-area-inset-top, 0px) + 1rem)",
+              paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1rem)",
+            }}
             onClick={() => setShowFullQr(false)}
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-card border border-border rounded-3xl p-6 max-w-sm w-full"
+              className="my-auto max-h-full w-full max-w-sm overflow-y-auto rounded-3xl border border-border bg-card p-5 shadow-2xl shadow-black/15 sm:p-6"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="text-center mb-6">
@@ -370,11 +391,11 @@ export function EventTicketPanel({
                 />
               </div>
 
-              <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center justify-between gap-3 text-sm">
                 <span className="text-muted-foreground">{ticket?.ticketCode}</span>
                 <button
                   onClick={() => setShowFullQr(false)}
-                  className="px-4 py-2 bg-fan text-white font-medium rounded-xl"
+                  className="shrink-0 px-4 py-2 bg-fan text-white font-medium rounded-xl"
                 >
                   Done
                 </button>
