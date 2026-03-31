@@ -28,6 +28,18 @@ export const metadata: Metadata = {
         type: "image/png",
       },
     ],
+    shortcut: [
+      {
+        url: "/branding/earplug-mark-light.png",
+        media: "(prefers-color-scheme: light)",
+        type: "image/png",
+      },
+      {
+        url: "/branding/earplug-mark-dark.png",
+        media: "(prefers-color-scheme: dark)",
+        type: "image/png",
+      },
+    ],
     apple: [
       {
         url: "/branding/earplug-mark-light.png",
@@ -40,7 +52,6 @@ export const metadata: Metadata = {
         type: "image/png",
       },
     ],
-    shortcut: "/branding/earplug-mark-light.png",
   },
   openGraph: {
     title: "EarPlug | Listen Local",
