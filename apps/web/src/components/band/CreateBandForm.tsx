@@ -24,6 +24,7 @@ import { api } from "../../../../../convex/_generated/api";
 import { CityAutocomplete } from "@/components/ui/CityAutocomplete";
 import { GENRES, GENRE_COLORS } from "@ear-plug/shared/constants";
 import type { Genre } from "@ear-plug/shared/types";
+import { getConvexErrorMessage } from "@/lib/convexErrors";
 import { cn } from "@/lib/utils";
 import { useProfileContext } from "@/hooks/useProfileContext";
 
@@ -114,24 +115,6 @@ function sanitizeSocialLinks(socialLinks: FormData["socialLinks"]): FormData["so
   return Object.keys(normalized).length > 0 ? normalized : undefined;
 }
 
-function getCreateBandErrorMessage(error: unknown): string {
-  if (error && typeof error === "object" && "data" in error) {
-    const data = (error as { data?: unknown }).data;
-    if (data && typeof data === "object") {
-      const message = "message" in data ? (data as { message?: unknown }).message : undefined;
-      if (typeof message === "string" && message.trim().length > 0) {
-        return message;
-      }
-    }
-  }
-
-  if (error instanceof Error && error.message.trim().length > 0) {
-    return error.message;
-  }
-
-  return "Failed to create band. Please try again.";
-}
-
 export function CreateBandForm() {
   const router = useRouter();
   const createBand = useMutation(api.bands.create);
@@ -212,7 +195,7 @@ export function CreateBandForm() {
       setBandMode(bandId);
       router.push("/home");
     } catch (err) {
-      setError(getCreateBandErrorMessage(err));
+      setError(getConvexErrorMessage(err, "Failed to create band. Please try again."));
     } finally {
       setIsSubmitting(false);
     }

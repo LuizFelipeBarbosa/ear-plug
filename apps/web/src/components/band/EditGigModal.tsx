@@ -40,6 +40,7 @@ import type {
   EventStatus,
   Genre,
 } from "@ear-plug/shared/types";
+import { getConvexErrorMessage } from "@/lib/convexErrors";
 
 interface EditableEvent {
   _id: string;
@@ -226,9 +227,7 @@ export function EditGigModal({
       setCohostSearch("");
     } catch (inviteError) {
       setSubmitError(
-        inviteError instanceof Error
-          ? inviteError.message
-          : "Failed to invite co-host band"
+        getConvexErrorMessage(inviteError, "Failed to invite co-host band."),
       );
     } finally {
       setActiveInviteMutationId(null);
@@ -249,9 +248,7 @@ export function EditGigModal({
       });
     } catch (revokeError) {
       setSubmitError(
-        revokeError instanceof Error
-          ? revokeError.message
-          : "Failed to update co-host invite"
+        getConvexErrorMessage(revokeError, "Failed to update co-host invite."),
       );
     } finally {
       setActiveInviteMutationId(null);
@@ -330,9 +327,7 @@ export function EditGigModal({
       onSuccess?.();
       onClose();
     } catch (error) {
-      setSubmitError(
-        error instanceof Error ? error.message : "Failed to update event"
-      );
+      setSubmitError(getConvexErrorMessage(error, "Failed to update event."));
     } finally {
       setIsSubmitting(false);
     }
@@ -354,9 +349,7 @@ export function EditGigModal({
       onSuccess?.();
       onClose();
     } catch (error) {
-      setSubmitError(
-        error instanceof Error ? error.message : "Failed to delete event"
-      );
+      setSubmitError(getConvexErrorMessage(error, "Failed to delete event."));
     } finally {
       setIsDeleting(false);
     }

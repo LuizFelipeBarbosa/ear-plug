@@ -5,7 +5,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { MapPin, X, Loader2, Search } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import usePlacesAutocomplete from "use-places-autocomplete";
 import { cn } from "@/lib/utils";
 import { ensurePlacesLibrary } from "@/lib/google/ensurePlacesLibrary";
 import type { VenueLocationData } from "@/types";
@@ -36,10 +35,58 @@ interface CitySuggestion {
   fullText: string;
 }
 
+interface FormattableTextLike {
+  toString(): string;
+}
+
+interface PlaceLike {
+  id?: string;
+  displayName?: string;
+  formattedAddress?: string;
+  location?: google.maps.LatLng | google.maps.LatLngLiteral;
+  nationalPhoneNumber?: string;
+  websiteURI?: string;
+  addressComponents?: google.maps.GeocoderAddressComponent[];
+  fetchFields(request: { fields: string[] }): Promise<unknown>;
+}
+
+interface PlacePredictionLike {
+  text?: FormattableTextLike;
+  mainText?: FormattableTextLike;
+  secondaryText?: FormattableTextLike;
+  placeId?: string;
+  toPlace?: () => PlaceLike;
+}
+
+interface VenueSuggestion extends CitySuggestion {
+  placePrediction: PlacePredictionLike;
+}
+
+type AutocompleteFetcher = (request: unknown) => Promise<{ suggestions?: unknown[] }>;
+
 const CITY_PRIMARY_TYPES = ["(cities)"];
 const CITY_PRIMARY_TYPES_FALLBACK = ["locality"];
 
-function parseCitySuggestion(rawSuggestion: unknown, index: number): CitySuggestion | null {
+function toDisplayText(value: unknown): string {
+  if (typeof value === "string") {
+    return value.trim();
+  }
+
+  if (
+    value &&
+    typeof value === "object" &&
+    typeof (value as { toString?: () => string }).toString === "function"
+  ) {
+    return (value as { toString: () => string }).toString().trim();
+  }
+
+  return "";
+}
+
+function parseVenueSuggestion(
+  rawSuggestion: unknown,
+  index: number,
+): VenueSuggestion | null {
   if (!rawSuggestion || typeof rawSuggestion !== "object") {
     return null;
   }
@@ -51,13 +98,8 @@ function parseCitySuggestion(rawSuggestion: unknown, index: number): CitySuggest
   }
 
   const predictionRecord = rawPrediction as Record<string, unknown>;
-  const predictionText = predictionRecord.text;
-
-  const fullText =
-    predictionText &&
-    typeof (predictionText as { toString?: () => string }).toString === "function"
-      ? (predictionText as { toString: () => string }).toString().trim()
-      : "";
+  const placePrediction = rawPrediction as PlacePredictionLike;
+  const fullText = toDisplayText(placePrediction.text);
 
   if (!fullText) {
     return null;
@@ -68,14 +110,53 @@ function parseCitySuggestion(rawSuggestion: unknown, index: number): CitySuggest
     .map((part) => part.trim())
     .filter(Boolean);
 
-  const primaryText = parts[0] ?? fullText;
-  const secondaryText = parts.length > 1 ? parts.slice(1).join(", ") : undefined;
+  const primaryText = toDisplayText(placePrediction.mainText) || parts[0] || fullText;
+  const secondaryText =
+    toDisplayText(placePrediction.secondaryText) ||
+    (parts.length > 1 ? parts.slice(1).join(", ") : undefined);
   const placeId =
-    typeof predictionRecord.placeId === "string" && predictionRecord.placeId.length > 0
-      ? predictionRecord.placeId
+    typeof placePrediction.placeId === "string" && placePrediction.placeId.length > 0
+      ? placePrediction.placeId
       : `${fullText}-${index}`;
 
-  return { placeId, primaryText, secondaryText, fullText };
+  return { placeId, primaryText, secondaryText, fullText, placePrediction };
+}
+
+function parseCitySuggestion(rawSuggestion: unknown, index: number): CitySuggestion | null {
+  const suggestion = parseVenueSuggestion(rawSuggestion, index);
+  if (!suggestion) {
+    return null;
+  }
+
+  return {
+    placeId: suggestion.placeId,
+    primaryText: suggestion.primaryText,
+    secondaryText: suggestion.secondaryText,
+    fullText: suggestion.fullText,
+  };
+}
+
+function extractCoordinates(
+  location: google.maps.LatLng | google.maps.LatLngLiteral,
+): google.maps.LatLngLiteral | null {
+  if (
+    typeof (location as google.maps.LatLng).lat === "function" &&
+    typeof (location as google.maps.LatLng).lng === "function"
+  ) {
+    return {
+      lat: (location as google.maps.LatLng).lat(),
+      lng: (location as google.maps.LatLng).lng(),
+    };
+  }
+
+  if (
+    typeof (location as google.maps.LatLngLiteral).lat === "number" &&
+    typeof (location as google.maps.LatLngLiteral).lng === "number"
+  ) {
+    return location as google.maps.LatLngLiteral;
+  }
+
+  return null;
 }
 
 /**
@@ -116,29 +197,14 @@ export function CityAutocomplete({
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const requestIdRef = useRef(0);
-  const fetchAutocompleteSuggestionsRef = useRef<
-    ((request: unknown) => Promise<{ suggestions?: unknown[] }>) | null
-  >(null);
+  const fetchAutocompleteSuggestionsRef = useRef<AutocompleteFetcher | null>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [inputValue, setInputValue] = useState(controlledValue);
   const [manualErrorInput, setManualErrorInput] = useState(controlledValue);
   const [citySuggestions, setCitySuggestions] = useState<CitySuggestion[]>([]);
+  const [venueSuggestions, setVenueSuggestions] = useState<VenueSuggestion[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
-
-  // Venue mode: use use-places-autocomplete
-  const autocompleteHook = usePlacesAutocomplete({
-    debounce: 200,
-    requestOptions: isVenueMode ? undefined : {}, // Don't run in city mode
-  });
-
-  const {
-    ready: venueReady,
-    value: venueInputValue,
-    suggestions: { status: venueStatus, data: venueSuggestions },
-    setValue: setVenueValue,
-    clearSuggestions: clearVenueSuggestions,
-  } = autocompleteHook;
 
   // Initialize Places Library
   useEffect(() => {
@@ -180,13 +246,13 @@ export function CityAutocomplete({
   // Sync external value with local input
   useEffect(() => {
     if (isVenueMode) {
-      // For venue mode, sync with the hook's value if we have a VenueLocationData object
       if (value && typeof value === "object") {
-        setVenueValue(value.name, false);
+        setInputValue(value.name || "");
       }
+      return;
     }
     setInputValue(controlledValue);
-  }, [value, controlledValue, isVenueMode, setVenueValue]);
+  }, [value, controlledValue, isVenueMode]);
 
   // Keep the manual fallback input in sync with externally controlled selections.
   useEffect(() => {
@@ -233,20 +299,21 @@ export function CityAutocomplete({
 
     const boundFetcher = fetchAutocompleteSuggestions.bind(
       autocompleteSuggestionClass
-    ) as (request: unknown) => Promise<{ suggestions?: unknown[] }>;
+    ) as AutocompleteFetcher;
 
     fetchAutocompleteSuggestionsRef.current = boundFetcher;
     return boundFetcher;
   }, []);
 
-  // City mode: fetch city suggestions
+  // Fetch autocomplete suggestions
   useEffect(() => {
-    if (isVenueMode || placesStatus !== "ready") {
+    if (placesStatus !== "ready") {
       return;
     }
 
     const query = inputValue.trim();
     if (!showSuggestions || query.length < 2) {
+      setVenueSuggestions([]);
       setCitySuggestions([]);
       setIsSearching(false);
       return;
@@ -261,27 +328,50 @@ export function CityAutocomplete({
 
         let result: { suggestions?: unknown[] };
 
-        try {
+        if (isVenueMode) {
           result = await fetchAutocompleteSuggestions({
             input: query,
-            includedPrimaryTypes: CITY_PRIMARY_TYPES,
+            region: "us",
+            language: "en-US",
           });
-        } catch {
-          result = await fetchAutocompleteSuggestions({
-            input: query,
-            includedPrimaryTypes: CITY_PRIMARY_TYPES_FALLBACK,
-          });
+        } else {
+          try {
+            result = await fetchAutocompleteSuggestions({
+              input: query,
+              includedPrimaryTypes: CITY_PRIMARY_TYPES,
+              region: "us",
+              language: "en-US",
+            });
+          } catch {
+            result = await fetchAutocompleteSuggestions({
+              input: query,
+              includedPrimaryTypes: CITY_PRIMARY_TYPES_FALLBACK,
+              region: "us",
+              language: "en-US",
+            });
+          }
         }
 
         if (requestId !== requestIdRef.current) return;
 
-        const normalizedSuggestions = (result.suggestions ?? [])
-          .map((item, index) => parseCitySuggestion(item, index))
-          .filter((item): item is CitySuggestion => item !== null);
+        if (isVenueMode) {
+          const normalizedSuggestions = (result.suggestions ?? [])
+            .map((item, index) => parseVenueSuggestion(item, index))
+            .filter((item): item is VenueSuggestion => item !== null);
 
-        setCitySuggestions(normalizedSuggestions);
+          setVenueSuggestions(normalizedSuggestions);
+          setCitySuggestions([]);
+        } else {
+          const normalizedSuggestions = (result.suggestions ?? [])
+            .map((item, index) => parseCitySuggestion(item, index))
+            .filter((item): item is CitySuggestion => item !== null);
+
+          setCitySuggestions(normalizedSuggestions);
+          setVenueSuggestions([]);
+        }
       } catch {
         if (requestId === requestIdRef.current) {
+          setVenueSuggestions([]);
           setCitySuggestions([]);
         }
       } finally {
@@ -302,17 +392,21 @@ export function CityAutocomplete({
     setInputValue(newValue);
 
     if (isVenueMode) {
-      setVenueValue(newValue);
       if (newValue.length >= 2) {
         setShowSuggestions(true);
+      } else {
+        setVenueSuggestions([]);
       }
       // Clear selection if user modifies the text after selection
-      if (value && newValue !== (value as VenueLocationData).name) {
+      if (value && typeof value === "object" && newValue !== value.name) {
         onChange(null);
       }
     } else {
       onChange(newValue);
       setShowSuggestions(true);
+      if (newValue.length < 2) {
+        setCitySuggestions([]);
+      }
     }
   };
 
@@ -322,8 +416,7 @@ export function CityAutocomplete({
     setManualErrorInput("");
     onChange(isVenueMode ? null : "");
     if (isVenueMode) {
-      setVenueValue("", false);
-      clearVenueSuggestions();
+      setVenueSuggestions([]);
     } else {
       setCitySuggestions([]);
     }
@@ -387,85 +480,65 @@ export function CityAutocomplete({
 
   // Handle venue selection (venue mode)
   const handleVenueSelect = useCallback(
-    async (suggestion: google.maps.places.AutocompletePrediction) => {
-      setVenueValue(suggestion.description, false);
-      setInputValue(suggestion.description);
+    async (suggestion: VenueSuggestion) => {
+      setInputValue(suggestion.fullText);
       setShowSuggestions(false);
-      clearVenueSuggestions();
-
-      if (typeof window === "undefined" || !window.google?.maps?.places) {
-        console.error("Google Maps not loaded");
-        return;
-      }
+      setVenueSuggestions([]);
 
       try {
-        const placesService = new window.google.maps.places.PlacesService(
-          document.createElement("div")
-        );
+        const place = suggestion.placePrediction.toPlace?.();
+        if (!place) {
+          throw new Error("Selected location could not be loaded.");
+        }
 
-        placesService.getDetails(
-          {
-            placeId: suggestion.place_id,
-            fields: [
-              "name",
-              "formatted_address",
-              "geometry",
-              "place_id",
-              "formatted_phone_number",
-              "website",
-              "address_components",
-            ],
-          },
-          (place, status) => {
-            if (
-              status === window.google.maps.places.PlacesServiceStatus.OK &&
-              place &&
-              place.geometry &&
-              place.geometry.location
-            ) {
-              const city = place.address_components
-                ? extractCity(
-                    place.address_components,
-                    place.formatted_address || suggestion.description,
-                  )
-                : "";
+        await place.fetchFields({
+          fields: [
+            "id",
+            "displayName",
+            "formattedAddress",
+            "location",
+            "addressComponents",
+            "nationalPhoneNumber",
+            "websiteURI",
+          ],
+        });
 
-              let name = place.name || "";
-              if (!name || name === place.formatted_address) {
-                const streetNumber = place.address_components?.find((c) =>
-                  c.types.includes("street_number")
-                )?.long_name;
-                const route = place.address_components?.find((c) =>
-                  c.types.includes("route")
-                )?.long_name;
-                name =
-                  streetNumber && route
-                    ? `${streetNumber} ${route}`
-                    : suggestion.terms[0]?.value || "Location";
-              }
+        if (!place.location) {
+          throw new Error("Selected location is missing coordinates.");
+        }
 
-              const venueData: VenueLocationData = {
-                name,
-                address: place.formatted_address || suggestion.description,
-                city,
-                coordinates: {
-                  lat: place.geometry.location.lat(),
-                  lng: place.geometry.location.lng(),
-                },
-                placeId: suggestion.place_id,
-                phoneNumber: place.formatted_phone_number,
-                website: place.website,
-              };
+        const coordinates = extractCoordinates(place.location);
+        if (!coordinates) {
+          throw new Error("Selected location returned invalid coordinates.");
+        }
 
-              onChange(venueData);
-            }
-          }
-        );
+        const city = place.addressComponents
+          ? extractCity(
+              place.addressComponents,
+              place.formattedAddress || suggestion.fullText,
+            )
+          : "";
+
+        const venueData: VenueLocationData = {
+          name: place.displayName?.trim() || suggestion.primaryText || "Location",
+          address: place.formattedAddress || suggestion.fullText,
+          city,
+          coordinates,
+          placeId: place.id || suggestion.placeId,
+          phoneNumber: place.nationalPhoneNumber,
+          website: place.websiteURI,
+        };
+
+        setPlacesErrorMessage(null);
+        onChange(venueData);
       } catch (err) {
         console.error("Error fetching place details:", err);
+        setPlacesErrorMessage(
+          "Location details could not be loaded. Try another suggestion or enter details manually.",
+        );
       }
     },
-    [clearVenueSuggestions, extractCity, onChange, setVenueValue]
+    [extractCity, onChange]
   );
 
   // Render loading state
@@ -540,15 +613,15 @@ export function CityAutocomplete({
   const selectedVenue = hasSelectedVenue ? (value as VenueLocationData) : null;
 
   const hasSuggestions = isVenueMode
-    ? showSuggestions && venueInputValue.length >= 2 && venueStatus === "OK" && venueSuggestions.length > 0
+    ? showSuggestions && inputValue.length >= 2 && venueSuggestions.length > 0
     : showSuggestions && inputValue.length >= 2 && citySuggestions.length > 0;
 
   const isLoadingSuggestions = isVenueMode
-    ? false // use-places-autocomplete doesn't expose loading state, data is async but instant
+    ? showSuggestions && inputValue.length >= 2 && isSearching
     : showSuggestions && inputValue.length >= 2 && isSearching;
 
   const hasNoResults = isVenueMode
-    ? showSuggestions && venueInputValue.length >= 2 && venueStatus === "ZERO_RESULTS"
+    ? showSuggestions && inputValue.length >= 2 && !isSearching && venueSuggestions.length === 0
     : showSuggestions && inputValue.length >= 2 && !isSearching && citySuggestions.length === 0;
 
   return (
@@ -565,11 +638,11 @@ export function CityAutocomplete({
         {/* Map Pin Icon */}
         <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
           <MapPin
-            className={cn(
-              "w-5 h-5 transition-colors",
-              isFocused || controlledValue ? "text-band" : "text-muted-foreground"
-            )}
-          />
+          className={cn(
+            "w-5 h-5 transition-colors",
+            isFocused || inputValue ? "text-band" : "text-muted-foreground"
+          )}
+        />
         </div>
 
         {/* Input Field */}
@@ -583,7 +656,7 @@ export function CityAutocomplete({
             setShowSuggestions(true);
           }}
           onBlur={() => setIsFocused(false)}
-          disabled={disabled || (isVenueMode && !venueReady)}
+          disabled={disabled}
           placeholder={placeholder}
           className={cn(
             "w-full pl-12 pr-10 py-3.5 bg-muted/50 border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-band/10 transition-all",
@@ -628,6 +701,19 @@ export function CityAutocomplete({
         )}
       </AnimatePresence>
 
+      <AnimatePresence>
+        {!error && placesErrorMessage && placesStatus === "ready" && (
+          <motion.p
+            initial={{ opacity: 0, y: -5 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="text-xs text-muted-foreground mt-1.5 ml-1"
+          >
+            {placesErrorMessage}
+          </motion.p>
+        )}
+      </AnimatePresence>
+
       {/* Selected Venue Info (venue mode only) */}
       <AnimatePresence>
         {selectedVenue && (
@@ -660,8 +746,7 @@ export function CityAutocomplete({
       <AnimatePresence>
         {isVenueMode
           ? showSuggestions &&
-            venueInputValue.length >= 2 &&
-            venueStatus === "OK" &&
+            inputValue.length >= 2 &&
             venueSuggestions.length > 0 && (
               <motion.div
                 initial={{ opacity: 0, y: -8 }}
@@ -672,7 +757,7 @@ export function CityAutocomplete({
               >
                 {venueSuggestions.map((suggestion, index) => (
                   <motion.button
-                    key={suggestion.place_id}
+                    key={suggestion.placeId}
                     type="button"
                     onClick={() => handleVenueSelect(suggestion)}
                     initial={{ opacity: 0, x: -10 }}
@@ -684,11 +769,13 @@ export function CityAutocomplete({
                       <MapPin className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0 group-hover:text-band transition-colors" />
                       <div className="min-w-0">
                         <p className="text-sm text-foreground font-medium truncate group-hover:text-band transition-colors">
-                          {suggestion.structured_formatting.main_text}
+                          {suggestion.primaryText}
                         </p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {suggestion.structured_formatting.secondary_text}
-                        </p>
+                        {suggestion.secondaryText && (
+                          <p className="text-xs text-muted-foreground truncate">
+                            {suggestion.secondaryText}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </motion.button>
@@ -772,7 +859,7 @@ export function CityAutocomplete({
       {/* Typing hint */}
       <AnimatePresence>
         {showSuggestions &&
-          (isVenueMode ? venueInputValue.length === 1 : inputValue.length === 1) && (
+          inputValue.length === 1 && (
             <motion.div
               initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}

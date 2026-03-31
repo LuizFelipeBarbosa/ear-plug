@@ -30,6 +30,7 @@ import {
   validateGigForm,
 } from "@/components/band/GigFormShared";
 import { GigModalShell } from "@/components/band/GigModalShell";
+import { getConvexErrorMessage } from "@/lib/convexErrors";
 import { api } from "../../../../../convex/_generated/api";
 import type { EventStatus } from "@ear-plug/shared/types";
 
@@ -202,9 +203,7 @@ export function CreateGigModal({
       onSuccess?.();
       handleClose();
     } catch (error) {
-      setSubmitError(
-        error instanceof Error ? error.message : "Failed to create event"
-      );
+      setSubmitError(getConvexErrorMessage(error, "Failed to create gig."));
     } finally {
       setIsSubmitting(false);
     }

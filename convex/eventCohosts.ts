@@ -32,6 +32,33 @@ function isBandManagerRole(role: Doc<"bandMemberships">["role"]): boolean {
   return role === "owner" || role === "admin";
 }
 
+function isBandManagerAccessError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    (error.message === "Not authenticated" ||
+      error.message === "User not found" ||
+      error.message === "Not authorized for this band")
+  );
+}
+
+async function requireBandManagerAccess(
+  ctx: EventCohostReadableCtx,
+  bandId: Id<"bands">,
+  message: string
+) {
+  try {
+    return await requireBandRole(ctx, bandId, ["owner", "admin"]);
+  } catch (error) {
+    if (isBandManagerAccessError(error)) {
+      throw new ConvexError({
+        code: "event_cohost_access_denied",
+        message,
+      });
+    }
+    throw error;
+  }
+}
+
 function effectiveInviteStatus(
   invite: Pick<Doc<"eventCohostInvites">, "status" | "expiresAt">,
   now: number
@@ -246,12 +273,18 @@ export const respondToInvite = mutation({
 
     const invite = await ctx.db.get(args.inviteId);
     if (!invite) {
-      throw new Error("Invite not found");
+      throw new ConvexError({
+        code: "event_cohost_invite_not_found",
+        message: "Co-host invite not found.",
+      });
     }
 
     const event = await ctx.db.get(invite.eventId);
     if (!event) {
-      throw new Error("Event not found");
+      throw new ConvexError({
+        code: "event_not_found",
+        message: "Event not found.",
+      });
     }
 
     const membership = await ctx.db
@@ -262,11 +295,17 @@ export const respondToInvite = mutation({
       .unique();
 
     if (!membership || !isBandManagerRole(membership.role)) {
-      throw new Error("Not authorized for this invite");
+      throw new ConvexError({
+        code: "event_cohost_access_denied",
+        message: "Only invited band owners and admins can respond to this invite.",
+      });
     }
 
     if (invite.status !== "pending") {
-      throw new Error("Invite is no longer pending");
+      throw new ConvexError({
+        code: "event_cohost_invite_closed",
+        message: "This co-host invite is no longer pending.",
+      });
     }
 
     if (invite.expiresAt < now) {
@@ -274,7 +313,10 @@ export const respondToInvite = mutation({
         status: "expired",
         respondedAt: now,
       });
-      throw new Error("Invite has expired");
+      throw new ConvexError({
+        code: "event_cohost_invite_expired",
+        message: "This co-host invite has expired.",
+      });
     }
 
     const nextStatus = args.action === "accept" ? "accepted" : "declined";
@@ -304,16 +346,26 @@ export const inviteBandsToEvent = mutation({
     invitedBandIds: v.array(v.id("bands")),
   },
   handler: async (ctx, args) => {
-    const { user } = await requireBandRole(ctx, args.actingBandId, ["owner", "admin"]);
+    const { user } = await requireBandManagerAccess(
+      ctx,
+      args.actingBandId,
+      "Only band owners and admins can invite co-hosts.",
+    );
 
     const event = await ctx.db.get(args.eventId);
     if (!event) {
-      throw new Error("Event not found");
+      throw new ConvexError({
+        code: "event_not_found",
+        message: "Event not found.",
+      });
     }
 
     const participatingBandIds = await getParticipatingBandIdsForEvent(ctx, event);
     if (!participatingBandIds.includes(args.actingBandId)) {
-      throw new Error("Not authorized for this event");
+      throw new ConvexError({
+        code: "event_cohost_access_denied",
+        message: "Only participating band owners and admins can invite co-hosts for this gig.",
+      });
     }
 
     const { createdInviteIds, skippedBandIds } = await createCohostInvitesForEvent(ctx, {
@@ -323,6 +375,13 @@ export const inviteBandsToEvent = mutation({
       invitedByUserId: user._id,
       invitedBandIds: args.invitedBandIds,
     });
+
+    if (createdInviteIds.length === 0 && skippedBandIds.length > 0) {
+      throw new ConvexError({
+        code: "event_cohost_invite_exists",
+        message: "That band already has an active co-host invite for this gig.",
+      });
+    }
 
     return {
       eventId: event._id,
@@ -343,21 +402,34 @@ export const revokeEventInvite = mutation({
     actingBandId: v.id("bands"),
   },
   handler: async (ctx, args) => {
-    await requireBandRole(ctx, args.actingBandId, ["owner", "admin"]);
+    await requireBandManagerAccess(
+      ctx,
+      args.actingBandId,
+      "Only band owners and admins can manage co-host invites.",
+    );
 
     const invite = await ctx.db.get(args.inviteId);
     if (!invite) {
-      throw new Error("Invite not found");
+      throw new ConvexError({
+        code: "event_cohost_invite_not_found",
+        message: "Co-host invite not found.",
+      });
     }
 
     const event = await ctx.db.get(invite.eventId);
     if (!event) {
-      throw new Error("Event not found");
+      throw new ConvexError({
+        code: "event_not_found",
+        message: "Event not found.",
+      });
     }
 
     const participatingBandIds = await getParticipatingBandIdsForEvent(ctx, event);
     if (!participatingBandIds.includes(args.actingBandId)) {
-      throw new Error("Not authorized for this event");
+      throw new ConvexError({
+        code: "event_cohost_access_denied",
+        message: "Only participating band owners and admins can manage co-host invites for this gig.",
+      });
     }
 
     const now = Date.now();

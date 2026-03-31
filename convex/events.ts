@@ -443,6 +443,33 @@ function validateConfirmedEventPayload(
   }
 }
 
+function isBandManagerAccessError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    (error.message === "Not authenticated" ||
+      error.message === "User not found" ||
+      error.message === "Not authorized for this band")
+  );
+}
+
+async function requireBandManagerAccess(
+  ctx: MutationCtx,
+  bandId: Id<"bands">,
+  message: string
+) {
+  try {
+    return await requireBandRole(ctx, bandId, ["owner", "admin"]);
+  } catch (error) {
+    if (isBandManagerAccessError(error)) {
+      throw new ConvexError({
+        code: "event_band_access_denied",
+        message,
+      });
+    }
+    throw error;
+  }
+}
+
 function normalizeEventPollOption(option: EventPollOption): EventPollOption {
   return {
     id: option.id.trim(),
@@ -2425,10 +2452,17 @@ export const create = mutation({
   handler: async (ctx, args) => {
     const band = await ctx.db.get(args.bandId);
     if (!band) {
-      throw new Error("Band not found");
+      throw new ConvexError({
+        code: "event_band_not_found",
+        message: "Band not found.",
+      });
     }
 
-    const { user } = await requireBandRole(ctx, args.bandId, ["owner", "admin"]);
+    const { user } = await requireBandManagerAccess(
+      ctx,
+      args.bandId,
+      "Only band owners and admins can create gigs.",
+    );
 
     const status = args.status ?? "confirmed";
     const genres = args.genres ?? (args.genre ? [args.genre] : undefined);
@@ -2549,10 +2583,17 @@ export const createWithVenue = mutation({
   handler: async (ctx, args) => {
     const band = await ctx.db.get(args.bandId);
     if (!band) {
-      throw new Error("Band not found");
+      throw new ConvexError({
+        code: "event_band_not_found",
+        message: "Band not found.",
+      });
     }
 
-    const { user } = await requireBandRole(ctx, args.bandId, ["owner", "admin"]);
+    const { user } = await requireBandManagerAccess(
+      ctx,
+      args.bandId,
+      "Only band owners and admins can create gigs.",
+    );
 
     const status = args.status ?? "confirmed";
     const genres = args.genres ?? (args.genre ? [args.genre] : undefined);
@@ -2662,19 +2703,30 @@ export const updateWithVenue = mutation({
   handler: async (ctx, args) => {
     const event = await ctx.db.get(args.eventId);
     if (!event) {
-      throw new Error("Event not found");
+      throw new ConvexError({
+        code: "event_not_found",
+        message: "Event not found.",
+      });
     }
 
-    await requireBandRole(ctx, args.actingBandId, ["owner", "admin"]);
+    await requireBandManagerAccess(
+      ctx,
+      args.actingBandId,
+      "Only band owners and admins can edit gigs.",
+    );
     const participatingBandIds = await getParticipatingBandIdsForEvent(ctx, event);
     if (!participatingBandIds.includes(args.actingBandId)) {
-      throw new Error("Not authorized for this event");
+      throw new ConvexError({
+        code: "event_band_access_denied",
+        message: "Only participating band owners and admins can edit this gig.",
+      });
     }
 
     if (args.capacity !== undefined && args.capacity < event.rsvpCount) {
-      throw new Error(
-        `Cannot reduce capacity below current RSVP count (${event.rsvpCount}).`
-      );
+      throw new ConvexError({
+        code: "invalid_event_capacity",
+        message: `Cannot reduce capacity below current RSVP count (${event.rsvpCount}).`,
+      });
     }
 
     const nextStatus = args.status ?? event.status;
@@ -2700,7 +2752,10 @@ export const updateWithVenue = mutation({
           capacity: args.capacity ?? event.capacity,
         });
       } else if (isPublic(nextStatus)) {
-        throw new Error("Confirmed gigs require a complete venue selection.");
+        throw new ConvexError({
+          code: "invalid_confirmed_event",
+          message: "Confirmed gigs require a complete venue selection.",
+        });
       }
       // Tentative saves accept partial venue input, but only complete venue
       // payloads can be persisted as a concrete venue reference.
@@ -2805,17 +2860,30 @@ export const deleteTentative = mutation({
   handler: async (ctx, args) => {
     const event = await ctx.db.get(args.eventId);
     if (!event) {
-      throw new Error("Event not found");
+      throw new ConvexError({
+        code: "event_not_found",
+        message: "Event not found.",
+      });
     }
 
-    await requireBandRole(ctx, args.actingBandId, ["owner", "admin"]);
+    await requireBandManagerAccess(
+      ctx,
+      args.actingBandId,
+      "Only band owners and admins can delete tentative gigs.",
+    );
     const participatingBandIds = await getParticipatingBandIdsForEvent(ctx, event);
     if (!participatingBandIds.includes(args.actingBandId)) {
-      throw new Error("Not authorized for this event");
+      throw new ConvexError({
+        code: "event_band_access_denied",
+        message: "Only participating band owners and admins can delete this gig.",
+      });
     }
 
     if (!isTentative(event.status)) {
-      throw new Error("Only tentative gigs can be deleted.");
+      throw new ConvexError({
+        code: "invalid_event_status",
+        message: "Only tentative gigs can be deleted.",
+      });
     }
 
     // Defensive cleanup in case legacy data exists.
