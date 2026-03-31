@@ -345,6 +345,85 @@ export function BandDashboard() {
               highlight={unreadCount > 0}
             />
           </div>
+
+          {analytics?.pollSnapshot ? (
+            <div className="mt-3 rounded-2xl border border-band/20 bg-gradient-to-br from-band/10 via-card to-card p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-band/15 text-band">
+                      <HelpCircle className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">
+                        Poll Snapshot
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {analytics.pollSnapshot.eventTitle}
+                      </p>
+                    </div>
+                  </div>
+                  <p className="mt-3 text-sm font-medium text-foreground">
+                    {analytics.pollSnapshot.question}
+                  </p>
+                </div>
+                <Link
+                  href="/analytics"
+                  className="inline-flex items-center gap-1 text-xs font-medium text-band transition-colors hover:text-band/80"
+                >
+                  View poll details
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+
+              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div className="rounded-xl border border-border/60 bg-card/80 px-3 py-3">
+                  <p className="text-xl font-bold text-foreground">
+                    {analytics.pollSnapshot.responseCount}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">Responses</p>
+                </div>
+                <div className="rounded-xl border border-border/60 bg-card/80 px-3 py-3">
+                  <p className="text-xl font-bold text-foreground">
+                    {Math.round(analytics.pollSnapshot.responseRate)}%
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">Response rate</p>
+                </div>
+                <div className="rounded-xl border border-border/60 bg-card/80 px-3 py-3">
+                  <p className="text-sm font-semibold text-foreground">
+                    {analytics.pollSnapshot.topOption?.label ?? "No answers yet"}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {analytics.pollSnapshot.topOption
+                      ? `${analytics.pollSnapshot.topOption.count} picks`
+                      : `${analytics.pollSnapshot.eligibleRsvpCount} RSVP${analytics.pollSnapshot.eligibleRsvpCount === 1 ? "" : "s"} eligible`}
+                  </p>
+                </div>
+              </div>
+
+              {analytics.pollSnapshot.topOption ? (
+                <div className="mt-3">
+                  <div className="mb-1 flex items-center justify-between gap-3 text-xs text-muted-foreground">
+                    <span>Leading answer</span>
+                    <span>
+                      {Math.round(analytics.pollSnapshot.topOption.percentage)}%
+                    </span>
+                  </div>
+                  <div className="h-2 rounded-full bg-muted">
+                    <div
+                      className="h-full rounded-full bg-band"
+                      style={{
+                        width: `${Math.max(
+                          8,
+                          Math.round(analytics.pollSnapshot.topOption.percentage),
+                        )}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
         </motion.div>
 
         {/* Upcoming Shows Preview */}

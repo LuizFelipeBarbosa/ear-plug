@@ -88,6 +88,26 @@ export type GuestRsvpType = "on_list" | "attended";
 export type GuestFilterType = "all" | GuestRsvpType;
 
 /**
+ * One answer option for a gig RSVP poll.
+ */
+export interface EventPollOption {
+  /** Stable option identifier stored on RSVP rows */
+  id: string;
+  /** User-facing answer label */
+  label: string;
+}
+
+/**
+ * Optional poll attached to a gig RSVP flow.
+ */
+export interface EventPoll {
+  /** Poll question shown after RSVP */
+  question: string;
+  /** Single-choice answer options */
+  options: EventPollOption[];
+}
+
+/**
  * Event ticket lifecycle state.
  */
 export type TicketStatus = "active" | "used" | "revoked";
@@ -336,6 +356,8 @@ export interface Event extends BaseEntity {
   status: EventStatus;
   /** Street-address visibility for fan-facing surfaces */
   addressVisibility?: EventAddressVisibility;
+  /** Optional RSVP poll shown to fans after RSVP */
+  poll?: EventPoll;
 }
 
 /**
@@ -359,6 +381,10 @@ export interface EventWithDetails extends Event {
   attendanceStatus?: GuestRsvpType;
   /** Unix timestamp (ms) when RSVP was marked attended */
   attendedAt?: number;
+  /** Whether the event poll already has at least one response */
+  pollHasResponses?: boolean;
+  /** Number of RSVP poll responses currently recorded */
+  pollResponseCount?: number;
 }
 
 /**
@@ -376,6 +402,10 @@ export interface RSVP extends BaseEntity {
   attendanceStatus?: GuestRsvpType;
   /** Unix timestamp (ms) when RSVP was marked attended */
   attendedAt?: number;
+  /** Selected poll option id for the related event poll */
+  pollAnswerOptionId?: string;
+  /** Unix timestamp (ms) when the RSVP poll was answered */
+  pollAnsweredAt?: number;
 }
 
 /**
@@ -780,6 +810,71 @@ export interface AnalyticsData {
     name: string;
     /** Percentage value */
     value: number;
+  }[];
+  /** Aggregate poll participation across polled gigs */
+  pollSummary: {
+    /** Number of gigs that currently have a poll configured */
+    polledGigCount: number;
+    /** Total RSVP poll responses across polled gigs */
+    totalResponses: number;
+    /** Average poll response rate across polled gigs */
+    averageResponseRate: number;
+  };
+  /** Single highlighted poll for dashboard surfaces */
+  pollSnapshot: {
+    /** Event document id */
+    eventId: string;
+    /** Event title */
+    eventTitle: string;
+    /** Event date timestamp (ms) */
+    dateTime: number;
+    /** Poll question */
+    question: string;
+    /** Number of RSVP poll responses */
+    responseCount: number;
+    /** Number of RSVPs eligible to answer */
+    eligibleRsvpCount: number;
+    /** Poll response rate as a percentage */
+    responseRate: number;
+    /** Top answer option, or null when there are no answers yet */
+    topOption: {
+      /** Option id */
+      id: string;
+      /** Option label */
+      label: string;
+      /** Number of responses choosing this option */
+      count: number;
+      /** Share of responses choosing this option */
+      percentage: number;
+    } | null;
+  } | null;
+  /** Recent polled gigs with option-level answer distributions */
+  pollBreakdown: {
+    /** Event document id */
+    eventId: string;
+    /** Event title */
+    eventTitle: string;
+    /** Event date timestamp (ms) */
+    dateTime: number;
+    /** Poll question */
+    question: string;
+    /** Number of RSVP poll responses */
+    responseCount: number;
+    /** Number of RSVPs eligible to answer */
+    eligibleRsvpCount: number;
+    /** Poll response rate as a percentage */
+    responseRate: number;
+    /** Option-level counts and percentages */
+    options: {
+      /** Option id */
+      id: string;
+      /** Option label */
+      label: string;
+      /** Number of responses */
+      count: number;
+      /** Share of responses for this option */
+      percentage: number;
+    }[];
   }[];
 }
 

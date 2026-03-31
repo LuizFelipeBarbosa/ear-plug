@@ -5,7 +5,7 @@
  * @module convex/events
  */
 
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { haversineDistance, coordinatesMatch } from "./utils/geo";
@@ -48,11 +48,29 @@ const eventAddressVisibilityValidator = v.union(
   v.literal("rsvp_only")
 );
 
+const eventPollOptionValidator = v.object({
+  id: v.string(),
+  label: v.string(),
+});
+
+const eventPollValidator = v.object({
+  question: v.string(),
+  options: v.array(eventPollOptionValidator),
+});
+
 type EventAddressVisibility = "public" | "rsvp_only";
 type GuestRsvpType = "on_list" | "attended";
 type EventTicketStatus = "active" | "used" | "revoked";
 type EventCheckinRole = "manager" | "staff";
 type EventTicketScanStatus = "checked_in" | "already_used" | "revoked" | "invalid";
+type EventPollOption = {
+  id: string;
+  label: string;
+};
+type EventPoll = {
+  question: string;
+  options: EventPollOption[];
+};
 
 const guestFilterTypeValidator = v.union(
   v.literal("all"),
@@ -67,6 +85,7 @@ const TICKET_QR_PREFIX = "EPT1";
 const CHECKIN_STAFF_REVOKE_REASON = "event_staff_revoked";
 const RSVP_CANCEL_REVOKE_REASON = "rsvp_cancelled";
 const GUEST_REMOVED_REVOKE_REASON = "guest_removed";
+const MAX_EVENT_POLL_OPTIONS = 6;
 
 interface ViewerContext {
   userId: Id<"users"> | null;
@@ -407,6 +426,158 @@ function validateConfirmedEventPayload(
   if (!input.venueId && !hasCompleteVenueInput(input)) {
     throw new Error("Confirmed gigs require a complete venue selection.");
   }
+}
+
+function normalizeEventPollOption(option: EventPollOption): EventPollOption {
+  return {
+    id: option.id.trim(),
+    label: option.label.trim(),
+  };
+}
+
+function normalizeEventPoll(poll: EventPoll | null | undefined): EventPoll | undefined {
+  if (!poll) {
+    return undefined;
+  }
+
+  return {
+    question: poll.question.trim(),
+    options: poll.options.map(normalizeEventPollOption),
+  };
+}
+
+function validateEventPoll(poll: EventPoll | undefined): void {
+  if (!poll) {
+    return;
+  }
+
+  if (poll.question.length === 0) {
+    throw new ConvexError({
+      code: "invalid_event_poll",
+      message: "Poll question is required.",
+    });
+  }
+
+  if (poll.question.length > 200) {
+    throw new ConvexError({
+      code: "invalid_event_poll",
+      message: "Poll question must be 200 characters or fewer.",
+    });
+  }
+
+  if (poll.options.length < 2 || poll.options.length > MAX_EVENT_POLL_OPTIONS) {
+    throw new ConvexError({
+      code: "invalid_event_poll",
+      message: `Polls must have between 2 and ${MAX_EVENT_POLL_OPTIONS} options.`,
+    });
+  }
+
+  const seenIds = new Set<string>();
+  const seenLabels = new Set<string>();
+
+  for (const option of poll.options) {
+    if (option.id.length === 0) {
+      throw new ConvexError({
+        code: "invalid_event_poll",
+        message: "Each poll option needs a stable id.",
+      });
+    }
+
+    if (seenIds.has(option.id)) {
+      throw new ConvexError({
+        code: "invalid_event_poll",
+        message: "Poll options must have unique ids.",
+      });
+    }
+    seenIds.add(option.id);
+
+    if (option.label.length === 0) {
+      throw new ConvexError({
+        code: "invalid_event_poll",
+        message: "Poll options cannot be empty.",
+      });
+    }
+
+    if (option.label.length > 120) {
+      throw new ConvexError({
+        code: "invalid_event_poll",
+        message: "Poll options must be 120 characters or fewer.",
+      });
+    }
+
+    const normalizedLabel = option.label.toLowerCase();
+    if (seenLabels.has(normalizedLabel)) {
+      throw new ConvexError({
+        code: "invalid_event_poll",
+        message: "Poll options must be unique.",
+      });
+    }
+    seenLabels.add(normalizedLabel);
+  }
+}
+
+function areEventPollsEqual(
+  left: EventPoll | undefined,
+  right: EventPoll | undefined
+): boolean {
+  if (!left && !right) {
+    return true;
+  }
+
+  if (!left || !right) {
+    return false;
+  }
+
+  if (left.question !== right.question || left.options.length !== right.options.length) {
+    return false;
+  }
+
+  return left.options.every((option, index) => {
+    const nextOption = right.options[index];
+    return option.id === nextOption.id && option.label === nextOption.label;
+  });
+}
+
+async function getEventPollResponses(
+  ctx: QueryCtx | MutationCtx,
+  eventId: Id<"events">
+) {
+  const rsvps = await ctx.db
+    .query("rsvps")
+    .withIndex("by_event", (q) => q.eq("eventId", eventId))
+    .collect();
+
+  const answered = rsvps.filter((rsvp) => typeof rsvp.pollAnswerOptionId === "string");
+
+  return {
+    rsvps,
+    answerCount: answered.length,
+    hasResponses: answered.length > 0,
+  };
+}
+
+function buildPollPromptPayload(
+  event: Pick<Doc<"events">, "_id" | "title" | "poll" | "dateTime">
+) {
+  if (!event.poll || !canAnswerEventPoll(event)) {
+    return null;
+  }
+
+  return {
+    eventId: event._id,
+    eventTitle: event.title?.trim() || "Untitled Gig",
+    question: event.poll.question,
+    options: event.poll.options,
+  };
+}
+
+function canAnswerEventPoll(event: Pick<Doc<"events">, "dateTime" | "poll">): boolean {
+  return (
+    !!event.poll &&
+    typeof event.dateTime === "number" &&
+    Number.isFinite(event.dateTime) &&
+    event.dateTime > Date.now()
+  );
 }
 
 function hasPublicCoreFields(
@@ -777,9 +948,10 @@ export const getById = query({
     if (!event || !isPublicEvent(event)) return null;
     const viewerContext = await buildViewerContext(ctx);
 
-    const [band, acceptedCohostBandIds] = await Promise.all([
+    const [band, acceptedCohostBandIds, pollResponses] = await Promise.all([
       ctx.db.get(event.bandId),
       getAcceptedCohostBandIds(ctx, event._id),
+      getEventPollResponses(ctx, event._id),
     ]);
     const cohostBands = (
       await Promise.all(acceptedCohostBandIds.map((bandId) => ctx.db.get(bandId)))
@@ -794,6 +966,8 @@ export const getById = query({
         cohostBands,
         lineupBands,
         venue,
+        pollHasResponses: pollResponses.hasResponses,
+        pollResponseCount: pollResponses.answerCount,
       },
       viewerContext
     );
@@ -1059,7 +1233,7 @@ export const rsvp = mutation({
         rsvpCount: Math.max(0, event.rsvpCount - 1),
       });
 
-      return { action: "removed" };
+      return { action: "removed", pollPrompt: null };
     }
 
     // Check capacity before adding RSVP
@@ -1086,7 +1260,77 @@ export const rsvp = mutation({
       rsvpCount: event.rsvpCount + 1,
     });
 
-    return { action: "added" };
+    return {
+      action: "added",
+      pollPrompt: buildPollPromptPayload(event),
+    };
+  },
+});
+
+export const submitEventPollResponse = mutation({
+  args: {
+    eventId: v.id("events"),
+    optionId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireAuthenticatedUser(ctx);
+    const event = await ctx.db.get(args.eventId);
+
+    if (!event || !isPublicEvent(event)) {
+      throw new ConvexError({
+        code: "event_not_found",
+        message: "This gig is not available.",
+      });
+    }
+
+    if (!canAnswerEventPoll(event)) {
+      throw new ConvexError({
+        code: "poll_closed",
+        message: "This RSVP poll is no longer accepting answers.",
+      });
+    }
+
+    const optionId = args.optionId.trim();
+    if (optionId.length === 0) {
+      throw new ConvexError({
+        code: "invalid_poll_option",
+        message: "Choose an answer before submitting.",
+      });
+    }
+
+    const selectedOption = event.poll?.options.find((option) => option.id === optionId);
+    if (!selectedOption) {
+      throw new ConvexError({
+        code: "invalid_poll_option",
+        message: "That poll answer is no longer available.",
+      });
+    }
+
+    const rsvp = await ctx.db
+      .query("rsvps")
+      .withIndex("by_user_event", (q) =>
+        q.eq("userId", user._id).eq("eventId", args.eventId)
+      )
+      .unique();
+
+    if (!rsvp) {
+      throw new ConvexError({
+        code: "missing_rsvp",
+        message: "RSVP to this gig before answering the poll.",
+      });
+    }
+
+    const pollAnsweredAt = Date.now();
+    await ctx.db.patch(rsvp._id, {
+      pollAnswerOptionId: selectedOption.id,
+      pollAnsweredAt,
+    });
+
+    return {
+      optionId: selectedOption.id,
+      label: selectedOption.label,
+      pollAnsweredAt,
+    };
   },
 });
 
@@ -1307,12 +1551,24 @@ export const getUserEventStatus = query({
   handler: async (ctx, args) => {
     const event = await ctx.db.get(args.eventId);
     if (!event || !isPublicEvent(event)) {
-      return { hasRsvp: false, hasLiked: false };
+      return {
+        hasRsvp: false,
+        hasLiked: false,
+        hasPendingPoll: false,
+        selectedPollOptionId: undefined,
+        canAnswerPoll: false,
+      };
     }
 
     const user = await getAuthenticatedUserOrNull(ctx);
     if (!user) {
-      return { hasRsvp: false, hasLiked: false };
+      return {
+        hasRsvp: false,
+        hasLiked: false,
+        hasPendingPoll: false,
+        selectedPollOptionId: undefined,
+        canAnswerPoll: false,
+      };
     }
 
     const rsvp = await ctx.db
@@ -1332,6 +1588,10 @@ export const getUserEventStatus = query({
     return {
       hasRsvp: !!rsvp,
       hasLiked: !!like,
+      hasPendingPoll:
+        !!rsvp && canAnswerEventPoll(event) && !rsvp.pollAnswerOptionId,
+      selectedPollOptionId: rsvp?.pollAnswerOptionId,
+      canAnswerPoll: !!rsvp && canAnswerEventPoll(event),
     };
   },
 });
@@ -2137,6 +2397,7 @@ export const create = mutation({
     genre: v.optional(genreValidator), // Legacy field for backward compatibility
     status: v.optional(eventStatusValidator),
     addressVisibility: v.optional(eventAddressVisibilityValidator),
+    poll: v.optional(eventPollValidator),
   },
   handler: async (ctx, args) => {
     const band = await ctx.db.get(args.bandId);
@@ -2148,6 +2409,8 @@ export const create = mutation({
 
     const status = args.status ?? "confirmed";
     const genres = args.genres ?? (args.genre ? [args.genre] : undefined);
+    const poll = normalizeEventPoll(args.poll);
+    validateEventPoll(poll);
 
     if (isPublic(status)) {
       validateConfirmedEventPayload({
@@ -2173,6 +2436,7 @@ export const create = mutation({
       rsvpCount: 0,
       status,
       addressVisibility: args.addressVisibility ?? "public",
+      poll,
     });
 
     if (args.cohostBandIds && args.cohostBandIds.length > 0) {
@@ -2257,6 +2521,7 @@ export const createWithVenue = mutation({
     description: v.optional(v.string()),
     status: v.optional(eventStatusValidator),
     addressVisibility: v.optional(eventAddressVisibilityValidator),
+    poll: v.optional(eventPollValidator),
   },
   handler: async (ctx, args) => {
     const band = await ctx.db.get(args.bandId);
@@ -2268,6 +2533,8 @@ export const createWithVenue = mutation({
 
     const status = args.status ?? "confirmed";
     const genres = args.genres ?? (args.genre ? [args.genre] : undefined);
+    const poll = normalizeEventPoll(args.poll);
+    validateEventPoll(poll);
     const hasVenueInput = hasCompleteVenueInput(args);
 
     if (isPublic(status)) {
@@ -2309,6 +2576,7 @@ export const createWithVenue = mutation({
       rsvpCount: 0,
       status,
       addressVisibility: args.addressVisibility ?? "public",
+      poll,
     });
 
     if (args.cohostBandIds && args.cohostBandIds.length > 0) {
@@ -2356,6 +2624,7 @@ export const updateWithVenue = mutation({
     genre: v.optional(genreValidator),
     status: v.optional(eventStatusValidator),
     addressVisibility: v.optional(eventAddressVisibilityValidator),
+    poll: v.optional(v.union(eventPollValidator, v.null())),
     venueName: v.optional(v.string()),
     venueAddress: v.optional(v.string()),
     venueCity: v.optional(v.string()),
@@ -2386,6 +2655,8 @@ export const updateWithVenue = mutation({
     }
 
     const nextStatus = args.status ?? event.status;
+    const normalizedPoll = normalizeEventPoll(args.poll);
+    validateEventPoll(normalizedPoll);
     const hasAnyVenueUpdate =
       args.venueName !== undefined ||
       args.venueAddress !== undefined ||
@@ -2431,6 +2702,21 @@ export const updateWithVenue = mutation({
     const nextTitle = args.title !== undefined ? args.title : event.title;
     const nextDateTime = args.dateTime !== undefined ? args.dateTime : event.dateTime;
     const nextCapacity = args.capacity !== undefined ? args.capacity : event.capacity;
+    const currentPoll = normalizeEventPoll(event.poll);
+    const nextPoll = args.poll !== undefined ? normalizedPoll : currentPoll;
+
+    if (
+      args.poll !== undefined &&
+      !areEventPollsEqual(currentPoll, nextPoll)
+    ) {
+      const pollResponses = await getEventPollResponses(ctx, args.eventId);
+      if (pollResponses.hasResponses) {
+        throw new ConvexError({
+          code: "event_poll_locked",
+          message: "This RSVP poll is locked after the first response.",
+        });
+      }
+    }
 
     if (isPublic(nextStatus)) {
       validateConfirmedEventPayload({
@@ -2463,6 +2749,9 @@ export const updateWithVenue = mutation({
     if (args.status !== undefined) updates.status = args.status;
     if (args.addressVisibility !== undefined) {
       updates.addressVisibility = args.addressVisibility;
+    }
+    if (args.poll !== undefined) {
+      updates.poll = nextPoll;
     }
 
     if (Object.keys(updates).length > 0) {

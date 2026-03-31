@@ -32,6 +32,7 @@ import { useProfileContext } from "@/hooks/useProfileContext";
 import { EditGigModal } from "@/components/band/EditGigModal";
 import { GuestListCard } from "@/components/band/GuestListCard";
 import { GuestControlPanelModal } from "@/components/band/GuestControlPanelModal";
+import { EventPollPrompt } from "@/components/events/EventPollPrompt";
 import { EventTicketPanel } from "@/components/events/EventTicketPanel";
 import {
   formatEventTime,
@@ -83,10 +84,23 @@ export default function EventDetailsPage({ params }: PageProps) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isGuestPanelOpen, setIsGuestPanelOpen] = useState(false);
   const [showMoreBands, setShowMoreBands] = useState(false);
+  const [isPollSubmitting, setIsPollSubmitting] = useState(false);
   const eventId = id as Id<"events">;
 
-  const { event, hasRsvp, hasLiked, isLoading, rsvp, toggleLike } =
-    useEvent(eventId);
+  const {
+    event,
+    hasRsvp,
+    hasLiked,
+    hasPendingPoll,
+    selectedPollOptionId,
+    isLoading,
+    pollPrompt,
+    rsvp,
+    toggleLike,
+    submitPollResponse,
+    dismissPollPrompt,
+    openPendingPollPrompt,
+  } = useEvent(eventId);
   const { mode, bandId, bands } = useProfileContext();
   const inBandMode = mode === "band";
   const activeBandMembership = bands.find((entry) => entry.band._id === bandId);
@@ -500,6 +514,33 @@ export default function EventDetailsPage({ params }: PageProps) {
           </motion.div>
         )}
 
+        {!inBandMode && hasRsvp && hasPendingPoll && event.poll ? (
+          <motion.div variants={itemVariants} className="mb-6">
+            <div className="rounded-2xl border border-band/20 bg-band/5 p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-band">
+                    RSVP Poll Pending
+                  </p>
+                  <p className="mt-1 text-sm font-medium text-foreground">
+                    {event.poll.question}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Optional. Answer now or come back before the show starts.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => openPendingPollPrompt(event)}
+                  className="rounded-xl bg-band px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-band/90"
+                >
+                  Answer Poll
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        ) : null}
+
         {/* Venue Info */}
         {event.venue && (
           <motion.div variants={itemVariants} className="mb-6">
@@ -663,6 +704,26 @@ export default function EventDetailsPage({ params }: PageProps) {
           eventTitle={event.title}
         />
       )}
+
+      {pollPrompt ? (
+        <EventPollPrompt
+          isOpen
+          eventTitle={pollPrompt.eventTitle}
+          question={pollPrompt.question}
+          options={pollPrompt.options}
+          initialSelectedOptionId={selectedPollOptionId}
+          isSubmitting={isPollSubmitting}
+          onClose={dismissPollPrompt}
+          onSubmit={async (optionId) => {
+            setIsPollSubmitting(true);
+            try {
+              await submitPollResponse(optionId);
+            } finally {
+              setIsPollSubmitting(false);
+            }
+          }}
+        />
+      ) : null}
     </div>
   );
 }

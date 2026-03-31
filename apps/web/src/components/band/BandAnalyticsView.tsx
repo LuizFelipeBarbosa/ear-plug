@@ -8,6 +8,7 @@ import {
   Clock,
   Eye,
   MapPin,
+  MessageSquareText,
   TrendingDown,
   TrendingUp,
   Trophy,
@@ -179,6 +180,47 @@ export function BandAnalyticsView() {
           </div>
         </section>
 
+        {analytics?.pollSummary.polledGigCount ? (
+          <section>
+            <motion.div
+              variants={ANIMATION_VARIANTS.item}
+              className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <h2 className="text-sm font-semibold text-foreground">
+                Poll Overview
+              </h2>
+              <span className="text-xs text-muted-foreground">
+                Response trends from gigs with RSVP polls
+              </span>
+            </motion.div>
+
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <MetricCard
+                icon={<MessageSquareText className="w-4 h-4" />}
+                label="Poll Responses"
+                value={analytics.pollSummary.totalResponses}
+                color="primary"
+                delay={0}
+              />
+              <MetricCard
+                icon={<Calendar className="w-4 h-4" />}
+                label="Polled Gigs"
+                value={analytics.pollSummary.polledGigCount}
+                color="secondary"
+                delay={1}
+              />
+              <MetricCard
+                icon={<TrendingUp className="w-4 h-4" />}
+                label="Avg Response Rate"
+                value={Math.round(analytics.pollSummary.averageResponseRate)}
+                suffix="%"
+                color="accent"
+                delay={2}
+              />
+            </div>
+          </section>
+        ) : null}
+
         {/* Best & Worst Shows */}
         {hasData && (
           <motion.section variants={ANIMATION_VARIANTS.item}>
@@ -300,6 +342,91 @@ export function BandAnalyticsView() {
             </div>
           </div>
         </motion.section>
+
+        {analytics?.pollBreakdown.length ? (
+          <motion.section variants={ANIMATION_VARIANTS.item}>
+            <div className="overflow-hidden rounded-2xl border border-border bg-card">
+              <div className="border-b border-border/50 p-4">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-band/10 text-band">
+                    <MessageSquareText className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h2 className="text-sm font-semibold text-foreground">
+                      Poll Results
+                    </h2>
+                    <p className="text-xs text-muted-foreground">
+                      Answer distribution for recent polled gigs
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="divide-y divide-border/50">
+                {analytics.pollBreakdown.map((poll, pollIndex) => (
+                  <div key={poll.eventId} className="p-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-foreground">
+                          {poll.eventTitle}
+                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {formatFullDate(poll.dateTime)}
+                        </p>
+                        <p className="mt-2 text-sm text-foreground">
+                          {poll.question}
+                        </p>
+                      </div>
+                      <div className="shrink-0 rounded-xl border border-border bg-muted/50 px-3 py-2 text-right">
+                        <p className="text-sm font-semibold text-foreground">
+                          {poll.responseCount}/{poll.eligibleRsvpCount}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {Math.round(poll.responseRate)}% responded
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 space-y-3">
+                      {poll.options.map((option, optionIndex) => (
+                        <div key={option.id}>
+                          <div className="mb-1 flex items-center justify-between gap-3 text-sm">
+                            <span className="truncate text-foreground">
+                              {option.label}
+                            </span>
+                            <span className="shrink-0 text-xs text-muted-foreground">
+                              {option.count} • {Math.round(option.percentage)}%
+                            </span>
+                          </div>
+                          <div className="h-2 rounded-full bg-muted">
+                            <div
+                              className="h-full rounded-full"
+                              style={{
+                                width: `${Math.max(
+                                  option.count > 0
+                                    ? 8
+                                    : 0,
+                                  Math.round(option.percentage),
+                                )}%`,
+                                backgroundColor:
+                                  [
+                                    CHART_COLORS.primary,
+                                    CHART_COLORS.secondary,
+                                    CHART_COLORS.accent,
+                                    CHART_COLORS.primaryLight,
+                                  ][(pollIndex + optionIndex) % 4],
+                              }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </motion.section>
+        ) : null}
 
         {/* Audience Breakdown */}
         <motion.section variants={ANIMATION_VARIANTS.item}>

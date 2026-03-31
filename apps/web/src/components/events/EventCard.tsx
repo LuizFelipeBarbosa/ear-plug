@@ -1,13 +1,14 @@
 "use client";
+import { useState } from "react";
 import Link from "next/link";
 import { Heart, Check } from "lucide-react";
-import { useMutation, useQuery } from "convex/react";
-import { api } from "../../../../../convex/_generated/api";
 import { EventImage } from "@/components/ui/OptimizedImage";
+import { EventPollPrompt } from "@/components/events/EventPollPrompt";
 import { formatEventDate, formatEventTime } from "@ear-plug/shared/constants";
 import { cn } from "@/lib/utils";
 import type { RoleTone } from "@/lib/ui/roleTone";
 import type { Id } from "../../../../../convex/_generated/dataModel";
+import { useEventInteraction } from "@/hooks/useEvents";
 import { useProfileContext } from "@/hooks/useProfileContext";
 interface EventCardProps {
   event: {
@@ -40,24 +41,28 @@ export function EventCard({
   const { mode } = useProfileContext();
   const resolvedTone: RoleTone = tone ?? (mode === "personal" ? "fan" : "band");
   const allowFanActions = mode === "personal";
-  const eventStatus = useQuery(
-    api.events.getUserEventStatus,
-    allowFanActions ? { eventId: event._id } : "skip",
-  );
-  const toggleLike = useMutation(api.events.toggleLike);
-  const rsvp = useMutation(api.events.rsvp);
+  const {
+    hasLiked,
+    hasRsvp,
+    pollPrompt,
+    selectedPollOptionId,
+    rsvp,
+    toggleLike,
+    submitPollResponse,
+    dismissPollPrompt,
+  } = useEventInteraction(allowFanActions ? event._id : undefined);
+  const [isPollSubmitting, setIsPollSubmitting] = useState(false);
   const handleLikeClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    await toggleLike({ eventId: event._id });
+    await toggleLike();
   };
   const handleRsvpClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    await rsvp({ eventId: event._id });
+    await rsvp();
   };
-  const isLiked = allowFanActions ? (eventStatus?.hasLiked ?? false) : false;
-  const hasRsvp = allowFanActions ? (eventStatus?.hasRsvp ?? false) : false;
+  const isLiked = allowFanActions ? hasLiked : false;
   const displayTitle = event.title?.trim() || "Untitled Gig";
   const eventDateTime =
     typeof event.dateTime === "number" ? event.dateTime : null;
@@ -75,124 +80,135 @@ export function EventCard({
     : "p-4";
   const imageSizeClass = compact ? "w-16 h-16" : "w-20 h-20";
   return (
-    <Link href={`/gig/${event._id}`} className="block group">
-      {" "}
-      <div
-        className={cn(
-          "flex items-center gap-3 rounded-lg border bg-card transition-colors",
-          paddingClass,
-          isPast
-            ? "opacity-75 border-border"
-            : resolvedTone === "fan"
-              ? "border-border hover:border-fan/40"
-              : "border-border hover:border-band/40",
-        )}
-      >
-        {" "}
-        <EventImage
-          src={event.image}
-          alt={displayTitle}
-          className={cn(imageSizeClass, "flex-shrink-0 rounded-md")}
-        />{" "}
-        <div className="flex-1 min-w-0">
-          {" "}
-          <h3
-            className={cn(
-              "truncate text-sm font-medium",
-              compact ? "mb-0.5" : "mb-1",
-              "text-foreground",
-            )}
-          >
-            {displayTitle}
-          </h3>{" "}
-          {event.venue ? (
-            <div className="relative mt-0.5 overflow-hidden rounded-sm">
-              {" "}
-              <p
+    <>
+      <Link href={`/gig/${event._id}`} className="block group">
+        <div
+          className={cn(
+            "flex items-center gap-3 rounded-lg border bg-card transition-colors",
+            paddingClass,
+            isPast
+              ? "opacity-75 border-border"
+              : resolvedTone === "fan"
+                ? "border-border hover:border-fan/40"
+                : "border-border hover:border-band/40",
+          )}
+        >
+          <EventImage
+            src={event.image}
+            alt={displayTitle}
+            className={cn(imageSizeClass, "flex-shrink-0 rounded-md")}
+          />
+          <div className="flex-1 min-w-0">
+            <h3
+              className={cn(
+                "truncate text-sm font-medium",
+                compact ? "mb-0.5" : "mb-1",
+                "text-foreground",
+              )}
+            >
+              {displayTitle}
+            </h3>
+            {event.venue ? (
+              <div className="relative mt-0.5 overflow-hidden rounded-sm">
+                <p
+                  className={cn(
+                    "text-xs truncate transition-all duration-200",
+                    event.isVenueAddressHidden
+                      ? "text-muted-foreground blur-[2px] opacity-30 select-none"
+                      : "text-muted-foreground",
+                  )}
+                >
+                  {event.venue.name}
+                </p>
+                {event.isVenueAddressHidden && (
+                  <div className="absolute inset-0 flex items-center bg-background/80 px-2 backdrop-blur-sm">
+                    <p className="w-full truncate text-[10px] font-medium text-foreground">
+                      RSVP to reveal location
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : null}
+            <p
+              className={cn(
+                "mt-1 text-xs",
+                isPast ? "text-muted-foreground" : accentTextClass,
+              )}
+            >
+              {displayDate} • {displayTime}
+            </p>
+            {showAttendanceStatus && (
+              <span
                 className={cn(
-                  "text-xs truncate transition-all duration-200",
-                  event.isVenueAddressHidden
-                    ? "text-muted-foreground blur-[2px] opacity-30 select-none"
-                    : "text-muted-foreground",
+                  "mt-2 inline-flex rounded-md border px-2 py-1 text-[10px] font-medium",
+                  event.attendanceStatus === "attended"
+                    ? "border-success/40 bg-success/10 text-success"
+                    : "border-border bg-muted text-muted-foreground",
                 )}
               >
-                {" "}
-                {event.venue.name}{" "}
-              </p>{" "}
-              {event.isVenueAddressHidden && (
-                <div className="absolute inset-0 flex items-center bg-background/80 backdrop-blur-sm px-2">
-                  {" "}
-                  <p className="w-full truncate text-[10px] font-medium text-foreground">
-                    {" "}
-                    RSVP to reveal location{" "}
-                  </p>{" "}
-                </div>
-              )}{" "}
-            </div>
-          ) : null}{" "}
-          <p
-            className={cn(
-              "text-xs mt-1",
-              isPast ? "text-muted-foreground" : accentTextClass,
+                {event.attendanceStatus === "attended"
+                  ? "Attended"
+                  : "No check-in"}
+              </span>
             )}
-          >
-            {" "}
-            {displayDate} • {displayTime}{" "}
-          </p>{" "}
-          {showAttendanceStatus && (
-            <span
-              className={cn(
-                "inline-flex mt-2 rounded-md px-2 py-1 text-[10px] font-medium border",
-                event.attendanceStatus === "attended"
-                  ? "border-success/40 text-success bg-success/10"
-                  : "border-border text-muted-foreground bg-muted",
-              )}
-            >
-              {" "}
-              {event.attendanceStatus === "attended"
-                ? "Attended"
-                : "No check-in"}{" "}
-            </span>
-          )}{" "}
-        </div>{" "}
-        <div className="flex items-center gap-1">
-          {" "}
-          {isPast || !allowFanActions ? (
-            <span className="px-2.5 py-1 text-[10px] font-medium rounded-md bg-muted text-muted-foreground border border-border">
-              {" "}
-              {isPast ? "Completed" : "View only"}{" "}
-            </span>
-          ) : (
-            <button
-              onClick={handleRsvpClick}
-              className={cn(
-                "flex items-center justify-center p-2 rounded-md border transition-colors touch-target",
-                hasRsvp
-                  ? "bg-success border-success text-white"
-                  : cn("bg-transparent border-border", accentTextClass),
-              )}
-              title={hasRsvp ? "Cancel RSVP" : "RSVP to event"}
-            >
-              <Check className={cn("w-4 h-4", hasRsvp && "stroke-[3]")} />
-            </button>
-          )}{" "}
-          {showLikeButton && !isPast && allowFanActions && (
-            <button
-              onClick={handleLikeClick}
-              className="flex items-center justify-center p-2 rounded-md border border-border hover:border-like/50 transition-colors touch-target"
-            >
-              <Heart
+          </div>
+          <div className="flex items-center gap-1">
+            {isPast || !allowFanActions ? (
+              <span className="rounded-md border border-border bg-muted px-2.5 py-1 text-[10px] font-medium text-muted-foreground">
+                {isPast ? "Completed" : "View only"}
+              </span>
+            ) : (
+              <button
+                onClick={handleRsvpClick}
                 className={cn(
-                  "w-4 h-4 transition-colors",
-                  isLiked
-                    ? "fill-like text-like"
-                    : "text-muted-foreground hover:text-like",
+                  "touch-target flex items-center justify-center rounded-md border p-2 transition-colors",
+                  hasRsvp
+                    ? "border-success bg-success text-white"
+                    : cn("border-border bg-transparent", accentTextClass),
                 )}
-              />
-            </button>
-          )}{" "}
-        </div>{" "}
-      </div>{" "}
-    </Link>
+                title={hasRsvp ? "Cancel RSVP" : "RSVP to event"}
+              >
+                <Check className={cn("h-4 w-4", hasRsvp && "stroke-[3]")} />
+              </button>
+            )}
+            {showLikeButton && !isPast && allowFanActions && (
+              <button
+                onClick={handleLikeClick}
+                className="touch-target flex items-center justify-center rounded-md border border-border p-2 transition-colors hover:border-like/50"
+              >
+                <Heart
+                  className={cn(
+                    "h-4 w-4 transition-colors",
+                    isLiked
+                      ? "fill-like text-like"
+                      : "text-muted-foreground hover:text-like",
+                  )}
+                />
+              </button>
+            )}
+          </div>
+        </div>
+      </Link>
+
+      {pollPrompt ? (
+        <EventPollPrompt
+          isOpen
+          eventTitle={pollPrompt.eventTitle}
+          question={pollPrompt.question}
+          options={pollPrompt.options}
+          initialSelectedOptionId={selectedPollOptionId}
+          isSubmitting={isPollSubmitting}
+          onClose={dismissPollPrompt}
+          onSubmit={async (optionId) => {
+            setIsPollSubmitting(true);
+            try {
+              await submitPollResponse(optionId);
+            } finally {
+              setIsPollSubmitting(false);
+            }
+          }}
+        />
+      ) : null}
+    </>
   );
 }

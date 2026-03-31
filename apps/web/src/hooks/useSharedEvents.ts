@@ -127,6 +127,7 @@ export function useSharedEvents() {
         description: input.description,
         status: input.status,
         addressVisibility: input.addressVisibility,
+        poll: input.poll,
       });
 
       return result;
@@ -161,6 +162,7 @@ export function useSharedEvents() {
         genres?: CreateEventInput["genres"];
         status?: "confirmed" | "hold" | "available";
         addressVisibility?: "public" | "rsvp_only";
+        poll?: UpdateEventInput["poll"];
         venueName?: string;
         venueAddress?: string;
         venueCity?: string;
@@ -188,6 +190,7 @@ export function useSharedEvents() {
       if (input.addressVisibility !== undefined) {
         mutationArgs.addressVisibility = input.addressVisibility;
       }
+      if (input.poll !== undefined) mutationArgs.poll = input.poll ?? null;
 
       if (input.venue) {
         mutationArgs.venueName = input.venue.name;

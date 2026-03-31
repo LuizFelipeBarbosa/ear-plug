@@ -76,6 +76,40 @@ export const eventCohostInviteStatusSchema = z.enum([
 export const eventStatusSchema = z.enum(["confirmed", "hold", "available"]);
 
 /**
+ * Schema for a single gig poll answer option.
+ */
+export const eventPollOptionSchema = z.object({
+  id: z.string().trim().min(1).max(100),
+  label: z.string().trim().min(1).max(120),
+});
+
+/**
+ * Schema for an optional RSVP poll attached to a gig.
+ */
+export const eventPollSchema = z.object({
+  question: z.string().trim().min(1).max(200),
+  options: z
+    .array(eventPollOptionSchema)
+    .min(2)
+    .max(6)
+    .superRefine((options, ctx) => {
+      const seen = new Set<string>();
+      options.forEach((option, index) => {
+        const normalized = option.label.trim().toLowerCase();
+        if (seen.has(normalized)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Poll options must be unique",
+            path: [index, "label"],
+          });
+          return;
+        }
+        seen.add(normalized);
+      });
+    }),
+});
+
+/**
  * Schema for validating open date status values.
  * Used for venue booking slot management.
  *
@@ -270,6 +304,8 @@ export const eventCreateSchema = z.object({
   description: z.string().max(2000).optional(),
   /** Event genre (required) */
   genre: genreSchema,
+  /** Optional RSVP poll configuration */
+  poll: eventPollSchema.optional(),
 });
 
 /**
@@ -408,6 +444,11 @@ export type BandInviteStatusInput = z.infer<typeof bandInviteStatusSchema>;
 export type EventCohostInviteStatusInput = z.infer<
   typeof eventCohostInviteStatusSchema
 >;
+
+/**
+ * Inferred type for gig RSVP polls.
+ */
+export type EventPollInput = z.infer<typeof eventPollSchema>;
 
 /**
  * Inferred type for user profile update payloads.

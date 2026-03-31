@@ -4,6 +4,7 @@
 
 import type {
   EventAddressVisibility,
+  EventPoll,
   EventStatus,
   Genre,
 } from "@ear-plug/shared/types";
@@ -43,6 +44,7 @@ export interface CreateEventInput {
   price?: number;
   status?: EventStatus;
   addressVisibility?: EventAddressVisibility;
+  poll?: EventPoll;
 }
 
 /**
@@ -63,6 +65,7 @@ export interface UpdateEventInput {
   price?: number;
   status?: EventStatus;
   addressVisibility?: EventAddressVisibility;
+  poll?: EventPoll | null;
 }
 
 /**

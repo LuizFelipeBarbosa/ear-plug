@@ -6,7 +6,7 @@
 
 import { ConvexError, v } from "convex/values";
 import { query, mutation } from "./_generated/server";
-import type { Id } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import {
   getAuthenticatedUserOrNull,
@@ -145,6 +145,59 @@ async function listBandParticipatingEvents(
     ...hostedEvents,
     ...cohostedEvents.filter((event) => !hostedEventIds.has(event._id)),
   ];
+}
+
+function buildPollAnalyticsForEvent(
+  event: Pick<Doc<"events">, "_id" | "title" | "dateTime" | "poll">,
+  rsvps: Doc<"rsvps">[]
+) {
+  if (!event.poll || typeof event.dateTime !== "number" || !Number.isFinite(event.dateTime)) {
+    return null;
+  }
+
+  const responseCount = rsvps.filter(
+    (rsvp) => typeof rsvp.pollAnswerOptionId === "string" && rsvp.pollAnswerOptionId.length > 0
+  ).length;
+  const eligibleRsvpCount = rsvps.length;
+  const responseRate =
+    eligibleRsvpCount > 0 ? (responseCount / eligibleRsvpCount) * 100 : 0;
+
+  const options = event.poll.options.map((option) => {
+    const count = rsvps.filter((rsvp) => rsvp.pollAnswerOptionId === option.id).length;
+    return {
+      id: option.id,
+      label: option.label,
+      count,
+      percentage: responseCount > 0 ? (count / responseCount) * 100 : 0,
+    };
+  });
+
+  const topOption = [...options].sort((left, right) => {
+    if (right.count !== left.count) {
+      return right.count - left.count;
+    }
+    return left.label.localeCompare(right.label);
+  })[0] ?? null;
+
+  return {
+    eventId: event._id,
+    eventTitle: event.title?.trim() || "Untitled Gig",
+    dateTime: event.dateTime,
+    question: event.poll.question,
+    responseCount,
+    eligibleRsvpCount,
+    responseRate,
+    topOption:
+      topOption && topOption.count > 0
+        ? {
+            id: topOption.id,
+            label: topOption.label,
+            count: topOption.count,
+            percentage: topOption.percentage,
+          }
+        : null,
+    options,
+  };
 }
 
 /**
@@ -1058,14 +1111,20 @@ export const getAnalytics = query({
       .filter((e) => e.dateTime < now)
       .sort((a, b) => b.dateTime - a.dateTime);
 
-    // Count checked-in attendees for each past event.
+    const rsvpsByEventId = new Map<string, Doc<"rsvps">[]>();
     const attendedByEventId = new Map<string, number>();
     await Promise.all(
-      pastEvents.map(async (event) => {
+      events.map(async (event) => {
         const eventRsvps = await ctx.db
           .query("rsvps")
           .withIndex("by_event", (q) => q.eq("eventId", event._id))
           .collect();
+
+        rsvpsByEventId.set(event._id, eventRsvps);
+
+        if (typeof event.dateTime !== "number" || event.dateTime >= now) {
+          return;
+        }
 
         const attendedCount = eventRsvps.reduce(
           (sum, rsvp) => sum + ((rsvp.attendanceStatus ?? "on_list") === "attended" ? 1 : 0),
@@ -1172,6 +1231,61 @@ export const getAnalytics = query({
         : 0;
 
     const newTrafficRate = avgCapacity > 0 ? (totalRsvps / avgCapacity) * 100 : 0;
+    const polledEvents = events
+      .filter(
+        (
+          event
+        ): event is typeof event & {
+          dateTime: number;
+          poll: NonNullable<typeof event.poll>;
+        } =>
+          typeof event.dateTime === "number" &&
+          Number.isFinite(event.dateTime) &&
+          !!event.poll &&
+          event.poll.options.length > 0
+      )
+      .sort((left, right) => {
+        const leftUpcoming = left.dateTime >= now;
+        const rightUpcoming = right.dateTime >= now;
+        if (leftUpcoming !== rightUpcoming) {
+          return leftUpcoming ? -1 : 1;
+        }
+        return leftUpcoming
+          ? left.dateTime - right.dateTime
+          : right.dateTime - left.dateTime;
+      });
+
+    const pollAnalyticsByEventId = new Map<
+      string,
+      NonNullable<ReturnType<typeof buildPollAnalyticsForEvent>>
+    >();
+    for (const event of polledEvents) {
+      const analyticsForEvent = buildPollAnalyticsForEvent(
+        event,
+        rsvpsByEventId.get(event._id) ?? []
+      );
+      if (analyticsForEvent) {
+        pollAnalyticsByEventId.set(event._id, analyticsForEvent);
+      }
+    }
+
+    const pollAnalyticsList = polledEvents
+      .map((event) => pollAnalyticsByEventId.get(event._id))
+      .filter(
+        (
+          value
+        ): value is NonNullable<typeof value> => value !== undefined
+      );
+
+    const totalPollResponses = pollAnalyticsList.reduce(
+      (sum, event) => sum + event.responseCount,
+      0
+    );
+    const averagePollResponseRate =
+      pollAnalyticsList.length > 0
+        ? pollAnalyticsList.reduce((sum, event) => sum + event.responseRate, 0) /
+          pollAnalyticsList.length
+        : 0;
 
     return {
       totalRsvps,
@@ -1184,6 +1298,22 @@ export const getAnalytics = query({
         { name: "Returning", value: Math.round(newTrafficRate * 0.6) },
         { name: "New", value: Math.round(newTrafficRate * 0.4) },
       ],
+      pollSummary: {
+        polledGigCount: pollAnalyticsList.length,
+        totalResponses: totalPollResponses,
+        averageResponseRate: averagePollResponseRate,
+      },
+      pollSnapshot: pollAnalyticsList[0] ?? null,
+      pollBreakdown: pollAnalyticsList.slice(0, 6).map((event) => ({
+        eventId: event.eventId,
+        eventTitle: event.eventTitle,
+        dateTime: event.dateTime,
+        question: event.question,
+        responseCount: event.responseCount,
+        eligibleRsvpCount: event.eligibleRsvpCount,
+        responseRate: event.responseRate,
+        options: event.options,
+      })),
     };
   },
 });

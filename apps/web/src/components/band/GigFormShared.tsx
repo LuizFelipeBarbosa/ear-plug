@@ -9,13 +9,17 @@ import {
   Check,
   Clock,
   Loader2,
+  Lock,
   DollarSign,
   Eye,
   EyeOff,
   FileText,
   ImageIcon,
+  MessageSquareText,
   Music,
+  Plus,
   Search,
+  Trash2,
   Users,
   X,
   type LucideIcon,
@@ -25,11 +29,34 @@ import { cn } from "@/lib/utils";
 import { GENRES, GENRE_COLORS } from "@ear-plug/shared/constants";
 import type {
   EventAddressVisibility,
+  EventPoll,
   EventStatus,
   Genre,
 } from "@ear-plug/shared/types";
 
 export const MAX_EVENT_GENRES = 3;
+export const MIN_EVENT_POLL_OPTIONS = 2;
+export const MAX_EVENT_POLL_OPTIONS = 6;
+
+export interface GigPollFormOption {
+  id: string;
+  label: string;
+}
+
+function createGigPollOptionId(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+
+  return `poll-option-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+export function createEmptyGigPollOption(): GigPollFormOption {
+  return {
+    id: createGigPollOptionId(),
+    label: "",
+  };
+}
 
 export type GigModalTab = "details" | "lineup" | "settings";
 
@@ -82,6 +109,9 @@ export interface GigFormData {
   description: string;
   status: EventStatus;
   addressVisibility: EventAddressVisibility;
+  pollEnabled: boolean;
+  pollQuestion: string;
+  pollOptions: GigPollFormOption[];
 }
 
 export function createGigFormData(initialStatus: EventStatus): GigFormData {
@@ -95,6 +125,9 @@ export function createGigFormData(initialStatus: EventStatus): GigFormData {
     description: "",
     status: initialStatus,
     addressVisibility: "public",
+    pollEnabled: false,
+    pollQuestion: "",
+    pollOptions: [createEmptyGigPollOption(), createEmptyGigPollOption()],
   };
 }
 
@@ -138,6 +171,39 @@ export function validateGigForm(
     }
   }
 
+  if (formData.pollEnabled) {
+    const pollQuestion = formData.pollQuestion.trim();
+    if (!pollQuestion) {
+      nextErrors.pollQuestion = "Poll question is required";
+    }
+
+    if (pollQuestion.length > 200) {
+      nextErrors.pollQuestion = "Poll question must be 200 characters or fewer";
+    }
+
+    if (
+      formData.pollOptions.length < MIN_EVENT_POLL_OPTIONS ||
+      formData.pollOptions.length > MAX_EVENT_POLL_OPTIONS
+    ) {
+      nextErrors.pollOptions = `Add between ${MIN_EVENT_POLL_OPTIONS} and ${MAX_EVENT_POLL_OPTIONS} poll options`;
+    } else {
+      const trimmedOptions = formData.pollOptions.map((option) => option.label.trim());
+      if (trimmedOptions.some((option) => option.length === 0)) {
+        nextErrors.pollOptions = "Poll options cannot be empty";
+      } else {
+        const seen = new Set<string>();
+        for (const option of trimmedOptions) {
+          const normalized = option.toLowerCase();
+          if (seen.has(normalized)) {
+            nextErrors.pollOptions = "Poll options must be unique";
+            break;
+          }
+          seen.add(normalized);
+        }
+      }
+    }
+  }
+
   return nextErrors;
 }
 
@@ -152,6 +218,22 @@ export function parseGigFormNumbers(formData: GigFormData): {
     price: formData.price.trim()
       ? Math.round(Number.parseFloat(formData.price) * 100)
       : undefined,
+  };
+}
+
+export function buildEventPollFromForm(
+  formData: Pick<GigFormData, "pollEnabled" | "pollQuestion" | "pollOptions">
+): EventPoll | undefined {
+  if (!formData.pollEnabled) {
+    return undefined;
+  }
+
+  return {
+    question: formData.pollQuestion.trim(),
+    options: formData.pollOptions.map((option) => ({
+      id: option.id,
+      label: option.label.trim(),
+    })),
   };
 }
 
@@ -747,16 +829,41 @@ export function GigDetailsSection({
 }
 
 interface GigSettingsSectionProps {
-  formData: Pick<GigFormData, "status" | "addressVisibility">;
+  formData: Pick<
+    GigFormData,
+    | "status"
+    | "addressVisibility"
+    | "pollEnabled"
+    | "pollQuestion"
+    | "pollOptions"
+  >;
+  errors?: Record<string, string>;
   onStatusChange: (status: EventStatus) => void;
   onAddressVisibilityChange: (visibility: EventAddressVisibility) => void;
+  onPollEnabledChange: (enabled: boolean) => void;
+  onPollQuestionChange: (value: string) => void;
+  onPollOptionChange: (optionId: string, value: string) => void;
+  onAddPollOption: () => void;
+  onRemovePollOption: (optionId: string) => void;
+  clearError?: (field: string) => void;
+  pollLocked?: boolean;
+  pollResponseCount?: number;
   dangerSlot?: ReactNode;
 }
 
 export function GigSettingsSection({
   formData,
+  errors = {},
   onStatusChange,
   onAddressVisibilityChange,
+  onPollEnabledChange,
+  onPollQuestionChange,
+  onPollOptionChange,
+  onAddPollOption,
+  onRemovePollOption,
+  clearError,
+  pollLocked = false,
+  pollResponseCount = 0,
   dangerSlot,
 }: GigSettingsSectionProps) {
   return (
@@ -836,6 +943,157 @@ export function GigSettingsSection({
           RSVP-only hides the street address until fans RSVP
         </p>
       </div>
+
+      <GigSectionCard
+        title="RSVP Poll"
+        description="Ask one optional question after fans RSVP. Fans can skip it and answer later from the gig page."
+      >
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <div
+              className={cn(
+                "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border",
+                formData.pollEnabled
+                  ? "border-band/30 bg-band/10 text-band"
+                  : "border-border bg-muted text-muted-foreground",
+              )}
+            >
+              <MessageSquareText className="h-4 w-4" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-foreground">
+                {formData.pollEnabled ? "Poll enabled" : "No RSVP poll"}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {pollLocked
+                  ? `Locked after ${pollResponseCount} response${pollResponseCount === 1 ? "" : "s"}.`
+                  : "Single question, single-choice answers."}
+              </p>
+            </div>
+          </div>
+
+          {pollLocked ? (
+            <span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
+              <Lock className="h-3.5 w-3.5" />
+              Locked
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                onPollEnabledChange(!formData.pollEnabled);
+                clearError?.("pollQuestion");
+                clearError?.("pollOptions");
+              }}
+              className={cn(
+                "rounded-xl px-4 py-2 text-sm font-medium transition-colors",
+                formData.pollEnabled
+                  ? "border border-red-500/30 bg-red-500/10 text-red-500 hover:bg-red-500/20"
+                  : "bg-band text-white hover:bg-band/90",
+              )}
+            >
+              {formData.pollEnabled ? "Remove Poll" : "Enable Poll"}
+            </button>
+          )}
+        </div>
+
+        {formData.pollEnabled ? (
+          <div className="space-y-3">
+            <div>
+              <label className="mb-2 block text-xs font-semibold text-muted-foreground">
+                Poll Question
+              </label>
+              <textarea
+                value={formData.pollQuestion}
+                onChange={(event) => {
+                  onPollQuestionChange(event.target.value);
+                  clearError?.("pollQuestion");
+                }}
+                disabled={pollLocked}
+                rows={3}
+                placeholder="What do you want fans to answer after they RSVP?"
+                className={cn(
+                  "w-full resize-none rounded-xl border bg-muted px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none",
+                  errors.pollQuestion
+                    ? "border-red-500"
+                    : "border-border focus:border-band",
+                  pollLocked && "cursor-not-allowed opacity-70",
+                )}
+              />
+              {errors.pollQuestion ? (
+                <p className="mt-1 text-xs text-red-500">{errors.pollQuestion}</p>
+              ) : null}
+            </div>
+
+            <div>
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <label className="block text-xs font-semibold text-muted-foreground">
+                  Answer Options ({formData.pollOptions.length}/{MAX_EVENT_POLL_OPTIONS})
+                </label>
+                {!pollLocked ? (
+                  <button
+                    type="button"
+                    onClick={onAddPollOption}
+                    disabled={formData.pollOptions.length >= MAX_EVENT_POLL_OPTIONS}
+                    className="inline-flex items-center gap-1 text-xs font-medium text-band transition-colors hover:text-band/80 disabled:cursor-not-allowed disabled:text-muted-foreground"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Add option
+                  </button>
+                ) : null}
+              </div>
+
+              <div className="space-y-2">
+                {formData.pollOptions.map((option, index) => (
+                  <div key={option.id} className="flex items-center gap-2">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-muted text-xs font-semibold text-muted-foreground">
+                      {index + 1}
+                    </div>
+                    <input
+                      type="text"
+                      value={option.label}
+                      onChange={(event) => {
+                        onPollOptionChange(option.id, event.target.value);
+                        clearError?.("pollOptions");
+                      }}
+                      disabled={pollLocked}
+                      placeholder={`Option ${index + 1}`}
+                      className={cn(
+                        "min-w-0 flex-1 rounded-xl border bg-muted px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none",
+                        errors.pollOptions
+                          ? "border-red-500"
+                          : "border-border focus:border-band",
+                        pollLocked && "cursor-not-allowed opacity-70",
+                      )}
+                    />
+                    {!pollLocked && formData.pollOptions.length > MIN_EVENT_POLL_OPTIONS ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onRemovePollOption(option.id);
+                          clearError?.("pollOptions");
+                        }}
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-red-500/20 bg-red-500/10 text-red-500 transition-colors hover:bg-red-500/20"
+                        aria-label={`Remove option ${index + 1}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+
+              {errors.pollOptions ? (
+                <p className="mt-1 text-xs text-red-500">{errors.pollOptions}</p>
+              ) : null}
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-xl border border-dashed border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+            Fans will RSVP without a follow-up question.
+          </div>
+        )}
+      </GigSectionCard>
 
       {dangerSlot}
     </motion.div>
