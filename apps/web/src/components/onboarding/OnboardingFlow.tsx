@@ -1,8 +1,7 @@
 "use client";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { SignIn, SignUp, useAuth } from "@clerk/nextjs";
-import { ArrowRight } from "lucide-react";
-import { WEB_AUTH_CLERK_APPEARANCE } from "@/components/auth/clerkAppearance";
+import { useAuth } from "@clerk/nextjs";
+import { CustomAuthPanel } from "@/components/auth/CustomAuthPanel";
 import { BrandWordmark } from "@/components/branding/BrandLogo";
 import { cn } from "@/lib/utils";
 
@@ -17,7 +16,7 @@ export function OnboardingFlow({ overlay }: { overlay?: ReactNode }) {
     <div className="relative min-h-screen overflow-hidden bg-black">
       <VideoBackground />
       <div className="relative z-20 min-h-screen bg-black/60">
-        <div className="mx-auto flex min-h-screen max-w-xl flex-col px-6 py-8">
+        <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-6 py-8">
           <header className="pt-2 text-center">
             <div className="mx-auto flex w-fit flex-col items-center">
               <div className="rounded-[28px] border border-white/15 bg-black/35 px-4 py-3 shadow-[0_30px_80px_rgba(0,0,0,0.45)] backdrop-blur-xl">
@@ -101,31 +100,5 @@ function AuthCard({
   mode: "sign-in" | "sign-up";
   onModeChange: (mode: "sign-in" | "sign-up") => void;
 }) {
-  return (
-    <div className="w-full max-w-md animate-fade-in">
-      <div className="rounded-[30px] border border-white/18 bg-black/28 p-2.5 shadow-[0_36px_100px_rgba(0,0,0,0.52)] backdrop-blur-2xl sm:p-3">
-        <div className="rounded-[24px] border border-white/10 bg-gradient-to-b from-white/[0.08] to-white/[0.03] px-4 py-4 sm:px-5 sm:py-5">
-          {mode === "sign-up" ? (
-            <SignUp routing="hash" appearance={WEB_AUTH_CLERK_APPEARANCE} />
-          ) : (
-            <SignIn routing="hash" appearance={WEB_AUTH_CLERK_APPEARANCE} />
-          )}
-        </div>
-      </div>
-      <div className="mt-4 text-center">
-        <button
-          type="button"
-          onClick={() =>
-            onModeChange(mode === "sign-up" ? "sign-in" : "sign-up")
-          }
-          className="inline-flex items-center gap-1.5 text-sm text-zinc-100 hover:text-zinc-50"
-        >
-          {mode === "sign-up"
-            ? "Already have an account? Sign in"
-            : "Don't have an account? Sign up"}
-          <ArrowRight className="h-4 w-4" />
-        </button>
-      </div>
-    </div>
-  );
+  return <CustomAuthPanel mode={mode} onModeChange={onModeChange} />;
 }
