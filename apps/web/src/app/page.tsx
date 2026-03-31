@@ -8,6 +8,7 @@ import {
   hasRequiredPersonalName,
 } from "@ear-plug/shared/utils";
 import { NameCompletionModal } from "@/components/auth/NameCompletionModal";
+import { BrandMark } from "@/components/branding/BrandLogo";
 import { useCurrentUser } from "@/hooks/useUser";
 import { OnboardingFlow } from "@/components/onboarding/OnboardingFlow";
 
@@ -49,8 +50,8 @@ export default function HomePage() {
   if (!isLoaded || (isSignedIn && (!isClerkUserLoaded || isUserLoading))) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-pulse">
-          <div className="w-16 h-16 bg-fan animate-pulse-fan" />
+        <div className="animate-pulse-fan rounded-[28px] border border-border bg-card/90 p-4 shadow-soft">
+          <BrandMark className="w-14 sm:w-16" theme="auto" priority />
         </div>
       </div>
     );

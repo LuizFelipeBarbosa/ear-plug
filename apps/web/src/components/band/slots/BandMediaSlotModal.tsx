@@ -372,16 +372,6 @@ export function BandMediaSlotModal({ slot, onClose, onSave, onClear }: BandMedia
               </p>
             </div>
 
-            <div className="p-3 bg-muted/50 border border-border rounded-xl">
-              <p className="text-[10px] text-muted-foreground leading-relaxed">
-                <span className="font-medium text-foreground">Supported formats:</span>
-                <br />
-                Images: JPEG, PNG, WEBP (max 10MB)
-                <br />
-                Videos: MP4, WEBM, MOV (max 150MB)
-              </p>
-            </div>
-
             <div>
               <CityAutocomplete
                 value={location}

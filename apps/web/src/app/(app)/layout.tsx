@@ -10,6 +10,7 @@ import {
   hasRequiredPersonalName,
 } from "@ear-plug/shared/utils";
 import { NameCompletionModal } from "@/components/auth/NameCompletionModal";
+import { BrandMark } from "@/components/branding/BrandLogo";
 import { useCurrentUser } from "@/hooks/useUser";
 import { ProfileContextProvider } from "@/hooks/useProfileContext";
 import { BottomNav } from "@/components/navigation/BottomNav";
@@ -93,8 +94,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   ) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-pulse">
-          <div className="w-12 h-12 bg-fan animate-pulse-fan" />
+        <div className="animate-pulse-fan rounded-[24px] border border-border bg-card/90 p-3 shadow-soft">
+          <BrandMark className="w-10 sm:w-12" theme="auto" priority />
         </div>
       </div>
     );
@@ -116,8 +117,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-pulse">
-          <div className="w-12 h-12 bg-fan animate-pulse-fan" />
+        <div className="animate-pulse-fan rounded-[24px] border border-border bg-card/90 p-3 shadow-soft">
+          <BrandMark className="w-10 sm:w-12" theme="auto" priority />
         </div>
       </div>
     );

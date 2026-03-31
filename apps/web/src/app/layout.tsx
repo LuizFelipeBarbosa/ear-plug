@@ -10,16 +10,49 @@ const sourceSerif = Source_Serif_4({
   display: "swap",
 });
 export const metadata: Metadata = {
-  title: "Ear-Plug | Listen Local",
+  title: "EarPlug | Listen Local",
   description:
     "Discover local live music events in the Bay Area. Connect with bands, find shows, and never miss a gig.",
   keywords: ["live music", "concerts", "Bay Area", "local bands", "events"],
-  authors: [{ name: "Ear-Plug" }],
+  authors: [{ name: "EarPlug" }],
+  icons: {
+    icon: [
+      {
+        url: "/branding/earplug-mark-light.png",
+        media: "(prefers-color-scheme: light)",
+        type: "image/png",
+      },
+      {
+        url: "/branding/earplug-mark-dark.png",
+        media: "(prefers-color-scheme: dark)",
+        type: "image/png",
+      },
+    ],
+    apple: [
+      {
+        url: "/branding/earplug-mark-light.png",
+        media: "(prefers-color-scheme: light)",
+        type: "image/png",
+      },
+      {
+        url: "/branding/earplug-mark-dark.png",
+        media: "(prefers-color-scheme: dark)",
+        type: "image/png",
+      },
+    ],
+    shortcut: "/branding/earplug-mark-light.png",
+  },
   openGraph: {
-    title: "Ear-Plug | Listen Local",
+    title: "EarPlug | Listen Local",
     description: "Discover local live music events in the Bay Area",
     type: "website",
     locale: "en_US",
+    images: [
+      {
+        url: "/branding/earplug-wordmark-light.png",
+        alt: "EarPlug",
+      },
+    ],
   },
 };
 export const viewport: Viewport = {

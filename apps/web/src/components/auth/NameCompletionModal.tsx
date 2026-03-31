@@ -10,6 +10,7 @@ import {
   splitPersonalName,
 } from "@ear-plug/shared/utils";
 import { api } from "../../../../../convex/_generated/api";
+import { BrandMark } from "@/components/branding/BrandLogo";
 import { ResponsiveSheetModal } from "@/components/ui/ResponsiveSheetModal";
 import { cn } from "@/lib/utils";
 
@@ -87,9 +88,20 @@ export function NameCompletionModal({ isOpen }: NameCompletionModalProps) {
     >
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="border-b border-border bg-card/95 px-5 py-5 backdrop-blur-xl">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-fan/80">
-            Complete Profile
-          </p>
+          <div className="inline-flex items-center gap-3 rounded-2xl border border-border bg-muted/50 px-3 py-2">
+            <BrandMark
+              className="w-8"
+              theme="auto"
+              decorative
+              sizes="32px"
+            />
+            <div className="text-left">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-fan/80">
+                Complete Profile
+              </p>
+              <p className="text-[11px] text-muted-foreground">EarPlug account setup</p>
+            </div>
+          </div>
           <h2
             id="name-completion-modal-title"
             className="mt-2 text-xl font-bold text-foreground"
@@ -97,7 +109,7 @@ export function NameCompletionModal({ isOpen }: NameCompletionModalProps) {
             Add your first and last name
           </h2>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            Ear-Plug needs your real name before you can continue into the app.
+            EarPlug needs your real name before you can continue into the app.
           </p>
         </div>
 
