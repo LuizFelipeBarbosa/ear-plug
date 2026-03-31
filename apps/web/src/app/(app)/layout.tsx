@@ -6,6 +6,7 @@ import { useAuth, useUser } from "@clerk/nextjs";
 import { useMutation } from "convex/react";
 import {
   composePersonalName,
+  hasRequiredFullPersonalName,
   hasRequiredPersonalName,
 } from "@ear-plug/shared/utils";
 import { NameCompletionModal } from "@/components/auth/NameCompletionModal";
@@ -21,10 +22,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useCurrentUser();
   const upsertUser = useMutation(api.users.upsertUser);
   const [isCreatingUser, setIsCreatingUser] = useState(false);
+  const missingClerkName = !hasRequiredPersonalName(
+    clerkUser?.firstName,
+    clerkUser?.lastName,
+  );
+  const missingStoredName =
+    user !== undefined && user !== null && !hasRequiredFullPersonalName(user.name);
   const needsNameCompletion =
     isSignedIn &&
     Boolean(clerkUser) &&
-    !hasRequiredPersonalName(clerkUser?.firstName, clerkUser?.lastName);
+    (missingClerkName || missingStoredName);
 
   useEffect(() => {
     // Redirect to onboarding if not authenticated

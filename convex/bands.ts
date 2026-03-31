@@ -1215,22 +1215,25 @@ export const getAnalytics = query({
       })
     );
 
-    // Calculate traffic rate (simplified)
     const totalRsvps = events.reduce((sum, e) => sum + e.rsvpCount, 0);
-    const eventsWithCapacity = events.filter(
-      (
-        e
-      ): e is typeof e & {
-        capacity: number;
-      } => typeof e.capacity === "number" && Number.isFinite(e.capacity)
-    );
-    const avgCapacity =
-      eventsWithCapacity.length > 0
-        ? eventsWithCapacity.reduce((sum, e) => sum + e.capacity, 0) /
-          eventsWithCapacity.length
-        : 0;
+    const audienceVisitCounts = new Map<string, number>();
+    for (const eventRsvps of rsvpsByEventId.values()) {
+      for (const rsvp of eventRsvps) {
+        const key = rsvp.userId;
+        audienceVisitCounts.set(key, (audienceVisitCounts.get(key) ?? 0) + 1);
+      }
+    }
 
-    const newTrafficRate = avgCapacity > 0 ? (totalRsvps / avgCapacity) * 100 : 0;
+    let returningAudienceCount = 0;
+    let newAudienceCount = 0;
+    for (const visitCount of audienceVisitCounts.values()) {
+      if (visitCount > 1) {
+        returningAudienceCount += 1;
+      } else {
+        newAudienceCount += 1;
+      }
+    }
+
     const polledEvents = events
       .filter(
         (
@@ -1295,8 +1298,8 @@ export const getAnalytics = query({
       lowestShow,
       eventComparison,
       trafficData: [
-        { name: "Returning", value: Math.round(newTrafficRate * 0.6) },
-        { name: "New", value: Math.round(newTrafficRate * 0.4) },
+        { name: "Returning", value: returningAudienceCount },
+        { name: "New", value: newAudienceCount },
       ],
       pollSummary: {
         polledGigCount: pollAnalyticsList.length,

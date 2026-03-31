@@ -7,6 +7,7 @@ import { ConvexReactClient } from "convex/react";
 import { useMutation, useQuery } from "convex/react";
 import {
   composePersonalName,
+  hasRequiredFullPersonalName,
   hasRequiredPersonalName,
 } from "@ear-plug/shared/utils";
 import * as SecureStore from "expo-secure-store";
@@ -71,11 +72,19 @@ function UserBootstrap({ children }: { children: React.ReactNode }) {
   const upsertUser = useMutation(api.users.upsertUser);
   const attemptedFor = useRef<string | null>(null);
   const [isBootstrapping, setIsBootstrapping] = useState(false);
+  const missingClerkName = !hasRequiredPersonalName(
+    clerkUser?.firstName,
+    clerkUser?.lastName,
+  );
+  const missingStoredName =
+    convexUser !== undefined &&
+    convexUser !== null &&
+    !hasRequiredFullPersonalName(convexUser.name);
   const needsNameCompletion =
     isLoaded &&
     isSignedIn &&
     Boolean(clerkUser) &&
-    !hasRequiredPersonalName(clerkUser?.firstName, clerkUser?.lastName);
+    (missingClerkName || missingStoredName);
 
   useEffect(() => {
     if (!isLoaded || !isSignedIn || !clerkUser) return;

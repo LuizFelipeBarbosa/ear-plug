@@ -76,7 +76,13 @@ export function NameCompletionModal({ visible }: NameCompletionModalProps) {
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade">
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={() => {}}
+      presentationStyle="overFullScreen"
+    >
       <View className="flex-1 justify-end bg-black/50">
         <View className="rounded-t-[28px] bg-[#fbf8f3] px-5 pb-8 pt-6">
           <Text className="text-[11px] font-semibold uppercase tracking-[2px] text-[#9d5c3f]">

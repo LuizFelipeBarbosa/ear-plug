@@ -269,6 +269,14 @@ export function splitPersonalName(
 }
 
 /**
+ * Returns true when a full display name can be split into both first and last names.
+ */
+export function hasRequiredFullPersonalName(fullName?: string | null): boolean {
+  const { firstName, lastName } = splitPersonalName(fullName);
+  return hasRequiredPersonalName(firstName, lastName);
+}
+
+/**
  * Returns a user-facing validation error for missing personal name fields.
  */
 export function getPersonalNameValidationError(

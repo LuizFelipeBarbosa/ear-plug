@@ -71,6 +71,14 @@ export function BandAnalyticsView() {
   const { analytics, isLoading: analyticsLoading } = useBandAnalytics(
     band?._id,
   );
+  const trafficTotal = useMemo(
+    () =>
+      (analytics?.trafficData ?? []).reduce(
+        (sum, entry) => sum + Math.max(entry.value, 0),
+        0,
+      ),
+    [analytics?.trafficData],
+  );
 
   const hasData = useMemo(
     () => analytics && analytics.eventComparison.length > 0,
@@ -478,7 +486,7 @@ export function BandAnalyticsView() {
                           />
                         ))}
                       </Pie>
-                      <Tooltip content={<TrafficTooltip />} />
+                      <Tooltip content={<TrafficTooltip total={trafficTotal} />} />
                     </PieChart>
                   </ResponsiveContainer>
 
@@ -509,7 +517,7 @@ export function BandAnalyticsView() {
                           </span>
                         </div>
                         <span className="text-sm font-semibold text-foreground min-w-[3ch] text-right">
-                          {item.value}%
+                          {item.value}
                         </span>
                       </motion.div>
                     ))}
@@ -844,20 +852,23 @@ function EventComparisonTooltip({
 function TrafficTooltip({
   active,
   payload,
+  total,
 }: {
   active?: boolean;
   payload?: Array<{ name?: string; value?: number; payload?: { name: string } }>;
+  total: number;
 }) {
   if (!active || !payload || payload.length === 0) return null;
 
   const data = payload[0];
   const value = data?.value ?? 0;
   const name = data?.payload?.name ?? "";
+  const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
 
   return (
     <div className="bg-card border border-border shadow-lg px-3 py-2 rounded-lg">
       <p className="text-sm font-medium text-foreground">{name}</p>
-      <p className="text-xs text-band font-semibold">{value}%</p>
+      <p className="text-xs text-band font-semibold">{percentage}%</p>
     </div>
   );
 }

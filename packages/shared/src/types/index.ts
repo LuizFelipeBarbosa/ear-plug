@@ -808,7 +808,7 @@ export interface AnalyticsData {
   trafficData: {
     /** Traffic source name */
     name: string;
-    /** Percentage value */
+    /** Absolute audience total */
     value: number;
   }[];
   /** Aggregate poll participation across polled gigs */
