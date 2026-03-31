@@ -208,6 +208,82 @@
 :focus:not(:focus-visible) {
   outline: none;
 }
+
+/* Clerk auth phone input and country popover need explicit dark-surface overrides. */
+.ep-auth-clerk .cl-phoneInputBox,
+.ep-auth-clerk .cl-formInputGroup {
+  align-items: stretch;
+}
+
+.ep-auth-clerk .cl-phoneInputBox button,
+.ep-auth-clerk .cl-phoneInputCountrySelectButton {
+  min-width: 4.5rem;
+  justify-content: flex-start;
+}
+
+.ep-auth-clerk .cl-phoneInputBox input,
+.ep-auth-clerk .cl-phoneInputBox .cl-formFieldInput {
+  border: 0;
+  background: transparent;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+  line-height: 1.25rem;
+}
+
+.ep-auth-clerk .cl-phoneInputCountryCode,
+.ep-auth-clerk .cl-phoneInputBox button,
+.ep-auth-clerk .cl-phoneInputCountrySelectButton {
+  color: rgb(228 228 231);
+}
+
+.cl-phoneInputCountrySelectPopoverCard,
+.cl-selectPopoverCard,
+.cl-selectDropdown {
+  background: rgba(23, 18, 20, 0.98) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  color: rgb(244 244 245) !important;
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.45) !important;
+  backdrop-filter: blur(18px);
+}
+
+.cl-phoneInputCountrySelectSearchInput,
+.cl-selectSearchInput {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  color: rgb(244 244 245) !important;
+}
+
+.cl-phoneInputCountrySelectSearchInput::placeholder,
+.cl-selectSearchInput::placeholder {
+  color: rgb(161 161 170) !important;
+}
+
+.cl-phoneInputCountrySelectOption,
+.cl-selectOption {
+  color: rgb(244 244 245) !important;
+}
+
+.cl-phoneInputCountrySelectOption:hover,
+.cl-selectOption:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+
+.cl-phoneInputCountrySelectOptionCallingCode,
+.cl-selectOption__secondaryText {
+  color: rgb(161 161 170) !important;
+}
+
+.cl-phoneInputCountrySelectOptionsContainer::-webkit-scrollbar,
+.cl-selectOptionsContainer::-webkit-scrollbar {
+  width: 10px;
+}
+
+.cl-phoneInputCountrySelectOptionsContainer::-webkit-scrollbar-thumb,
+.cl-selectOptionsContainer::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+}
+
 /* Ensure browser autofill does not force a light textbox in dark mode. */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
