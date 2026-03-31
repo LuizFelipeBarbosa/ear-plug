@@ -59,18 +59,34 @@ cp apps/web/.env.example apps/web/.env.local
 Create `apps/web/.env.local`:
 
 ```env
+# Convex
 NEXT_PUBLIC_CONVEX_URL=https://your-app.convex.cloud
+CONVEX_DEPLOYMENT=prod:your-app
+# Optional: Use dev deployments for local development
+# CONVEX_DEPLOYMENT=dev:your-project-name
+
+# Clerk
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
 CLERK_SECRET_KEY=sk_test_...
+CLERK_JWT_ISSUER_DOMAIN=https://your-app.clerk.accounts.dev
+
+# Google Maps
 NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your-google-maps-api-key
 ```
 
 Create `apps/mobile/.env.local`:
 
 ```env
+# Convex
 EXPO_PUBLIC_CONVEX_URL=https://your-app.convex.cloud
+
+# Clerk
 EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
+
+# Google Maps (also configure in app.json for native)
 EXPO_PUBLIC_GOOGLE_MAPS_API_KEY=your-google-maps-api-key
+
+# Web app base URL for opening ticket pages from mobile
 EXPO_PUBLIC_WEB_APP_URL=https://your-web-app-domain.com
 ```
 
@@ -115,6 +131,7 @@ Ear-Plug/
 │   ├── web/                    # Next.js web application
 │   │   ├── src/app/           # App Router pages and layouts
 │   │   ├── src/components/    # React components
+│   │   │   ├── auth/          # Authentication components
 │   │   │   ├── band/          # Musician dashboard, calendar, slots, guest lists
 │   │   │   ├── fan/           # Map discovery, calendar, profile, notifications
 │   │   │   ├── events/        # Shared event components
