@@ -20,6 +20,7 @@ interface EventTicketPanelProps {
   onEnsureTicket?: () => Promise<unknown>;
   showOpenTicketLink?: boolean;
   compact?: boolean;
+  onQrExpandedChange?: (isExpanded: boolean) => void;
 }
 
 function formatDateTime(timestamp: number): string {
@@ -68,6 +69,7 @@ export function EventTicketPanel({
   onEnsureTicket,
   showOpenTicketLink = true,
   compact = false,
+  onQrExpandedChange,
 }: EventTicketPanelProps) {
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [downloadPending, setDownloadPending] = useState(false);
@@ -118,6 +120,14 @@ export function EventTicketPanel({
       document.documentElement.style.overflow = previousHtmlOverflow;
     };
   }, [showFullQr]);
+
+  useEffect(() => {
+    onQrExpandedChange?.(showFullQr);
+
+    return () => {
+      onQrExpandedChange?.(false);
+    };
+  }, [onQrExpandedChange, showFullQr]);
 
   const config = useMemo(() => {
     if (!ticket) return null;

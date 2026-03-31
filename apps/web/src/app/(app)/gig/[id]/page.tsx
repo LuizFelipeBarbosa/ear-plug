@@ -85,6 +85,7 @@ export default function EventDetailsPage({ params }: PageProps) {
   const [isGuestPanelOpen, setIsGuestPanelOpen] = useState(false);
   const [showMoreBands, setShowMoreBands] = useState(false);
   const [isPollSubmitting, setIsPollSubmitting] = useState(false);
+  const [isTicketQrOpen, setIsTicketQrOpen] = useState(false);
   const eventId = id as Id<"events">;
 
   const {
@@ -510,6 +511,7 @@ export default function EventDetailsPage({ params }: PageProps) {
               ticketPayload={ticket}
               isLoading={isTicketLoading}
               onEnsureTicket={ensureTicket}
+              onQrExpandedChange={setIsTicketQrOpen}
             />
           </motion.div>
         )}
@@ -635,7 +637,7 @@ export default function EventDetailsPage({ params }: PageProps) {
 
       {/* Sticky Bottom Action */}
       <AnimatePresence>
-        {!isPast && (
+        {!isPast && !isTicketQrOpen && (
           <motion.div
             initial={{ y: 100 }}
             animate={{ y: 0 }}
