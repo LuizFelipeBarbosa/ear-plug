@@ -2,6 +2,7 @@ import { UserProfile } from "@clerk/nextjs";
 import { Music, ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { WEB_AUTH_CLERK_APPEARANCE } from "@/components/auth/clerkAppearance";
+import { SpotifyReconnectButton } from "./SpotifyReconnectButton";
 
 export default function SpotifyConnectionsPage() {
   return (
@@ -32,6 +33,10 @@ export default function SpotifyConnectionsPage() {
                 sync to personalize local show recommendations.
               </p>
             </div>
+          </div>
+
+          <div className="mb-5">
+            <SpotifyReconnectButton />
           </div>
 
           <UserProfile
