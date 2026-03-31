@@ -104,7 +104,7 @@ function AuthCard({
   return (
     <div className="w-full max-w-md animate-fade-in">
       <div className="rounded-[30px] border border-white/18 bg-black/28 p-2.5 shadow-[0_36px_100px_rgba(0,0,0,0.52)] backdrop-blur-2xl sm:p-3">
-        <div className="rounded-[24px] border border-white/10 bg-gradient-to-b from-white/[0.08] to-white/[0.03] px-4 py-5 sm:px-5 sm:py-6">
+        <div className="rounded-[24px] border border-white/10 bg-gradient-to-b from-white/[0.08] to-white/[0.03] px-4 py-4 sm:px-5 sm:py-5">
           {mode === "sign-up" ? (
             <SignUp routing="hash" appearance={WEB_AUTH_CLERK_APPEARANCE} />
           ) : (
@@ -112,7 +112,7 @@ function AuthCard({
           )}
         </div>
       </div>
-      <div className="mt-5 text-center">
+      <div className="mt-4 text-center">
         <button
           type="button"
           onClick={() =>

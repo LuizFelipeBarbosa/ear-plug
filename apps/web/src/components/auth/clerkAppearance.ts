@@ -13,15 +13,15 @@ export const WEB_AUTH_CLERK_APPEARANCE = {
     rootBox: "ep-auth-clerk w-full",
     cardBox: "w-full",
     card: "w-full rounded-[1.5rem] bg-transparent shadow-none",
-    main: "w-full gap-3.5",
+    main: "w-full gap-2.5",
     headerTitle:
       "text-[1.85rem] font-semibold tracking-[-0.03em] text-zinc-50",
-    headerSubtitle: "mt-1 text-sm leading-6 text-zinc-300",
-    form: "mt-4 w-full space-y-3",
-    formContainer: "w-full space-y-3",
-    formFieldRow: "w-full gap-2.5",
+    headerSubtitle: "mt-0.5 text-sm leading-5 text-zinc-300",
+    form: "mt-3 w-full space-y-2.5",
+    formContainer: "w-full space-y-2.5",
+    formFieldRow: "w-full gap-2",
     formFieldLabel:
-      "mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-300",
+      "mb-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-300",
     formFieldInput:
       "h-12 w-full min-w-0 flex-1 basis-0 rounded-[18px] border border-white/15 bg-white/[0.08] px-4 text-zinc-50 placeholder:text-zinc-400 focus:border-white/35 focus:bg-white/[0.12] focus:ring-0",
     formFieldInputGroup:
@@ -34,11 +34,11 @@ export const WEB_AUTH_CLERK_APPEARANCE = {
     phoneInputCountrySelectIcon: "text-zinc-400",
     phoneInputCountryCode: "text-sm font-medium text-zinc-200",
     formButtonPrimary:
-      "mt-1 h-12 rounded-[18px] bg-white text-zinc-950 font-semibold shadow-[0_18px_40px_rgba(255,255,255,0.16)] hover:bg-zinc-100",
-    socialButtons: "mt-0.5 w-full space-y-2.5",
+      "mt-0 h-12 rounded-[18px] bg-white text-zinc-950 font-semibold shadow-[0_18px_40px_rgba(255,255,255,0.16)] hover:bg-zinc-100",
+    socialButtons: "mt-0 w-full space-y-2",
     socialButtonsBlockButton:
       "h-12 rounded-[18px] border border-white/15 bg-white/[0.06] text-zinc-100 shadow-none hover:bg-white/[0.12]",
-    dividerRow: "my-3",
+    dividerRow: "my-2",
     footer: "hidden",
     footerAction: "hidden",
     footerActionText: "hidden",
