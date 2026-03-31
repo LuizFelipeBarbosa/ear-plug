@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ImagePlus, Loader2, Play, Trash2, X, MapPin, FileText, ImageIcon } from "lucide-react";
+import { ImagePlus, Loader2, Pause, Play, Trash2, X, MapPin, ImageIcon } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CityAutocomplete } from "@/components/ui/CityAutocomplete";
 import { cn } from "@/lib/utils";
@@ -42,6 +42,8 @@ function detectMediaType(file: File): "image" | "video" | null {
 
 export function BandMediaSlotModal({ slot, onClose, onSave, onClear }: BandMediaSlotModalProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const hideVideoControlTimeoutRef = useRef<number | null>(null);
   const [caption, setCaption] = useState(slot.caption ?? "");
   const [location, setLocation] = useState(slot.location ?? "");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -49,6 +51,8 @@ export function BandMediaSlotModal({ slot, onClose, onSave, onClear }: BandMedia
   const [isSaving, setIsSaving] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const [showVideoControl, setShowVideoControl] = useState(false);
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -57,6 +61,10 @@ export function BandMediaSlotModal({ slot, onClose, onSave, onClear }: BandMedia
     };
     window.addEventListener("keydown", onKeyDown);
     return () => {
+      if (hideVideoControlTimeoutRef.current !== null) {
+        window.clearTimeout(hideVideoControlTimeoutRef.current);
+      }
+      videoRef.current?.pause();
       document.body.style.overflow = "";
       window.removeEventListener("keydown", onKeyDown);
     };
@@ -79,10 +87,58 @@ export function BandMediaSlotModal({ slot, onClose, onSave, onClear }: BandMedia
   const overlayLocation = location.trim() || slot.location?.trim();
   const overlayCaption = caption.trim() || slot.caption?.trim();
   const hasOverlayMeta = Boolean(overlayLocation || overlayCaption);
+  const showCenteredVideoControl =
+    previewMediaType === "video" && previewMediaUrl
+      ? !isVideoPlaying || showVideoControl
+      : false;
+
+  const clearVideoControlTimeout = () => {
+    if (hideVideoControlTimeoutRef.current !== null) {
+      window.clearTimeout(hideVideoControlTimeoutRef.current);
+      hideVideoControlTimeoutRef.current = null;
+    }
+  };
+
+  const scheduleVideoControlHide = () => {
+    clearVideoControlTimeout();
+    hideVideoControlTimeoutRef.current = window.setTimeout(() => {
+      setShowVideoControl(false);
+      hideVideoControlTimeoutRef.current = null;
+    }, 900);
+  };
+
+  useEffect(() => {
+    clearVideoControlTimeout();
+    setIsVideoPlaying(false);
+    setShowVideoControl(false);
+    videoRef.current?.pause();
+  }, [previewMediaType, previewMediaUrl]);
 
   const triggerFilePicker = () => {
     if (!slot.canEdit) return;
     fileInputRef.current?.click();
+  };
+
+  const handleVideoToggle = async () => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (video.paused || video.ended) {
+      try {
+        await video.play();
+        setShowVideoControl(true);
+        scheduleVideoControlHide();
+      } catch (playError) {
+        setError(
+          playError instanceof Error ? playError.message : "Unable to play video."
+        );
+      }
+      return;
+    }
+
+    clearVideoControlTimeout();
+    video.pause();
+    setShowVideoControl(false);
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -183,12 +239,49 @@ export function BandMediaSlotModal({ slot, onClose, onSave, onClear }: BandMedia
 
           {previewMediaUrl ? (
             previewMediaType === "video" ? (
-              <video
-                src={previewMediaUrl}
-                controls
-                playsInline
-                className="max-h-full max-w-full"
-              />
+              <div className="relative flex h-full w-full items-center justify-center">
+                <video
+                  ref={videoRef}
+                  src={previewMediaUrl}
+                  playsInline
+                  onPlay={() => setIsVideoPlaying(true)}
+                  onPause={() => setIsVideoPlaying(false)}
+                  onEnded={() => {
+                    clearVideoControlTimeout();
+                    setIsVideoPlaying(false);
+                    setShowVideoControl(false);
+                  }}
+                  className="max-h-full max-w-full"
+                />
+
+                <button
+                  type="button"
+                  onClick={handleVideoToggle}
+                  className="absolute inset-0 z-[1] touch-target"
+                  aria-label={isVideoPlaying ? "Pause video" : "Play video"}
+                />
+
+                <AnimatePresence initial={false}>
+                  {showCenteredVideoControl ? (
+                    <motion.div
+                      key={isVideoPlaying ? "pause" : "play"}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      transition={{ duration: 0.18 }}
+                      className="pointer-events-none absolute inset-0 z-[2] flex items-center justify-center"
+                    >
+                      <div className="flex h-16 w-16 items-center justify-center rounded-full border border-white/20 bg-black/50 backdrop-blur-sm">
+                        {isVideoPlaying ? (
+                          <Pause className="h-7 w-7 text-white" />
+                        ) : (
+                          <Play className="ml-1 h-7 w-7 fill-white text-white" />
+                        )}
+                      </div>
+                    </motion.div>
+                  ) : null}
+                </AnimatePresence>
+              </div>
             ) : (
               <img
                 src={previewMediaUrl}
@@ -248,7 +341,7 @@ export function BandMediaSlotModal({ slot, onClose, onSave, onClear }: BandMedia
 
               type="button"
               onClick={triggerFilePicker}
-              className="absolute bottom-4 right-4 px-3 py-2 bg-black/70 backdrop-blur-sm border border-white/20 text-white text-xs font-medium rounded-lg hover:bg-black/90 transition-colors flex items-center gap-1.5"
+              className="absolute bottom-4 right-4 z-[12] px-3 py-2 bg-black/70 backdrop-blur-sm border border-white/20 text-white text-xs font-medium rounded-lg hover:bg-black/90 transition-colors flex items-center gap-1.5"
             >
               <ImagePlus className="w-3.5 h-3.5" />
               Replace
@@ -257,7 +350,7 @@ export function BandMediaSlotModal({ slot, onClose, onSave, onClear }: BandMedia
 
           {/* Video Badge */}
           {slot.canEdit && previewMediaType === "video" && previewMediaUrl && (
-            <div className="absolute bottom-4 left-4 px-3 py-1.5 bg-black/70 backdrop-blur-sm border border-white/20 rounded-lg flex items-center gap-1.5">
+            <div className="absolute bottom-4 left-4 z-[11] px-3 py-1.5 bg-black/70 backdrop-blur-sm border border-white/20 rounded-lg flex items-center gap-1.5">
               <Play className="w-3 h-3 text-white fill-white" />
               <span className="text-xs text-white font-medium">Video</span>
             </div>
@@ -294,16 +387,11 @@ export function BandMediaSlotModal({ slot, onClose, onSave, onClear }: BandMedia
                 value={location}
                 onChange={(city) => setLocation(city as string)}
                 placeholder="e.g., San Francisco, CA"
-                label="Event Location"
                 disabled={!slot.canEdit}
               />
             </div>
 
             <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-foreground mb-2">
-                <FileText className="w-4 h-4 text-muted-foreground" />
-                Caption
-              </label>
               <textarea
                 value={caption}
                 onChange={(event) =>

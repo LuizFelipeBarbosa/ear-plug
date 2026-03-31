@@ -4,6 +4,9 @@ import { SignIn, SignUp, useAuth } from "@clerk/nextjs";
 import { ArrowRight, Headphones } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+const LOGIN_BACKGROUND_VIDEO_SRC = "/media/login-background.mov";
+const LOGIN_BACKGROUND_POSTER_SRC = "/media/login-background-poster.png";
+
 const AUTH_APPEARANCE = {
   variables: { colorPrimary: "#7c3aed" },
   elements: {
@@ -109,10 +112,10 @@ function VideoBackground() {
           preload="metadata"
           onLoadedData={() => setVideoLoaded(true)}
           onError={() => setVideoError(true)}
-          poster="/media/onboarding-poster.jpg"
+          poster={LOGIN_BACKGROUND_POSTER_SRC}
         >
           {" "}
-          <source src="/media/onboarding-loop.mp4" type="video/mp4" />{" "}
+          <source src={LOGIN_BACKGROUND_VIDEO_SRC} />{" "}
         </video>
       )}{" "}
       <div
@@ -122,7 +125,10 @@ function VideoBackground() {
         )}
       >
         {" "}
-        <div className="absolute inset-0 bg-[url('/media/onboarding-poster.jpg')] bg-cover bg-center" />{" "}
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: `url('${LOGIN_BACKGROUND_POSTER_SRC}')` }}
+        />{" "}
       </div>{" "}
       <div className="absolute inset-0 bg-black/60" />{" "}
     </div>
