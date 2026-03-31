@@ -10,6 +10,7 @@ import {
   Share2,
   MapPin,
   Calendar,
+  CalendarPlus,
   Clock,
   Users,
   DollarSign,
@@ -34,6 +35,7 @@ import { GuestListCard } from "@/components/band/GuestListCard";
 import { GuestControlPanelModal } from "@/components/band/GuestControlPanelModal";
 import { EventPollPrompt } from "@/components/events/EventPollPrompt";
 import { EventTicketPanel } from "@/components/events/EventTicketPanel";
+import { downloadCalendarInvite } from "@/lib/calendar";
 import {
   formatEventTime,
   formatFullDate,
@@ -86,6 +88,7 @@ export default function EventDetailsPage({ params }: PageProps) {
   const [showMoreBands, setShowMoreBands] = useState(false);
   const [isPollSubmitting, setIsPollSubmitting] = useState(false);
   const [isTicketQrOpen, setIsTicketQrOpen] = useState(false);
+  const [calendarError, setCalendarError] = useState<string | null>(null);
   const eventId = id as Id<"events">;
 
   const {
@@ -209,6 +212,43 @@ export default function EventDetailsPage({ params }: PageProps) {
   const cohostBands = lineupBands.filter((b: any) => b._id !== event.bandId);
   const visibleCohosts = showMoreBands ? cohostBands : cohostBands.slice(0, 2);
   const hasMoreCohosts = cohostBands.length > 2;
+  const calendarLocation = event.venue
+    ? [
+        event.venue.name,
+        event.isVenueAddressHidden ? undefined : event.venue.address,
+        event.venue.city,
+      ]
+        .filter(Boolean)
+        .join(" • ")
+    : "";
+  const calendarDescription = [
+    event.description,
+    hostBand?.name ? `Lineup: ${[hostBand.name, ...cohostBands.map((band: any) => band.name)].join(", ")}` : undefined,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+
+  const handleAddToCalendar = () => {
+    try {
+      downloadCalendarInvite(
+        {
+          title: event.title,
+          startsAt: event.dateTime,
+          description: calendarDescription,
+          location: calendarLocation,
+          url: window.location.href,
+        },
+        event.title
+      );
+      setCalendarError(null);
+    } catch (error) {
+      setCalendarError(
+        error instanceof Error
+          ? error.message
+          : "Unable to create a calendar invite for this show."
+      );
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background pb-40 overflow-x-hidden">
@@ -347,6 +387,24 @@ export default function EventDetailsPage({ params }: PageProps) {
             color="band"
           />
         </motion.div>
+
+        {!isPast && typeof event.dateTime === "number" ? (
+          <motion.div variants={itemVariants} className="mb-6">
+            <button
+              type="button"
+              onClick={handleAddToCalendar}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-border bg-card px-4 py-3.5 text-sm font-medium text-foreground transition-colors hover:border-fan/30 hover:bg-fan/5"
+            >
+              <CalendarPlus
+                className={cn("h-4 w-4", inBandMode ? "text-band" : "text-fan")}
+              />
+              Add to Calendar
+            </button>
+            {calendarError ? (
+              <p className="mt-2 text-xs text-red-500">{calendarError}</p>
+            ) : null}
+          </motion.div>
+        ) : null}
 
         {/* RSVP Progress */}
         {!isPast && (

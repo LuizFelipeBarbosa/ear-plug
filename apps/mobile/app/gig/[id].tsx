@@ -10,9 +10,10 @@ import {
 import { useProfileContext } from "@/context/ProfileContext";
 import { useEvent, useEventCheckinAccess } from "@/hooks/useEvents";
 import { formatEventDate, formatEventTime, formatPrice } from "@ear-plug/shared/constants";
+import { buildGoogleCalendarUrl } from "@ear-plug/shared/utils";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft, Calendar, Heart, MapPin, QrCode, ShieldCheck, Ticket, Users } from "lucide-react-native";
-import { Text, TouchableOpacity, View } from "react-native";
+import { Alert, Linking, Text, TouchableOpacity, View } from "react-native";
 import type { Id } from "../../../../convex/_generated/dataModel";
 
 export default function EventDetailsScreen() {
@@ -55,6 +56,41 @@ export default function EventDetailsScreen() {
   const eventStatus = event.status as string | undefined;
   const eventStatusLabel = eventStatus === "hold" ? "Tentative" : eventStatus ?? "Confirmed";
   const eventStatusTone: "warning" | "band" | "fan" = eventStatus === "hold" ? "warning" : isBandMode ? "band" : "fan";
+  const lineupNames =
+    event.lineupBands?.map((band: any) => band.name).filter(Boolean) ??
+    (event.band?.name ? [event.band.name] : []);
+  const calendarLocation = event.venue
+    ? [
+        event.venue.name,
+        event.isVenueAddressHidden ? undefined : event.venue.address,
+        event.venue.city,
+      ]
+        .filter(Boolean)
+        .join(" • ")
+    : "";
+  const calendarDescription = [event.description, lineupNames.length ? `Lineup: ${lineupNames.join(", ")}` : undefined]
+    .filter(Boolean)
+    .join("\n\n");
+
+  const handleAddToCalendar = async () => {
+    const url = buildGoogleCalendarUrl({
+      title: event.title,
+      startsAt: event.dateTime,
+      description: calendarDescription,
+      location: calendarLocation,
+    });
+
+    if (!url) {
+      Alert.alert("Calendar unavailable", "This event needs a confirmed date before it can be added to a calendar.");
+      return;
+    }
+
+    try {
+      await Linking.openURL(url);
+    } catch {
+      Alert.alert("Unable to open calendar", "Try again in a moment.");
+    }
+  };
 
   return (
     <AppScreen
@@ -145,6 +181,16 @@ export default function EventDetailsScreen() {
             <MetaRow icon={<Ticket size={16} color="#64748b" />} label="Price" value={typeof event.price === "number" ? formatPrice(event.price) : "Free"} />
             <MetaRow icon={<MapPin size={16} color="#64748b" />} label="Venue" value={`${event.venue?.name || "Venue TBD"}${event.venue?.city ? ` • ${event.venue.city}` : ""}${event.isVenueAddressHidden ? " • RSVP to reveal" : ""}`} />
           </View>
+          {!isPast && typeof event.dateTime === "number" ? (
+            <View className="mt-4">
+              <ActionButton
+                label="Add to Calendar"
+                variant="secondary"
+                icon={<Calendar size={16} color="#334155" />}
+                onPress={() => void handleAddToCalendar()}
+              />
+            </View>
+          ) : null}
         </SectionCard>
       </View>
     </AppScreen>
