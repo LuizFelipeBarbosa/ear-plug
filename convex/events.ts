@@ -408,23 +408,38 @@ function validateConfirmedEventPayload(
   input: ConfirmedEventValidationInput
 ): void {
   if (!input.title || input.title.trim().length === 0) {
-    throw new Error("Confirmed gigs require an event title.");
+    throw new ConvexError({
+      code: "invalid_confirmed_event",
+      message: "Confirmed gigs require an event title.",
+    });
   }
 
   if (typeof input.dateTime !== "number" || !Number.isFinite(input.dateTime)) {
-    throw new Error("Confirmed gigs require a valid date.");
+    throw new ConvexError({
+      code: "invalid_confirmed_event",
+      message: "Confirmed gigs require a valid date.",
+    });
   }
 
   if (typeof input.capacity !== "number" || !Number.isFinite(input.capacity) || input.capacity <= 0) {
-    throw new Error("Confirmed gigs require a positive capacity.");
+    throw new ConvexError({
+      code: "invalid_confirmed_event",
+      message: "Confirmed gigs require a positive capacity.",
+    });
   }
 
   if (!input.genres || input.genres.length === 0) {
-    throw new Error("Confirmed gigs require at least one genre.");
+    throw new ConvexError({
+      code: "invalid_confirmed_event",
+      message: "Confirmed gigs require at least one genre.",
+    });
   }
 
   if (!input.venueId && !hasCompleteVenueInput(input)) {
-    throw new Error("Confirmed gigs require a complete venue selection.");
+    throw new ConvexError({
+      code: "invalid_confirmed_event",
+      message: "Confirmed gigs require a complete venue selection.",
+    });
   }
 }
 

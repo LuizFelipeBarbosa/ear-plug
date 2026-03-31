@@ -333,14 +333,43 @@ export function CityAutocomplete({
 
   // Extract city from address components (venue mode)
   const extractCity = useCallback(
-    (addressComponents: google.maps.GeocoderAddressComponent[]): string => {
+    (
+      addressComponents: google.maps.GeocoderAddressComponent[],
+      formattedAddress?: string,
+    ): string => {
       const cityComponent =
         addressComponents.find((comp) => comp.types.includes("locality")) ||
+        addressComponents.find((comp) => comp.types.includes("postal_town")) ||
+        addressComponents.find((comp) =>
+          comp.types.includes("administrative_area_level_3")
+        ) ||
+        addressComponents.find((comp) =>
+          comp.types.includes("sublocality_level_1")
+        ) ||
         addressComponents.find((comp) => comp.types.includes("sublocality")) ||
+        addressComponents.find((comp) => comp.types.includes("neighborhood")) ||
         addressComponents.find((comp) =>
           comp.types.includes("administrative_area_level_2")
         );
-      return cityComponent?.long_name || "";
+
+      if (cityComponent?.long_name) {
+        return cityComponent.long_name;
+      }
+
+      if (!formattedAddress) {
+        return "";
+      }
+
+      const formattedParts = formattedAddress
+        .split(",")
+        .map((part) => part.trim())
+        .filter(Boolean);
+
+      if (formattedParts.length >= 3) {
+        return formattedParts[1] ?? "";
+      }
+
+      return "";
     },
     []
   );
@@ -395,7 +424,10 @@ export function CityAutocomplete({
               place.geometry.location
             ) {
               const city = place.address_components
-                ? extractCity(place.address_components)
+                ? extractCity(
+                    place.address_components,
+                    place.formatted_address || suggestion.description,
+                  )
                 : "";
 
               let name = place.name || "";

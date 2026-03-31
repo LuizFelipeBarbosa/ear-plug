@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
@@ -49,7 +49,10 @@ async function requireBandsExist(
   const existingBands = await Promise.all(bandIds.map((bandId) => ctx.db.get(bandId)));
   const missingBandId = existingBands.findIndex((band) => !band);
   if (missingBandId >= 0) {
-    throw new Error("One or more invited bands were not found.");
+    throw new ConvexError({
+      code: "invalid_event_cohost_invite",
+      message: "One or more invited bands were not found.",
+    });
   }
 }
 
@@ -98,7 +101,10 @@ export async function createCohostInvitesForEvent(
 }> {
   const now = Date.now();
   if (args.invitedBandIds.some((bandId) => bandId === args.hostBandId)) {
-    throw new Error("Host band cannot invite itself as a co-host.");
+    throw new ConvexError({
+      code: "invalid_event_cohost_invite",
+      message: "Host band cannot invite itself as a co-host.",
+    });
   }
   const uniqueBandIds = toUniqueBandIds(args.invitedBandIds).filter(
     (bandId) => bandId !== args.hostBandId

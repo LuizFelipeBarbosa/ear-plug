@@ -131,6 +131,19 @@ export function createGigFormData(initialStatus: EventStatus): GigFormData {
   };
 }
 
+function hasCompleteVenueSelection(
+  venue: VenueLocationData | null,
+): venue is VenueLocationData {
+  return Boolean(
+    venue &&
+      venue.name.trim() &&
+      venue.address.trim() &&
+      venue.city.trim() &&
+      Number.isFinite(venue.coordinates?.lat) &&
+      Number.isFinite(venue.coordinates?.lng),
+  );
+}
+
 export function validateGigForm(
   formData: GigFormData,
   venue: VenueLocationData | null,
@@ -147,6 +160,9 @@ export function validateGigForm(
   }
   if (!isTentative && !venue) {
     nextErrors.venue = "Venue location is required";
+  } else if (!isTentative && !hasCompleteVenueSelection(venue)) {
+    nextErrors.venue =
+      "Select a venue from the suggestions so the address and city are complete.";
   }
   if (!isTentative && formData.genres.length === 0) {
     nextErrors.genres = "At least one genre is required";
