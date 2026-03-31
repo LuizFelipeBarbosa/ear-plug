@@ -12,6 +12,11 @@ const AUTH_APPEARANCE = {
   variables: {
     colorPrimary: "#f8fafc",
     colorTextOnPrimaryBackground: "#09090b",
+    colorText: "#f4f4f5",
+    colorTextSecondary: "#d4d4d8",
+    colorInputText: "#f4f4f5",
+    colorInputBackground: "rgba(255,255,255,0.08)",
+    colorNeutral: "rgba(255,255,255,0.16)",
   },
   elements: {
     rootBox: "w-full",
@@ -29,14 +34,18 @@ const AUTH_APPEARANCE = {
     formFieldInput:
       "h-12 w-full min-w-0 flex-1 basis-0 rounded-[18px] border border-white/15 bg-white/[0.08] px-4 text-zinc-50 placeholder:text-zinc-400 focus:border-white/35 focus:bg-white/[0.12] focus:ring-0",
     formFieldInputGroup: "flex w-full min-w-0 items-stretch overflow-hidden rounded-[18px]",
-    formInputGroup: "flex w-full min-w-0 items-stretch gap-2",
-    phoneInputBox: "flex w-full min-w-0 flex-1 items-stretch",
+    formInputGroup: "flex w-full min-w-0 items-stretch gap-0",
+    phoneInputBox:
+      "flex h-12 w-full min-w-0 items-stretch overflow-hidden rounded-[18px] border border-white/15 bg-white/[0.08] transition-colors focus-within:border-white/35 focus-within:bg-white/[0.12] [&_button]:h-full [&_button]:shrink-0 [&_button]:border-0 [&_button]:border-r [&_button]:border-white/10 [&_button]:bg-transparent [&_button]:px-3 [&_button]:text-zinc-200 [&_button_svg]:text-zinc-400 [&_input]:h-full [&_input]:min-w-0 [&_input]:flex-1 [&_input]:border-0 [&_input]:bg-transparent [&_input]:px-3 [&_input]:text-zinc-50 [&_input]:shadow-none [&_input]:placeholder:text-zinc-400 [&_input]:focus:ring-0",
     formButtonPrimary:
       "mt-1 h-12 rounded-[18px] bg-white text-zinc-950 font-semibold shadow-[0_18px_40px_rgba(255,255,255,0.16)] hover:bg-zinc-100",
     socialButtons: "mt-0.5 w-full space-y-2.5",
     socialButtonsBlockButton:
       "h-12 rounded-[18px] border border-white/15 bg-white/[0.06] text-zinc-100 shadow-none hover:bg-white/[0.12]",
     dividerRow: "my-3",
+    footer: "hidden",
+    footerAction: "hidden",
+    footerActionText: "hidden",
     footerActionLink: "font-medium text-white hover:text-zinc-200",
     dividerLine: "bg-white/12",
     dividerText:
