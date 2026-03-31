@@ -244,22 +244,22 @@ interface GigModalTabsProps {
 
 export function GigModalTabs({ activeTab, onChange }: GigModalTabsProps) {
   return (
-    <div className="mt-4 -mx-1 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-      <div className="flex min-w-max gap-2 px-1">
+    <div className="mt-4">
+      <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap">
         {GIG_MODAL_TABS.map((tab) => (
           <button
             key={tab.id}
             type="button"
             onClick={() => onChange(tab.id)}
             className={cn(
-              "flex shrink-0 items-center justify-center gap-1.5 rounded-full px-4 py-2 text-xs font-medium transition-all",
+              "flex min-w-0 items-center justify-center gap-1.5 rounded-full px-3 py-2 text-[11px] font-medium transition-all sm:px-4 sm:text-xs",
               activeTab === tab.id
                 ? "bg-band text-white shadow-sm shadow-band/20"
                 : "border border-border bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground",
             )}
           >
-            <tab.icon className="w-3.5 h-3.5" />
-            <span>{tab.label}</span>
+            <tab.icon className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">{tab.label}</span>
           </button>
         ))}
       </div>

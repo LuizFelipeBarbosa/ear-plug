@@ -389,7 +389,7 @@ export function EditGigModal({
           <GigModalTabs activeTab={activeTab} onChange={setActiveTab} />
         </div>
 
-        <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-24 pt-4 sm:pb-8">
+        <div className="flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-4 pb-24 pt-4 sm:pb-8">
           <div className="space-y-4">
             {submitError ? <GigModalErrorAlert message={submitError} /> : null}
 
