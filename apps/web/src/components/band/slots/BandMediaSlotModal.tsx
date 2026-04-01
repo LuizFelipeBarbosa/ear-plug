@@ -222,7 +222,7 @@ export function BandMediaSlotModal({ slot, onClose, onSave, onClear }: BandMedia
         {/* Media Preview */}
         <div
           className={cn(
-            "relative bg-black flex items-center justify-center",
+            "relative bg-black flex items-center justify-center overflow-hidden",
             slot.canEdit
               ? "min-h-[35vh] md:min-h-full md:flex-[3]"
               : "min-h-[70vh] max-h-[calc(90vh-2px)]"
@@ -252,7 +252,7 @@ export function BandMediaSlotModal({ slot, onClose, onSave, onClear }: BandMedia
                     setIsVideoPlaying(false);
                     setShowVideoControl(false);
                   }}
-                  className="h-full w-full object-cover"
+                  className="absolute inset-0 h-full w-full object-cover"
                 />
 
                 <button
