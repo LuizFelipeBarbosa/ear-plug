@@ -17,7 +17,6 @@ import {
   Youtube,
   ExternalLink,
   Sparkles,
-  Image as ImageIcon,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { api } from "../../../../../../../convex/_generated/api";
@@ -37,7 +36,7 @@ interface PageProps {
   params: { id: string };
 }
 
-type TabType = "overview" | "media" | "shows";
+type TabType = "overview" | "shows";
 
 // Animation variants
 const containerVariants = {
@@ -351,7 +350,6 @@ export default function BandFeedPage({ params }: PageProps) {
         <div className="flex items-center px-4">
           {[
             { id: "overview" as const, label: "Overview", icon: Sparkles },
-            { id: "media" as const, label: "Media", icon: ImageIcon },
             { id: "shows" as const, label: "Shows", icon: Calendar },
           ].map((tab) => (
             <button
@@ -381,13 +379,10 @@ export default function BandFeedPage({ params }: PageProps) {
       <main className="px-4 pt-4">
         <TabPanel isActive={activeTab === "overview"}>
             <OverviewTab
+              bandId={band._id}
               band={band}
               pastGigs={pastGigs ?? []}
-              followerCount={followerCount}
             />
-        </TabPanel>
-        <TabPanel isActive={activeTab === "media"}>
-          <MediaTab bandId={band._id} />
         </TabPanel>
         <TabPanel isActive={activeTab === "shows"}>
             <ShowsTab
@@ -423,13 +418,13 @@ function QuickStat({
 
 // Overview Tab
 function OverviewTab({
+  bandId,
   band,
   pastGigs,
-  followerCount,
 }: {
+  bandId: Id<"bands">;
   band: any;
   pastGigs: any[];
-  followerCount: number;
 }) {
   return (
     <motion.div
@@ -476,6 +471,14 @@ function OverviewTab({
         </motion.div>
       )}
 
+      <motion.div variants={itemVariants}>
+        <BandPublicMediaSlotsSection
+          bandId={bandId}
+          title="Photos & Videos"
+          description="Check out the band's latest photos and videos."
+        />
+      </motion.div>
+
       {/* Recent Shows Preview */}
       <motion.div variants={itemVariants}>
         <div className="flex items-center justify-between mb-3">
@@ -496,27 +499,6 @@ function OverviewTab({
           emptyMessage="No shows yet. Check back soon!"
           maxItems={4}
           tone="fan"
-        />
-      </motion.div>
-    </motion.div>
-  );
-}
-
-// Media Tab
-function MediaTab({ bandId }: { bandId: Id<"bands"> }) {
-  return (
-    <motion.div
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-      exit={{ opacity: 0, y: -10 }}
-      className="space-y-5"
-    >
-      <motion.div variants={itemVariants}>
-        <BandPublicMediaSlotsSection
-          bandId={bandId}
-          title="Photos & Videos"
-          description="Check out the band's latest photos and videos."
         />
       </motion.div>
     </motion.div>
