@@ -240,7 +240,7 @@ export function BandMediaSlotModal({ slot, onClose, onSave, onClear }: BandMedia
 
           {previewMediaUrl ? (
             previewMediaType === "video" ? (
-              <div className="relative flex h-full w-full items-center justify-center">
+              <div className="absolute inset-0 flex items-center justify-center">
                 <video
                   ref={videoRef}
                   src={previewMediaUrl}
@@ -361,7 +361,7 @@ export function BandMediaSlotModal({ slot, onClose, onSave, onClear }: BandMedia
 
         {/* Form Panel */}
         {slot.canEdit ? (
-          <div className="md:flex-[2] border-t md:border-t-0 md:border-l border-border p-5 flex flex-col gap-4 overflow-y-auto max-h-[50vh] md:max-h-none">
+          <div className="md:flex-[2] border-t md:border-t-0 md:border-l border-border p-4 flex flex-col gap-3 overflow-y-auto max-h-[50vh] md:max-h-none">
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <div className="w-8 h-8 bg-band/10 rounded-lg flex items-center justify-center">
@@ -391,7 +391,7 @@ export function BandMediaSlotModal({ slot, onClose, onSave, onClear }: BandMedia
                 }
                 placeholder="Add a short description..."
                 disabled={!slot.canEdit}
-                rows={3}
+                rows={2}
                 className={cn(
                   "w-full resize-none bg-muted/50 border border-border rounded-xl px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-band/50 focus:ring-2 focus:ring-band/10 transition-all",
                   !slot.canEdit && "opacity-70 cursor-not-allowed"
