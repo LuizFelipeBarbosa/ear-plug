@@ -25,7 +25,7 @@ import {
   ArrowRight,
   Bell,
 } from "lucide-react";
-import { useBandPastShows, useCurrentBand, useBandAnalytics } from "@/hooks/useBand";
+import { useBandShows, useCurrentBand, useBandAnalytics } from "@/hooks/useBand";
 import { useProfileContext } from "@/hooks/useProfileContext";
 import { useBandConversations } from "@/hooks/useMessages";
 import { useSuggestedVenues, useOpenDates } from "@/hooks/useVenues";
@@ -65,7 +65,7 @@ export function BandDashboard() {
     activeMembership?.membership.role === "owner" ||
     activeMembership?.membership.role === "admin";
 
-  const { pastShows, isLoading: isPastShowsLoading } = useBandPastShows(
+  const { shows: pastShows, isLoading: isPastShowsLoading } = useBandShows(
     bandWithStats?._id,
   );
 

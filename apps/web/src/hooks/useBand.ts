@@ -114,13 +114,13 @@ export function useBandAnalytics(bandId: Id<"bands"> | undefined) {
 /**
  * Hook for listing a band's past confirmed shows with flyer-ready display fields.
  */
-export function useBandPastShows(bandId: Id<"bands"> | undefined) {
+export function useBandShows(bandId: Id<"bands"> | undefined) {
   const events = useQuery(
     api.events.listByBand,
     bandId ? { bandId, includesPast: true } : "skip",
   );
 
-  const pastShows = (events ?? [])
+  const shows = (events ?? [])
     .filter(
       (
         event,
@@ -129,7 +129,6 @@ export function useBandPastShows(bandId: Id<"bands"> | undefined) {
       } =>
         typeof event.dateTime === "number" &&
         Number.isFinite(event.dateTime) &&
-        event.dateTime < Date.now() &&
         event.status === "confirmed",
     )
     .sort((a, b) => b.dateTime - a.dateTime)
@@ -143,7 +142,7 @@ export function useBandPastShows(bandId: Id<"bands"> | undefined) {
     }));
 
   return {
-    pastShows,
+    shows,
     isLoading: bandId !== undefined && events === undefined,
   };
 }

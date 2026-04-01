@@ -30,7 +30,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
-import { useBandPastShows, useCurrentBand } from "@/hooks/useBand";
+import { useBandShows, useCurrentBand } from "@/hooks/useBand";
 import { useProfileContext } from "@/hooks/useProfileContext";
 import { EditBandProfileModal } from "@/components/band/EditBandProfileModal";
 import { BandMediaSlotsSection } from "@/components/band/slots/BandMediaSlotsSection";
@@ -48,11 +48,11 @@ import { panelFade } from "@/lib/motion/presets";
 
 const PANEL_TRANSITION_MS = 250;
 
-type TabType = "overview" | "media" | "shows" | "settings";
+type TabType = "overview" | "shows" | "settings";
 
 export function BandProfileView() {
   const { band, bandWithStats, isLoading } = useCurrentBand();
-  const { pastShows, isLoading: isPastShowsLoading } = useBandPastShows(band?._id);
+  const { shows, isLoading: isShowsLoading } = useBandShows(band?._id);
   const [activeTab, setActiveTab] = useState<TabType>("overview");
   const [showEditModal, setShowEditModal] = useState(false);
   const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false);
@@ -441,7 +441,6 @@ export function BandProfileView() {
         <MobileTabRail
           items={[
             { id: "overview", label: "Overview", icon: Sparkles },
-            { id: "media", label: "Media", icon: ImageIcon },
             { id: "shows", label: "Shows", icon: Calendar },
             { id: "settings", label: "Settings", icon: Settings },
           ]}
@@ -458,17 +457,15 @@ export function BandProfileView() {
             <OverviewTab
               band={band}
               stats={stats}
-              pastShows={pastShows}
-              isPastShowsLoading={isPastShowsLoading}
+              shows={shows}
+              isShowsLoading={isShowsLoading}
+              canManageSlots={canEditBandProfile}
             />
-        </TabPanel>
-        <TabPanel isActive={activeTab === "media"}>
-          <MediaTab bandId={band._id} canManageSlots={canEditBandProfile} />
         </TabPanel>
         <TabPanel isActive={activeTab === "shows"}>
             <ShowsTab
-              pastShows={pastShows}
-              isPastShowsLoading={isPastShowsLoading}
+              shows={shows}
+              isShowsLoading={isShowsLoading}
             />
         </TabPanel>
         <TabPanel isActive={activeTab === "settings"}>
@@ -911,17 +908,18 @@ function QuickStat({
   );
 }
 
-// Overview Tab
 function OverviewTab({
   band,
   stats,
-  pastShows,
-  isPastShowsLoading,
+  shows,
+  isShowsLoading,
+  canManageSlots,
 }: {
   band: any;
   stats: any;
-  pastShows: any[];
-  isPastShowsLoading: boolean;
+  shows: any[];
+  isShowsLoading: boolean;
+  canManageSlots: boolean;
 }) {
   return (
     <motion.div
@@ -968,41 +966,29 @@ function OverviewTab({
         </div>
       )}
 
+      {/* Media Slots */}
+      <div>
+        <BandMediaSlotsSection
+          bandId={band._id}
+          canManageSlots={canManageSlots}
+          title="Media"
+          description="Showcase your band with up to 6 photos and videos. Drag to reorder."
+        />
+      </div>
+
       {/* Recent Shows Preview */}
       <div>
         <div className="flex items-center justify-between mb-3">
           <SectionTitle icon={Calendar} title="Recent Shows" className="mb-0" />
-          {pastShows.length > 0 && (
-            <span className="text-xs text-muted-foreground">{pastShows.length} total</span>
+          {shows && shows.length > 0 && (
+            <span className="text-xs text-muted-foreground">{shows.length} total</span>
           )}
         </div>
         <PastShowFlyerSection
-          shows={pastShows.slice(0, 4)}
-          emptyMessage="No past shows yet. Start creating events!"
-          isLoading={isPastShowsLoading}
+          shows={shows ? shows.slice(0, 4) : []}
+          emptyMessage="No shows yet. Start creating events!"
+          isLoading={isShowsLoading}
           tone="band"
-        />
-      </div>
-    </motion.div>
-  );
-}
-
-// Media Tab
-function MediaTab({ bandId, canManageSlots }: { bandId: Id<"bands">; canManageSlots: boolean }) {
-  return (
-    <motion.div
-      variants={panelFade}
-      initial="hidden"
-      animate="visible"
-      exit="exit"
-      className="space-y-5"
-    >
-      <div>
-        <BandMediaSlotsSection
-          bandId={bandId}
-          canManageSlots={canManageSlots}
-          title="Photos & Videos"
-          description="Showcase your band with up to 6 photos and videos. Drag to reorder."
         />
       </div>
     </motion.div>
@@ -1011,11 +997,11 @@ function MediaTab({ bandId, canManageSlots }: { bandId: Id<"bands">; canManageSl
 
 // Shows Tab
 function ShowsTab({
-  pastShows,
-  isPastShowsLoading,
+  shows,
+  isShowsLoading,
 }: {
-  pastShows: any[];
-  isPastShowsLoading: boolean;
+  shows: any[];
+  isShowsLoading: boolean;
 }) {
   return (
     <motion.div
@@ -1027,15 +1013,15 @@ function ShowsTab({
     >
       <div>
         <div className="flex items-center justify-between mb-3">
-          <SectionTitle icon={Ticket} title="Show History" className="mb-0" />
-          {pastShows.length > 0 && (
-            <Badge variant="highlight">{pastShows.length} shows</Badge>
+          <SectionTitle icon={Ticket} title="Shows" className="mb-0" />
+          {shows && shows.length > 0 && (
+            <Badge variant="highlight">{shows.length} shows</Badge>
           )}
         </div>
         <PastShowFlyerSection
-          shows={pastShows}
-          emptyMessage="No past shows yet. Start creating events to build your history!"
-          isLoading={isPastShowsLoading}
+          shows={shows}
+          emptyMessage="No shows yet. Start creating events to build your history!"
+          isLoading={isShowsLoading}
           tone="band"
         />
       </div>
