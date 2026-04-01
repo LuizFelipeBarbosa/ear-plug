@@ -41,6 +41,7 @@ import {
 } from "@/components/fan/profile/FanProfilePrimitives";
 import { AccountManagementPanel } from "@/components/profile/AccountManagementPanel";
 import { ProfileWorkspaceSwitcher } from "@/components/profile/ProfileWorkspaceSwitcher";
+import { useSocialOAuth } from "@/hooks/useSocialOAuth";
 import { GENRE_COLORS } from "@ear-plug/shared/constants";
 import {
   composePersonalName,
@@ -851,7 +852,6 @@ function SettingsTab({
   onOpenWorkspaceMenu: () => void;
   pendingInvitesCount: number;
 }) {
-  const { user: clerkUser } = useUser();
   const spotifyPersonalization = useQuery(api.spotify.getSpotifyPersonalization);
   const syncSpotifyPersonalization = useAction(
     api.spotify.syncSpotifyPersonalization,
@@ -859,6 +859,7 @@ function SettingsTab({
   const clearSpotifyPersonalization = useMutation(
     api.spotify.clearSpotifyPersonalization,
   );
+  const { startSocialOAuth } = useSocialOAuth();
   const [isSyncingSpotify, setIsSyncingSpotify] = useState(false);
   const [isClearingSpotify, setIsClearingSpotify] = useState(false);
   const [isRepairingSpotify, setIsRepairingSpotify] = useState(false);
@@ -910,39 +911,20 @@ function SettingsTab({
   }, [clearSpotifyPersonalization]);
 
   const handleRepairSpotifyAccess = useCallback(async () => {
-    if (!clerkUser) {
-      return;
-    }
-
     setSpotifyError(null);
     setSpotifyErrorCode(null);
     setSpotifyNotice(null);
     setIsRepairingSpotify(true);
 
     try {
-      const spotifyAccount = clerkUser.externalAccounts.find(
-        (account) => account.provider === "spotify",
-      );
-
-      if (spotifyAccount) {
-        await spotifyAccount.reauthorize({
-          redirectUrl: "/sso-callback",
-          additionalScopes: ["user-top-read", "user-follow-read"],
-        });
-      } else {
-        await clerkUser.createExternalAccount({
-          strategy: "oauth_spotify",
-          redirectUrl: "/sso-callback",
-          additionalScopes: ["user-top-read", "user-follow-read"],
-        });
-      }
+      await startSocialOAuth({ provider: "spotify" });
     } catch (error) {
       setSpotifyError(
         getActionErrorMessage(error, "We couldn't refresh Spotify access right now."),
       );
       setIsRepairingSpotify(false);
     }
-  }, [clerkUser]);
+  }, [startSocialOAuth]);
 
   const hasSpotifyPersonalization =
     spotifyPersonalization !== undefined && spotifyPersonalization !== null;

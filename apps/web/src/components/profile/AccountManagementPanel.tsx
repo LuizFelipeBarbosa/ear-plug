@@ -4,12 +4,13 @@ import { useMemo, useState } from "react";
 import Image from "next/image";
 import { SignOutButton, useUser } from "@clerk/nextjs";
 import { useAction } from "convex/react";
-import { Loader2, ShieldCheck } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { api } from "../../../../../convex/_generated/api";
+import { useSocialOAuth } from "@/hooks/useSocialOAuth";
+import { type SocialProvider } from "@/lib/auth/sso";
 import { getConvexErrorMessage } from "@/lib/convexErrors";
 import { cn } from "@/lib/utils";
 
-type SocialProvider = "spotify" | "google";
 type ProviderAction = "connect" | "unlink";
 
 const PROVIDERS: Array<{
@@ -138,6 +139,7 @@ function ProviderLogo({
 export function AccountManagementPanel() {
   const { isLoaded, user } = useUser();
   const unlinkExternalAccount = useAction(api.users.unlinkExternalAccount);
+  const { startSocialOAuth } = useSocialOAuth();
   const [providerError, setProviderError] = useState<string | null>(null);
   const [providerNotice, setProviderNotice] = useState<string | null>(null);
   const [activeProviderAction, setActiveProviderAction] = useState<{
@@ -175,13 +177,7 @@ export function AccountManagementPanel() {
     setActiveProviderAction({ provider, action: "connect" });
 
     try {
-      await user.createExternalAccount({
-        strategy: `oauth_${provider}`,
-        redirectUrl: "/sso-callback",
-        ...(provider === "spotify"
-          ? { additionalScopes: ["user-top-read", "user-follow-read"] }
-          : {}),
-      });
+      await startSocialOAuth({ provider });
     } catch (error) {
       setProviderError(
         getClerkErrorMessage(error, `We couldn't start the ${provider} connection flow.`),
@@ -364,36 +360,15 @@ export function AccountManagementPanel() {
             </div>
           </div>
         </div>
+        <SignOutButton redirectUrl="/">
+          <button
+            type="button"
+            className="mt-5 inline-flex w-full items-center justify-center rounded-[22px] border border-border bg-background px-5 py-4 text-base font-semibold text-foreground transition-colors hover:border-red-500/30 hover:text-red-500"
+          >
+            Sign out
+          </button>
+        </SignOutButton>
       </section>
-
-      <div className="ml-auto grid max-w-[36rem] gap-5">
-        <section className="rounded-[30px] border border-border bg-card/95 p-5 shadow-soft sm:p-6">
-            <div className="flex items-center gap-3">
-              <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-border bg-muted dark:border-white/10 dark:bg-white/[0.04]">
-                <ShieldCheck className="h-4 w-4 text-foreground" />
-              </span>
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
-                  Session
-                </p>
-                <h2 className="text-2xl font-semibold text-foreground">Sign out</h2>
-              </div>
-            </div>
-
-            <p className="mt-4 text-sm leading-6 text-muted-foreground">
-              End this session and return to the custom EarPlug sign-in screen.
-            </p>
-
-            <SignOutButton redirectUrl="/">
-              <button
-                type="button"
-                className="mt-5 inline-flex w-full items-center justify-center rounded-[18px] border border-border bg-background px-4 py-3 text-sm font-semibold text-foreground transition-colors hover:border-red-500/30 hover:text-red-500"
-              >
-                Sign out
-              </button>
-            </SignOutButton>
-        </section>
-      </div>
     </div>
   );
 }

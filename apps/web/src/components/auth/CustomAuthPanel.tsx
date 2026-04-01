@@ -2,13 +2,14 @@
 
 import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { useSignIn, useSignUp } from "@clerk/nextjs";
+import { useAuth, useSignIn, useSignUp } from "@clerk/nextjs";
 import { ArrowRight, Loader2, Phone, ShieldCheck } from "lucide-react";
 import { BrandMark } from "@/components/branding/BrandLogo";
 import { ResponsiveSheetModal } from "@/components/ui/ResponsiveSheetModal";
+import { useSocialOAuth } from "@/hooks/useSocialOAuth";
+import { type SocialProvider } from "@/lib/auth/sso";
 import { cn } from "@/lib/utils";
 
-type SocialProvider = "google" | "spotify";
 type PhoneFlowKind = "sign-in" | "sign-up";
 const E164_REGEX = /^\+[1-9]\d{9,14}$/;
 
@@ -297,8 +298,13 @@ function ProviderButton({
   );
 }
 
-export function CustomAuthPanel() {
+export function CustomAuthPanel({
+  externalNotice = null,
+}: {
+  externalNotice?: string | null;
+}) {
   const router = useRouter();
+  const { isSignedIn } = useAuth();
   const {
     isLoaded: isSignInLoaded,
     signIn,
@@ -309,6 +315,7 @@ export function CustomAuthPanel() {
     signUp,
     setActive: setActiveSignUp,
   } = useSignUp();
+  const { startSocialOAuth } = useSocialOAuth();
 
   const [phoneNumber, setPhoneNumber] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
@@ -361,22 +368,12 @@ export function CustomAuthPanel() {
   };
 
   const handleSocialAuth = async (provider: SocialProvider) => {
-    if (!isSignInLoaded || !signIn) {
-      return;
-    }
-
     setError(null);
     setNotice(null);
     setOauthLoadingProvider(provider);
 
     try {
-      await signIn.authenticateWithRedirect({
-        strategy: `oauth_${provider}`,
-        redirectUrl: "/sso-callback",
-        redirectUrlComplete: "/",
-        continueSignIn: true,
-        continueSignUp: true,
-      });
+      await startSocialOAuth({ provider });
     } catch (caughtError) {
       setError(
         getClerkErrorMessage(
@@ -384,6 +381,7 @@ export function CustomAuthPanel() {
           `We couldn't start ${provider} sign-in right now.`,
         ),
       );
+    } finally {
       setOauthLoadingProvider(null);
     }
   };
@@ -578,44 +576,48 @@ export function CustomAuthPanel() {
               />
             </div>
 
-            <div className="my-6 flex items-center gap-4">
-              <div className="h-px flex-1 bg-white/10" />
-              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-zinc-500">
-                Or continue with phone
-              </p>
-              <div className="h-px flex-1 bg-white/10" />
-            </div>
+            {!isSignedIn ? (
+              <>
+                <div className="my-6 flex items-center gap-4">
+                  <div className="h-px flex-1 bg-white/10" />
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-zinc-500">
+                    Or continue with phone
+                  </p>
+                  <div className="h-px flex-1 bg-white/10" />
+                </div>
 
-            <div className="space-y-4">
-              <AuthField
-                label="Phone Number"
-                value={phoneNumber}
-                onChange={(value) => setPhoneNumber(formatPhoneNumberInput(value))}
-                placeholder="(415) 555-0123"
-                autoComplete="tel"
-                type="tel"
-                inputMode="tel"
-                icon={<Phone className="h-4 w-4" />}
-              />
-              <button
-                type="button"
-                onClick={() => void handleSendPhoneCode()}
-                disabled={isSubmitting || oauthLoadingProvider !== null}
-                className={cn(
-                  "flex w-full items-center justify-center gap-2 rounded-[20px] bg-white px-4 py-3.5 text-sm font-semibold text-zinc-950 transition-colors",
-                  isSubmitting || oauthLoadingProvider !== null
-                    ? "cursor-not-allowed opacity-70"
-                    : "hover:bg-zinc-200",
-                )}
-              >
-                {isSubmitting ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <ArrowRight className="h-4 w-4" />
-                )}
-                Send confirmation code
-              </button>
-            </div>
+                <div className="space-y-4">
+                  <AuthField
+                    label="Phone Number"
+                    value={phoneNumber}
+                    onChange={(value) => setPhoneNumber(formatPhoneNumberInput(value))}
+                    placeholder="(415) 555-0123"
+                    autoComplete="tel"
+                    type="tel"
+                    inputMode="tel"
+                    icon={<Phone className="h-4 w-4" />}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void handleSendPhoneCode()}
+                    disabled={isSubmitting || oauthLoadingProvider !== null}
+                    className={cn(
+                      "flex w-full items-center justify-center gap-2 rounded-[20px] bg-white px-4 py-3.5 text-sm font-semibold text-zinc-950 transition-colors",
+                      isSubmitting || oauthLoadingProvider !== null
+                        ? "cursor-not-allowed opacity-70"
+                        : "hover:bg-zinc-200",
+                    )}
+                  >
+                    {isSubmitting ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <ArrowRight className="h-4 w-4" />
+                    )}
+                    Send confirmation code
+                  </button>
+                </div>
+              </>
+            ) : null}
 
             {!pendingPhoneFlow && notice ? (
               <div className="mt-4 rounded-[20px] border border-emerald-500/20 bg-emerald-500/10 px-4 py-3">
@@ -626,6 +628,12 @@ export function CustomAuthPanel() {
             {!pendingPhoneFlow && error ? (
               <div className="mt-4 rounded-[20px] border border-red-500/25 bg-red-500/10 px-4 py-3">
                 <p className="text-sm text-red-200">{error}</p>
+              </div>
+            ) : null}
+
+            {!pendingPhoneFlow && !notice && !error && externalNotice ? (
+              <div className="mt-4 rounded-[20px] border border-white/[0.08] bg-white/[0.04] px-4 py-3">
+                <p className="text-sm text-zinc-200">{externalNotice}</p>
               </div>
             ) : null}
 

@@ -1,0 +1,154 @@
+"use client";
+
+export type SocialProvider = "google" | "spotify";
+export type PendingSsoIntentKind = "sign_in" | "link_provider";
+
+export interface PendingSsoIntent {
+  kind: PendingSsoIntentKind;
+  provider: SocialProvider;
+  returnTo: string;
+  createdAt: number;
+}
+
+type SearchParamsLike = Pick<URLSearchParams, "toString"> | null | undefined;
+
+const PENDING_SSO_INTENT_KEY = "earplug.pending_sso_intent";
+const PENDING_SSO_MAX_AGE_MS = 10 * 60 * 1000;
+const SPOTIFY_SCOPES = ["user-top-read", "user-follow-read"] as const;
+
+export function getSocialProviderLabel(provider: SocialProvider): string {
+  return provider === "google" ? "Google" : "Spotify";
+}
+
+export function getSocialStrategy(
+  provider: SocialProvider,
+): "oauth_google" | "oauth_spotify" {
+  return `oauth_${provider}`;
+}
+
+export function getSocialScopes(provider: SocialProvider): string[] | undefined {
+  return provider === "spotify" ? [...SPOTIFY_SCOPES] : undefined;
+}
+
+export function getCurrentPathWithSearch(
+  pathname: string,
+  searchParams: SearchParamsLike,
+): string {
+  const normalizedPathname = pathname || "/";
+  const query = searchParams?.toString();
+
+  return query ? `${normalizedPathname}?${query}` : normalizedPathname;
+}
+
+export function resolveSocialOauthReturnTo(
+  pathname: string,
+  searchParams: SearchParamsLike,
+  isSignedIn: boolean,
+): string {
+  const currentPath = getCurrentPathWithSearch(pathname, searchParams);
+
+  if (isSignedIn) {
+    return currentPath === "/sso-callback" ? "/sign-in" : currentPath;
+  }
+
+  if (
+    pathname === "/sign-in" ||
+    pathname === "/sign-up" ||
+    pathname === "/sso-callback"
+  ) {
+    return "/";
+  }
+
+  return currentPath;
+}
+
+export function persistPendingSsoIntent(
+  intent: Omit<PendingSsoIntent, "createdAt">,
+): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const payload: PendingSsoIntent = {
+    ...intent,
+    createdAt: Date.now(),
+  };
+
+  window.sessionStorage.setItem(PENDING_SSO_INTENT_KEY, JSON.stringify(payload));
+}
+
+export function readPendingSsoIntent(): PendingSsoIntent | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const rawValue = window.sessionStorage.getItem(PENDING_SSO_INTENT_KEY);
+  if (!rawValue) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(rawValue);
+
+    if (!isPendingSsoIntent(parsed)) {
+      clearPendingSsoIntent();
+      return null;
+    }
+
+    if (Date.now() - parsed.createdAt > PENDING_SSO_MAX_AGE_MS) {
+      clearPendingSsoIntent();
+      return null;
+    }
+
+    return parsed;
+  } catch {
+    clearPendingSsoIntent();
+    return null;
+  }
+}
+
+export function clearPendingSsoIntent(): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.sessionStorage.removeItem(PENDING_SSO_INTENT_KEY);
+}
+
+export function getExternalVerificationRedirectUrl(resource: unknown): string | null {
+  if (typeof resource !== "object" || resource === null) {
+    return null;
+  }
+
+  const verification = (
+    resource as {
+      verification?: { externalVerificationRedirectURL?: unknown } | null;
+    }
+  ).verification;
+
+  if (
+    verification &&
+    typeof verification.externalVerificationRedirectURL === "string" &&
+    verification.externalVerificationRedirectURL.length > 0
+  ) {
+    return verification.externalVerificationRedirectURL;
+  }
+
+  return null;
+}
+
+function isPendingSsoIntent(value: unknown): value is PendingSsoIntent {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+
+  const candidate = value as Partial<PendingSsoIntent>;
+
+  return (
+    (candidate.kind === "sign_in" || candidate.kind === "link_provider") &&
+    (candidate.provider === "google" || candidate.provider === "spotify") &&
+    typeof candidate.returnTo === "string" &&
+    candidate.returnTo.length > 0 &&
+    typeof candidate.createdAt === "number"
+  );
+}
