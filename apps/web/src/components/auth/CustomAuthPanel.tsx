@@ -374,6 +374,8 @@ export function CustomAuthPanel() {
         strategy: `oauth_${provider}`,
         redirectUrl: "/sso-callback",
         redirectUrlComplete: "/",
+        continueSignIn: true,
+        continueSignUp: true,
       });
     } catch (caughtError) {
       setError(

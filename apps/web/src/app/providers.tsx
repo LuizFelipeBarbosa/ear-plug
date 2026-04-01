@@ -13,6 +13,10 @@ export function Providers({ children }: { children: ReactNode }) {
     <ClerkProvider
       publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY!}
       appearance={WEB_AUTH_CLERK_APPEARANCE}
+      signInUrl="/"
+      signUpUrl="/"
+      signInFallbackRedirectUrl="/"
+      signUpFallbackRedirectUrl="/"
     >
       <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
         <MotionConfig reducedMotion="user" transition={motionConfigTransition}>
