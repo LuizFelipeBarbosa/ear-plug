@@ -16,7 +16,7 @@ import {
   Users,
   Zap,
 } from "lucide-react";
-import { motion, AnimatePresence, type Variants } from "framer-motion";
+import { motion, type Variants } from "framer-motion";
 import { api } from "../../../../../../../convex/_generated/api";
 import type { Id } from "../../../../../../../convex/_generated/dataModel";
 import { PastShowFlyerSection } from "@/components/events/PastShowFlyerSection";
@@ -31,6 +31,7 @@ import { getInitials } from "@ear-plug/shared/utils";
 import type { Genre } from "@ear-plug/shared/types";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
+import { TabPanel } from "@/components/ui/TabPanel";
 
 interface PageProps {
   params: { id: string };
@@ -205,29 +206,24 @@ export default function PublicFanProfilePage({ params }: PageProps) {
 
       {/* Tab Content */}
       <main className="px-4 pt-4">
-        <AnimatePresence mode="wait">
-          {activeTab === "overview" && (
+        <TabPanel isActive={activeTab === "overview"}>
             <OverviewTab
-              key="overview"
               gigDna={gigDna}
               topGenres={topGenres}
               pastShows={pastShows}
             />
-          )}
-          {activeTab === "saved" && (
+        </TabPanel>
+        <TabPanel isActive={activeTab === "saved"}>
             <SavedTab
-              key="saved"
               savedArtists={savedArtists}
               mostViewedSavedArtists={mostViewedSavedArtists}
             />
-          )}
-          {activeTab === "activity" && (
+        </TabPanel>
+        <TabPanel isActive={activeTab === "activity"}>
             <ActivityTab
-              key="activity"
               pastShows={pastShows}
             />
-          )}
-        </AnimatePresence>
+        </TabPanel>
       </main>
     </div>
   );

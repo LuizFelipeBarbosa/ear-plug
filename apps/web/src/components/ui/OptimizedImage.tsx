@@ -32,11 +32,14 @@ export function OptimizedImage({
     <div
       className={cn("relative overflow-hidden", aspectRatioClass, className)}
     >
-      {" "}
-      {/* Loading skeleton */}{" "}
-      {showLoadingState && isLoading && (
-        <div className="absolute inset-0 bg-muted animate-shimmer" />
-      )}{" "}
+      {showLoadingState && !hasError && (
+        <div
+          className={cn(
+            "absolute inset-0 bg-muted pointer-events-none transition-opacity duration-200",
+            isLoading ? "opacity-100 animate-shimmer" : "opacity-0",
+          )}
+        />
+      )}
       <Image
         {...props}
         alt={alt}
@@ -50,10 +53,12 @@ export function OptimizedImage({
           setIsLoading(false);
           setHasError(true);
         }}
-      />{" "}
+      />
     </div>
   );
-} // Avatar with fallback initials
+}
+
+// Avatar with fallback initials
 interface AvatarImageProps {
   src?: string | null;
   alt: string;
@@ -87,18 +92,18 @@ export function AvatarImage({
       )}
       style={{ width: size, height: size }}
     >
-      {" "}
       {showFallback ? (
         <div className="w-full h-full flex items-center justify-center text-foreground font-bold">
-          {" "}
-          <span style={{ fontSize: size * 0.4 }}>{initials}</span>{" "}
+          <span style={{ fontSize: size * 0.4 }}>{initials}</span>
         </div>
       ) : (
         <>
-          {" "}
-          {isLoading && (
-            <div className="absolute inset-0 bg-muted animate-shimmer" />
-          )}{" "}
+          <div
+            className={cn(
+              "absolute inset-0 bg-muted pointer-events-none transition-opacity duration-200",
+              isLoading ? "opacity-100 animate-shimmer" : "opacity-0",
+            )}
+          />
           <Image
             src={src}
             alt={alt}
@@ -113,12 +118,14 @@ export function AvatarImage({
               setIsLoading(false);
               setHasError(true);
             }}
-          />{" "}
+          />
         </>
-      )}{" "}
+      )}
     </div>
   );
-} // Event image with gradient fallback
+}
+
+// Event image with gradient fallback
 interface EventImageProps {
   src?: string | null;
   alt: string;
@@ -135,16 +142,20 @@ export function EventImage({
   const [isLoading, setIsLoading] = useState(true);
   return (
     <div className={cn("relative overflow-hidden", className)}>
-      {" "}
-      {/* Fallback gradient */}{" "}
+      {/* Fallback gradient */}
       {(!src || hasError) && (
         <div className="absolute inset-0 bg-gradient-to-br from-zinc-200 to-zinc-400 dark:from-zinc-700 dark:to-zinc-500" />
-      )}{" "}
-      {/* Loading state */}{" "}
-      {src && !hasError && isLoading && (
-        <div className="absolute inset-0 bg-muted animate-shimmer" />
-      )}{" "}
-      {/* Actual image */}{" "}
+      )}
+      {/* Loading state */}
+      {src && !hasError && (
+        <div
+          className={cn(
+            "absolute inset-0 bg-muted pointer-events-none transition-opacity duration-200",
+            isLoading ? "opacity-100 animate-shimmer" : "opacity-0",
+          )}
+        />
+      )}
+      {/* Actual image */}
       {src && !hasError && (
         <Image
           src={src}
@@ -162,7 +173,7 @@ export function EventImage({
             setHasError(true);
           }}
         />
-      )}{" "}
+      )}
     </div>
   );
 }

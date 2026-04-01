@@ -130,13 +130,33 @@
       oklch(var(--muted)) 100%
     );
     background-size: 200% 100%;
-    animation: shimmer 1.5s linear infinite;
+    opacity: 0;
+    will-change: opacity, background-position;
+    animation:
+      loading-fade-in 180ms ease-out 120ms both,
+      shimmer 1.5s linear 120ms infinite;
   }
   .animate-pulse-fan {
-    animation: pulse-fan 1.6s ease-in-out infinite;
+    opacity: 0;
+    will-change: opacity, box-shadow;
+    animation:
+      loading-fade-in 180ms ease-out 120ms both,
+      pulse-fan 1.6s ease-in-out 120ms infinite;
   }
   .animate-pulse-band {
-    animation: pulse-band 1.6s ease-in-out infinite;
+    opacity: 0;
+    will-change: opacity, box-shadow;
+    animation:
+      loading-fade-in 180ms ease-out 120ms both,
+      pulse-band 1.6s ease-in-out 120ms infinite;
+  }
+}
+@keyframes loading-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
 @keyframes shimmer {
@@ -183,6 +203,12 @@
   .animate-spin,
   .animate-ping {
     animation: none !important;
+  }
+
+  .animate-shimmer,
+  .animate-pulse-fan,
+  .animate-pulse-band {
+    opacity: 1 !important;
   }
 }
 @media screen and (max-width: 768px) {

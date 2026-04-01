@@ -29,6 +29,7 @@ import { useSavedBands } from "@/hooks/useBand";
 import { useProfileContext } from "@/hooks/useProfileContext";
 import { EditProfileModal } from "@/components/ui/EditProfileModal";
 import { MobileTabRail } from "@/components/ui/MobileTabRail";
+import { TabPanel } from "@/components/ui/TabPanel";
 import { ThemeToggleRow } from "@/components/ui/ThemeToggle";
 import { CreateBandForm } from "@/components/band/CreateBandForm";
 import { PastShowFlyerSection } from "@/components/events/PastShowFlyerSection";
@@ -52,7 +53,7 @@ import {
 } from "@ear-plug/shared/utils";
 import type { Genre } from "@ear-plug/shared/types";
 import { cn } from "@/lib/utils";
-import { panelFade, presenceSyncNoInitial } from "@/lib/motion/presets";
+import { panelFade } from "@/lib/motion/presets";
 import { uploadToConvexStorage } from "@/lib/convexUpload";
 import type { GigDnaTier } from "@/lib/gigDnaEvolution";
 
@@ -373,34 +374,28 @@ export function FanProfileView() {
 
       {/* Tab Content */}
       <main className="px-4 pt-4">
-        <AnimatePresence {...presenceSyncNoInitial}>
-          {activeTab === "overview" && (
+        <TabPanel isActive={activeTab === "overview"}>
             <OverviewTab
-              key="overview"
               publicProfile={publicProfile}
               onOpenGigDnaModal={openGigDnaModal}
             />
-          )}
-          {activeTab === "saved" && (
+        </TabPanel>
+        <TabPanel isActive={activeTab === "saved"}>
             <SavedTab
-              key="saved"
               publicProfile={publicProfile}
             />
-          )}
-          {activeTab === "activity" && (
+        </TabPanel>
+        <TabPanel isActive={activeTab === "activity"}>
             <ActivityTab
-              key="activity"
               publicProfile={publicProfile}
             />
-          )}
-          {activeTab === "settings" && (
+        </TabPanel>
+        <TabPanel isActive={activeTab === "settings"}>
             <SettingsTab
-              key="settings"
               onOpenWorkspaceMenu={openWorkspaceMenu}
               pendingInvitesCount={pendingInvites.length}
             />
-          )}
-        </AnimatePresence>
+        </TabPanel>
       </main>
 
       {/* Workspace Menu Overlay */}

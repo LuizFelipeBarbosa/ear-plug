@@ -17,9 +17,10 @@ import { useQuery } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import { EventCard } from "@/components/events/EventCard";
 import { MobileTabRail } from "@/components/ui/MobileTabRail";
-import { motion, AnimatePresence } from "framer-motion";
+import { TabPanel } from "@/components/ui/TabPanel";
+import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { panelFade, presenceSyncNoInitial } from "@/lib/motion/presets";
+import { panelFade } from "@/lib/motion/presets";
 import { formatEventDate, formatEventTime } from "@ear-plug/shared/constants";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 
@@ -41,6 +42,39 @@ interface CalendarEvent {
   attendedAt?: number;
 }
 
+function groupEventsByMonth(
+  events: CalendarEvent[] | undefined,
+  activeTab: EventTab,
+): Record<string, CalendarEvent[]> {
+  if (!events) {
+    return {};
+  }
+
+  const grouped: Record<string, CalendarEvent[]> = {};
+  events.forEach((event) => {
+    if (!event.dateTime) return;
+    const date = new Date(event.dateTime);
+    const monthKey = date.toLocaleDateString("en-US", {
+      month: "long",
+      year: "numeric",
+    });
+    if (!grouped[monthKey]) {
+      grouped[monthKey] = [];
+    }
+    grouped[monthKey].push(event);
+  });
+
+  return Object.fromEntries(
+    Object.entries(grouped).sort((a, b) => {
+      const dateA = new Date(a[1][0]?.dateTime || 0);
+      const dateB = new Date(b[1][0]?.dateTime || 0);
+      return activeTab === "past"
+        ? dateB.getTime() - dateA.getTime()
+        : dateA.getTime() - dateB.getTime();
+    }),
+  );
+}
+
 export function FanCalendarView() {
   const [activeTab, setActiveTab] = useState<EventTab>("upcoming");
 
@@ -51,10 +85,6 @@ export function FanCalendarView() {
   const isLoading =
     rsvps === undefined || likedEvents === undefined || pastRsvps === undefined;
 
-  // Get current tab data
-  const currentEvents =
-    activeTab === "upcoming" ? rsvps : activeTab === "saved" ? likedEvents : pastRsvps;
-
   // Calculate stats
   const stats = useMemo(() => {
     return {
@@ -63,34 +93,6 @@ export function FanCalendarView() {
       past: pastRsvps?.length || 0,
     };
   }, [rsvps, likedEvents, pastRsvps]);
-
-  // Group events by month
-  const groupedEvents = useMemo(() => {
-    if (!currentEvents) return {};
-
-    const grouped: Record<string, CalendarEvent[]> = {};
-    currentEvents.forEach((event: CalendarEvent) => {
-      if (!event.dateTime) return;
-      const date = new Date(event.dateTime);
-      const monthKey = date.toLocaleDateString("en-US", {
-        month: "long",
-        year: "numeric",
-      });
-      if (!grouped[monthKey]) {
-        grouped[monthKey] = [];
-      }
-      grouped[monthKey].push(event);
-    });
-
-    // Sort months chronologically
-    return Object.fromEntries(
-      Object.entries(grouped).sort((a, b) => {
-        const dateA = new Date(a[1][0]?.dateTime || 0);
-        const dateB = new Date(b[1][0]?.dateTime || 0);
-        return activeTab === "past" ? dateB.getTime() - dateA.getTime() : dateA.getTime() - dateB.getTime();
-      })
-    );
-  }, [currentEvents, activeTab]);
 
   // Get next upcoming event for the hero card
   const nextEvent = useMemo(() => {
@@ -236,55 +238,87 @@ export function FanCalendarView() {
 
       {/* Events List */}
       <main className="px-4 pt-4">
-        <AnimatePresence {...presenceSyncNoInitial}>
-          {isLoading ? (
-            <LoadingState key="loading" />
-          ) : currentEvents && currentEvents.length > 0 ? (
-            <motion.div
-              key={activeTab}
-              variants={panelFade}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              className="space-y-6"
-            >
-              {Object.entries(groupedEvents).map(([month, monthEvents]) => (
-                <div key={month}>
-                  {/* Month Header */}
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-8 h-8 bg-fan/10 border border-fan/20 rounded-lg flex items-center justify-center">
-                      <Calendar className="w-4 h-4 text-fan" />
-                    </div>
-                    <h2 className="text-sm font-semibold text-foreground">
-                      {month}
-                    </h2>
-                    <div className="flex-1 h-px bg-border" />
-                    <span className="text-xs text-muted-foreground">
-                      {monthEvents.length} event{monthEvents.length !== 1 ? "s" : ""}
-                    </span>
-                  </div>
-
-                  {/* Events for this month */}
-                  <div className="space-y-3">
-                    {monthEvents.map((event) => (
-                      <div key={event._id}>
-                        <EventCard
-                          event={event}
-                          showAttendanceStatus={activeTab === "past"}
-                          variant="default"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </motion.div>
-          ) : (
-            <EmptyState key="empty" activeTab={activeTab} />
-          )}
-        </AnimatePresence>
+        <TabPanel isActive={activeTab === "upcoming"}>
+          <CalendarTabContent
+            activeTab="upcoming"
+            events={rsvps}
+            isLoading={isLoading}
+          />
+        </TabPanel>
+        <TabPanel isActive={activeTab === "saved"}>
+          <CalendarTabContent
+            activeTab="saved"
+            events={likedEvents}
+            isLoading={isLoading}
+          />
+        </TabPanel>
+        <TabPanel isActive={activeTab === "past"}>
+          <CalendarTabContent
+            activeTab="past"
+            events={pastRsvps}
+            isLoading={isLoading}
+          />
+        </TabPanel>
       </main>
     </div>
+  );
+}
+
+function CalendarTabContent({
+  activeTab,
+  events,
+  isLoading,
+}: {
+  activeTab: EventTab;
+  events: CalendarEvent[] | undefined;
+  isLoading: boolean;
+}) {
+  if (isLoading) {
+    return <LoadingState />;
+  }
+
+  if (!events || events.length === 0) {
+    return <EmptyState activeTab={activeTab} />;
+  }
+
+  const groupedEvents = groupEventsByMonth(events, activeTab);
+
+  return (
+    <motion.div
+      variants={panelFade}
+      initial="hidden"
+      animate="visible"
+      className="space-y-6"
+    >
+      {Object.entries(groupedEvents).map(([month, monthEvents]) => (
+        <div key={month}>
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-8 h-8 bg-fan/10 border border-fan/20 rounded-lg flex items-center justify-center">
+              <Calendar className="w-4 h-4 text-fan" />
+            </div>
+            <h2 className="text-sm font-semibold text-foreground">
+              {month}
+            </h2>
+            <div className="flex-1 h-px bg-border" />
+            <span className="text-xs text-muted-foreground">
+              {monthEvents.length} event{monthEvents.length !== 1 ? "s" : ""}
+            </span>
+          </div>
+
+          <div className="space-y-3">
+            {monthEvents.map((event) => (
+              <div key={event._id}>
+                <EventCard
+                  event={event}
+                  showAttendanceStatus={activeTab === "past"}
+                  variant="default"
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </motion.div>
   );
 }
 

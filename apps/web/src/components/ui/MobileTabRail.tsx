@@ -2,6 +2,7 @@
 
 import type { ElementType } from "react";
 import { motion } from "framer-motion";
+import { IconBadge } from "@/components/ui/IconBadge";
 import { cn } from "@/lib/utils";
 
 type RailTone = "band" | "fan" | "neutral";
@@ -27,21 +28,29 @@ interface MobileTabRailProps {
 
 const TONE_STYLES: Record<
   RailTone,
-  { activeText: string; activeBadge: string; indicator: string }
+  {
+    activeText: string;
+    activeBadge: string;
+    activeIconBox: string;
+    indicator: string;
+  }
 > = {
   band: {
     activeText: "text-band",
     activeBadge: "bg-band/15 text-band",
+    activeIconBox: "border-band/20 bg-band/10 text-band",
     indicator: "bg-band",
   },
   fan: {
     activeText: "text-fan",
     activeBadge: "bg-fan/15 text-fan",
+    activeIconBox: "border-fan/20 bg-fan/10 text-fan",
     indicator: "bg-fan",
   },
   neutral: {
     activeText: "text-foreground",
     activeBadge: "bg-muted text-foreground",
+    activeIconBox: "border-foreground/10 bg-foreground/5 text-foreground",
     indicator: "bg-foreground",
   },
 };
@@ -93,7 +102,7 @@ export function MobileTabRail({
               onClick={() => onChange(item.id)}
               disabled={item.disabled}
               className={cn(
-                "relative inline-flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-medium transition-colors touch-target-sm",
+                "group relative inline-flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-medium transition-colors touch-target-sm",
                 shouldFillWidth
                   ? "w-full min-w-0 justify-center gap-1.5 px-2"
                   : "shrink-0",
@@ -104,7 +113,19 @@ export function MobileTabRail({
                 buttonClassName,
               )}
             >
-              {Icon ? <Icon className="w-4 h-4" /> : null}
+              {Icon ? (
+                <IconBadge
+                  size="sm"
+                  className={cn(
+                    "transition-colors",
+                    isActive
+                      ? styles.activeIconBox
+                      : "border-border/70 bg-muted/60 text-muted-foreground group-hover:border-foreground/10 group-hover:text-foreground",
+                  )}
+                >
+                  <Icon />
+                </IconBadge>
+              ) : null}
               <span className={cn("whitespace-nowrap", shouldFillWidth && "truncate")}>
                 {item.label}
               </span>

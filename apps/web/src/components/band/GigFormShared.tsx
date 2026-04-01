@@ -25,6 +25,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { CityAutocomplete, type VenueLocationData } from "@/components/ui/CityAutocomplete";
+import { IconBadge } from "@/components/ui/IconBadge";
 import { cn } from "@/lib/utils";
 import { GENRES, GENRE_COLORS } from "@ear-plug/shared/constants";
 import type {
@@ -268,13 +269,23 @@ export function GigModalTabs({ activeTab, onChange }: GigModalTabsProps) {
             type="button"
             onClick={() => onChange(tab.id)}
             className={cn(
-              "flex min-w-0 items-center justify-center gap-1.5 rounded-full px-3 py-2 text-[11px] font-medium transition-all sm:px-4 sm:text-xs",
+              "group flex min-w-0 items-center justify-center gap-1.5 rounded-full px-3 py-2 text-[11px] font-medium transition-all sm:px-4 sm:text-xs",
               activeTab === tab.id
                 ? "bg-band text-white shadow-sm shadow-band/20"
                 : "border border-border bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground",
             )}
           >
-            <tab.icon className="h-3.5 w-3.5 shrink-0" />
+            <IconBadge
+              size="sm"
+              className={cn(
+                "transition-colors",
+                activeTab === tab.id
+                  ? "border-white/20 bg-white/10 text-white"
+                  : "border-border/70 bg-background/70 text-muted-foreground group-hover:border-foreground/10 group-hover:text-foreground",
+              )}
+            >
+              <tab.icon />
+            </IconBadge>
             <span className="truncate">{tab.label}</span>
           </button>
         ))}
