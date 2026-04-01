@@ -34,7 +34,7 @@ export function CustomAuthPanel({
               EarPlug
             </div>
             <div className="rounded-full border border-white/[0.06] bg-white/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-zinc-400">
-              {isSignIn ? "Sign in" : "Create account"}
+              {isSignIn ? "Sign in" : "Sign up"}
             </div>
           </div>
 
