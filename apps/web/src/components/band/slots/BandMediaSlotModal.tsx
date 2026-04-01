@@ -354,17 +354,6 @@ export function BandMediaSlotModal({ slot, onClose, onSave, onClear }: BandMedia
         {/* Form Panel */}
         {slot.canEdit ? (
           <div className="md:flex-[2] border-t md:border-t-0 md:border-l border-border p-4 flex flex-col gap-3 overflow-y-auto max-h-[50vh] md:max-h-none">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <div className="w-8 h-8 bg-band/10 rounded-lg flex items-center justify-center">
-                  <ImageIcon className="w-4 h-4 text-band" />
-                </div>
-                <h3 className="text-base font-semibold text-foreground">Slot {slot.slotIndex + 1}</h3>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {slot.isFilled ? "Replace media or edit details" : "Add media to this slot"}
-              </p>
-            </div>
 
             <div>
               <CityAutocomplete
