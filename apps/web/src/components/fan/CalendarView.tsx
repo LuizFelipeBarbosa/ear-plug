@@ -148,7 +148,7 @@ export function FanCalendarView() {
             >
               <tab.icon className="w-5 h-5 mb-1" />
               <span className="text-lg font-bold">{tab.count}</span>
-              <span className="text-[10px] uppercase tracking-wide font-medium">
+              <span className="text-[10px]   font-medium">
                 {tab.label}
               </span>
             </button>
@@ -171,7 +171,7 @@ export function FanCalendarView() {
                 <div className="relative flex items-start gap-4">
                   {/* Date Badge */}
                   <div className="flex-shrink-0 w-16 h-16 bg-card border border-fan/20 rounded-xl flex flex-col items-center justify-center">
-                    <span className="text-xs text-fan font-semibold uppercase">
+                    <span className="text-xs text-fan font-semibold ">
                       {nextEvent.dateTime &&
                         new Date(nextEvent.dateTime).toLocaleDateString("en-US", {
                           month: "short",

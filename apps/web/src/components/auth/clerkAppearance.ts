@@ -2,7 +2,7 @@ const AUTH_HEADER_TITLE_CLASS =
   "text-[1.85rem] font-semibold tracking-[-0.03em] text-zinc-50";
 const AUTH_HEADER_SUBTITLE_CLASS = "mt-0.5 text-sm leading-5 text-zinc-300";
 const AUTH_FIELD_LABEL_CLASS =
-  "mb-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-300";
+  "mb-1 block text-[11px] font-semibold  tracking-[0.18em] text-zinc-300";
 const AUTH_SECONDARY_BUTTON_CLASS =
   "h-12 rounded-[18px] border border-white/15 bg-white/[0.06] text-zinc-100 shadow-none hover:bg-white/[0.12]";
 
@@ -34,7 +34,7 @@ export const WEB_AUTH_CLERK_APPEARANCE = {
     formFieldLabelRow: "mb-1 flex items-center justify-between gap-3",
     formFieldLabel: AUTH_FIELD_LABEL_CLASS,
     formFieldAction:
-      "text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400 transition-colors hover:text-zinc-200",
+      "text-[11px] font-semibold  tracking-[0.18em] text-zinc-400 transition-colors hover:text-zinc-200",
     formFieldInput:
       "h-12 w-full min-w-0 flex-1 basis-0 rounded-[18px] border border-white/15 bg-white/[0.08] px-4 text-zinc-50 placeholder:text-zinc-400 focus:border-white/35 focus:bg-white/[0.12] focus:ring-0",
     formFieldInputGroup:
@@ -70,7 +70,7 @@ export const WEB_AUTH_CLERK_APPEARANCE = {
     footerActionLink: "font-medium text-white hover:text-zinc-200",
     dividerLine: "bg-white/12",
     dividerText:
-      "bg-transparent px-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500",
+      "bg-transparent px-3 text-[11px] font-semibold  tracking-[0.18em] text-zinc-500",
     identityPreview: "rounded-[18px] border border-white/12 bg-white/[0.08]",
     identityPreviewText: "text-zinc-100",
     identityPreviewEditButton: "text-zinc-200 hover:text-white",

@@ -368,6 +368,8 @@ async function fetchSpotifyJson<T>(
 
   if (!response.ok) {
     let message = `Spotify request failed with status ${response.status}.`;
+    let code: "spotify_sync_failed" | "spotify_reconnect_required" =
+      "spotify_sync_failed";
     try {
       const payload = (await response.json()) as {
         error?: {
@@ -381,8 +383,16 @@ async function fetchSpotifyJson<T>(
       // Ignore non-JSON error payloads.
     }
 
+    if (response.status === 401 || response.status === 403) {
+      code = "spotify_reconnect_required";
+      message =
+        response.status === 401
+          ? "Spotify access expired. Refresh Spotify access in Profile > Settings > Spotify, then sync again."
+          : "Spotify access is missing required scopes. Refresh Spotify access in Profile > Settings > Spotify, approve the requested scopes, then sync again.";
+    }
+
     throw new ConvexError({
-      code: "spotify_sync_failed",
+      code,
       message,
     });
   }

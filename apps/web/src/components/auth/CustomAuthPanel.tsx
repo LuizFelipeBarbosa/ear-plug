@@ -30,11 +30,11 @@ export function CustomAuthPanel({
 
         <div className="relative px-6 py-6 sm:px-8 sm:py-8">
           <div className="flex items-center justify-between gap-4">
-            <div className="inline-flex items-center gap-3 rounded-full border border-white/[0.08] bg-black/25 px-3.5 py-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-zinc-200">
+            <div className="inline-flex items-center gap-3 rounded-full border border-white/[0.08] bg-black/25 px-3.5 py-2 text-[11px] font-semibold  tracking-[0.24em] text-zinc-200">
               <BrandMark className="w-6" theme="dark" decorative sizes="24px" />
               EarPlug
             </div>
-            <div className="rounded-full border border-white/[0.06] bg-white/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-zinc-400">
+            <div className="rounded-full border border-white/[0.06] bg-white/[0.05] px-3 py-1 text-[10px] font-semibold  tracking-[0.24em] text-zinc-400">
               {isSignIn ? "Sign in" : "Sign up"}
             </div>
           </div>

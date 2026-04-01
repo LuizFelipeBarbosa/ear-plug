@@ -270,7 +270,7 @@ function OverviewTab({
               <Sparkles className="w-7 h-7 text-fan" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-0.5">
+              <p className="text-xs text-muted-foreground   mb-0.5">
                 Archetype
               </p>
               <p className="text-xl font-bold text-foreground">

@@ -140,7 +140,7 @@ export function EventCard({
               {displayDate} • {displayTime}
             </p>
             {event.personalizationReason ? (
-              <span className="mt-2 inline-flex rounded-full border border-fan/20 bg-fan/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-fan">
+              <span className="mt-2 inline-flex rounded-full border border-fan/20 bg-fan/10 px-2 py-0.5 text-[10px] font-semibold   text-fan">
                 {event.personalizationReason === "spotify_artist_match"
                   ? "Spotify pick: artist match"
                   : "Spotify pick: genre match"}

@@ -579,7 +579,7 @@ export default function EventDetailsPage({ params }: PageProps) {
             <div className="rounded-2xl border border-band/20 bg-band/5 p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-band">
+                  <p className="text-xs font-semibold  tracking-[0.18em] text-band">
                     RSVP Poll Pending
                   </p>
                   <p className="mt-1 text-sm font-medium text-foreground">

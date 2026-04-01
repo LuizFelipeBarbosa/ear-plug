@@ -335,7 +335,7 @@ export function GigModalHeader({
             {eyebrow ? (
               <p
                 className={cn(
-                  "mb-1 text-[11px] font-semibold uppercase tracking-[0.18em]",
+                  "mb-1 text-[11px] font-semibold  tracking-[0.18em]",
                   toneStyles.eyebrow,
                 )}
               >

@@ -318,7 +318,7 @@ export function FanNotificationsView() {
                 <section key={group.title}>
                   {/* Section Header */}
                   <div className="flex items-center gap-3 mb-3">
-                    <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    <h2 className="text-xs font-semibold text-muted-foreground  ">
                       {group.title}
                     </h2>
                     <div className="flex-1 h-px bg-border" />

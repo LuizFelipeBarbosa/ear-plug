@@ -416,7 +416,7 @@ function QuickStat({
         <Icon />
       </IconBadge>
       <span className="font-semibold text-foreground text-lg">{value}</span>
-      <span className="text-[10px] text-muted-foreground uppercase tracking-wide">{label}</span>
+      <span className="text-[10px] text-muted-foreground  ">{label}</span>
     </div>
   );
 }

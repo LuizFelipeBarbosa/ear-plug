@@ -91,7 +91,7 @@ export function GigDnaEvolutionModal({
           ) : (
             <>
               <div className="rounded-2xl border border-fan/20 bg-gradient-to-br from-fan/10 via-fan/5 to-transparent p-4">
-                <p className="mb-1 text-xs uppercase tracking-wide text-muted-foreground">
+                <p className="mb-1 text-xs   text-muted-foreground">
                   Current DNA
                 </p>
                 <p className="text-xl font-bold text-foreground">{gigDna.label}</p>
@@ -114,7 +114,7 @@ export function GigDnaEvolutionModal({
                   <section className="space-y-3 rounded-2xl border border-border bg-muted/30 p-4">
                     <div className="flex flex-wrap items-end justify-between gap-3">
                       <div>
-                        <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                        <p className="text-xs   text-muted-foreground">
                           Progress to {evolution.nextTier}
                         </p>
                         <p className="text-lg font-bold text-foreground">
@@ -134,7 +134,7 @@ export function GigDnaEvolutionModal({
                   </section>
 
                   <section className="space-y-2">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    <p className="text-xs font-semibold   text-muted-foreground">
                       Checkpoints
                     </p>
                     {evolution.checkpoints.map((checkpoint) => (

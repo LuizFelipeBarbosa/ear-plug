@@ -342,7 +342,7 @@ export function BandCalendarView() {
                 <div className="w-8 h-8 rounded-lg bg-band/10 flex items-center justify-center">
                   <Calendar className="w-4 h-4 text-band" />
                 </div>
-                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                <span className="text-xs font-medium text-muted-foreground  ">
                   Band Workspace
                 </span>
               </div>

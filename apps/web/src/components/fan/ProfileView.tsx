@@ -436,7 +436,7 @@ export function FanProfileView() {
               <div className="space-y-6 p-4 pb-6">
                 {/* Band Creation Section */}
                 <section>
-                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                  <h4 className="text-xs font-semibold text-muted-foreground   mb-3">
                     Your Bands
                   </h4>
                   {myBands.length === 0 ? (
@@ -491,7 +491,7 @@ export function FanProfileView() {
                 {/* Pending Invites */}
                 {pendingInvites.length > 0 && (
                   <section>
-                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                    <h4 className="text-xs font-semibold text-muted-foreground   mb-3">
                       Pending Invites ({pendingInvites.length})
                     </h4>
                     <div className="space-y-2">
@@ -609,7 +609,7 @@ function OverviewTab({
               <Sparkles className="w-7 h-7 text-fan" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-0.5">
+              <p className="text-xs text-muted-foreground   mb-0.5">
                 Archetype
               </p>
               <p className="text-xl font-bold text-foreground">
@@ -964,7 +964,7 @@ function SettingsTab({
                   <p className="text-sm font-medium text-foreground">
                     Fan Taste Sync
                   </p>
-                  <span className="rounded-full border border-fan/20 bg-fan/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-fan">
+                  <span className="rounded-full border border-fan/20 bg-fan/10 px-2 py-0.5 text-[10px] font-semibold   text-fan">
                     Web only
                   </span>
                 </div>
@@ -1024,7 +1024,7 @@ function SettingsTab({
                   {spotifyPersonalization.topGenres.map((genre) => (
                     <span
                       key={genre}
-                      className="rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide"
+                      className="rounded-full border px-2.5 py-1 text-[10px] font-semibold  "
                       style={{
                         color: GENRE_COLORS[genre as Genre],
                         borderColor: `${GENRE_COLORS[genre as Genre]}33`,
@@ -1038,7 +1038,7 @@ function SettingsTab({
 
                 {spotifyPersonalization.topArtists.length > 0 ? (
                   <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    <p className="text-[11px] font-semibold  tracking-[0.18em] text-muted-foreground">
                       Top Spotify Artists
                     </p>
                     <div className="mt-2 flex flex-wrap gap-2">

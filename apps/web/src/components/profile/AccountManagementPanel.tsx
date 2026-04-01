@@ -426,7 +426,7 @@ export function AccountManagementPanel() {
                 />
               </div>
               <div className="min-w-0">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                <p className="text-[11px] font-semibold  tracking-[0.22em] text-muted-foreground">
                   Current identity
                 </p>
                 <h3 className="mt-1 text-[1.75rem] font-semibold leading-none text-foreground">
@@ -442,7 +442,7 @@ export function AccountManagementPanel() {
               <div className="rounded-[22px] border border-border/70 bg-muted/40 px-4 py-3.5 dark:border-white/10 dark:bg-white/[0.04]">
                 <div className="flex h-full items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    <p className="text-[11px] font-semibold  tracking-[0.18em] text-muted-foreground">
                       Primary email
                     </p>
                     <p className="mt-2 truncate text-sm font-medium text-foreground">
@@ -452,7 +452,7 @@ export function AccountManagementPanel() {
                   <button
                     type="button"
                     onClick={() => openIdentityEditor("email")}
-                    className="inline-flex shrink-0 items-center rounded-full border border-border bg-background px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:border-foreground/20 hover:text-foreground"
+                    className="inline-flex shrink-0 items-center rounded-full border border-border bg-background px-3 py-1.5 text-[11px] font-semibold  tracking-[0.14em] text-muted-foreground transition-colors hover:border-foreground/20 hover:text-foreground"
                   >
                     Edit
                   </button>
@@ -462,7 +462,7 @@ export function AccountManagementPanel() {
               <div className="rounded-[22px] border border-border/70 bg-muted/40 px-4 py-3.5 dark:border-white/10 dark:bg-white/[0.04]">
                 <div className="flex h-full items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    <p className="text-[11px] font-semibold  tracking-[0.18em] text-muted-foreground">
                       Primary phone
                     </p>
                     <p className="mt-2 text-sm font-medium text-foreground">
@@ -472,7 +472,7 @@ export function AccountManagementPanel() {
                   <button
                     type="button"
                     onClick={() => openIdentityEditor("phone")}
-                    className="inline-flex shrink-0 items-center rounded-full border border-border bg-background px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:border-foreground/20 hover:text-foreground"
+                    className="inline-flex shrink-0 items-center rounded-full border border-border bg-background px-3 py-1.5 text-[11px] font-semibold  tracking-[0.14em] text-muted-foreground transition-colors hover:border-foreground/20 hover:text-foreground"
                   >
                     Edit
                   </button>
@@ -498,14 +498,14 @@ export function AccountManagementPanel() {
           <div className="flex h-full flex-col rounded-[28px] border border-border/80 bg-background/88 p-5 shadow-soft dark:border-white/10 dark:bg-white/[0.05] sm:p-6">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                <p className="text-[11px] font-semibold  tracking-[0.22em] text-muted-foreground">
                   Connected providers
                 </p>
                 <h3 className="mt-1 text-xl font-semibold text-foreground">
                   Social accounts
                 </h3>
               </div>
-              <div className="rounded-full border border-border bg-muted px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              <div className="rounded-full border border-border bg-muted px-3 py-1 text-[10px] font-semibold  tracking-[0.18em] text-muted-foreground">
                 {user.externalAccounts.length} linked
               </div>
             </div>
@@ -539,7 +539,7 @@ export function AccountManagementPanel() {
 
                       {externalAccount ? (
                         <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-                          <span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-600 dark:text-emerald-300">
+                          <span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold  tracking-[0.18em] text-emerald-600 dark:text-emerald-300">
                             Connected
                           </span>
                           <button
@@ -547,7 +547,7 @@ export function AccountManagementPanel() {
                             onClick={() => void handleUnlinkProvider(provider)}
                             disabled={activeProviderAction !== null}
                             className={cn(
-                              "inline-flex items-center rounded-full border px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] transition-colors disabled:cursor-not-allowed disabled:opacity-70",
+                              "inline-flex items-center rounded-full border px-3 py-1.5 text-[11px] font-semibold  tracking-[0.14em] transition-colors disabled:cursor-not-allowed disabled:opacity-70",
                               busyAction === "unlink"
                                 ? "border-red-500/30 bg-red-500/10 text-red-500"
                                 : "border-border bg-background text-muted-foreground hover:border-red-500/30 hover:text-red-500",
@@ -561,7 +561,7 @@ export function AccountManagementPanel() {
                           type="button"
                           onClick={() => void handleConnectProvider(provider)}
                           disabled={activeProviderAction !== null}
-                          className="inline-flex shrink-0 items-center rounded-full bg-foreground px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-background transition-colors hover:opacity-92 disabled:cursor-not-allowed disabled:opacity-70"
+                          className="inline-flex shrink-0 items-center rounded-full bg-foreground px-3 py-1.5 text-[11px] font-semibold  tracking-[0.14em] text-background transition-colors hover:opacity-92 disabled:cursor-not-allowed disabled:opacity-70"
                         >
                           {busyAction === "connect" ? "Redirecting" : "Connect"}
                         </button>
@@ -602,7 +602,7 @@ export function AccountManagementPanel() {
           <div className="w-full max-w-md rounded-[28px] border border-border bg-card p-5 shadow-soft sm:p-6">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                <p className="text-[11px] font-semibold  tracking-[0.2em] text-muted-foreground">
                   {identityEditState.field === "email" ? "Primary email" : "Primary phone"}
                 </p>
                 <h3 className="mt-1 text-xl font-semibold text-foreground">
@@ -615,7 +615,7 @@ export function AccountManagementPanel() {
                 type="button"
                 onClick={closeIdentityEditor}
                 disabled={isSavingIdentity}
-                className="rounded-full border border-border bg-background px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-full border border-border bg-background px-3 py-1.5 text-[11px] font-semibold  tracking-[0.14em] text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Close
               </button>
@@ -631,7 +631,7 @@ export function AccountManagementPanel() {
             >
               {identityEditState.step === "input" ? (
                 <div>
-                  <label className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  <label className="block text-[11px] font-semibold  tracking-[0.18em] text-muted-foreground">
                     {identityEditState.field === "email" ? "Email address" : "Phone number"}
                   </label>
                   <input
@@ -652,7 +652,7 @@ export function AccountManagementPanel() {
                 </div>
               ) : (
                 <div>
-                  <label className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  <label className="block text-[11px] font-semibold  tracking-[0.18em] text-muted-foreground">
                     Confirmation code
                   </label>
                   <input

@@ -225,7 +225,7 @@ export function FanDiscoverView() {
                   {/* Genre Filter */}
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                      <span className="text-xs font-semibold text-muted-foreground  ">
                         Genre
                       </span>
                       {selectedGenre && (

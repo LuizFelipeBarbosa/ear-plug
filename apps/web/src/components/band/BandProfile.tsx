@@ -523,7 +523,7 @@ export function BandProfileView() {
               <div className="space-y-6 p-4 pb-6">
                 {/* Members Section */}
                 <section>
-                  <h4 className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                  <h4 className="flex items-center gap-2 text-xs font-semibold text-muted-foreground   mb-3">
                     <Users className="w-3.5 h-3.5" />
                     Members ({members?.length || 0})
                   </h4>
@@ -623,7 +623,7 @@ export function BandProfileView() {
                 {/* Invite Section */}
                 {canManageMembers && (
                   <section>
-                    <h4 className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                    <h4 className="flex items-center gap-2 text-xs font-semibold text-muted-foreground   mb-3">
                       <UserPlus className="w-3.5 h-3.5" />
                       Invite Members
                     </h4>
@@ -818,7 +818,7 @@ export function BandProfileView() {
                 {/* Danger Zone */}
                 {canTransferOwnership && band && (
                   <section>
-                    <h4 className="flex items-center gap-2 text-xs font-semibold text-red-500 uppercase tracking-wide mb-3">
+                    <h4 className="flex items-center gap-2 text-xs font-semibold text-red-500   mb-3">
                       <Trash2 className="w-3.5 h-3.5" />
                       Danger Zone
                     </h4>
@@ -904,7 +904,7 @@ function QuickStat({
         <Icon />
       </IconBadge>
       <span className="text-base font-semibold text-foreground sm:text-lg">{value}</span>
-      <span className="text-[9px] uppercase tracking-wide text-muted-foreground sm:text-[10px]">
+      <span className="text-[9px]   text-muted-foreground sm:text-[10px]">
         {label}
       </span>
     </div>
