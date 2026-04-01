@@ -1220,11 +1220,12 @@ export const listByBand = query({
 });
 
 /**
- * Lists public past events for a specific band for fan-facing surfaces.
- * Returns confirmed events only, sorted by most recent first.
+ * Lists public confirmed events for a specific band for fan-facing surfaces.
+ * Legacy name retained for existing clients.
+ * Returns hosted and accepted cohost gigs, sorted by most recent date first.
  *
  * @param args.bandId - The Convex ID of the band
- * @param args.limit - Maximum number of past gigs to return (default: 6, max: 24)
+ * @param args.limit - Maximum number of gigs to return (default: 6, max: 24)
  */
 export const listPublicPastByBand = query({
   args: {
@@ -1233,23 +1234,39 @@ export const listPublicPastByBand = query({
   },
   handler: async (ctx, args) => {
     await requireAuthenticatedUser(ctx);
-
-    const now = Date.now();
     const limit = Math.max(1, Math.min(args.limit ?? 6, 24));
 
-    const events = await ctx.db
-      .query("events")
-      .withIndex("by_band", (q) => q.eq("bandId", args.bandId))
-      .collect();
+    const [hostedEvents, acceptedCohostInvites] = await Promise.all([
+      ctx.db
+        .query("events")
+        .withIndex("by_band", (q) => q.eq("bandId", args.bandId))
+        .collect(),
+      ctx.db
+        .query("eventCohostInvites")
+        .withIndex("by_invited_band_status", (q) =>
+          q.eq("invitedBandId", args.bandId).eq("status", "accepted")
+        )
+        .collect(),
+    ]);
 
-    const pastEvents = events
+    const hostedById = new Map(hostedEvents.map((event) => [event._id, event]));
+    const cohostedEventIds = Array.from(
+      new Set(acceptedCohostInvites.map((invite) => invite.eventId))
+    );
+    const cohostedEvents = (
+      await Promise.all(cohostedEventIds.map((eventId) => ctx.db.get(eventId)))
+    ).filter((event): event is NonNullable<typeof event> => event !== null);
+
+    const confirmedEvents = [
+      ...hostedEvents,
+      ...cohostedEvents.filter((event) => !hostedById.has(event._id)),
+    ]
       .filter((event): event is PublicEvent => isPublicEvent(event))
-      .filter((event) => event.dateTime < now)
       .sort((a, b) => b.dateTime - a.dateTime)
       .slice(0, limit);
 
     return Promise.all(
-      pastEvents.map(async (event) => {
+      confirmedEvents.map(async (event) => {
         const venue = await ctx.db.get(event.venueId);
         return {
           ...event,

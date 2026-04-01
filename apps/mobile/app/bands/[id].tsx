@@ -33,7 +33,7 @@ export default function PublicBandProfileScreen() {
   const { mode } = useProfileContext();
 
   const profile = useQuery(api.bands.getPublicBandProfile, { bandId });
-  const pastShows = useQuery(api.events.listPublicPastByBand, { bandId, limit: 20 }) ?? [];
+  const confirmedShows = useQuery(api.events.listPublicPastByBand, { bandId, limit: 20 }) ?? [];
   const toggleSave = useMutation(api.bands.toggleSave);
   const trackProfileView = useMutation(api.bands.trackProfileView);
   const trackedRef = useRef<string | null>(null);
@@ -143,7 +143,7 @@ export default function PublicBandProfileScreen() {
 
           <View className="mt-4 flex-row gap-2">
             <StatCard label="Followers" value={String(followerCount)} tone="band" />
-            <StatCard label="Past Shows" value={String(pastShows.length)} tone="band" />
+            <StatCard label="Shows" value={String(confirmedShows.length)} tone="band" />
           </View>
         </HeroHeader>
       }
@@ -169,10 +169,13 @@ export default function PublicBandProfileScreen() {
         ) : null}
 
         <SectionCard>
-          <SectionTitle title="Past Shows" subtitle="The public band page keeps past event history easy to browse." />
+          <SectionTitle
+            title="Show History"
+            subtitle="Confirmed gigs, past and upcoming, stay easy to browse on the public band page."
+          />
           <View className="gap-3">
-            {pastShows.length > 0 ? (
-              pastShows.map((show) => (
+            {confirmedShows.length > 0 ? (
+              confirmedShows.map((show) => (
                 <RowLink
                   key={show._id}
                   title={show.title || "Untitled Gig"}
@@ -181,7 +184,7 @@ export default function PublicBandProfileScreen() {
                 />
               ))
             ) : (
-              <Text className="text-sm text-slate-500">No past shows yet.</Text>
+              <Text className="text-sm text-slate-500">No confirmed gigs yet.</Text>
             )}
           </View>
         </SectionCard>

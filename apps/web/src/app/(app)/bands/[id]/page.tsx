@@ -73,7 +73,7 @@ export default function BandFeedPage({ params }: PageProps) {
   const trackProfileView = useMutation(api.bands.trackProfileView);
 
   const publicProfile = useQuery(api.bands.getPublicBandProfile, { bandId });
-  const pastGigs = useQuery(api.events.listPublicPastByBand, {
+  const confirmedGigs = useQuery(api.events.listPublicPastByBand, {
     bandId,
     limit: 20,
   });
@@ -290,8 +290,8 @@ export default function BandFeedPage({ params }: PageProps) {
           {/* Quick Stats Row */}
           <div className="grid grid-cols-3 gap-3 mt-5 pt-4 border-t border-border/50">
             <QuickStat icon={Heart} value={followerCount} label="Followers" />
-            <QuickStat icon={Calendar} value={(pastGigs ?? []).length} label="Shows" />
-            <QuickStat icon={Ticket} value={(pastGigs ?? []).length} label="Gigs" />
+            <QuickStat icon={Calendar} value={(confirmedGigs ?? []).length} label="Shows" />
+            <QuickStat icon={Ticket} value={(confirmedGigs ?? []).length} label="Gigs" />
           </div>
 
           {/* Follow Button */}
@@ -381,13 +381,13 @@ export default function BandFeedPage({ params }: PageProps) {
             <OverviewTab
               bandId={band._id}
               band={band}
-              pastGigs={pastGigs ?? []}
+              confirmedGigs={confirmedGigs ?? []}
             />
         </TabPanel>
         <TabPanel isActive={activeTab === "shows"}>
             <ShowsTab
-              pastGigs={pastGigs ?? []}
-              isLoading={pastGigs === undefined}
+              confirmedGigs={confirmedGigs ?? []}
+              isLoading={confirmedGigs === undefined}
             />
         </TabPanel>
       </main>
@@ -420,11 +420,11 @@ function QuickStat({
 function OverviewTab({
   bandId,
   band,
-  pastGigs,
+  confirmedGigs,
 }: {
   bandId: Id<"bands">;
   band: any;
-  pastGigs: any[];
+  confirmedGigs: any[];
 }) {
   return (
     <motion.div
@@ -483,12 +483,12 @@ function OverviewTab({
       <motion.div variants={itemVariants}>
         <div className="flex items-center justify-between mb-3">
           <SectionTitle icon={Calendar} title="Recent Shows" className="mb-0" />
-          {pastGigs.length > 0 && (
-            <span className="text-xs text-muted-foreground">{pastGigs.length} total</span>
+          {confirmedGigs.length > 0 && (
+            <span className="text-xs text-muted-foreground">{confirmedGigs.length} total</span>
           )}
         </div>
         <PastShowFlyerSection
-          shows={pastGigs.slice(0, 4).map((gig) => ({
+          shows={confirmedGigs.slice(0, 4).map((gig) => ({
             eventId: gig._id,
             title: gig.title,
             dateTime: gig.dateTime,
@@ -496,7 +496,7 @@ function OverviewTab({
             venueName: gig.venue.name,
             venueCity: gig.venue.city,
           }))}
-          emptyMessage="No shows yet. Check back soon!"
+          emptyMessage="No confirmed gigs yet. Check back soon!"
           maxItems={4}
           tone="fan"
         />
@@ -507,10 +507,10 @@ function OverviewTab({
 
 // Shows Tab
 function ShowsTab({
-  pastGigs,
+  confirmedGigs,
   isLoading,
 }: {
-  pastGigs: any[];
+  confirmedGigs: any[];
   isLoading: boolean;
 }) {
   return (
@@ -524,12 +524,12 @@ function ShowsTab({
       <motion.div variants={itemVariants}>
         <div className="flex items-center justify-between mb-3">
           <SectionTitle icon={Ticket} title="Show History" className="mb-0" />
-          {pastGigs.length > 0 && (
-            <Badge variant="highlight">{pastGigs.length} shows</Badge>
+          {confirmedGigs.length > 0 && (
+            <Badge variant="highlight">{confirmedGigs.length} shows</Badge>
           )}
         </div>
         <PastShowFlyerSection
-          shows={pastGigs.map((gig) => ({
+          shows={confirmedGigs.map((gig) => ({
             eventId: gig._id,
             title: gig.title,
             dateTime: gig.dateTime,
@@ -537,7 +537,7 @@ function ShowsTab({
             venueName: gig.venue.name,
             venueCity: gig.venue.city,
           }))}
-          emptyMessage="No past shows yet. Follow to get notified of upcoming gigs!"
+          emptyMessage="No confirmed gigs yet. Follow to get notified of upcoming shows!"
           isLoading={isLoading}
           tone="fan"
         />
