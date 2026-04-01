@@ -349,14 +349,6 @@ export function BandMediaSlotModal({ slot, onClose, onSave, onClear }: BandMedia
               Replace
             </motion.button>
           )}
-
-          {/* Video Badge */}
-          {slot.canEdit && previewMediaType === "video" && previewMediaUrl && (
-            <div className="absolute bottom-4 left-4 z-[11] px-3 py-1.5 bg-black/70 backdrop-blur-sm border border-white/20 rounded-lg flex items-center gap-1.5">
-              <Play className="w-3 h-3 text-white fill-white" />
-              <span className="text-xs text-white font-medium">Video</span>
-            </div>
-          )}
         </div>
 
         {/* Form Panel */}
