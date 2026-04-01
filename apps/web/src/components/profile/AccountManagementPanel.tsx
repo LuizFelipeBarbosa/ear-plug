@@ -2,9 +2,11 @@
 
 import { useMemo, useState } from "react";
 import Image from "next/image";
-import { useReverification } from "@clerk/clerk-react";
 import { SignOutButton, useUser } from "@clerk/nextjs";
+import { useAction } from "convex/react";
 import { Loader2, ShieldCheck } from "lucide-react";
+import { api } from "../../../../../convex/_generated/api";
+import { getConvexErrorMessage } from "@/lib/convexErrors";
 import { cn } from "@/lib/utils";
 
 type SocialProvider = "spotify" | "google";
@@ -45,15 +47,6 @@ function getClerkErrorMessage(error: unknown, fallback: string): string {
   }
 
   return fallback;
-}
-
-function isReverificationCancelled(error: unknown): boolean {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    (error as { code?: unknown }).code === "reverification_cancelled"
-  );
 }
 
 function formatDateTime(value: Date | null): string {
@@ -144,6 +137,7 @@ function ProviderLogo({
 
 export function AccountManagementPanel() {
   const { isLoaded, user } = useUser();
+  const unlinkExternalAccount = useAction(api.users.unlinkExternalAccount);
   const [providerError, setProviderError] = useState<string | null>(null);
   const [providerNotice, setProviderNotice] = useState<string | null>(null);
   const [activeProviderAction, setActiveProviderAction] = useState<{
@@ -163,22 +157,6 @@ export function AccountManagementPanel() {
 
     return entries;
   }, [user]);
-
-  const unlinkProviderWithReverification = useReverification(
-    async (provider: SocialProvider) => {
-      const account = externalAccountsByProvider.get(provider);
-
-      if (!account) {
-        return null;
-      }
-
-      const providerTitle = account.providerTitle();
-      await account.destroy();
-      await user?.reload();
-
-      return providerTitle;
-    },
-  );
 
   if (!isLoaded || !user) {
     return (
@@ -224,19 +202,16 @@ export function AccountManagementPanel() {
     setActiveProviderAction({ provider, action: "unlink" });
 
     try {
-      const providerTitle = await unlinkProviderWithReverification(provider);
-
-      if (providerTitle) {
-        setProviderNotice(`${providerTitle} was unlinked from this account.`);
-      }
+      await unlinkExternalAccount({
+        externalAccountId: account.id,
+        provider,
+      });
+      await user.reload();
+      setProviderNotice(`${account.providerTitle()} was unlinked from this account.`);
     } catch (error) {
-      if (isReverificationCancelled(error)) {
-        setProviderNotice("Verification was cancelled. Your linked accounts were not changed.");
-      } else {
-        setProviderError(
-          getClerkErrorMessage(error, `We couldn't unlink the ${provider} account.`),
-        );
-      }
+      setProviderError(
+        getConvexErrorMessage(error, `We couldn't unlink the ${provider} account.`),
+      );
     } finally {
       setActiveProviderAction(null);
     }
