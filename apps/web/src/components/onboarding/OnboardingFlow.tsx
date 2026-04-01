@@ -2,7 +2,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { CustomAuthPanel } from "@/components/auth/CustomAuthPanel";
-import { BrandWordmark } from "@/components/branding/BrandLogo";
 import { cn } from "@/lib/utils";
 
 const LOGIN_BACKGROUND_VIDEO_SRC = "/media/login-background.mov";
@@ -16,18 +15,6 @@ export function OnboardingFlow({ overlay }: { overlay?: ReactNode }) {
       <VideoBackground />
       <div className="relative z-20 min-h-screen bg-black/60">
         <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-6 py-8">
-          <header className="pt-2 text-center">
-            <div className="mx-auto flex w-fit flex-col items-center">
-              <div className="rounded-[28px] border border-white/15 bg-black/35 px-4 py-3 shadow-[0_30px_80px_rgba(0,0,0,0.45)] backdrop-blur-xl">
-                <BrandWordmark
-                  theme="dark"
-                  priority
-                  className="w-[9.5rem] sm:w-[11.5rem]"
-                  sizes="(max-width: 640px) 152px, 184px"
-                />
-              </div>
-            </div>
-          </header>
           <main className="flex flex-1 items-center justify-center py-6">
             {!isSignedIn ? <CustomAuthPanel /> : null}
           </main>

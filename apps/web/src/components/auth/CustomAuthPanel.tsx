@@ -5,10 +5,12 @@ import { useRouter } from "next/navigation";
 import { useSignIn, useSignUp } from "@clerk/nextjs";
 import { ArrowRight, Loader2, Phone, ShieldCheck } from "lucide-react";
 import { BrandMark } from "@/components/branding/BrandLogo";
+import { ResponsiveSheetModal } from "@/components/ui/ResponsiveSheetModal";
 import { cn } from "@/lib/utils";
 
 type SocialProvider = "google" | "spotify";
 type PhoneFlowKind = "sign-in" | "sign-up";
+const E164_REGEX = /^\+[1-9]\d{9,14}$/;
 
 interface PendingPhoneFlow {
   kind: PhoneFlowKind;
@@ -79,12 +81,94 @@ function shouldFallbackToPhoneSignUp(error: unknown): boolean {
   );
 }
 
-function formatDestinationLabel(destination: string): string {
-  if (destination.length <= 24) {
-    return destination;
+function normalizePhoneNumber(value: string):
+  | { ok: true; e164: string }
+  | { ok: false; message: string } {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return {
+      ok: false,
+      message: "Enter your phone number to continue.",
+    };
   }
 
-  return `${destination.slice(0, 8)}...${destination.slice(-8)}`;
+  if (trimmed.startsWith("+")) {
+    const digits = trimmed.slice(1).replace(/\D/g, "");
+    const e164 = `+${digits}`;
+    if (E164_REGEX.test(e164)) {
+      return { ok: true, e164 };
+    }
+
+    return {
+      ok: false,
+      message: "Enter a valid phone number in international format.",
+    };
+  }
+
+  const digits = trimmed.replace(/\D/g, "");
+  if (digits.length === 10) {
+    return { ok: true, e164: `+1${digits}` };
+  }
+
+  if (digits.length === 11 && digits.startsWith("1")) {
+    return { ok: true, e164: `+${digits}` };
+  }
+
+  return {
+    ok: false,
+    message: "Enter a valid US phone number or full international format.",
+  };
+}
+
+function formatUsPhoneNumber(digits: string, prefix = ""): string {
+  if (digits.length === 0) {
+    return prefix;
+  }
+
+  if (digits.length < 4) {
+    return `${prefix}${digits}`;
+  }
+
+  if (digits.length < 7) {
+    return `${prefix}(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+  }
+
+  return `${prefix}(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
+}
+
+function formatPhoneNumberInput(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return "";
+  }
+
+  if (trimmed.startsWith("+")) {
+    const digits = trimmed.slice(1).replace(/\D/g, "");
+    if (digits.startsWith("1") && digits.length <= 11) {
+      return formatUsPhoneNumber(digits.slice(1), "+1 ");
+    }
+
+    return `+${digits}`;
+  }
+
+  const digits = trimmed.replace(/\D/g, "");
+  if (digits.length <= 10) {
+    return formatUsPhoneNumber(digits);
+  }
+
+  if (digits.length === 11 && digits.startsWith("1")) {
+    return formatUsPhoneNumber(digits.slice(1), "1 ");
+  }
+
+  return digits;
+}
+
+function formatDestinationLabel(destination: string): string {
+  if (destination.startsWith("+1") && destination.length === 12) {
+    return formatUsPhoneNumber(destination.slice(2));
+  }
+
+  return formatPhoneNumberInput(destination);
 }
 
 function AuthField({
@@ -102,7 +186,7 @@ function AuthField({
       <span className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.22em] text-zinc-400">
         {label}
       </span>
-      <div className="group flex items-center gap-3 rounded-[20px] border border-white/12 bg-white/[0.045] px-4 py-3.5 transition-colors focus-within:border-white/35 focus-within:bg-white/[0.08]">
+      <div className="group flex items-center gap-3 rounded-[20px] border border-white/[0.08] bg-white/[0.045] px-4 py-3.5 transition-colors focus-within:border-white/[0.18] focus-within:bg-white/[0.08]">
         {icon ? (
           <span className="text-zinc-500 transition-colors group-focus-within:text-white">
             {icon}
@@ -177,14 +261,12 @@ function SpotifyLogo({ className }: { className?: string }) {
 function ProviderButton({
   provider,
   label,
-  note,
   disabled,
   isLoading,
   onClick,
 }: {
   provider: SocialProvider;
   label: string;
-  note: string;
   disabled: boolean;
   isLoading: boolean;
   onClick: () => void;
@@ -196,17 +278,14 @@ function ProviderButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="group rounded-[22px] border border-white/12 bg-white/[0.045] px-4 py-4 text-left transition-colors hover:border-white/25 hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-70"
+      className="group rounded-[22px] border border-white/[0.08] bg-white/[0.045] px-4 py-4 text-left transition-colors hover:border-white/[0.14] hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-70"
     >
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-black/35">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/[0.06] bg-black/35">
             <Logo className="h-6 w-6" />
           </div>
-          <div>
-            <p className="text-sm font-semibold text-white">{label}</p>
-            <p className="text-[11px] uppercase tracking-[0.18em] text-zinc-500">{note}</p>
-          </div>
+          <p className="text-sm font-semibold text-white">{label}</p>
         </div>
         {isLoading ? (
           <Loader2 className="h-4 w-4 animate-spin text-zinc-300" />
@@ -265,20 +344,20 @@ export function CustomAuthPanel() {
     router.push("/");
   };
 
-  const startPhoneSignUp = async (trimmedPhoneNumber: string) => {
+  const startPhoneSignUp = async (normalizedPhoneNumber: string) => {
     if (!isSignUpLoaded || !signUp) {
       throw new Error("Account creation is still loading. Try again in a moment.");
     }
 
-    await signUp.create({ phoneNumber: trimmedPhoneNumber });
+    await signUp.create({ phoneNumber: normalizedPhoneNumber });
     await signUp.preparePhoneNumberVerification();
     setPendingPhoneFlow({
       kind: "sign-up",
-      destination: trimmedPhoneNumber,
-      destinationLabel: formatDestinationLabel(trimmedPhoneNumber),
+      destination: normalizedPhoneNumber,
+      destinationLabel: formatDestinationLabel(normalizedPhoneNumber),
     });
     setVerificationCode("");
-    setNotice("Verification code sent. Check your phone to finish signing in.");
+    setNotice("Code sent.");
   };
 
   const handleSocialAuth = async (provider: SocialProvider) => {
@@ -312,11 +391,12 @@ export function CustomAuthPanel() {
       return;
     }
 
-    const trimmedPhoneNumber = phoneNumber.trim();
-    if (!trimmedPhoneNumber) {
-      setError("Enter your phone number to continue.");
+    const normalizedPhone = normalizePhoneNumber(phoneNumber);
+    if (!normalizedPhone.ok) {
+      setError(normalizedPhone.message);
       return;
     }
+    const normalizedPhoneNumber = normalizedPhone.e164;
 
     setError(null);
     setNotice(null);
@@ -325,20 +405,20 @@ export function CustomAuthPanel() {
     try {
       await signIn.create({
         strategy: "phone_code",
-        identifier: trimmedPhoneNumber,
+        identifier: normalizedPhoneNumber,
       });
 
       setPendingPhoneFlow({
         kind: "sign-in",
-        destination: trimmedPhoneNumber,
-        destinationLabel: formatDestinationLabel(trimmedPhoneNumber),
+        destination: normalizedPhoneNumber,
+        destinationLabel: formatDestinationLabel(normalizedPhoneNumber),
       });
       setVerificationCode("");
-      setNotice("Verification code sent. Check your phone.");
+      setNotice("Code sent.");
     } catch (caughtError) {
       if (shouldFallbackToPhoneSignUp(caughtError)) {
         try {
-          await startPhoneSignUp(trimmedPhoneNumber);
+          await startPhoneSignUp(normalizedPhoneNumber);
         } catch (signUpError) {
           setError(
             getClerkErrorMessage(
@@ -448,7 +528,7 @@ export function CustomAuthPanel() {
         await signUp.preparePhoneNumberVerification();
       }
 
-      setNotice("Fresh verification code sent.");
+      setNotice("New code sent.");
     } catch (caughtError) {
       setError(
         getClerkErrorMessage(
@@ -463,35 +543,33 @@ export function CustomAuthPanel() {
 
   return (
     <div className="mx-auto w-full max-w-xl animate-fade-in">
-      <div className="relative overflow-hidden rounded-[34px] border border-white/14 bg-black/30 shadow-[0_50px_140px_rgba(0,0,0,0.55)] backdrop-blur-2xl">
+      <div className="relative overflow-hidden rounded-[34px] border border-white/[0.14] bg-black/30 shadow-[0_50px_140px_rgba(0,0,0,0.55)] backdrop-blur-2xl">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.22),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(22,163,74,0.18),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))]" />
         <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.05)_0%,transparent_28%,transparent_70%,rgba(255,255,255,0.04)_100%)]" />
 
         <div className="relative px-6 py-6 sm:px-8 sm:py-8">
           <div className="flex items-center justify-between gap-4">
-            <div className="inline-flex items-center gap-3 rounded-full border border-white/12 bg-black/25 px-3.5 py-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-zinc-200">
+            <div className="inline-flex items-center gap-3 rounded-full border border-white/[0.08] bg-black/25 px-3.5 py-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-zinc-200">
               <BrandMark className="w-6" theme="dark" decorative sizes="24px" />
-              Bay Area Access
+              EarPlug
             </div>
-            <div className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-zinc-400">
+            <div className="rounded-full border border-white/[0.06] bg-white/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-zinc-400">
               Listen Local
             </div>
           </div>
 
-          <div className="mt-6 rounded-[28px] border border-white/12 bg-[linear-gradient(180deg,rgba(7,10,17,0.92),rgba(10,10,12,0.96))] p-5 shadow-[0_24px_60px_rgba(0,0,0,0.35)] sm:p-6">
+          <div className="mt-6 rounded-[28px] border border-white/[0.08] bg-[linear-gradient(180deg,rgba(7,10,17,0.92),rgba(10,10,12,0.96))] p-5 shadow-[0_24px_60px_rgba(0,0,0,0.35)] sm:p-6">
             <div className="grid gap-3 sm:grid-cols-2">
               <ProviderButton
                 provider="google"
-                label="Continue with Google"
-                note="Fastest way in"
+                label="Sign in with Google"
                 disabled={oauthLoadingProvider !== null || isSubmitting}
                 isLoading={oauthLoadingProvider === "google"}
                 onClick={() => void handleSocialAuth("google")}
               />
               <ProviderButton
                 provider="spotify"
-                label="Continue with Spotify"
-                note="Power personalization"
+                label="Sign in with Spotify"
                 disabled={oauthLoadingProvider !== null || isSubmitting}
                 isLoading={oauthLoadingProvider === "spotify"}
                 onClick={() => void handleSocialAuth("spotify")}
@@ -506,21 +584,116 @@ export function CustomAuthPanel() {
               <div className="h-px flex-1 bg-white/10" />
             </div>
 
-            {!pendingPhoneFlow ? (
-              <div className="space-y-4">
+            <div className="space-y-4">
+              <AuthField
+                label="Phone Number"
+                value={phoneNumber}
+                onChange={(value) => setPhoneNumber(formatPhoneNumberInput(value))}
+                placeholder="(415) 555-0123"
+                autoComplete="tel"
+                type="tel"
+                inputMode="tel"
+                icon={<Phone className="h-4 w-4" />}
+              />
+              <button
+                type="button"
+                onClick={() => void handleSendPhoneCode()}
+                disabled={isSubmitting || oauthLoadingProvider !== null}
+                className={cn(
+                  "flex w-full items-center justify-center gap-2 rounded-[20px] bg-white px-4 py-3.5 text-sm font-semibold text-zinc-950 transition-colors",
+                  isSubmitting || oauthLoadingProvider !== null
+                    ? "cursor-not-allowed opacity-70"
+                    : "hover:bg-zinc-200",
+                )}
+              >
+                {isSubmitting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <ArrowRight className="h-4 w-4" />
+                )}
+                Send confirmation code
+              </button>
+            </div>
+
+            {!pendingPhoneFlow && notice ? (
+              <div className="mt-4 rounded-[20px] border border-emerald-500/20 bg-emerald-500/10 px-4 py-3">
+                <p className="text-sm text-emerald-200">{notice}</p>
+              </div>
+            ) : null}
+
+            {!pendingPhoneFlow && error ? (
+              <div className="mt-4 rounded-[20px] border border-red-500/25 bg-red-500/10 px-4 py-3">
+                <p className="text-sm text-red-200">{error}</p>
+              </div>
+            ) : null}
+
+            <div id="clerk-captcha" className="mt-4" />
+          </div>
+        </div>
+      </div>
+
+      <ResponsiveSheetModal
+        isOpen={pendingPhoneFlow !== null}
+        onClose={resetPhoneFlow}
+        labelledBy="phone-confirmation-title"
+        panelClassName="sm:max-w-md border-white/[0.08] bg-[#090a0f]"
+        backdropClassName="bg-black/80 backdrop-blur-md"
+      >
+        {pendingPhoneFlow ? (
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[#090a0f] text-white">
+            <div className="flex-1 px-5 py-5 sm:px-6 sm:py-6">
+              <div className="flex items-center justify-between gap-3">
+                <div className="inline-flex items-center gap-3 rounded-full border border-white/[0.08] bg-black/20 px-3.5 py-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-zinc-200">
+                  <BrandMark className="w-6" theme="dark" decorative sizes="24px" />
+                  EarPlug
+                </div>
+                <div className="rounded-full border border-white/[0.06] bg-white/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-zinc-400">
+                  Code
+                </div>
+              </div>
+
+              <div className="mt-6">
+                <h2
+                  id="phone-confirmation-title"
+                  className="text-[1.65rem] font-semibold tracking-[-0.03em] text-white"
+                >
+                  Enter code
+                </h2>
+                <p className="mt-2 text-sm text-zinc-400">
+                  Sent to{" "}
+                  <span className="font-semibold text-zinc-100">
+                    {pendingPhoneFlow.destinationLabel}
+                  </span>
+                </p>
+              </div>
+
+              <div className="mt-5">
                 <AuthField
-                  label="Phone Number"
-                  value={phoneNumber}
-                  onChange={setPhoneNumber}
-                  placeholder="(415) 555-0123"
-                  autoComplete="tel"
-                  type="tel"
-                  inputMode="tel"
-                  icon={<Phone className="h-4 w-4" />}
+                  label="Code"
+                  value={verificationCode}
+                  onChange={setVerificationCode}
+                  placeholder="123456"
+                  autoComplete="one-time-code"
+                  inputMode="numeric"
                 />
+              </div>
+
+              {notice ? (
+                <div className="mt-4 rounded-[18px] border border-emerald-500/20 bg-emerald-500/[0.08] px-4 py-3">
+                  <p className="text-sm text-emerald-200">{notice}</p>
+                </div>
+              ) : null}
+
+              {error ? (
+                <div className="mt-4 rounded-[18px] border border-red-500/20 bg-red-500/[0.08] px-4 py-3">
+                  <p className="text-sm text-red-200">{error}</p>
+                </div>
+              ) : null}
+
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
                 <button
                   type="button"
-                  onClick={() => void handleSendPhoneCode()}
+                  onClick={() => void handleVerifyPhoneCode()}
                   disabled={isSubmitting || oauthLoadingProvider !== null}
                   className={cn(
                     "flex w-full items-center justify-center gap-2 rounded-[20px] bg-white px-4 py-3.5 text-sm font-semibold text-zinc-950 transition-colors",
@@ -532,97 +705,36 @@ export function CustomAuthPanel() {
                   {isSubmitting ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <ArrowRight className="h-4 w-4" />
+                    <ShieldCheck className="h-4 w-4" />
                   )}
-                  Send confirmation code
+                  Verify code
                 </button>
-                <p className="text-xs leading-5 text-zinc-500">
-                  No password. If this is your first time, we&apos;ll create the
-                  account after your phone number is confirmed.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="rounded-[22px] border border-white/10 bg-white/[0.04] px-4 py-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500">
-                    Phone confirmation
-                  </p>
-                  <p className="mt-2 text-sm text-zinc-200">
-                    Enter the code sent to{" "}
-                    <span className="font-semibold text-white">
-                      {pendingPhoneFlow.destinationLabel}
-                    </span>
-                    .
-                  </p>
-                </div>
-                <AuthField
-                  label="Confirmation Code"
-                  value={verificationCode}
-                  onChange={setVerificationCode}
-                  placeholder="123456"
-                  autoComplete="one-time-code"
-                  inputMode="numeric"
-                />
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <button
-                    type="button"
-                    onClick={() => void handleVerifyPhoneCode()}
-                    disabled={isSubmitting || oauthLoadingProvider !== null}
-                    className={cn(
-                      "flex w-full items-center justify-center gap-2 rounded-[20px] bg-white px-4 py-3.5 text-sm font-semibold text-zinc-950 transition-colors",
-                      isSubmitting || oauthLoadingProvider !== null
-                        ? "cursor-not-allowed opacity-70"
-                        : "hover:bg-zinc-200",
-                    )}
-                  >
-                    {isSubmitting ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <ShieldCheck className="h-4 w-4" />
-                    )}
-                    Verify code
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void handleResendCode()}
-                    disabled={isSubmitting || oauthLoadingProvider !== null}
-                    className={cn(
-                      "rounded-[20px] border border-white/12 bg-white/[0.045] px-4 py-3.5 text-sm font-semibold text-white transition-colors",
-                      isSubmitting || oauthLoadingProvider !== null
-                        ? "cursor-not-allowed opacity-70"
-                        : "hover:border-white/25 hover:bg-white/[0.08]",
-                    )}
+                <button
+                  type="button"
+                  onClick={() => void handleResendCode()}
+                  disabled={isSubmitting || oauthLoadingProvider !== null}
+                  className={cn(
+                    "rounded-[20px] border border-white/[0.08] bg-white/[0.045] px-4 py-3.5 text-sm font-semibold text-white transition-colors",
+                    isSubmitting || oauthLoadingProvider !== null
+                      ? "cursor-not-allowed opacity-70"
+                      : "hover:border-white/[0.14] hover:bg-white/[0.08]",
+                  )}
                   >
                     Resend code
                   </button>
-                </div>
-                <button
-                  type="button"
-                  onClick={resetPhoneFlow}
-                  disabled={isSubmitting}
-                  className="text-sm font-medium text-zinc-400 transition-colors hover:text-white disabled:cursor-not-allowed disabled:opacity-70"
-                >
-                  Use a different phone number
-                </button>
               </div>
-            )}
-
-            {notice ? (
-              <div className="mt-4 rounded-[20px] border border-emerald-500/20 bg-emerald-500/10 px-4 py-3">
-                <p className="text-sm text-emerald-200">{notice}</p>
-              </div>
-            ) : null}
-
-            {error ? (
-              <div className="mt-4 rounded-[20px] border border-red-500/25 bg-red-500/10 px-4 py-3">
-                <p className="text-sm text-red-200">{error}</p>
-              </div>
-            ) : null}
-
-            <div id="clerk-captcha" className="mt-4" />
+              <button
+                type="button"
+                onClick={resetPhoneFlow}
+                disabled={isSubmitting}
+                className="mt-4 w-full text-sm font-medium text-zinc-400 transition-colors hover:text-white disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                Change phone number
+              </button>
+            </div>
           </div>
-        </div>
-      </div>
+        ) : null}
+      </ResponsiveSheetModal>
     </div>
   );
 }

@@ -13,7 +13,7 @@ importers:
         version: 2.19.21(@solana/web3.js@1.98.4(bufferutil@4.1.0)(typescript@5.3.3)(utf-8-validate@5.0.10))(@types/react@18.2.79)(bs58@5.0.0)(bufferutil@4.1.0)(expo-auth-session@5.5.2(expo@51.0.39(@babel/core@7.28.6)(@babel/preset-env@7.28.6(@babel/core@7.28.6))(bufferutil@4.1.0)(react-native@0.74.5(@babel/core@7.28.6)(@babel/preset-env@7.28.6(@babel/core@7.28.6))(@types/react@18.2.79)(bufferutil@4.1.0)(react@18.2.0)(utf-8-validate@5.0.10))(react@18.2.0)(utf-8-validate@5.0.10)))(expo-crypto@13.0.2(expo@51.0.39(@babel/core@7.28.6)(@babel/preset-env@7.28.6(@babel/core@7.28.6))(bufferutil@4.1.0)(react-native@0.74.5(@babel/core@7.28.6)(@babel/preset-env@7.28.6(@babel/core@7.28.6))(@types/react@18.2.79)(bufferutil@4.1.0)(react@18.2.0)(utf-8-validate@5.0.10))(react@18.2.0)(utf-8-validate@5.0.10)))(expo-secure-store@13.0.2(expo@51.0.39(@babel/core@7.28.6)(@babel/preset-env@7.28.6(@babel/core@7.28.6))(bufferutil@4.1.0)(react-native@0.74.5(@babel/core@7.28.6)(@babel/preset-env@7.28.6(@babel/core@7.28.6))(@types/react@18.2.79)(bufferutil@4.1.0)(react@18.2.0)(utf-8-validate@5.0.10))(react@18.2.0)(utf-8-validate@5.0.10)))(expo-web-browser@13.0.3(expo@51.0.39(@babel/core@7.28.6)(@babel/preset-env@7.28.6(@babel/core@7.28.6))(bufferutil@4.1.0)(react-native@0.74.5(@babel/core@7.28.6)(@babel/preset-env@7.28.6(@babel/core@7.28.6))(@types/react@18.2.79)(bufferutil@4.1.0)(react@18.2.0)(utf-8-validate@5.0.10))(react@18.2.0)(utf-8-validate@5.0.10)))(fastestsmallesttextencoderdecoder@1.0.22)(react-dom@18.3.1(react@18.2.0))(react-native@0.74.5(@babel/core@7.28.6)(@babel/preset-env@7.28.6(@babel/core@7.28.6))(@types/react@18.2.79)(bufferutil@4.1.0)(react@18.2.0)(utf-8-validate@5.0.10))(react@18.2.0)(typescript@5.3.3)(use-sync-external-store@1.6.0(react@18.2.0))(utf-8-validate@5.0.10)(zod@3.25.76)
       convex:
         specifier: ^1.16.0
-        version: 1.31.7(@clerk/clerk-react@5.60.0(react-dom@18.3.1(react@18.2.0))(react@18.2.0))(react@18.2.0)
+        version: 1.31.7(@clerk/clerk-react@5.61.4(react-dom@18.3.1(react@18.2.0))(react@18.2.0))(react@18.2.0)
       svix:
         specifier: ^1.86.0
         version: 1.86.0
@@ -53,7 +53,7 @@ importers:
         version: 6.1.18(react-native@0.74.5(@babel/core@7.28.6)(@babel/preset-env@7.28.6(@babel/core@7.28.6))(@types/react@18.2.79)(bufferutil@4.1.0)(react@18.2.0)(utf-8-validate@5.0.10))(react@18.2.0)
       convex:
         specifier: ^1.16.0
-        version: 1.31.7(@clerk/clerk-react@5.60.0(react-dom@18.3.1(react@18.2.0))(react@18.2.0))(react@18.2.0)
+        version: 1.31.7(@clerk/clerk-react@5.61.4(react-dom@18.3.1(react@18.2.0))(react@18.2.0))(react@18.2.0)
       expo:
         specifier: ~51.0.0
         version: 51.0.39(@babel/core@7.28.6)(@babel/preset-env@7.28.6(@babel/core@7.28.6))(bufferutil@4.1.0)(react-native@0.74.5(@babel/core@7.28.6)(@babel/preset-env@7.28.6(@babel/core@7.28.6))(@types/react@18.2.79)(bufferutil@4.1.0)(react@18.2.0)(utf-8-validate@5.0.10))(react@18.2.0)(utf-8-validate@5.0.10)
@@ -153,7 +153,7 @@ importers:
         version: 7.1.2(eslint@8.57.1)(typescript@5.3.3)
       eslint-import-resolver-typescript:
         specifier: ^4.4.4
-        version: 4.4.4(eslint-plugin-import@2.32.0)(eslint@8.57.1)
+        version: 4.4.4(eslint-plugin-import@2.32.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.3.3))(eslint-import-resolver-typescript@3.10.1)(eslint@8.57.1))(eslint@8.57.1)
       tailwindcss:
         specifier: ^3.4.0
         version: 3.4.19(yaml@2.8.2)
@@ -163,9 +163,12 @@ importers:
 
   apps/web:
     dependencies:
+      '@clerk/clerk-react':
+        specifier: ^5.61.4
+        version: 5.61.4(react-dom@18.3.1(react@18.2.0))(react@18.2.0)
       '@clerk/nextjs':
-        specifier: ^5.0.0
-        version: 5.7.5(next@14.2.35(@babel/core@7.28.6)(react-dom@18.3.1(react@18.2.0))(react@18.2.0))(react-dom@18.3.1(react@18.2.0))(react@18.2.0)
+        specifier: ^6.39.1
+        version: 6.39.1(next@14.2.35(@babel/core@7.28.6)(react-dom@18.3.1(react@18.2.0))(react@18.2.0))(react-dom@18.3.1(react@18.2.0))(react@18.2.0)
       '@ear-plug/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -177,7 +180,7 @@ importers:
         version: 2.1.1
       convex:
         specifier: ^1.16.0
-        version: 1.31.7(@clerk/clerk-react@5.60.0(react-dom@18.3.1(react@18.2.0))(react@18.2.0))(react@18.2.0)
+        version: 1.31.7(@clerk/clerk-react@5.61.4(react-dom@18.3.1(react@18.2.0))(react@18.2.0))(react@18.2.0)
       framer-motion:
         specifier: ^12.34.3
         version: 12.34.3(react-dom@18.3.1(react@18.2.0))(react@18.2.0)
@@ -1038,8 +1041,8 @@ packages:
   '@base-org/account@2.0.1':
     resolution: {integrity: sha512-tySVNx+vd6XEynZL0uvB10uKiwnAfThr8AbKTwILVG86mPbLAhEOInQIk+uDnvpTvfdUhC1Bi5T/46JvFoLZQQ==}
 
-  '@clerk/backend@1.14.1':
-    resolution: {integrity: sha512-YlKMpiVo4UITw3sgA+9QrAFRILVOz5hgB1Zw180Y2LEZ5a+MdpX668vJKGh7riSweMN7JQvU2jlsKGRO+1bXDw==}
+  '@clerk/backend@2.33.1':
+    resolution: {integrity: sha512-DRwmFu6gEmzHRUeXXB5y02QxMihHDEgetSQrb0ME6KaYe29+LnenBUQAmlASXmsovIi9cBqk4hE4WHWNRXX+Bw==}
     engines: {node: '>=18.17.0'}
 
   '@clerk/clerk-expo@2.19.21':
@@ -1076,18 +1079,9 @@ packages:
       react: ^18.0.0 || ~19.0.3 || ~19.1.4 || ~19.2.3 || ~19.3.0-0
       react-dom: ^18.0.0 || ~19.0.3 || ~19.1.4 || ~19.2.3 || ~19.3.0-0
 
-  '@clerk/clerk-react@5.12.0':
-    resolution: {integrity: sha512-3Lr2QazCm5R6ZLbu7wM+d5YwCElrAoX00OBWcKqjPYaWDJCCmEYN6LJbLzOTYQ8QT1J1ZIed85/lKa+q2aD1aA==}
+  '@clerk/clerk-react@5.61.4':
+    resolution: {integrity: sha512-xGvQvzfc5pQEuqCW8CNUgnlR+9nt6gSSMGMYx3l972utIJrFKByQJFCRZpwYBvAHiveuK11Wgy3J39p904jb+w==}
     engines: {node: '>=18.17.0'}
-    deprecated: 'This package is no longer supported. Please use @clerk/react instead. See the upgrade guide for more info: https://clerk.com/docs/guides/development/upgrading/upgrade-guides/core-3'
-    peerDependencies:
-      react: '>=18 || >=19.0.0-beta'
-      react-dom: '>=18 || >=19.0.0-beta'
-
-  '@clerk/clerk-react@5.60.0':
-    resolution: {integrity: sha512-P88FncsJpq/3WZJhhlj+md8mYb35BIXpr462C/figwsBGHsinr8VuBQUMcMZZ/6M34C8ABfLTPa6PHVp6+3D5Q==}
-    engines: {node: '>=18.17.0'}
-    deprecated: 'This package is no longer supported. Please use @clerk/react instead. See the upgrade guide for more info: https://clerk.com/docs/guides/development/upgrading/upgrade-guides/core-3'
     peerDependencies:
       react: ^18.0.0 || ~19.0.3 || ~19.1.4 || ~19.2.3 || ~19.3.0-0
       react-dom: ^18.0.0 || ~19.0.3 || ~19.1.4 || ~19.2.3 || ~19.3.0-0
@@ -1096,28 +1090,28 @@ packages:
     resolution: {integrity: sha512-RxxxKyj4aXGq8GO+2+n/YsPg5Q9xGKO/T1grMxOne8CNZXLcRniIXomL6hcTjHaQ4ZNPuNvQRt8YAcu5g01tWw==}
     engines: {node: '>=18.17.0'}
 
-  '@clerk/nextjs@5.7.5':
-    resolution: {integrity: sha512-hfH4IiKcDT9LlqSOlNHZoYfX6iF4lBqPXf/KwnILCX/0+MVYaotb30FwWXkcHI2jZgcvumlQTOq8Gv5KugnihA==}
+  '@clerk/nextjs@6.39.1':
+    resolution: {integrity: sha512-crc6nJOK+1V7kf7tMxeoOaJK9/HHGbjqWm1rW11RrRKA7lnaIeCUtO6kSy8dZ/4ZyVfUACVOwUdQM7EqwHmzWg==}
     engines: {node: '>=18.17.0'}
     peerDependencies:
-      next: ^13.5.4 || ^14.0.3 || >=15.0.0-rc
-      react: '>=18 || >=19.0.0-beta'
-      react-dom: '>=18 || >=19.0.0-beta'
+      next: ^13.5.7 || ^14.2.25 || ^15.2.3 || ^16
+      react: ^18.0.0 || ~19.0.3 || ~19.1.4 || ~19.2.3 || ~19.3.0-0
+      react-dom: ^18.0.0 || ~19.0.3 || ~19.1.4 || ~19.2.3 || ~19.3.0-0
 
-  '@clerk/shared@2.9.2':
-    resolution: {integrity: sha512-vRMDj13Pv9n8Pf+f8P40AvqJ8QEq348qUxUVIf17vn9R3/toicrQOY/Q6qsrAS8KXY9+ZnyTafJa+VFK+6iEFA==}
+  '@clerk/shared@3.44.0':
+    resolution: {integrity: sha512-kH+chNeZwqml3IDpWLgebWECfOZifyUQO4OISd/96w1EuCY1Bzw6cBq/ZbpsoO8jyG8/6bGr/MGXLhDzTrpPfA==}
     engines: {node: '>=18.17.0'}
     peerDependencies:
-      react: '>=18 || >=19.0.0-beta'
-      react-dom: '>=18 || >=19.0.0-beta'
+      react: ^18.0.0 || ~19.0.3 || ~19.1.4 || ~19.2.3 || ~19.3.0-0
+      react-dom: ^18.0.0 || ~19.0.3 || ~19.1.4 || ~19.2.3 || ~19.3.0-0
     peerDependenciesMeta:
       react:
         optional: true
       react-dom:
         optional: true
 
-  '@clerk/shared@3.44.0':
-    resolution: {integrity: sha512-kH+chNeZwqml3IDpWLgebWECfOZifyUQO4OISd/96w1EuCY1Bzw6cBq/ZbpsoO8jyG8/6bGr/MGXLhDzTrpPfA==}
+  '@clerk/shared@3.47.3':
+    resolution: {integrity: sha512-jG0wMIZuuc8zaKieg9Os8ocTphG+llluRukUUdyVnu4+ZI1syVf+dkpDP3ZK69yLavTX3D0KAmkmQqTPzQV/Nw==}
     engines: {node: '>=18.17.0'}
     peerDependencies:
       react: ^18.0.0 || ~19.0.3 || ~19.1.4 || ~19.2.3 || ~19.3.0-0
@@ -1133,10 +1127,9 @@ packages:
     engines: {node: '>=18.17.0'}
     deprecated: 'This package is no longer supported. Please import types from @clerk/shared/types instead. See the upgrade guide for more info: https://clerk.com/docs/guides/development/upgrading/upgrade-guides/core-3'
 
-  '@clerk/types@4.26.0':
-    resolution: {integrity: sha512-VGcrQz/XpCiGbpIIzKVwWw4nLorzKnIP1IAemj1xt/80ULcdEZCncwhas6PoYBBsl1W55A1SwP9B/pEs0nmkCw==}
+  '@clerk/types@4.101.21':
+    resolution: {integrity: sha512-/70W603A6bRv1n24dDNAs3kWHLSIgXebEyzXZ46IuROWcq0+guSqqLa+nKekxxIdk6I/vnI9SWjBvBRuZVMnhQ==}
     engines: {node: '>=18.17.0'}
-    deprecated: 'This package is no longer supported. Please import types from @clerk/shared/types instead. See the upgrade guide for more info: https://clerk.com/docs/guides/development/upgrading/upgrade-guides/core-3'
 
   '@coinbase/wallet-sdk@4.3.0':
     resolution: {integrity: sha512-T3+SNmiCw4HzDm4we9wCHCxlP0pqCiwKe4sOwPH3YAK2KSKjxPRydKu6UQJrdONFVLG7ujXvbd/6ZqmvJb8rkw==}
@@ -2993,10 +2986,6 @@ packages:
     resolution: {integrity: sha512-D76uU73ulSXrD1UXF4KE2TMxVVwhsnCgfAyTg9k8P6KGZjlXKrOLe4dJQKI3Bxi5wjesZoFXJWElNWBjPZMbhg==}
     engines: {node: '>=6.6.0'}
 
-  cookie@0.7.0:
-    resolution: {integrity: sha512-qCf+V4dtlNhSRXGAZatc1TasyFO6GjohcOul807YOb5ik3+kQSnb4d7iajeCL8QHaJ4uZEjCgiCJerKXwdRVlQ==}
-    engines: {node: '>= 0.6'}
-
   cookie@0.7.2:
     resolution: {integrity: sha512-yki5XnKuf750l50uGTllt6kKILY4nQ1eNIQatoXEByZ5dWgnKqbnqmTrBE5B4N7lrMJKQ2ytWMiTO2o0v6Ew/w==}
     engines: {node: '>= 0.6'}
@@ -3064,9 +3053,6 @@ packages:
     resolution: {integrity: sha512-/Tb/JcjK111nNScGob5MNtsntNM1aCNUDipB/TkwZFhyDrrE47SOx/18wF2bbjgc3ZzCSKW1T5nt5EbFoAz/Vg==}
     engines: {node: '>=4'}
     hasBin: true
-
-  csstype@3.1.1:
-    resolution: {integrity: sha512-DJR/VvkAvSZW9bTouZue2sSxDwdTN92uHjqeKVm+0dAqdfNykRzQ95tay8aXMBAAPpUiq4Qcug2L7neoRh2Egw==}
 
   csstype@3.1.3:
     resolution: {integrity: sha512-M1uQkMl8rQK/szD0LNhtqxIPLpimGm8sOBwU7lLnCpSbTyY3yeU1Vc7l4KT5zT4s/yOxHH5O7tIuuLOCnLADRw==}
@@ -3280,9 +3266,6 @@ packages:
 
   domutils@3.2.2:
     resolution: {integrity: sha512-6kZKyUajlDuqlHKVX1w7gyslj9MPIXzIFiz/rGu35uC1wMi+kMhQwGhl4lt9unC9Vb9INnY9Z3/ZA3+FhASLaw==}
-
-  dot-case@3.0.4:
-    resolution: {integrity: sha512-Kv5nKlh6yRrdrGvxeJ2e5y2eRUpkUosIW4A2AS38zwSz27zu7ufDwQPi5Jhs3XAlGNetl3bmnGhQsMtkKJnj3w==}
 
   dotenv-expand@11.0.7:
     resolution: {integrity: sha512-zIHwmZPRshsCdpMDyVsqGmgyP0yT8GAgXUnkdAoJisxvf33k7yO6OuoKmcTGuXPWSsm8Oh88nZicRLA9Y0rUeA==}
@@ -4719,9 +4702,6 @@ packages:
     resolution: {integrity: sha512-lyuxPGr/Wfhrlem2CL/UcnUc1zcqKAImBDzukY7Y5F/yQiNdko6+fRLevlw1HgMySw7f611UIY408EtxRSoK3Q==}
     hasBin: true
 
-  lower-case@2.0.2:
-    resolution: {integrity: sha512-7fm3l3NAF9WfN6W3JOmf5drwpVqX78JtoGJ3A6W0a6ZnldM41w2fV5D490psKFTpMds8TJse/eHLFFsNHHjHgg==}
-
   lru-cache@10.4.3:
     resolution: {integrity: sha512-JNAzZcXrCt42VGLuYz0zfAzDfAvJWW6AfYlDBQyDV5DClI2m5sAmK+OIO7s59XfsRsWHp02jAJrRadPRGTt6SQ==}
 
@@ -4750,10 +4730,6 @@ packages:
 
   makeerror@1.0.12:
     resolution: {integrity: sha512-JmqCvUhmt43madlpFzG4BQzG2Z3m6tvQDNKdClZnO3VbIudJYmxsT0FNJMeiB2+JTSlTQTSbU8QdesVmwJcmLg==}
-
-  map-obj@4.3.0:
-    resolution: {integrity: sha512-hdN1wVrZbb29eBGiGjJbeP8JbKjq1urkHJ/LIP/NY48MZ1QVXUsQBV1G1zvYFHn1XE06cwjBsOI2K3Ulnj1YXQ==}
-    engines: {node: '>=8'}
 
   marky@1.3.0:
     resolution: {integrity: sha512-ocnPZQLNpvbedwTy9kNrQEsknEfgvcLMvOtz3sFeWApDq1MXH1TqkCIx58xlpESsfwQOnuBO9beyQuNGzVvuhQ==}
@@ -5007,9 +4983,6 @@ packages:
 
   nice-try@1.0.5:
     resolution: {integrity: sha512-1nh45deeb5olNY7eX82BkPO7SSxR5SSYJiPTrTdFUVYwAl8CKMA5N9PjTYkHiRjisVcxcQ1HXdLhx2qxxJzLNQ==}
-
-  no-case@3.0.4:
-    resolution: {integrity: sha512-fgAN3jGAh+RoxUGZHTSOLJIqUc2wmoBwGR4tbpNAKmmovFoWq0OdRkb0VkldReO2a2iBT/OEulG9XSUc10r3zg==}
 
   nocache@3.0.4:
     resolution: {integrity: sha512-WDD0bdg9mbq6F4mRxEYcPWwfA1vxd0mrvKOyxI7Xj/atfRHVeutzuWByG//jfm4uPzp0y4Kj051EORCBSQMycw==}
@@ -5937,13 +5910,6 @@ packages:
     resolution: {integrity: sha512-h+z7HKHYXj6wJU+AnS/+IH8Uh9fdcX1Lrhg1/VMdf9PwoBQXFcXiAdsy2tSK0P6gKwJLXp02r90ahUCqHk9rrw==}
     engines: {node: '>=8.0.0'}
 
-  snake-case@3.0.4:
-    resolution: {integrity: sha512-LAOh4z89bGQvl9pFfNF8V146i7o7/CqFPbqzYgP+yYzDIDeS9HaNFtXABamRW+AQzEVODcvE79ljJ+8a9YSdMg==}
-
-  snakecase-keys@5.4.4:
-    resolution: {integrity: sha512-YTywJG93yxwHLgrYLZjlC75moVEX04LZM4FHfihjHe1FCXm+QaLOFfSf535aXOAd0ArVQMWUAe8ZPm4VtWyXaA==}
-    engines: {node: '>=12'}
-
   source-map-js@1.2.1:
     resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==}
     engines: {node: '>=0.10.0'}
@@ -6180,11 +6146,6 @@ packages:
     peerDependencies:
       react: ^16.11.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
-  swr@2.3.8:
-    resolution: {integrity: sha512-gaCPRVoMq8WGDcWj9p4YWzCMPHzE0WNl6W8ADIx9c3JBEIdMkJGMzW+uzXvxHMltwcYACr9jP+32H8/hgwMR7w==}
-    peerDependencies:
-      react: ^16.11.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
-
   tabbable@6.4.0:
     resolution: {integrity: sha512-05PUHKSNE8ou2dwIxTngl4EzcnsCDZGJ/iCLtDflR/SHB/ny14rXc+qU5P4mG9JkusiV7EivzY9Mhm55AzAvCg==}
 
@@ -6300,9 +6261,6 @@ packages:
   tsconfig-paths@3.15.0:
     resolution: {integrity: sha512-2Ac2RgzDe/cn48GvOe3M+o82pEFewD3UPbyoUHHdKasHwJKjds4fLXWf/Ux5kATBKN20oaFGu+jbElp1pos0mg==}
 
-  tslib@2.4.1:
-    resolution: {integrity: sha512-tGyy4dAjRIEwI7BzsB0lynWgOpfqjUdq91XXAlIWD2OwKBH7oCl/GZG/HT4BOHrTlPMOASlMQ7veyTqpmRcrNA==}
-
   tslib@2.8.1:
     resolution: {integrity: sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==}
 
@@ -6370,10 +6328,6 @@ packages:
   type-fest@0.7.1:
     resolution: {integrity: sha512-Ne2YiiGN8bmrmJJEuTWTLJR32nh/JdL1+PSicowtNb0WFpn59GK8/lfD61bVtzguz7b3PBt74nxpv/Pw5po5Rg==}
     engines: {node: '>=8'}
-
-  type-fest@2.19.0:
-    resolution: {integrity: sha512-RAH822pAdBgcNMAfWnCBU3CFZcfZ/i1eZjwFU/dsLKumyuuP3niueg2UAukXYF0E2AAoc82ZSSf9J0WQBinzHA==}
-    engines: {node: '>=12.20'}
 
   typed-array-buffer@1.0.3:
     resolution: {integrity: sha512-nAYYwfY3qnzX30IkA6AQZjVbtK6duGontcQm1WSG1MD94YLqK0515GNApXkoxKOWMusVssAHWLh9SeaoefYFGw==}
@@ -7777,13 +7731,12 @@ snapshots:
       - utf-8-validate
       - zod
 
-  '@clerk/backend@1.14.1(react-dom@18.3.1(react@18.2.0))(react@18.2.0)':
+  '@clerk/backend@2.33.1(react-dom@18.3.1(react@18.2.0))(react@18.2.0)':
     dependencies:
-      '@clerk/shared': 2.9.2(react-dom@18.3.1(react@18.2.0))(react@18.2.0)
-      '@clerk/types': 4.26.0
-      cookie: 0.7.0
-      snakecase-keys: 5.4.4
-      tslib: 2.4.1
+      '@clerk/shared': 3.47.3(react-dom@18.3.1(react@18.2.0))(react@18.2.0)
+      '@clerk/types': 4.101.21(react-dom@18.3.1(react@18.2.0))(react@18.2.0)
+      standardwebhooks: 1.0.0
+      tslib: 2.8.1
     transitivePeerDependencies:
       - react
       - react-dom
@@ -7791,7 +7744,7 @@ snapshots:
   ? '@clerk/clerk-expo@2.19.21(@solana/web3.js@1.98.4(bufferutil@4.1.0)(typescript@5.3.3)(utf-8-validate@5.0.10))(@types/react@18.2.79)(bs58@5.0.0)(bufferutil@4.1.0)(expo-auth-session@5.5.2(expo@51.0.39(@babel/core@7.28.6)(@babel/preset-env@7.28.6(@babel/core@7.28.6))(bufferutil@4.1.0)(react-native@0.74.5(@babel/core@7.28.6)(@babel/preset-env@7.28.6(@babel/core@7.28.6))(@types/react@18.2.79)(bufferutil@4.1.0)(react@18.2.0)(utf-8-validate@5.0.10))(react@18.2.0)(utf-8-validate@5.0.10)))(expo-crypto@13.0.2(expo@51.0.39(@babel/core@7.28.6)(@babel/preset-env@7.28.6(@babel/core@7.28.6))(bufferutil@4.1.0)(react-native@0.74.5(@babel/core@7.28.6)(@babel/preset-env@7.28.6(@babel/core@7.28.6))(@types/react@18.2.79)(bufferutil@4.1.0)(react@18.2.0)(utf-8-validate@5.0.10))(react@18.2.0)(utf-8-validate@5.0.10)))(expo-secure-store@13.0.2(expo@51.0.39(@babel/core@7.28.6)(@babel/preset-env@7.28.6(@babel/core@7.28.6))(bufferutil@4.1.0)(react-native@0.74.5(@babel/core@7.28.6)(@babel/preset-env@7.28.6(@babel/core@7.28.6))(@types/react@18.2.79)(bufferutil@4.1.0)(react@18.2.0)(utf-8-validate@5.0.10))(react@18.2.0)(utf-8-validate@5.0.10)))(expo-web-browser@13.0.3(expo@51.0.39(@babel/core@7.28.6)(@babel/preset-env@7.28.6(@babel/core@7.28.6))(bufferutil@4.1.0)(react-native@0.74.5(@babel/core@7.28.6)(@babel/preset-env@7.28.6(@babel/core@7.28.6))(@types/react@18.2.79)(bufferutil@4.1.0)(react@18.2.0)(utf-8-validate@5.0.10))(react@18.2.0)(utf-8-validate@5.0.10)))(fastestsmallesttextencoderdecoder@1.0.22)(react-dom@18.3.1(react@18.2.0))(react-native@0.74.5(@babel/core@7.28.6)(@babel/preset-env@7.28.6(@babel/core@7.28.6))(@types/react@18.2.79)(bufferutil@4.1.0)(react@18.2.0)(utf-8-validate@5.0.10))(react@18.2.0)(typescript@5.3.3)(use-sync-external-store@1.6.0(react@18.2.0))(utf-8-validate@5.0.10)(zod@3.25.76)'
   : dependencies:
       '@clerk/clerk-js': 5.122.0(@solana/web3.js@1.98.4(bufferutil@4.1.0)(typescript@5.3.3)(utf-8-validate@5.0.10))(@types/react@18.2.79)(bs58@5.0.0)(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(react-dom@18.3.1(react@18.2.0))(react-native@0.74.5(@babel/core@7.28.6)(@babel/preset-env@7.28.6(@babel/core@7.28.6))(@types/react@18.2.79)(bufferutil@4.1.0)(react@18.2.0)(utf-8-validate@5.0.10))(react@18.2.0)(typescript@5.3.3)(use-sync-external-store@1.6.0(react@18.2.0))(utf-8-validate@5.0.10)(zod@3.25.76)
-      '@clerk/clerk-react': 5.60.0(react-dom@18.3.1(react@18.2.0))(react@18.2.0)
+      '@clerk/clerk-react': 5.61.4(react-dom@18.3.1(react@18.2.0))(react@18.2.0)
       '@clerk/shared': 3.44.0(react-dom@18.3.1(react@18.2.0))(react@18.2.0)
       '@clerk/types': 4.101.14(react-dom@18.3.1(react@18.2.0))(react@18.2.0)
       base-64: 1.0.0
@@ -7863,17 +7816,9 @@ snapshots:
       - utf-8-validate
       - zod
 
-  '@clerk/clerk-react@5.12.0(react-dom@18.3.1(react@18.2.0))(react@18.2.0)':
+  '@clerk/clerk-react@5.61.4(react-dom@18.3.1(react@18.2.0))(react@18.2.0)':
     dependencies:
-      '@clerk/shared': 2.9.2(react-dom@18.3.1(react@18.2.0))(react@18.2.0)
-      '@clerk/types': 4.26.0
-      react: 18.2.0
-      react-dom: 18.3.1(react@18.2.0)
-      tslib: 2.4.1
-
-  '@clerk/clerk-react@5.60.0(react-dom@18.3.1(react@18.2.0))(react@18.2.0)':
-    dependencies:
-      '@clerk/shared': 3.44.0(react-dom@18.3.1(react@18.2.0))(react@18.2.0)
+      '@clerk/shared': 3.47.3(react-dom@18.3.1(react@18.2.0))(react@18.2.0)
       react: 18.2.0
       react-dom: 18.3.1(react@18.2.0)
       tslib: 2.8.1
@@ -7885,31 +7830,31 @@ snapshots:
       - react
       - react-dom
 
-  '@clerk/nextjs@5.7.5(next@14.2.35(@babel/core@7.28.6)(react-dom@18.3.1(react@18.2.0))(react@18.2.0))(react-dom@18.3.1(react@18.2.0))(react@18.2.0)':
+  '@clerk/nextjs@6.39.1(next@14.2.35(@babel/core@7.28.6)(react-dom@18.3.1(react@18.2.0))(react@18.2.0))(react-dom@18.3.1(react@18.2.0))(react@18.2.0)':
     dependencies:
-      '@clerk/backend': 1.14.1(react-dom@18.3.1(react@18.2.0))(react@18.2.0)
-      '@clerk/clerk-react': 5.12.0(react-dom@18.3.1(react@18.2.0))(react@18.2.0)
-      '@clerk/shared': 2.9.2(react-dom@18.3.1(react@18.2.0))(react@18.2.0)
-      '@clerk/types': 4.26.0
-      crypto-js: 4.2.0
+      '@clerk/backend': 2.33.1(react-dom@18.3.1(react@18.2.0))(react@18.2.0)
+      '@clerk/clerk-react': 5.61.4(react-dom@18.3.1(react@18.2.0))(react@18.2.0)
+      '@clerk/shared': 3.47.3(react-dom@18.3.1(react@18.2.0))(react@18.2.0)
+      '@clerk/types': 4.101.21(react-dom@18.3.1(react@18.2.0))(react@18.2.0)
       next: 14.2.35(@babel/core@7.28.6)(react-dom@18.3.1(react@18.2.0))(react@18.2.0)
       react: 18.2.0
       react-dom: 18.3.1(react@18.2.0)
       server-only: 0.0.1
-      tslib: 2.4.1
+      tslib: 2.8.1
 
-  '@clerk/shared@2.9.2(react-dom@18.3.1(react@18.2.0))(react@18.2.0)':
+  '@clerk/shared@3.44.0(react-dom@18.3.1(react@18.2.0))(react@18.2.0)':
     dependencies:
-      '@clerk/types': 4.26.0
+      csstype: 3.1.3
+      dequal: 2.0.3
       glob-to-regexp: 0.4.1
       js-cookie: 3.0.5
       std-env: 3.10.0
-      swr: 2.3.8(react@18.2.0)
+      swr: 2.3.4(react@18.2.0)
     optionalDependencies:
       react: 18.2.0
       react-dom: 18.3.1(react@18.2.0)
 
-  '@clerk/shared@3.44.0(react-dom@18.3.1(react@18.2.0))(react@18.2.0)':
+  '@clerk/shared@3.47.3(react-dom@18.3.1(react@18.2.0))(react@18.2.0)':
     dependencies:
       csstype: 3.1.3
       dequal: 2.0.3
@@ -7928,9 +7873,12 @@ snapshots:
       - react
       - react-dom
 
-  '@clerk/types@4.26.0':
+  '@clerk/types@4.101.21(react-dom@18.3.1(react@18.2.0))(react@18.2.0)':
     dependencies:
-      csstype: 3.1.1
+      '@clerk/shared': 3.47.3(react-dom@18.3.1(react@18.2.0))(react@18.2.0)
+    transitivePeerDependencies:
+      - react
+      - react-dom
 
   '@coinbase/wallet-sdk@4.3.0':
     dependencies:
@@ -10369,17 +10317,15 @@ snapshots:
 
   convert-source-map@2.0.0: {}
 
-  convex@1.31.7(@clerk/clerk-react@5.60.0(react-dom@18.3.1(react@18.2.0))(react@18.2.0))(react@18.2.0):
+  convex@1.31.7(@clerk/clerk-react@5.61.4(react-dom@18.3.1(react@18.2.0))(react@18.2.0))(react@18.2.0):
     dependencies:
       esbuild: 0.27.0
       prettier: 3.8.1
     optionalDependencies:
-      '@clerk/clerk-react': 5.60.0(react-dom@18.3.1(react@18.2.0))(react@18.2.0)
+      '@clerk/clerk-react': 5.61.4(react-dom@18.3.1(react@18.2.0))(react@18.2.0)
       react: 18.2.0
 
   cookie-signature@1.2.2: {}
-
-  cookie@0.7.0: {}
 
   cookie@0.7.2: {}
 
@@ -10459,8 +10405,6 @@ snapshots:
   css-what@6.2.2: {}
 
   cssesc@3.0.0: {}
-
-  csstype@3.1.1: {}
 
   csstype@3.1.3: {}
 
@@ -10647,11 +10591,6 @@ snapshots:
       dom-serializer: 2.0.0
       domelementtype: 2.3.0
       domhandler: 5.0.3
-
-  dot-case@3.0.4:
-    dependencies:
-      no-case: 3.0.4
-      tslib: 2.8.1
 
   dotenv-expand@11.0.7:
     dependencies:
@@ -10855,7 +10794,7 @@ snapshots:
       eslint: 8.57.1
       eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0)(eslint@8.57.1)
       eslint-plugin-expo: 0.0.1(eslint@8.57.1)(typescript@5.3.3)
-      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.3.3))(eslint-import-resolver-typescript@3.10.1)(eslint@8.57.1)
+      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.3.3))(eslint-import-resolver-typescript@4.4.4(eslint-plugin-import@2.32.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.3.3))(eslint-import-resolver-typescript@3.10.1)(eslint@8.57.1))(eslint@8.57.1))(eslint@8.57.1)
       eslint-plugin-react: 7.37.5(eslint@8.57.1)
       eslint-plugin-react-hooks: 4.6.2(eslint@8.57.1)
     transitivePeerDependencies:
@@ -10910,11 +10849,11 @@ snapshots:
       tinyglobby: 0.2.15
       unrs-resolver: 1.11.1
     optionalDependencies:
-      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.3.3))(eslint-import-resolver-typescript@3.10.1)(eslint@8.57.1)
+      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.9.3))(eslint-import-resolver-typescript@3.10.1)(eslint@8.57.1)
     transitivePeerDependencies:
       - supports-color
 
-  eslint-import-resolver-typescript@4.4.4(eslint-plugin-import@2.32.0)(eslint@8.57.1):
+  eslint-import-resolver-typescript@4.4.4(eslint-plugin-import@2.32.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.3.3))(eslint-import-resolver-typescript@3.10.1)(eslint@8.57.1))(eslint@8.57.1):
     dependencies:
       debug: 4.4.3
       eslint: 8.57.1
@@ -10925,18 +10864,18 @@ snapshots:
       tinyglobby: 0.2.15
       unrs-resolver: 1.11.1
     optionalDependencies:
-      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.3.3))(eslint-import-resolver-typescript@3.10.1)(eslint@8.57.1)
+      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.3.3))(eslint-import-resolver-typescript@4.4.4(eslint-plugin-import@2.32.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.3.3))(eslint-import-resolver-typescript@3.10.1)(eslint@8.57.1))(eslint@8.57.1))(eslint@8.57.1)
     transitivePeerDependencies:
       - supports-color
 
-  eslint-module-utils@2.12.1(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.3.3))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@4.4.4(eslint-plugin-import@2.32.0)(eslint@8.57.1))(eslint@8.57.1):
+  eslint-module-utils@2.12.1(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.3.3))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@4.4.4(eslint-plugin-import@2.32.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.3.3))(eslint-import-resolver-typescript@3.10.1)(eslint@8.57.1))(eslint@8.57.1))(eslint@8.57.1):
     dependencies:
       debug: 3.2.7
     optionalDependencies:
       '@typescript-eslint/parser': 7.18.0(eslint@8.57.1)(typescript@5.3.3)
       eslint: 8.57.1
       eslint-import-resolver-node: 0.3.9
-      eslint-import-resolver-typescript: 4.4.4(eslint-plugin-import@2.32.0)(eslint@8.57.1)
+      eslint-import-resolver-typescript: 4.4.4(eslint-plugin-import@2.32.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.3.3))(eslint-import-resolver-typescript@3.10.1)(eslint@8.57.1))(eslint@8.57.1)
     transitivePeerDependencies:
       - supports-color
 
@@ -10960,7 +10899,7 @@ snapshots:
       - supports-color
       - typescript
 
-  eslint-plugin-import@2.32.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.3.3))(eslint-import-resolver-typescript@3.10.1)(eslint@8.57.1):
+  eslint-plugin-import@2.32.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.3.3))(eslint-import-resolver-typescript@4.4.4(eslint-plugin-import@2.32.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.3.3))(eslint-import-resolver-typescript@3.10.1)(eslint@8.57.1))(eslint@8.57.1))(eslint@8.57.1):
     dependencies:
       '@rtsao/scc': 1.1.0
       array-includes: 3.1.9
@@ -10971,7 +10910,7 @@ snapshots:
       doctrine: 2.1.0
       eslint: 8.57.1
       eslint-import-resolver-node: 0.3.9
-      eslint-module-utils: 2.12.1(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.3.3))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@4.4.4(eslint-plugin-import@2.32.0)(eslint@8.57.1))(eslint@8.57.1)
+      eslint-module-utils: 2.12.1(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.3.3))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@4.4.4(eslint-plugin-import@2.32.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.3.3))(eslint-import-resolver-typescript@3.10.1)(eslint@8.57.1))(eslint@8.57.1))(eslint@8.57.1)
       hasown: 2.0.2
       is-core-module: 2.16.1
       is-glob: 4.0.3
@@ -12380,10 +12319,6 @@ snapshots:
     dependencies:
       js-tokens: 4.0.0
 
-  lower-case@2.0.2:
-    dependencies:
-      tslib: 2.8.1
-
   lru-cache@10.4.3: {}
 
   lru-cache@5.1.1:
@@ -12412,8 +12347,6 @@ snapshots:
   makeerror@1.0.12:
     dependencies:
       tmpl: 1.0.5
-
-  map-obj@4.3.0: {}
 
   marky@1.3.0: {}
 
@@ -12763,11 +12696,6 @@ snapshots:
       - babel-plugin-macros
 
   nice-try@1.0.5: {}
-
-  no-case@3.0.4:
-    dependencies:
-      lower-case: 2.0.2
-      tslib: 2.8.1
 
   nocache@3.0.4: {}
 
@@ -13825,17 +13753,6 @@ snapshots:
 
   slugify@1.6.6: {}
 
-  snake-case@3.0.4:
-    dependencies:
-      dot-case: 3.0.4
-      tslib: 2.8.1
-
-  snakecase-keys@5.4.4:
-    dependencies:
-      map-obj: 4.3.0
-      snake-case: 3.0.4
-      type-fest: 2.19.0
-
   source-map-js@1.2.1: {}
 
   source-map-support@0.5.21:
@@ -14068,12 +13985,6 @@ snapshots:
       react: 18.2.0
       use-sync-external-store: 1.6.0(react@18.2.0)
 
-  swr@2.3.8(react@18.2.0):
-    dependencies:
-      dequal: 2.0.3
-      react: 18.2.0
-      use-sync-external-store: 1.6.0(react@18.2.0)
-
   tabbable@6.4.0: {}
 
   tailwind-merge@2.6.1: {}
@@ -14219,8 +14130,6 @@ snapshots:
       minimist: 1.2.8
       strip-bom: 3.0.0
 
-  tslib@2.4.1: {}
-
   tslib@2.8.1: {}
 
   turbo-darwin-64@2.8.1:
@@ -14267,8 +14176,6 @@ snapshots:
   type-fest@0.3.1: {}
 
   type-fest@0.7.1: {}
-
-  type-fest@2.19.0: {}
 
   typed-array-buffer@1.0.3:
     dependencies:

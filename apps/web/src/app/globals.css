@@ -29,24 +29,24 @@
     --success-accent: 22 163 74;
   }
   .dark {
-    --background: 0.14 0 0;
-    --foreground: 0.94 0 0;
-    --card: 0.18 0 0;
-    --card-foreground: 0.94 0 0;
-    --popover: 0.18 0 0;
-    --popover-foreground: 0.94 0 0;
+    --background: 0.169 0.013 271;
+    --foreground: 0.931 0.006 265;
+    --card: 0.214 0.019 266;
+    --card-foreground: 0.931 0.006 265;
+    --popover: 0.214 0.019 266;
+    --popover-foreground: 0.931 0.006 265;
     --primary: 0.62 0.18 262;
     --primary-foreground: 0.98 0 0;
     --secondary: 0.66 0.2 304;
     --secondary-foreground: 0.98 0 0;
-    --muted: 0.24 0 0;
-    --muted-foreground: 0.72 0 0;
-    --accent: 0.24 0 0;
-    --accent-foreground: 0.94 0 0;
+    --muted: 0.243 0.019 262;
+    --muted-foreground: 0.671 0.025 261;
+    --accent: 0.28 0.024 264;
+    --accent-foreground: 0.931 0.006 265;
     --destructive: 0.62 0.22 26;
     --destructive-foreground: 0.98 0 0;
-    --border: 0.3 0 0;
-    --input: 0.3 0 0;
+    --border: 0.32 0.025 263;
+    --input: 0.373 0.027 259;
     --ring: 0.62 0.18 262;
   }
   * {

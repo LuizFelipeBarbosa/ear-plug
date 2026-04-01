@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { SignOutButton, useUser } from "@clerk/nextjs";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
@@ -14,7 +14,6 @@ import {
   Clock,
   Edit3,
   Heart,
-  LogOut,
   Music,
   Plus,
   Settings,
@@ -40,6 +39,7 @@ import {
   FanProfileHeaderCard,
   FanSectionTitle,
 } from "@/components/fan/profile/FanProfilePrimitives";
+import { AccountManagementPanel } from "@/components/profile/AccountManagementPanel";
 import { ProfileWorkspaceSwitcher } from "@/components/profile/ProfileWorkspaceSwitcher";
 import { GENRE_COLORS } from "@ear-plug/shared/constants";
 import {
@@ -56,8 +56,17 @@ import { uploadToConvexStorage } from "@/lib/convexUpload";
 import type { GigDnaTier } from "@/lib/gigDnaEvolution";
 
 const PANEL_TRANSITION_MS = 250;
+const FAN_PROFILE_TABS = ["overview", "saved", "activity", "settings"] as const;
 
 type TabType = "overview" | "saved" | "activity" | "settings";
+
+function parseFanProfileTab(value: string | null): TabType {
+  if (value && FAN_PROFILE_TABS.includes(value as TabType)) {
+    return value as TabType;
+  }
+
+  return "overview";
+}
 
 function capitalizeGenre(genre: Genre | null): string {
   if (!genre) return "Explorer";
@@ -81,8 +90,23 @@ function getActionErrorMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
+function getActionErrorCode(error: unknown): string | null {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "data" in error &&
+    typeof (error as { data?: { code?: unknown } }).data?.code === "string"
+  ) {
+    return (error as { data: { code: string } }).data.code;
+  }
+
+  return null;
+}
+
 export function FanProfileView() {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { user: clerkUser } = useUser();
   const updateClerkPersonalName = useAction(api.users.updateClerkPersonalName);
   const { user, updateProfile } = useCurrentUser();
@@ -100,7 +124,8 @@ export function FanProfileView() {
   const setAvatarFromStorage = useMutation(api.users.setAvatarFromStorage);
   const clearAvatar = useMutation(api.users.clearAvatar);
 
-  const [activeTab, setActiveTab] = useState<TabType>("overview");
+  const resolvedTab = parseFanProfileTab(searchParams.get("tab"));
+  const [activeTab, setActiveTab] = useState<TabType>(resolvedTab);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isGigDnaModalOpen, setIsGigDnaModalOpen] = useState(false);
   const [isWorkspaceMenuOpen, setIsWorkspaceMenuOpen] = useState(false);
@@ -210,6 +235,20 @@ export function FanProfileView() {
       setIsGigDnaModalOpen(false);
     }
   }, [isGigDnaModalOpen, publicProfile?.gigDna]);
+
+  useEffect(() => {
+    setActiveTab(resolvedTab);
+  }, [resolvedTab]);
+
+  const handleTabChange = useCallback(
+    (nextTab: TabType) => {
+      setActiveTab(nextTab);
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("tab", nextTab);
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    },
+    [pathname, router, searchParams],
+  );
 
   if (!user) return null;
 
@@ -325,7 +364,7 @@ export function FanProfileView() {
             { id: "settings", label: "Settings", icon: Settings },
           ]}
           activeTab={activeTab}
-          onChange={(tabId) => setActiveTab(tabId as TabType)}
+          onChange={(tabId) => handleTabChange(tabId as TabType)}
           layoutId="activeTabIndicator"
           tone="fan"
         />
@@ -812,6 +851,7 @@ function SettingsTab({
   onOpenWorkspaceMenu: () => void;
   pendingInvitesCount: number;
 }) {
+  const { user: clerkUser } = useUser();
   const spotifyPersonalization = useQuery(api.spotify.getSpotifyPersonalization);
   const syncSpotifyPersonalization = useAction(
     api.spotify.syncSpotifyPersonalization,
@@ -821,11 +861,14 @@ function SettingsTab({
   );
   const [isSyncingSpotify, setIsSyncingSpotify] = useState(false);
   const [isClearingSpotify, setIsClearingSpotify] = useState(false);
+  const [isRepairingSpotify, setIsRepairingSpotify] = useState(false);
   const [spotifyNotice, setSpotifyNotice] = useState<string | null>(null);
   const [spotifyError, setSpotifyError] = useState<string | null>(null);
+  const [spotifyErrorCode, setSpotifyErrorCode] = useState<string | null>(null);
 
   const handleSpotifySync = useCallback(async () => {
     setSpotifyError(null);
+    setSpotifyErrorCode(null);
     setSpotifyNotice(null);
     setIsSyncingSpotify(true);
 
@@ -838,6 +881,7 @@ function SettingsTab({
           : "Spotify taste synced.",
       );
     } catch (error) {
+      setSpotifyErrorCode(getActionErrorCode(error));
       setSpotifyError(getActionErrorMessage(error, "We couldn't sync Spotify right now."));
     } finally {
       setIsSyncingSpotify(false);
@@ -846,6 +890,7 @@ function SettingsTab({
 
   const handleSpotifyClear = useCallback(async () => {
     setSpotifyError(null);
+    setSpotifyErrorCode(null);
     setSpotifyNotice(null);
     setIsClearingSpotify(true);
 
@@ -864,6 +909,41 @@ function SettingsTab({
     }
   }, [clearSpotifyPersonalization]);
 
+  const handleRepairSpotifyAccess = useCallback(async () => {
+    if (!clerkUser) {
+      return;
+    }
+
+    setSpotifyError(null);
+    setSpotifyErrorCode(null);
+    setSpotifyNotice(null);
+    setIsRepairingSpotify(true);
+
+    try {
+      const spotifyAccount = clerkUser.externalAccounts.find(
+        (account) => account.provider === "spotify",
+      );
+
+      if (spotifyAccount) {
+        await spotifyAccount.reauthorize({
+          redirectUrl: "/sso-callback",
+          additionalScopes: ["user-top-read", "user-follow-read"],
+        });
+      } else {
+        await clerkUser.createExternalAccount({
+          strategy: "oauth_spotify",
+          redirectUrl: "/sso-callback",
+          additionalScopes: ["user-top-read", "user-follow-read"],
+        });
+      }
+    } catch (error) {
+      setSpotifyError(
+        getActionErrorMessage(error, "We couldn't refresh Spotify access right now."),
+      );
+      setIsRepairingSpotify(false);
+    }
+  }, [clerkUser]);
+
   const hasSpotifyPersonalization =
     spotifyPersonalization !== undefined && spotifyPersonalization !== null;
   const spotifyLastSyncedLabel = hasSpotifyPersonalization
@@ -874,6 +954,9 @@ function SettingsTab({
         minute: "2-digit",
       })
     : null;
+  const shouldShowSpotifyRepairAction =
+    spotifyErrorCode === "spotify_reconnect_required" ||
+    spotifyErrorCode === "spotify_not_connected";
 
   return (
     <motion.div
@@ -883,6 +966,8 @@ function SettingsTab({
       exit="exit"
       className="space-y-5"
     >
+      <AccountManagementPanel />
+
       {/* Appearance */}
       <div>
         <FanSectionTitle icon={Settings} title="Appearance" />
@@ -907,8 +992,8 @@ function SettingsTab({
                   </span>
                 </div>
                 <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                  Connect Spotify, then sync your top artists to improve local
-                  show ranking and reveal Spotify picks in discovery.
+                  Sync your top artists to improve local show ranking and reveal
+                  Spotify picks in discovery.
                 </p>
               </div>
               {spotifyLastSyncedLabel ? (
@@ -918,23 +1003,27 @@ function SettingsTab({
               ) : null}
             </div>
 
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Link
-                href="/profile/connections"
-                className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-border bg-background px-4 py-3 text-sm font-medium text-foreground transition-colors hover:border-fan/30 hover:text-fan"
-              >
-                Manage Spotify Connection
-                <ChevronRight className="h-4 w-4" />
-              </Link>
+            <button
+              type="button"
+              onClick={() => void handleSpotifySync()}
+              disabled={isSyncingSpotify}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-fan px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-fan/90 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {isSyncingSpotify ? "Syncing Spotify..." : "Sync from Spotify"}
+            </button>
+
+            {shouldShowSpotifyRepairAction ? (
               <button
                 type="button"
-                onClick={() => void handleSpotifySync()}
-                disabled={isSyncingSpotify}
-                className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-fan px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-fan/90 disabled:cursor-not-allowed disabled:opacity-70"
+                onClick={() => void handleRepairSpotifyAccess()}
+                disabled={isRepairingSpotify}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-background px-4 py-3 text-sm font-medium text-foreground transition-colors hover:border-fan/30 hover:text-fan disabled:cursor-not-allowed disabled:opacity-70"
               >
-                {isSyncingSpotify ? "Syncing Spotify..." : "Sync from Spotify"}
+                {isRepairingSpotify
+                  ? "Refreshing Spotify access..."
+                  : "Refresh Spotify access"}
               </button>
-            </div>
+            ) : null}
 
             {spotifyError ? (
               <div className="rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3">
@@ -1015,8 +1104,8 @@ function SettingsTab({
                   No Spotify taste synced yet
                 </p>
                 <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                  Connect Spotify in account settings, then return here and run
-                  your first sync.
+                  Connect Spotify from Social accounts in this tab, then run your
+                  first sync.
                 </p>
               </div>
             )}
@@ -1069,15 +1158,6 @@ function SettingsTab({
         </div>
       </div>
 
-      {/* Sign Out */}
-      <div>
-        <SignOutButton>
-          <button className="w-full flex items-center justify-center gap-2 py-4 border border-red-500/20 text-red-500 font-medium text-sm bg-red-500/5 hover:bg-red-500/10 transition-colors rounded-xl">
-            <LogOut className="w-4 h-4" />
-            <span>Sign Out</span>
-          </button>
-        </SignOutButton>
-      </div>
     </motion.div>
   );
 }
