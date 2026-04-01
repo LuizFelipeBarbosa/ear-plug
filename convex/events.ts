@@ -16,7 +16,6 @@ import {
   requireBandRole,
 } from "./utils/permissions";
 import {
-  createCohostInvitesForEvent,
   getAcceptedCohostBandIds,
   getParticipatingBandIdsForEvent,
 } from "./eventCohosts";
@@ -2663,7 +2662,7 @@ export const create = mutation({
     });
 
     if (args.cohostBandIds && args.cohostBandIds.length > 0) {
-      await createCohostInvitesForEvent(ctx, {
+      await ctx.scheduler.runAfter(0, internal.eventCohosts.createInvitesAfterEventCreate, {
         eventId,
         hostBandId: args.bandId,
         invitedByBandId: args.bandId,
@@ -2810,7 +2809,7 @@ export const createWithVenue = mutation({
     });
 
     if (args.cohostBandIds && args.cohostBandIds.length > 0) {
-      await createCohostInvitesForEvent(ctx, {
+      await ctx.scheduler.runAfter(0, internal.eventCohosts.createInvitesAfterEventCreate, {
         eventId,
         hostBandId: args.bandId,
         invitedByBandId: args.bandId,

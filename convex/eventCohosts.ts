@@ -1,5 +1,5 @@
 import { ConvexError, v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import {
@@ -193,6 +193,38 @@ export async function createCohostInvitesForEvent(
 
   return { createdInviteIds, skippedBandIds };
 }
+
+/**
+ * Creates co-host invites after an event has been committed.
+ * This keeps event creation resilient even if invite creation hits a secondary failure.
+ */
+export const createInvitesAfterEventCreate = internalMutation({
+  args: {
+    eventId: v.id("events"),
+    hostBandId: v.id("bands"),
+    invitedByBandId: v.id("bands"),
+    invitedByUserId: v.id("users"),
+    invitedBandIds: v.array(v.id("bands")),
+  },
+  handler: async (ctx, args) => {
+    const event = await ctx.db.get(args.eventId);
+    if (!event) {
+      throw new ConvexError({
+        code: "event_not_found",
+        message: "Event not found.",
+      });
+    }
+
+    if (event.bandId !== args.hostBandId) {
+      throw new ConvexError({
+        code: "invalid_event_cohost_invite",
+        message: "Host band does not match the event owner.",
+      });
+    }
+
+    return await createCohostInvitesForEvent(ctx, args);
+  },
+});
 
 /**
  * Lists pending co-host invites for a band workspace.

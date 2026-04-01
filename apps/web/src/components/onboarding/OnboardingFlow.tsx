@@ -10,14 +10,13 @@ const LOGIN_BACKGROUND_POSTER_SRC = "/media/login-background-poster.png";
 export function OnboardingFlow({
   overlay,
   authNotice,
-  showAuthPanelWhenSignedIn = false,
+  mode = "sign-in",
 }: {
   overlay?: ReactNode;
   authNotice?: string | null;
-  showAuthPanelWhenSignedIn?: boolean;
+  mode?: "sign-in" | "sign-up";
 }) {
   const { isSignedIn } = useAuth();
-  const shouldRenderAuthPanel = !isSignedIn || showAuthPanelWhenSignedIn;
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-black">
@@ -25,8 +24,8 @@ export function OnboardingFlow({
       <div className="relative z-20 min-h-screen bg-black/60">
         <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-6 py-8">
           <main className="flex flex-1 items-center justify-center py-6">
-            {shouldRenderAuthPanel ? (
-              <CustomAuthPanel externalNotice={authNotice} />
+            {!isSignedIn ? (
+              <CustomAuthPanel externalNotice={authNotice} mode={mode} />
             ) : null}
           </main>
           <footer className="text-center">

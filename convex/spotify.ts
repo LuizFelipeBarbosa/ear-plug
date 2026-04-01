@@ -47,11 +47,15 @@ type SpotifyArtist = {
   };
 };
 
-type ClerkOauthAccessTokenResponse = {
-  data?: Array<{
-    token?: string;
-  }>;
+type ClerkOauthAccessTokenEntry = {
+  token?: string;
 };
+
+type ClerkOauthAccessTokenResponse =
+  | {
+      data?: ClerkOauthAccessTokenEntry[];
+    }
+  | ClerkOauthAccessTokenEntry[];
 
 type SpotifyTopArtistsResponse = {
   items?: SpotifyArtist[];
@@ -321,8 +325,17 @@ async function getClerkSpotifyAccessToken(
   }
 
   const payload = (await response.json()) as ClerkOauthAccessTokenResponse;
-  const token = payload.data?.find((entry) => typeof entry.token === "string")
-    ?.token;
+  const tokenEntries = Array.isArray(payload) ? payload : payload.data ?? [];
+
+  if (tokenEntries.length === 0) {
+    throw new ConvexError({
+      code: "spotify_not_connected",
+      message:
+        "Connect Spotify from Profile > Settings before syncing personalization.",
+    });
+  }
+
+  const token = tokenEntries.find((entry) => typeof entry.token === "string")?.token;
 
   if (!token) {
     throw new ConvexError({

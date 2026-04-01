@@ -30,6 +30,27 @@ export function getSocialScopes(provider: SocialProvider): string[] | undefined 
   return provider === "spotify" ? [...SPOTIFY_SCOPES] : undefined;
 }
 
+export function normalizeClerkExternalAccountProvider(
+  provider: string,
+): SocialProvider | null {
+  if (provider === "google" || provider === "oauth_google") {
+    return "google";
+  }
+
+  if (provider === "spotify" || provider === "oauth_spotify") {
+    return "spotify";
+  }
+
+  return null;
+}
+
+export function isMatchingClerkExternalAccountProvider(
+  clerkProvider: string,
+  provider: SocialProvider,
+): boolean {
+  return normalizeClerkExternalAccountProvider(clerkProvider) === provider;
+}
+
 export function getCurrentPathWithSearch(
   pathname: string,
   searchParams: SearchParamsLike,
@@ -132,6 +153,19 @@ export function getExternalVerificationRedirectUrl(resource: unknown): string | 
     verification.externalVerificationRedirectURL.length > 0
   ) {
     return verification.externalVerificationRedirectURL;
+  }
+
+  if (
+    verification &&
+    typeof verification.externalVerificationRedirectURL === "object" &&
+    verification.externalVerificationRedirectURL !== null &&
+    "href" in verification.externalVerificationRedirectURL &&
+    typeof (
+      verification.externalVerificationRedirectURL as { href?: unknown }
+    ).href === "string" &&
+    (verification.externalVerificationRedirectURL as { href: string }).href.length > 0
+  ) {
+    return (verification.externalVerificationRedirectURL as { href: string }).href;
   }
 
   return null;

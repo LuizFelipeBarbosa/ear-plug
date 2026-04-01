@@ -7,7 +7,10 @@ import { useAction } from "convex/react";
 import { Loader2 } from "lucide-react";
 import { api } from "../../../../../convex/_generated/api";
 import { useSocialOAuth } from "@/hooks/useSocialOAuth";
-import { type SocialProvider } from "@/lib/auth/sso";
+import {
+  normalizeClerkExternalAccountProvider,
+  type SocialProvider,
+} from "@/lib/auth/sso";
 import { getConvexErrorMessage } from "@/lib/convexErrors";
 import { cn } from "@/lib/utils";
 
@@ -154,7 +157,11 @@ export function AccountManagementPanel() {
     >();
 
     user?.externalAccounts.forEach((account) => {
-      entries.set(account.provider, account);
+      const normalizedProvider = normalizeClerkExternalAccountProvider(account.provider);
+
+      if (normalizedProvider) {
+        entries.set(normalizedProvider, account);
+      }
     });
 
     return entries;

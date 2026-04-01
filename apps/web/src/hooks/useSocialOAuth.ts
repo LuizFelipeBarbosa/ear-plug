@@ -8,6 +8,7 @@ import {
   getSocialProviderLabel,
   getSocialScopes,
   getSocialStrategy,
+  isMatchingClerkExternalAccountProvider,
   persistPendingSsoIntent,
   resolveSocialOauthReturnTo,
   type SocialProvider,
@@ -55,7 +56,8 @@ export function useSocialOAuth() {
 
         const scopes = getSocialScopes(provider);
         const existingAccount = user.externalAccounts.find(
-          (externalAccount) => externalAccount.provider === provider,
+          (externalAccount) =>
+            isMatchingClerkExternalAccountProvider(externalAccount.provider, provider),
         );
 
         const result = existingAccount

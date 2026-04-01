@@ -15,12 +15,12 @@ import { useStaleClerkSessionRecovery } from "@/hooks/useStaleClerkSessionRecove
 
 interface AuthExperienceProps {
   redirectAuthenticatedToHome?: boolean;
-  showAuthPanelWhenSignedIn?: boolean;
+  authMode?: "sign-in" | "sign-up";
 }
 
 export function AuthExperience({
   redirectAuthenticatedToHome = false,
-  showAuthPanelWhenSignedIn = false,
+  authMode = "sign-in",
 }: AuthExperienceProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -84,7 +84,7 @@ export function AuthExperience({
   return (
     <OnboardingFlow
       authNotice={authNotice}
-      showAuthPanelWhenSignedIn={showAuthPanelWhenSignedIn}
+      mode={authMode}
       overlay={needsNameCompletion ? <NameCompletionModal isOpen /> : undefined}
     />
   );
