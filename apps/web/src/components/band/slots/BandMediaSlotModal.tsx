@@ -252,7 +252,7 @@ export function BandMediaSlotModal({ slot, onClose, onSave, onClear }: BandMedia
                     setIsVideoPlaying(false);
                     setShowVideoControl(false);
                   }}
-                  className="max-h-full max-w-full"
+                  className="h-full w-full object-cover"
                 />
 
                 <button
