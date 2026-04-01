@@ -146,7 +146,7 @@ export function GuestControlPanelModal({
             <p className="text-base font-bold text-foreground sm:text-lg">
               {counts.total}
             </p>
-            <p className="mt-1 text-[9px] uppercase tracking-[0.18em] text-muted-foreground sm:text-[10px]">
+            <p className="mt-1 text-[9px]  tracking-[0.18em] text-muted-foreground sm:text-[10px]">
               Total
             </p>
           </div>
@@ -154,7 +154,7 @@ export function GuestControlPanelModal({
             <p className="text-base font-bold text-band sm:text-lg">
               {counts.onList}
             </p>
-            <p className="mt-1 text-[9px] uppercase tracking-[0.18em] text-muted-foreground sm:text-[10px]">
+            <p className="mt-1 text-[9px]  tracking-[0.18em] text-muted-foreground sm:text-[10px]">
               On List
             </p>
           </div>
@@ -162,7 +162,7 @@ export function GuestControlPanelModal({
             <p className="text-base font-bold text-success sm:text-lg">
               {counts.attended}
             </p>
-            <p className="mt-1 text-[9px] uppercase tracking-[0.18em] text-success sm:text-[10px]">
+            <p className="mt-1 text-[9px]  tracking-[0.18em] text-success sm:text-[10px]">
               Checked In
             </p>
           </div>
@@ -341,7 +341,7 @@ export function GuestControlPanelModal({
                     >
                       <span
                         className={cn(
-                          "inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]",
+                          "inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold  tracking-[0.14em]",
                           guest.rsvpType === "attended"
                             ? "bg-success/15 text-success"
                             : "bg-muted text-muted-foreground"

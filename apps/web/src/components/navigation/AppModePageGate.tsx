@@ -13,9 +13,7 @@ interface AppModePageGateProps {
 function AppPageLoadingShell() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="animate-pulse">
-        <div className="w-12 h-12 bg-fan animate-pulse-fan" />
-      </div>
+      <div className="w-12 h-12 bg-fan animate-pulse-fan" />
     </div>
   );
 }

@@ -73,7 +73,7 @@ export function EventPollPrompt({
               <MessageSquareText className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              <p className="mb-1 text-[11px] font-semibold  tracking-[0.18em] text-muted-foreground">
                 RSVP Poll
               </p>
               <h2

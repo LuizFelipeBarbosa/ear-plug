@@ -11,6 +11,7 @@ import {
 } from "@ear-plug/shared/utils";
 import { NameCompletionModal } from "@/components/auth/NameCompletionModal";
 import { BrandMark } from "@/components/branding/BrandLogo";
+import { useStaleClerkSessionRecovery } from "@/hooks/useStaleClerkSessionRecovery";
 import { useCurrentUser } from "@/hooks/useUser";
 import { ProfileContextProvider } from "@/hooks/useProfileContext";
 import { BottomNav } from "@/components/navigation/BottomNav";
@@ -21,6 +22,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { isLoaded, isSignedIn } = useAuth();
   const { isLoaded: isClerkUserLoaded, user: clerkUser } = useUser();
   const { user, isLoading } = useCurrentUser();
+  const { isRecovering } = useStaleClerkSessionRecovery();
   const upsertUser = useMutation(api.users.upsertUser);
   const [isCreatingUser, setIsCreatingUser] = useState(false);
   const missingClerkName = !hasRequiredPersonalName(
@@ -36,10 +38,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Redirect to onboarding if not authenticated
+    if (isRecovering) {
+      return;
+    }
+
     if (isLoaded && !isSignedIn) {
       router.push("/");
     }
-  }, [isLoaded, isSignedIn, router]);
+  }, [isLoaded, isRecovering, isSignedIn, router]);
 
   // Auto-create user in Convex if authenticated but user doesn't exist
   useEffect(() => {
@@ -48,6 +54,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         isLoaded &&
         isSignedIn &&
         clerkUser &&
+        !isRecovering &&
         !needsNameCompletion &&
         !isLoading &&
         user === null &&
@@ -78,6 +85,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     createUser();
   }, [
     isLoaded,
+    isRecovering,
     isSignedIn,
     clerkUser,
     needsNameCompletion,
@@ -88,6 +96,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   ]);
 
   if (
+    isRecovering ||
     !isLoaded ||
     (isSignedIn && !isClerkUserLoaded) ||
     (!needsNameCompletion && (isLoading || isCreatingUser))

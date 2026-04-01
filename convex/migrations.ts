@@ -556,3 +556,48 @@ export const validateUserPhoneBackfill = internalQuery({
     };
   },
 });
+
+export const repairStorageBackedMediaUrls = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const [users, bands] = await Promise.all([
+      ctx.db.query("users").collect(),
+      ctx.db.query("bands").collect(),
+    ]);
+
+    let usersUpdated = 0;
+    for (const user of users) {
+      if (!user.avatarStorageId) {
+        continue;
+      }
+
+      const avatarUrl = await ctx.storage.getUrl(user.avatarStorageId);
+      if (!avatarUrl || user.avatar === avatarUrl) {
+        continue;
+      }
+
+      await ctx.db.patch(user._id, { avatar: avatarUrl });
+      usersUpdated += 1;
+    }
+
+    let bandsUpdated = 0;
+    for (const band of bands) {
+      if (!band.imageStorageId) {
+        continue;
+      }
+
+      const imageUrl = await ctx.storage.getUrl(band.imageStorageId);
+      if (!imageUrl || band.image === imageUrl) {
+        continue;
+      }
+
+      await ctx.db.patch(band._id, { image: imageUrl });
+      bandsUpdated += 1;
+    }
+
+    return {
+      usersUpdated,
+      bandsUpdated,
+    };
+  },
+});

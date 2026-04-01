@@ -96,7 +96,7 @@ export function NameCompletionModal({ isOpen }: NameCompletionModalProps) {
               sizes="32px"
             />
             <div className="text-left">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-fan/80">
+              <p className="text-[11px] font-semibold  tracking-[0.22em] text-fan/80">
                 Complete Profile
               </p>
               <p className="text-[11px] text-muted-foreground">EarPlug account setup</p>

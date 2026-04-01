@@ -7,6 +7,7 @@ import { CityAutocomplete } from "@/components/ui/CityAutocomplete";
 import { cn } from "@/lib/utils";
 import type { BandMediaSlotIndex, BandPostMediaType } from "@ear-plug/shared/types";
 import { BAND_MEDIA_FILE_INPUT_ACCEPT } from "@ear-plug/shared/constants";
+import Image from "next/image";
 
 const MAX_CAPTION_LENGTH = 120;
 const PLACEHOLDER_SRC = "/images/band-slot-placeholder.svg";
@@ -283,10 +284,11 @@ export function BandMediaSlotModal({ slot, onClose, onSave, onClear }: BandMedia
                 </AnimatePresence>
               </div>
             ) : (
-              <img
+              <Image
                 src={previewMediaUrl}
                 alt="Slot media preview"
-                className="max-h-full max-w-full object-contain"
+                fill
+                className="object-contain"
               />
             )
           ) : (
@@ -425,7 +427,7 @@ export function BandMediaSlotModal({ slot, onClose, onSave, onClear }: BandMedia
 
               {slot.isFilled && (
                 <motion.button
-  
+
                   type="button"
                   onClick={handleClear}
                   disabled={isClearing || isSaving}
@@ -441,7 +443,7 @@ export function BandMediaSlotModal({ slot, onClose, onSave, onClear }: BandMedia
               )}
 
               <motion.button
-  
+
                 type="button"
                 onClick={handleSave}
                 disabled={!canSave || isSaving || isClearing}

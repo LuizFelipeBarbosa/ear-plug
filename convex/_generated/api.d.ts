@@ -18,6 +18,8 @@ import type * as messages from "../messages.js";
 import type * as migrations from "../migrations.js";
 import type * as notifications from "../notifications.js";
 import type * as seed from "../seed.js";
+import type * as spotify from "../spotify.js";
+import type * as spotifyInternal from "../spotifyInternal.js";
 import type * as users from "../users.js";
 import type * as utils_geo from "../utils/geo.js";
 import type * as utils_permissions from "../utils/permissions.js";
@@ -41,6 +43,8 @@ declare const fullApi: ApiFromModules<{
   migrations: typeof migrations;
   notifications: typeof notifications;
   seed: typeof seed;
+  spotify: typeof spotify;
+  spotifyInternal: typeof spotifyInternal;
   users: typeof users;
   "utils/geo": typeof utils_geo;
   "utils/permissions": typeof utils_permissions;

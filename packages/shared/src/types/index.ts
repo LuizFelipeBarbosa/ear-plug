@@ -188,6 +188,42 @@ export interface SocialLinks {
 }
 
 /**
+ * Personalization badge reason attached to fan-facing discover results.
+ */
+export type SpotifyPersonalizationReason =
+  | "spotify_artist_match"
+  | "spotify_genre_match";
+
+/**
+ * Small Spotify artist preview shown in fan settings after sync.
+ */
+export interface SpotifyTopArtistPreview {
+  /** Spotify artist id */
+  spotifyArtistId: string;
+  /** Artist display name */
+  name: string;
+  /** Optional artist image URL */
+  imageUrl?: string;
+  /** Optional Spotify artist URL */
+  externalUrl?: string;
+}
+
+/**
+ * Derived Spotify personalization state stored for a user.
+ * Contains normalized taste data only, never OAuth tokens.
+ */
+export interface SpotifyPersonalizationProfile {
+  /** Unix timestamp (ms) when Spotify taste was last synced */
+  lastSyncedAt: number;
+  /** Ear-Plug genres derived from Spotify top artists */
+  topGenres: Genre[];
+  /** Small top-artist preview for settings UI */
+  topArtists: SpotifyTopArtistPreview[];
+  /** Matched local band ids */
+  matchedBandIds: string[];
+}
+
+/**
  * Base interface for all database entities.
  * Provides common fields from Convex document storage.
  */
@@ -381,6 +417,8 @@ export interface EventWithDetails extends Event {
   attendanceStatus?: GuestRsvpType;
   /** Unix timestamp (ms) when RSVP was marked attended */
   attendedAt?: number;
+  /** Optional Spotify taste match reason for fan discover surfaces */
+  personalizationReason?: SpotifyPersonalizationReason;
   /** Whether the event poll already has at least one response */
   pollHasResponses?: boolean;
   /** Number of RSVP poll responses currently recorded */

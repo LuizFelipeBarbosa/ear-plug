@@ -26,6 +26,7 @@ import { useProfileContext } from "@/hooks/useProfileContext";
 import { CreateGigModal } from "./CreateGigModal";
 import { CreateGigTypeModal } from "./CreateGigTypeModal";
 import { EditGigModal } from "./EditGigModal";
+import { TabPanel } from "@/components/ui/TabPanel";
 import {
   formatEventTime,
   EVENT_STATUS_CONFIG,
@@ -341,7 +342,7 @@ export function BandCalendarView() {
                 <div className="w-8 h-8 rounded-lg bg-band/10 flex items-center justify-center">
                   <Calendar className="w-4 h-4 text-band" />
                 </div>
-                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                <span className="text-xs font-medium text-muted-foreground  ">
                   Band Workspace
                 </span>
               </div>
@@ -493,38 +494,38 @@ export function BandCalendarView() {
         animate="visible"
         className="px-4 pt-4"
       >
-        <AnimatePresence {...presenceSyncNoInitial}>
-          {viewMode === "month" ? (
-            <motion.div key="month" variants={panelFade} initial="hidden" animate="visible" exit="exit">
-              <MonthView
-                monthCells={monthCells}
-                eventsByDateKey={eventsByDateKey}
-                selectedDateKey={selectedDateKey}
-                onSelectDate={setSelectedDateKey}
-                selectedDateEvents={selectedDateEvents}
-                hasMonthEvents={hasMonthEvents}
-                monthName={monthName}
-                onOpenTentative={openTentativeEditor}
-              />
-            </motion.div>
-          ) : hasListEvents ? (
-            <motion.div key="list" variants={panelFade} initial="hidden" animate="visible" exit="exit">
-              <ListView
-                groupedEvents={groupedEvents}
-                unscheduledTentatives={unscheduledTentatives}
-                onOpenTentative={openTentativeEditor}
-              />
-            </motion.div>
-          ) : (
-            <motion.div key="empty" variants={panelFade} initial="hidden" animate="visible" exit="exit">
-              <EmptyState
-                onCreateClick={openCreateChooser}
-                band={band}
-                canManageShows={canManageShows}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <TabPanel isActive={viewMode === "month"}>
+          <motion.div variants={panelFade} initial="hidden" animate="visible">
+            <MonthView
+              monthCells={monthCells}
+              eventsByDateKey={eventsByDateKey}
+              selectedDateKey={selectedDateKey}
+              onSelectDate={setSelectedDateKey}
+              selectedDateEvents={selectedDateEvents}
+              hasMonthEvents={hasMonthEvents}
+              monthName={monthName}
+              onOpenTentative={openTentativeEditor}
+            />
+          </motion.div>
+        </TabPanel>
+        <TabPanel isActive={viewMode === "list" && hasListEvents}>
+          <motion.div variants={panelFade} initial="hidden" animate="visible">
+            <ListView
+              groupedEvents={groupedEvents}
+              unscheduledTentatives={unscheduledTentatives}
+              onOpenTentative={openTentativeEditor}
+            />
+          </motion.div>
+        </TabPanel>
+        <TabPanel isActive={viewMode === "list" && !hasListEvents}>
+          <motion.div variants={panelFade} initial="hidden" animate="visible">
+            <EmptyState
+              onCreateClick={openCreateChooser}
+              band={band}
+              canManageShows={canManageShows}
+            />
+          </motion.div>
+        </TabPanel>
       </motion.main>
 
       {/* Modals */}

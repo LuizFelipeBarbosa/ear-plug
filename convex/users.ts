@@ -4,7 +4,7 @@
  * @module convex/users
  */
 
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import {
   action,
   query,
@@ -12,6 +12,7 @@ import {
   internalMutation,
   internalQuery,
 } from "./_generated/server";
+import { api } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { normalizeInvitePhone } from "./utils/phone";
 import {
@@ -108,6 +109,10 @@ async function getClerkErrorMessage(response: Response): Promise<string> {
   return `Clerk request failed with status ${response.status}.`;
 }
 
+function formatExternalProviderLabel(provider: "google" | "spotify"): string {
+  return provider === "google" ? "Google" : "Spotify";
+}
+
 /**
  * Gets the currently authenticated user from the database.
  * Uses Clerk authentication identity to look up the user by their Clerk ID.
@@ -125,6 +130,61 @@ export const getCurrentUser = query({
   args: {},
   handler: async (ctx) => {
     return await getAuthenticatedUserOrNull(ctx);
+  },
+});
+
+export const unlinkExternalAccount = action({
+  args: {
+    externalAccountId: v.string(),
+    provider: v.union(v.literal("google"), v.literal("spotify")),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const secret = process.env.CLERK_SECRET_KEY;
+    if (!secret) {
+      throw new Error(
+        "CLERK_SECRET_KEY is required in Convex environment to unlink social accounts.",
+      );
+    }
+
+    const providerLabel = formatExternalProviderLabel(args.provider);
+    const response = await fetch(
+      `${CLERK_USERS_API_BASE}/${encodeURIComponent(identity.subject)}/external_accounts/${encodeURIComponent(args.externalAccountId)}`,
+      {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${secret}`,
+          "Content-Type": "application/json",
+        },
+      },
+    );
+
+    if (response.status === 404) {
+      throw new ConvexError({
+        code: "external_account_not_found",
+        message: `${providerLabel} is no longer linked to this account.`,
+      });
+    }
+
+    if (!response.ok) {
+      throw new ConvexError({
+        code: "external_account_unlink_failed",
+        message: await getClerkErrorMessage(response),
+      });
+    }
+
+    if (args.provider === "spotify") {
+      await ctx.runMutation(api.spotify.clearSpotifyPersonalization, {});
+    }
+
+    return {
+      provider: args.provider,
+      clearedSpotifyPersonalization: args.provider === "spotify",
+    };
   },
 });
 
@@ -685,17 +745,6 @@ export const clearAvatar = mutation({
   },
 });
 
-/**
- * Increments the current user's shows attended counter.
- * Called when a user attends an event they RSVP'd to.
- * Requires authentication.
- *
- * @throws Error if not authenticated or user not found
- *
- * @example
- * const incrementShows = useMutation(api.users.incrementShowsAttended);
- * await incrementShows();
- */
 export const incrementShowsAttended = internalMutation({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {

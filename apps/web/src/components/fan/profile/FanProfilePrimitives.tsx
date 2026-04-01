@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { Calendar, Heart, MapPin, Ticket, Zap } from "lucide-react";
 import { getInitials } from "@ear-plug/shared/utils";
 import { cn } from "@/lib/utils";
+import { IconBadge } from "@/components/ui/IconBadge";
 
 export interface FanProfileStats {
   showsAttended: number;
@@ -94,7 +95,9 @@ export function FanQuickStat({
 }) {
   return (
     <div className="flex flex-col items-center text-center">
-      <Icon className="w-4 h-4 text-muted-foreground mb-1" />
+      <IconBadge size="sm" className="mb-2">
+        <Icon />
+      </IconBadge>
       <span
         className={cn(
           "font-semibold text-foreground",
@@ -103,7 +106,7 @@ export function FanQuickStat({
       >
         {value}
       </span>
-      <span className="text-[10px] text-muted-foreground uppercase tracking-wide">
+      <span className="text-[10px] text-muted-foreground  ">
         {label}
       </span>
     </div>
@@ -121,7 +124,9 @@ export function FanSectionTitle({
 }) {
   return (
     <div className={cn("flex items-center gap-2 mb-3", className)}>
-      <Icon className="w-4 h-4 text-muted-foreground" />
+      <IconBadge size="sm">
+        <Icon />
+      </IconBadge>
       <h2 className="text-sm font-semibold text-foreground">{title}</h2>
     </div>
   );

@@ -36,13 +36,15 @@ import { EditBandProfileModal } from "@/components/band/EditBandProfileModal";
 import { BandMediaSlotsSection } from "@/components/band/slots/BandMediaSlotsSection";
 import { PastShowFlyerSection } from "@/components/events/PastShowFlyerSection";
 import { ProfileWorkspaceSwitcher } from "@/components/profile/ProfileWorkspaceSwitcher";
+import { IconBadge } from "@/components/ui/IconBadge";
 import { MobileTabRail } from "@/components/ui/MobileTabRail";
+import { TabPanel } from "@/components/ui/TabPanel";
 import { AvatarImage } from "@/components/ui/OptimizedImage";
 import { GENRE_COLORS } from "@ear-plug/shared/constants";
 import { getInitials } from "@ear-plug/shared/utils";
 import type { BandInviteAssignableUser, Genre } from "@ear-plug/shared/types";
 import { cn } from "@/lib/utils";
-import { panelFade, presenceSyncNoInitial } from "@/lib/motion/presets";
+import { panelFade } from "@/lib/motion/presets";
 
 const PANEL_TRANSITION_MS = 250;
 
@@ -452,34 +454,29 @@ export function BandProfileView() {
 
       {/* Tab Content */}
       <main className="px-4 pt-4">
-        <AnimatePresence {...presenceSyncNoInitial}>
-          {activeTab === "overview" && (
+        <TabPanel isActive={activeTab === "overview"}>
             <OverviewTab
-              key="overview"
               band={band}
               stats={stats}
               pastShows={pastShows}
               isPastShowsLoading={isPastShowsLoading}
             />
-          )}
-          {activeTab === "media" && (
-            <MediaTab key="media" bandId={band._id} canManageSlots={canEditBandProfile} />
-          )}
-          {activeTab === "shows" && (
+        </TabPanel>
+        <TabPanel isActive={activeTab === "media"}>
+          <MediaTab bandId={band._id} canManageSlots={canEditBandProfile} />
+        </TabPanel>
+        <TabPanel isActive={activeTab === "shows"}>
             <ShowsTab
-              key="shows"
               pastShows={pastShows}
               isPastShowsLoading={isPastShowsLoading}
             />
-          )}
-          {activeTab === "settings" && (
+        </TabPanel>
+        <TabPanel isActive={activeTab === "settings"}>
             <SettingsTab
-              key="settings"
               onOpenSettingsMenu={openSettingsMenu}
               canManageMembers={canManageMembers}
             />
-          )}
-        </AnimatePresence>
+        </TabPanel>
       </main>
 
       {/* Settings Slide-over Panel */}
@@ -526,7 +523,7 @@ export function BandProfileView() {
               <div className="space-y-6 p-4 pb-6">
                 {/* Members Section */}
                 <section>
-                  <h4 className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                  <h4 className="flex items-center gap-2 text-xs font-semibold text-muted-foreground   mb-3">
                     <Users className="w-3.5 h-3.5" />
                     Members ({members?.length || 0})
                   </h4>
@@ -626,7 +623,7 @@ export function BandProfileView() {
                 {/* Invite Section */}
                 {canManageMembers && (
                   <section>
-                    <h4 className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                    <h4 className="flex items-center gap-2 text-xs font-semibold text-muted-foreground   mb-3">
                       <UserPlus className="w-3.5 h-3.5" />
                       Invite Members
                     </h4>
@@ -821,7 +818,7 @@ export function BandProfileView() {
                 {/* Danger Zone */}
                 {canTransferOwnership && band && (
                   <section>
-                    <h4 className="flex items-center gap-2 text-xs font-semibold text-red-500 uppercase tracking-wide mb-3">
+                    <h4 className="flex items-center gap-2 text-xs font-semibold text-red-500   mb-3">
                       <Trash2 className="w-3.5 h-3.5" />
                       Danger Zone
                     </h4>
@@ -903,9 +900,11 @@ function QuickStat({
 }) {
   return (
     <div className="flex min-w-0 flex-col items-center px-1 text-center">
-      <Icon className="mb-1 h-4 w-4 text-muted-foreground" />
+      <IconBadge size="sm" className="mb-2">
+        <Icon />
+      </IconBadge>
       <span className="text-base font-semibold text-foreground sm:text-lg">{value}</span>
-      <span className="text-[9px] uppercase tracking-wide text-muted-foreground sm:text-[10px]">
+      <span className="text-[9px]   text-muted-foreground sm:text-[10px]">
         {label}
       </span>
     </div>
@@ -1112,7 +1111,9 @@ function SectionTitle({
 }) {
   return (
     <div className={cn("flex items-center gap-2 mb-3", className)}>
-      <Icon className="w-4 h-4 text-muted-foreground" />
+      <IconBadge size="sm">
+        <Icon />
+      </IconBadge>
       <h2 className="text-sm font-semibold text-foreground">{title}</h2>
     </div>
   );

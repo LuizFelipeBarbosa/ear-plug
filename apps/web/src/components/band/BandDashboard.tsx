@@ -208,7 +208,7 @@ export function BandDashboard() {
 
                   {/* Role Badge */}
                   <span className={cn(
-                    "text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full flex-shrink-0",
+                    "text-[10px] font-bold   px-2 py-1 rounded-full flex-shrink-0",
                     activeMembership?.membership.role === "owner"
                       ? "bg-band/10 text-band border border-band/20"
                       : "bg-muted text-muted-foreground border border-border"
@@ -638,7 +638,7 @@ function NextShowCard({ show }: { show: any }) {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2">
               <span className={cn(
-                "flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-full",
+                "flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold   rounded-full",
                 colors.bgLight,
                 colors.text
               )}>

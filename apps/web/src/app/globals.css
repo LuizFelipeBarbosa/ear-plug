@@ -29,24 +29,24 @@
     --success-accent: 22 163 74;
   }
   .dark {
-    --background: 0.14 0 0;
-    --foreground: 0.94 0 0;
-    --card: 0.18 0 0;
-    --card-foreground: 0.94 0 0;
-    --popover: 0.18 0 0;
-    --popover-foreground: 0.94 0 0;
+    --background: 0.169 0.013 271;
+    --foreground: 0.931 0.006 265;
+    --card: 0.214 0.019 266;
+    --card-foreground: 0.931 0.006 265;
+    --popover: 0.214 0.019 266;
+    --popover-foreground: 0.931 0.006 265;
     --primary: 0.62 0.18 262;
     --primary-foreground: 0.98 0 0;
     --secondary: 0.66 0.2 304;
     --secondary-foreground: 0.98 0 0;
-    --muted: 0.24 0 0;
-    --muted-foreground: 0.72 0 0;
-    --accent: 0.24 0 0;
-    --accent-foreground: 0.94 0 0;
+    --muted: 0.243 0.019 262;
+    --muted-foreground: 0.671 0.025 261;
+    --accent: 0.28 0.024 264;
+    --accent-foreground: 0.931 0.006 265;
     --destructive: 0.62 0.22 26;
     --destructive-foreground: 0.98 0 0;
-    --border: 0.3 0 0;
-    --input: 0.3 0 0;
+    --border: 0.32 0.025 263;
+    --input: 0.373 0.027 259;
     --ring: 0.62 0.18 262;
   }
   * {
@@ -130,13 +130,33 @@
       oklch(var(--muted)) 100%
     );
     background-size: 200% 100%;
-    animation: shimmer 1.5s linear infinite;
+    opacity: 0;
+    will-change: opacity, background-position;
+    animation:
+      loading-fade-in 180ms ease-out 120ms both,
+      shimmer 1.5s linear 120ms infinite;
   }
   .animate-pulse-fan {
-    animation: pulse-fan 1.6s ease-in-out infinite;
+    opacity: 0;
+    will-change: opacity, box-shadow;
+    animation:
+      loading-fade-in 180ms ease-out 120ms both,
+      pulse-fan 1.6s ease-in-out 120ms infinite;
   }
   .animate-pulse-band {
-    animation: pulse-band 1.6s ease-in-out infinite;
+    opacity: 0;
+    will-change: opacity, box-shadow;
+    animation:
+      loading-fade-in 180ms ease-out 120ms both,
+      pulse-band 1.6s ease-in-out 120ms infinite;
+  }
+}
+@keyframes loading-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
 @keyframes shimmer {
@@ -184,6 +204,12 @@
   .animate-ping {
     animation: none !important;
   }
+
+  .animate-shimmer,
+  .animate-pulse-fan,
+  .animate-pulse-band {
+    opacity: 1 !important;
+  }
 }
 @media screen and (max-width: 768px) {
   input[type="text"],
@@ -214,6 +240,74 @@
 .ep-auth-clerk .cl-formInputGroup {
   gap: 0;
   align-items: stretch;
+}
+
+.ep-auth-clerk .cl-headerTitle,
+.ep-auth-clerk .cl-formHeaderTitle {
+  font-size: 1.85rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: rgb(250 250 250);
+}
+
+.ep-auth-clerk .cl-headerSubtitle,
+.ep-auth-clerk .cl-formHeaderSubtitle {
+  margin-top: 0.125rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: rgb(212 212 216);
+}
+
+.ep-auth-clerk .cl-formHeader,
+.ep-auth-clerk .cl-form,
+.ep-auth-clerk .cl-formContainer,
+.ep-auth-clerk .cl-socialButtonsRoot,
+.ep-auth-clerk .cl-socialButtons,
+.ep-auth-clerk .cl-alternativeMethods {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.ep-auth-clerk .cl-formFieldLabelRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.ep-auth-clerk .cl-formFieldAction,
+.ep-auth-clerk .cl-formResendCodeLink {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  color: rgb(161 161 170);
+  transition: color 150ms ease;
+}
+
+.ep-auth-clerk .cl-formFieldAction:hover,
+.ep-auth-clerk .cl-formResendCodeLink:hover {
+  color: rgb(228 228 231);
+}
+
+.ep-auth-clerk .cl-socialButtonsBlockButtonText,
+.ep-auth-clerk .cl-alternativeMethodsBlockButtonText {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgb(244 244 245);
+}
+
+.ep-auth-clerk .cl-formFieldHintText,
+.ep-auth-clerk .cl-formFieldInfoText,
+.ep-auth-clerk .cl-formFieldRadioLabelDescription {
+  font-size: 0.75rem;
+  line-height: 1.25rem;
+  color: rgb(161 161 170);
+}
+
+.ep-auth-clerk .cl-formFieldCheckboxLabel,
+.ep-auth-clerk .cl-formFieldRadioLabelTitle {
+  color: rgb(212 212 216);
 }
 
 .ep-auth-clerk .cl-phoneInputBox button,

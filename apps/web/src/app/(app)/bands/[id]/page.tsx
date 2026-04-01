@@ -30,6 +30,8 @@ import { getInitials } from "@ear-plug/shared/utils";
 import type { Genre } from "@ear-plug/shared/types";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import { IconBadge } from "@/components/ui/IconBadge";
+import { TabPanel } from "@/components/ui/TabPanel";
 
 interface PageProps {
   params: { id: string };
@@ -377,26 +379,22 @@ export default function BandFeedPage({ params }: PageProps) {
 
       {/* Tab Content */}
       <main className="px-4 pt-4">
-        <AnimatePresence mode="wait">
-          {activeTab === "overview" && (
+        <TabPanel isActive={activeTab === "overview"}>
             <OverviewTab
-              key="overview"
               band={band}
               pastGigs={pastGigs ?? []}
               followerCount={followerCount}
             />
-          )}
-          {activeTab === "media" && (
-            <MediaTab key="media" bandId={band._id} />
-          )}
-          {activeTab === "shows" && (
+        </TabPanel>
+        <TabPanel isActive={activeTab === "media"}>
+          <MediaTab bandId={band._id} />
+        </TabPanel>
+        <TabPanel isActive={activeTab === "shows"}>
             <ShowsTab
-              key="shows"
               pastGigs={pastGigs ?? []}
               isLoading={pastGigs === undefined}
             />
-          )}
-        </AnimatePresence>
+        </TabPanel>
       </main>
     </div>
   );
@@ -414,9 +412,11 @@ function QuickStat({
 }) {
   return (
     <div className="flex flex-col items-center text-center">
-      <Icon className="w-4 h-4 text-muted-foreground mb-1" />
+      <IconBadge size="sm" className="mb-2">
+        <Icon />
+      </IconBadge>
       <span className="font-semibold text-foreground text-lg">{value}</span>
-      <span className="text-[10px] text-muted-foreground uppercase tracking-wide">{label}</span>
+      <span className="text-[10px] text-muted-foreground  ">{label}</span>
     </div>
   );
 }
@@ -576,7 +576,9 @@ function SectionTitle({
 }) {
   return (
     <div className={cn("flex items-center gap-2 mb-3", className)}>
-      <Icon className="w-4 h-4 text-muted-foreground" />
+      <IconBadge size="sm">
+        <Icon />
+      </IconBadge>
       <h2 className="text-sm font-semibold text-foreground">{title}</h2>
     </div>
   );
