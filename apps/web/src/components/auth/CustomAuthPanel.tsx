@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { SignIn, SignUp } from "@clerk/nextjs";
 import { BrandMark } from "@/components/branding/BrandLogo";
@@ -74,6 +75,18 @@ export function CustomAuthPanel({
                 fallbackRedirectUrl="/"
               />
             )}
+
+            <div className="mt-4 border-t border-white/[0.08] pt-4 text-center">
+              <p className="text-sm text-zinc-300">
+                {isSignIn ? "New to EarPlug?" : "Already have an account?"}{" "}
+                <Link
+                  href={isSignIn ? "/sign-up" : "/sign-in"}
+                  className="font-semibold text-white transition-colors hover:text-zinc-200"
+                >
+                  {isSignIn ? "Create an account" : "Sign in"}
+                </Link>
+              </p>
+            </div>
           </div>
         </div>
       </div>

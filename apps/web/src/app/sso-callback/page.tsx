@@ -28,43 +28,45 @@ export default function SSOCallbackPage() {
   }, []);
 
   useEffect(() => {
-    if (intent !== null) {
-      return;
-    }
-
-    router.replace("/sign-in");
-  }, [intent, router]);
-
-  useEffect(() => {
-    if (!intent || didHandleCallbackRef.current) {
+    if (intent === undefined || didHandleCallbackRef.current) {
       return;
     }
 
     didHandleCallbackRef.current = true;
-
-    void clerk
-      .handleRedirectCallback(
-        {
+    const callbackOptions = intent
+      ? {
           signInUrl: "/sign-in",
           signUpUrl: "/sign-up",
           signInForceRedirectUrl: intent.returnTo,
           signUpForceRedirectUrl: intent.returnTo,
           signInFallbackRedirectUrl: intent.returnTo,
           signUpFallbackRedirectUrl: intent.returnTo,
-        },
+        }
+      : {
+          signInUrl: "/sign-in",
+          signUpUrl: "/sign-up",
+        };
+
+    void clerk
+      .handleRedirectCallback(
+        callbackOptions,
         async (to) => {
-          if (intent.kind === "link_provider") {
+          if (intent?.kind === "link_provider") {
             await user?.reload();
           }
 
           clearPendingSsoIntent();
+          const destination = to || intent?.returnTo || "/";
 
-          if (to.startsWith("http://") || to.startsWith("https://")) {
-            window.location.assign(to);
+          if (
+            destination.startsWith("http://") ||
+            destination.startsWith("https://")
+          ) {
+            window.location.assign(destination);
             return;
           }
 
-          router.replace(to);
+          router.replace(destination);
         },
       )
       .catch(() => {

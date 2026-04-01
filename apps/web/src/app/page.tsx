@@ -1,7 +1,15 @@
 "use client";
 
-import { AuthExperience } from "@/components/auth/AuthExperience";
+import { Suspense } from "react";
+import {
+  AuthExperience,
+  AuthExperienceFallback,
+} from "@/components/auth/AuthExperience";
 
 export default function HomePage() {
-  return <AuthExperience redirectAuthenticatedToHome />;
+  return (
+    <Suspense fallback={<AuthExperienceFallback />}>
+      <AuthExperience redirectAuthenticatedToHome />
+    </Suspense>
+  );
 }

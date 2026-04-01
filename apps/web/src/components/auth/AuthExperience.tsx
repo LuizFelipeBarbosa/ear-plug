@@ -18,6 +18,16 @@ interface AuthExperienceProps {
   authMode?: "sign-in" | "sign-up";
 }
 
+export function AuthExperienceFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="animate-pulse-fan rounded-[28px] border border-border bg-card/90 p-4 shadow-soft">
+        <BrandMark className="w-14 sm:w-16" theme="auto" priority />
+      </div>
+    </div>
+  );
+}
+
 export function AuthExperience({
   redirectAuthenticatedToHome = false,
   authMode = "sign-in",
@@ -72,13 +82,7 @@ export function AuthExperience({
   ]);
 
   if (isRecovering || !isLoaded || (isSignedIn && (!isClerkUserLoaded || isUserLoading))) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-pulse-fan rounded-[28px] border border-border bg-card/90 p-4 shadow-soft">
-          <BrandMark className="w-14 sm:w-16" theme="auto" priority />
-        </div>
-      </div>
-    );
+    return <AuthExperienceFallback />;
   }
 
   return (

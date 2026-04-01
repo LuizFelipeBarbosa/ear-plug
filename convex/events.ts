@@ -269,27 +269,6 @@ function getEventGenres(
   return [];
 }
 
-function mergePreferredGenres(
-  spotifyGenres?: readonly GenreValue[],
-  userGenres?: readonly GenreValue[],
-): GenreValue[] {
-  const merged: GenreValue[] = [];
-
-  for (const genre of spotifyGenres ?? []) {
-    if (!merged.includes(genre)) {
-      merged.push(genre);
-    }
-  }
-
-  for (const genre of userGenres ?? []) {
-    if (!merged.includes(genre)) {
-      merged.push(genre);
-    }
-  }
-
-  return merged.slice(0, 5);
-}
-
 function getEventPersonalizationMetadata(
   event: Pick<Doc<"events">, "bandId" | "genres" | "genre">,
   viewerContext: ViewerContext,
@@ -815,9 +794,7 @@ async function buildViewerContext(ctx: QueryCtx): Promise<ViewerContext> {
     rsvpEventIds: new Set(rsvps.map((rsvp) => rsvp.eventId)),
     cohostEventIds,
     hasSpotifyPersonalization: Boolean(spotifyProfile),
-    personalizedGenres: spotifyProfile
-      ? mergePreferredGenres(spotifyProfile.topGenres, user.topGenres)
-      : [],
+    personalizedGenres: spotifyProfile?.topGenres ?? [],
     matchedBandIds: new Set(spotifyProfile?.matchedBandIds ?? []),
   };
 }
