@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { type FormEvent, useMemo, useState } from "react";
 import Image from "next/image";
 import { SignOutButton, useUser } from "@clerk/nextjs";
 import { useAction } from "convex/react";
@@ -15,6 +15,22 @@ import { getConvexErrorMessage } from "@/lib/convexErrors";
 import { cn } from "@/lib/utils";
 
 type ProviderAction = "connect" | "unlink";
+type IdentityField = "email" | "phone";
+
+interface VerificationTarget {
+  id: string;
+  attemptVerification: (params: { code: string }) => Promise<{
+    verification?: { status?: string | null } | null;
+  }>;
+}
+
+interface IdentityEditState {
+  field: IdentityField;
+  step: "input" | "verify";
+  value: string;
+  verificationCode: string;
+  target: VerificationTarget | null;
+}
 
 const PROVIDERS: Array<{
   provider: SocialProvider;
@@ -67,12 +83,36 @@ function formatDateTime(value: Date | null): string {
   });
 }
 
-function formatVerificationStatus(status?: string | null): string {
-  if (!status) {
-    return "Unknown";
+function formatPhoneNumber(value?: string | null): string {
+  if (!value) {
+    return "None";
   }
 
-  return status.replace(/_/g, " ");
+  const digits = value.replace(/\D/g, "");
+
+  if (digits.length === 11 && digits.startsWith("1")) {
+    return `+1 (${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`;
+  }
+
+  if (digits.length === 10) {
+    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+  }
+
+  return value;
+}
+
+function normalizePhoneNumber(value: string): string | null {
+  const digits = value.replace(/\D/g, "");
+
+  if (digits.length === 10) {
+    return `+1${digits}`;
+  }
+
+  if (digits.length === 11 && digits.startsWith("1")) {
+    return `+${digits}`;
+  }
+
+  return null;
 }
 
 function GoogleLogo({ className }: { className?: string }) {
@@ -145,6 +185,12 @@ export function AccountManagementPanel() {
   const { startSocialOAuth } = useSocialOAuth();
   const [providerError, setProviderError] = useState<string | null>(null);
   const [providerNotice, setProviderNotice] = useState<string | null>(null);
+  const [identityError, setIdentityError] = useState<string | null>(null);
+  const [identityNotice, setIdentityNotice] = useState<string | null>(null);
+  const [identityEditState, setIdentityEditState] = useState<IdentityEditState | null>(
+    null,
+  );
+  const [isSavingIdentity, setIsSavingIdentity] = useState(false);
   const [activeProviderAction, setActiveProviderAction] = useState<{
     provider: SocialProvider;
     action: ProviderAction;
@@ -177,6 +223,150 @@ export function AccountManagementPanel() {
       </div>
     );
   }
+
+  const openIdentityEditor = (field: IdentityField) => {
+    setIdentityError(null);
+    setIdentityNotice(null);
+    setIdentityEditState({
+      field,
+      step: "input",
+      value:
+        field === "email"
+          ? user.primaryEmailAddress?.emailAddress ?? ""
+          : formatPhoneNumber(user.primaryPhoneNumber?.phoneNumber),
+      verificationCode: "",
+      target: null,
+    });
+  };
+
+  const closeIdentityEditor = () => {
+    if (isSavingIdentity) {
+      return;
+    }
+
+    setIdentityEditState(null);
+    setIdentityError(null);
+  };
+
+  const handleIdentityValueSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!identityEditState) {
+      return;
+    }
+
+    setIdentityError(null);
+    setIdentityNotice(null);
+    setIsSavingIdentity(true);
+
+    try {
+      if (identityEditState.field === "email") {
+        const nextEmail = identityEditState.value.trim().toLowerCase();
+        const currentEmail = user.primaryEmailAddress?.emailAddress?.toLowerCase() ?? "";
+
+        if (!nextEmail) {
+          throw new Error("Enter an email address.");
+        }
+
+        if (nextEmail === currentEmail) {
+          setIdentityEditState(null);
+          return;
+        }
+
+        const emailAddress = await user.createEmailAddress({ email: nextEmail });
+        await emailAddress.prepareVerification({ strategy: "email_code" });
+        setIdentityEditState((prev) =>
+          prev
+            ? {
+                ...prev,
+                step: "verify",
+                verificationCode: "",
+                target: emailAddress,
+              }
+            : prev,
+        );
+        return;
+      }
+
+      const normalizedPhoneNumber = normalizePhoneNumber(identityEditState.value);
+      const currentPhoneNumber = user.primaryPhoneNumber?.phoneNumber ?? "";
+
+      if (!normalizedPhoneNumber) {
+        throw new Error("Enter a valid US phone number.");
+      }
+
+      if (normalizedPhoneNumber === currentPhoneNumber) {
+        setIdentityEditState(null);
+        return;
+      }
+
+      const phoneNumber = await user.createPhoneNumber({
+        phoneNumber: normalizedPhoneNumber,
+      });
+      await phoneNumber.prepareVerification();
+      setIdentityEditState((prev) =>
+        prev
+          ? {
+              ...prev,
+              step: "verify",
+              value: formatPhoneNumber(normalizedPhoneNumber),
+              verificationCode: "",
+              target: phoneNumber,
+            }
+          : prev,
+      );
+    } catch (error) {
+      setIdentityError(
+        getClerkErrorMessage(error, "We couldn't start that verification flow."),
+      );
+    } finally {
+      setIsSavingIdentity(false);
+    }
+  };
+
+  const handleIdentityVerificationSubmit = async (
+    event: FormEvent<HTMLFormElement>,
+  ) => {
+    event.preventDefault();
+
+    if (!identityEditState?.target) {
+      return;
+    }
+
+    setIdentityError(null);
+    setIdentityNotice(null);
+    setIsSavingIdentity(true);
+
+    try {
+      const result = await identityEditState.target.attemptVerification({
+        code: identityEditState.verificationCode.trim(),
+      });
+
+      if (result.verification?.status !== "verified") {
+        throw new Error("That code was not accepted. Try again.");
+      }
+
+      if (identityEditState.field === "email") {
+        await user.update({ primaryEmailAddressId: identityEditState.target.id });
+      } else {
+        await user.update({ primaryPhoneNumberId: identityEditState.target.id });
+      }
+
+      await user.reload();
+      setIdentityNotice(
+        identityEditState.field === "email"
+          ? "Primary email updated."
+          : "Primary phone updated.",
+      );
+      setIdentityEditState(null);
+    } catch (error) {
+      setIdentityError(
+        getClerkErrorMessage(error, "We couldn't verify that code."),
+      );
+    } finally {
+      setIsSavingIdentity(false);
+    }
+  };
 
   const handleConnectProvider = async (provider: SocialProvider) => {
     setProviderError(null);
@@ -223,59 +413,89 @@ export function AccountManagementPanel() {
   return (
     <div className="space-y-5">
       <section className="rounded-[30px] border border-border bg-card/95 p-5 shadow-soft sm:p-6">
-        <div className="grid gap-5 xl:grid-cols-[1.08fr_0.92fr]">
-          <div className="rounded-[28px] border border-border/80 bg-background/88 p-5 shadow-soft dark:border-white/10 dark:bg-white/[0.05] sm:p-6">
-            <div className="flex items-start gap-4">
-              <div className="relative h-16 w-16 overflow-hidden rounded-[22px] border border-border bg-muted dark:border-white/10 dark:bg-white/[0.06]">
+        <div className="grid items-stretch gap-5 xl:grid-cols-[1.08fr_0.92fr]">
+          <div className="flex h-full flex-col rounded-[28px] border border-border/80 bg-background/88 p-5 shadow-soft dark:border-white/10 dark:bg-white/[0.05] sm:p-6">
+            <div className="flex items-center gap-4">
+              <div className="relative h-14 w-14 overflow-hidden rounded-[20px] border border-border bg-muted dark:border-white/10 dark:bg-white/[0.06]">
                 <Image
                   src={user.imageUrl}
                   alt={user.fullName ?? "Profile image"}
                   fill
                   className="object-cover"
-                  sizes="64px"
+                  sizes="56px"
                 />
               </div>
               <div className="min-w-0">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
                   Current identity
                 </p>
-                <h3 className="mt-1 text-xl font-semibold text-foreground">
+                <h3 className="mt-1 text-[1.75rem] font-semibold leading-none text-foreground">
                   {user.fullName ?? "Unnamed account"}
                 </h3>
-                <p className="mt-1 text-sm text-muted-foreground">
+                <p className="mt-1.5 text-sm text-muted-foreground">
                   Last sign-in {formatDateTime(user.lastSignInAt)}
                 </p>
               </div>
             </div>
 
-            <div className="mt-5 space-y-3">
-              <div className="rounded-[22px] border border-border/70 bg-muted/40 p-4 dark:border-white/10 dark:bg-white/[0.04]">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                  Primary email
-                </p>
-                <p className="mt-2 text-sm font-medium text-foreground">
-                  {user.primaryEmailAddress?.emailAddress ?? "None"}
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {formatVerificationStatus(user.primaryEmailAddress?.verification.status)}
-                </p>
+            <div className="mt-4 grid flex-1 auto-rows-fr gap-3">
+              <div className="rounded-[22px] border border-border/70 bg-muted/40 px-4 py-3.5 dark:border-white/10 dark:bg-white/[0.04]">
+                <div className="flex h-full items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                      Primary email
+                    </p>
+                    <p className="mt-2 truncate text-sm font-medium text-foreground">
+                      {user.primaryEmailAddress?.emailAddress ?? "None"}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => openIdentityEditor("email")}
+                    className="inline-flex shrink-0 items-center rounded-full border border-border bg-background px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:border-foreground/20 hover:text-foreground"
+                  >
+                    Edit
+                  </button>
+                </div>
               </div>
 
-              <div className="rounded-[22px] border border-border/70 bg-muted/40 p-4 dark:border-white/10 dark:bg-white/[0.04]">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                  Primary phone
-                </p>
-                <p className="mt-2 text-sm font-medium text-foreground">
-                  {user.primaryPhoneNumber?.phoneNumber ?? "None"}
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {formatVerificationStatus(user.primaryPhoneNumber?.verification.status)}
-                </p>
+              <div className="rounded-[22px] border border-border/70 bg-muted/40 px-4 py-3.5 dark:border-white/10 dark:bg-white/[0.04]">
+                <div className="flex h-full items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                      Primary phone
+                    </p>
+                    <p className="mt-2 text-sm font-medium text-foreground">
+                      {formatPhoneNumber(user.primaryPhoneNumber?.phoneNumber)}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => openIdentityEditor("phone")}
+                    className="inline-flex shrink-0 items-center rounded-full border border-border bg-background px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:border-foreground/20 hover:text-foreground"
+                  >
+                    Edit
+                  </button>
+                </div>
               </div>
+
+              {identityError ? (
+                <div className="rounded-[22px] border border-red-500/20 bg-red-500/5 px-4 py-3">
+                  <p className="text-sm text-red-500">{identityError}</p>
+                </div>
+              ) : null}
+
+              {identityNotice ? (
+                <div className="rounded-[22px] border border-emerald-500/20 bg-emerald-500/5 px-4 py-3">
+                  <p className="text-sm text-emerald-600 dark:text-emerald-300">
+                    {identityNotice}
+                  </p>
+                </div>
+              ) : null}
             </div>
           </div>
 
-          <div className="rounded-[28px] border border-border/80 bg-background/88 p-5 shadow-soft dark:border-white/10 dark:bg-white/[0.05] sm:p-6">
+          <div className="flex h-full flex-col rounded-[28px] border border-border/80 bg-background/88 p-5 shadow-soft dark:border-white/10 dark:bg-white/[0.05] sm:p-6">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
@@ -290,7 +510,7 @@ export function AccountManagementPanel() {
               </div>
             </div>
 
-            <div className="mt-5 space-y-3">
+            <div className="mt-4 grid flex-1 auto-rows-fr gap-3">
               {PROVIDERS.map(({ provider, title }) => {
                 const externalAccount = externalAccountsByProvider.get(provider);
                 const isBusy = activeProviderAction?.provider === provider;
@@ -299,9 +519,9 @@ export function AccountManagementPanel() {
                 return (
                   <div
                     key={`summary-${provider}`}
-                    className="rounded-[22px] border border-border/70 bg-muted/40 p-4 dark:border-white/10 dark:bg-white/[0.04]"
+                    className="rounded-[22px] border border-border/70 bg-muted/40 px-4 py-3.5 dark:border-white/10 dark:bg-white/[0.04]"
                   >
-                    <div className="flex items-center justify-between gap-3">
+                    <div className="flex h-full items-center justify-between gap-3">
                       <div className="flex min-w-0 items-center gap-3">
                         <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/[0.06] bg-black/35">
                           <ProviderLogo provider={provider} className="h-6 w-6" />
@@ -376,6 +596,113 @@ export function AccountManagementPanel() {
           </button>
         </SignOutButton>
       </section>
+
+      {identityEditState ? (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/70 px-4 py-6 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-[28px] border border-border bg-card p-5 shadow-soft sm:p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                  {identityEditState.field === "email" ? "Primary email" : "Primary phone"}
+                </p>
+                <h3 className="mt-1 text-xl font-semibold text-foreground">
+                  {identityEditState.step === "input"
+                    ? `Edit ${identityEditState.field}`
+                    : "Enter verification code"}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={closeIdentityEditor}
+                disabled={isSavingIdentity}
+                className="rounded-full border border-border bg-background px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Close
+              </button>
+            </div>
+
+            <form
+              onSubmit={
+                identityEditState.step === "input"
+                  ? handleIdentityValueSubmit
+                  : handleIdentityVerificationSubmit
+              }
+              className="mt-5 space-y-4"
+            >
+              {identityEditState.step === "input" ? (
+                <div>
+                  <label className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    {identityEditState.field === "email" ? "Email address" : "Phone number"}
+                  </label>
+                  <input
+                    type={identityEditState.field === "email" ? "email" : "tel"}
+                    value={identityEditState.value}
+                    onChange={(event) =>
+                      setIdentityEditState((prev) =>
+                        prev ? { ...prev, value: event.target.value } : prev,
+                      )
+                    }
+                    placeholder={
+                      identityEditState.field === "email"
+                        ? "name@example.com"
+                        : "(555) 555-5555"
+                    }
+                    className="mt-2 w-full rounded-[18px] border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition-colors focus:border-foreground/20"
+                  />
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    Confirmation code
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={identityEditState.verificationCode}
+                    onChange={(event) =>
+                      setIdentityEditState((prev) =>
+                        prev
+                          ? { ...prev, verificationCode: event.target.value }
+                          : prev,
+                      )
+                    }
+                    placeholder="123456"
+                    className="mt-2 w-full rounded-[18px] border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition-colors focus:border-foreground/20"
+                  />
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {identityEditState.field === "email"
+                      ? "Enter the code sent to your new email address."
+                      : "Enter the code sent to your new phone number."}
+                  </p>
+                </div>
+              )}
+
+              {identityError ? (
+                <div className="rounded-[18px] border border-red-500/20 bg-red-500/5 px-4 py-3">
+                  <p className="text-sm text-red-500">{identityError}</p>
+                </div>
+              ) : null}
+
+              <button
+                type="submit"
+                disabled={isSavingIdentity}
+                className="inline-flex w-full items-center justify-center rounded-[18px] bg-foreground px-4 py-3 text-sm font-semibold text-background transition-opacity hover:opacity-92 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {isSavingIdentity ? (
+                  <span className="inline-flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    {identityEditState.step === "input" ? "Sending code" : "Saving"}
+                  </span>
+                ) : identityEditState.step === "input" ? (
+                  "Continue"
+                ) : (
+                  "Verify and save"
+                )}
+              </button>
+            </form>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

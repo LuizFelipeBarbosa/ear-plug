@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AuthenticateWithRedirectCallback, useUser } from "@clerk/nextjs";
+import { useClerk, useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import {
@@ -11,12 +11,12 @@ import {
 } from "@/lib/auth/sso";
 
 export default function SSOCallbackPage() {
+  const clerk = useClerk();
   const router = useRouter();
-  const { isLoaded, user } = useUser();
+  const { user } = useUser();
   const [intent, setIntent] = useState<PendingSsoIntent | null | undefined>(undefined);
   const didReadIntentRef = useRef(false);
-  const hasHandledLinkIntentRef = useRef(false);
-  const hasClearedSignInIntentRef = useRef(false);
+  const didHandleCallbackRef = useRef(false);
 
   useEffect(() => {
     if (didReadIntentRef.current) {
@@ -36,45 +36,56 @@ export default function SSOCallbackPage() {
   }, [intent, router]);
 
   useEffect(() => {
-    if (
-      intent?.kind !== "link_provider" ||
-      hasHandledLinkIntentRef.current ||
-      !isLoaded
-    ) {
+    if (!intent || didHandleCallbackRef.current) {
       return;
     }
 
-    hasHandledLinkIntentRef.current = true;
+    didHandleCallbackRef.current = true;
 
-    void (async () => {
-      try {
-        await user?.reload();
-      } finally {
+    void clerk
+      .handleRedirectCallback(
+        {
+          signInUrl: "/sign-in",
+          signUpUrl: "/sign-up",
+          signInForceRedirectUrl: intent.returnTo,
+          signUpForceRedirectUrl: intent.returnTo,
+          signInFallbackRedirectUrl: intent.returnTo,
+          signUpFallbackRedirectUrl: intent.returnTo,
+        },
+        async (to) => {
+          if (intent.kind === "link_provider") {
+            await user?.reload();
+          }
+
+          clearPendingSsoIntent();
+
+          if (to.startsWith("http://") || to.startsWith("https://")) {
+            window.location.assign(to);
+            return;
+          }
+
+          router.replace(to);
+        },
+      )
+      .catch(() => {
         clearPendingSsoIntent();
-        router.replace(intent.returnTo);
-      }
-    })();
-  }, [intent, isLoaded, router, user]);
+        router.replace("/sign-in");
+      });
+  }, [clerk, intent, router, user]);
 
-  if (intent === undefined || intent === null) {
-    return <CallbackLoader copy="Preparing sign-in..." />;
+  return <CallbackLoader copy={getCallbackCopy(intent)} />;
+}
+
+function getCallbackCopy(intent: PendingSsoIntent | null | undefined): string {
+  if (!intent) {
+    return "Preparing sign-in...";
   }
 
-  if (intent.kind === "sign_in") {
-    if (!hasClearedSignInIntentRef.current) {
-      clearPendingSsoIntent();
-      hasClearedSignInIntentRef.current = true;
-    }
-
-    return (
-      <>
-        <AuthenticateWithRedirectCallback />
-        <div id="clerk-captcha" />
-      </>
-    );
+  if (intent.kind === "link_provider") {
+    return `Finishing ${intent.provider} connection...`;
   }
 
-  return <CallbackLoader copy={`Finishing ${intent.provider} connection...`} />;
+  return `Finishing ${intent.provider} sign-in...`;
 }
 
 function CallbackLoader({ copy }: { copy: string }) {
@@ -86,6 +97,7 @@ function CallbackLoader({ copy }: { copy: string }) {
           {copy}
         </div>
       </div>
+      <div id="clerk-captcha" />
     </div>
   );
 }
