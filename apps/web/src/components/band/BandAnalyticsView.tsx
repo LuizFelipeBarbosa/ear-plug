@@ -71,6 +71,10 @@ export function BandAnalyticsView() {
   const { analytics, isLoading: analyticsLoading } = useBandAnalytics(
     band?._id,
   );
+  const topFanLocations = useMemo(
+    () => analytics?.locationBreakdown?.slice(0, 6) ?? [],
+    [analytics?.locationBreakdown],
+  );
   const trafficTotal = useMemo(
     () =>
       (analytics?.trafficData ?? []).reduce(
@@ -84,6 +88,7 @@ export function BandAnalyticsView() {
     () => analytics && analytics.eventComparison.length > 0,
     [analytics],
   );
+  const hasLocationData = topFanLocations.length > 0;
 
   if (bandLoading || analyticsLoading) {
     return <AnalyticsSkeleton />;
@@ -534,6 +539,93 @@ export function BandAnalyticsView() {
           </div>
         </motion.section>
 
+        <motion.section variants={ANIMATION_VARIANTS.item}>
+          <div className="overflow-hidden rounded-2xl border border-border bg-card">
+            <div className="border-b border-border/50 p-4">
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-band/10">
+                  <MapPin className="h-4 w-4 text-band" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-semibold text-foreground">
+                    Fan Locations
+                  </h2>
+                  <p className="text-xs text-muted-foreground">
+                    Where RSVP&apos;ing fans say they&apos;re based
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4">
+              {hasLocationData ? (
+                <div className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(280px,0.9fr)]">
+                  <div className="space-y-3">
+                    {topFanLocations.map((entry, index) => (
+                      <AudienceLocationRow
+                        key={entry.location}
+                        rank={index + 1}
+                        location={entry.location}
+                        fanCount={entry.fanCount}
+                        rsvpCount={entry.rsvpCount}
+                        attendedCount={entry.attendedCount}
+                        share={entry.share}
+                      />
+                    ))}
+                  </div>
+
+                  <div className="rounded-2xl border border-band/15 bg-gradient-to-br from-band/10 via-background to-blue-500/5 p-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-band/80">
+                      Top Market
+                    </p>
+                    <p className="mt-3 text-2xl font-bold text-foreground">
+                      {analytics?.locationSummary.topLocation?.location ??
+                        "No mapped fans yet"}
+                    </p>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      {analytics?.locationSummary.topLocation
+                        ? `${analytics.locationSummary.topLocation.fanCount} unique fan${analytics.locationSummary.topLocation.fanCount === 1 ? "" : "s"} • ${analytics.locationSummary.topLocation.rsvpCount} RSVP${analytics.locationSummary.topLocation.rsvpCount === 1 ? "" : "s"}`
+                        : "Location insights appear once fans RSVP with saved profile locations."}
+                    </p>
+
+                    <div className="mt-5 grid grid-cols-2 gap-2">
+                      <LocationSummaryTile
+                        label="Mapped fans"
+                        value={analytics?.locationSummary.locatedFanCount ?? 0}
+                      />
+                      <LocationSummaryTile
+                        label="Tracked locations"
+                        value={analytics?.locationSummary.trackedLocationCount ?? 0}
+                      />
+                    </div>
+
+                    {analytics?.locationSummary.fansWithoutLocationCount ? (
+                      <p className="mt-4 text-xs leading-5 text-muted-foreground">
+                        {analytics.locationSummary.fansWithoutLocationCount} legacy
+                        fan profile
+                        {analytics.locationSummary.fansWithoutLocationCount === 1
+                          ? " is"
+                          : "s are"}{" "}
+                        still missing a location and excluded from this list.
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+              ) : (
+                <EmptyChartState
+                  icon={<MapPin className="w-8 h-8" />}
+                  title="No fan locations yet"
+                  description={
+                    analytics?.locationSummary.fansWithoutLocationCount
+                      ? "Fans have RSVP'd, but some older profiles still do not have a saved location."
+                      : "Location insights will appear as fans RSVP with saved profile locations."
+                  }
+                />
+              )}
+            </div>
+          </div>
+        </motion.section>
+
         {/* Venue Performance List */}
         {hasData && (
           <motion.section variants={ANIMATION_VARIANTS.item}>
@@ -614,6 +706,79 @@ export function BandAnalyticsView() {
 }
 
 // Components
+
+function AudienceLocationRow({
+  rank,
+  location,
+  fanCount,
+  rsvpCount,
+  attendedCount,
+  share,
+}: {
+  rank: number;
+  location: string;
+  fanCount: number;
+  rsvpCount: number;
+  attendedCount: number;
+  share: number;
+}) {
+  return (
+    <div className="rounded-2xl border border-border bg-background/70 p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-start gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-band/10 text-sm font-semibold text-band">
+            {rank}
+          </div>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-foreground">
+              {location}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {fanCount} unique fan{fanCount === 1 ? "" : "s"} • {rsvpCount} RSVP
+              {rsvpCount === 1 ? "" : "s"}
+              {attendedCount > 0
+                ? ` • ${attendedCount} attended`
+                : ""}
+            </p>
+          </div>
+        </div>
+
+        <div className="shrink-0 text-right">
+          <p className="text-lg font-bold leading-none text-foreground">
+            {Math.round(share)}%
+          </p>
+          <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+            of mapped fans
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-3 h-2 overflow-hidden rounded-full bg-band/10">
+        <div
+          className="h-full rounded-full bg-gradient-to-r from-band to-blue-500"
+          style={{
+            width: `${Math.min(100, Math.max(share, fanCount > 0 ? 6 : 0))}%`,
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function LocationSummaryTile({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | number;
+}) {
+  return (
+    <div className="rounded-2xl border border-white/40 bg-white/60 px-3 py-3 backdrop-blur">
+      <p className="text-lg font-semibold text-foreground">{value}</p>
+      <p className="mt-1 text-xs text-muted-foreground">{label}</p>
+    </div>
+  );
+}
 
 function MetricCard({
   icon,

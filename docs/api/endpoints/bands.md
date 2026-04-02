@@ -360,11 +360,31 @@ Get detailed analytics data for a specific band.
   eventComparison: {
     name: string;               // Date label (e.g., "Jan 15")
     rsvps: number;              // RSVPs for that event
+    attended: number;           // Checked-in attendees for that event
     venueName: string;          // Venue name
   }[];
   trafficData: {
     name: string;               // "Returning" or "New"
-    value: number;              // Percentage value
+    value: number;              // Unique audience count
+  }[];
+  locationSummary: {
+    trackedLocationCount: number;    // Unique locations represented
+    locatedFanCount: number;         // Unique fans with a saved location
+    fansWithoutLocationCount: number;// Unique fans still missing location
+    topLocation: {
+      location: string;
+      fanCount: number;
+      rsvpCount: number;
+      attendedCount: number;
+      share: number;
+    } | null;
+  };
+  locationBreakdown: {
+    location: string;           // Fan profile location label
+    fanCount: number;           // Unique fans from this location
+    rsvpCount: number;          // Total RSVPs from this location
+    attendedCount: number;      // Total check-ins from this location
+    share: number;              // Share of mapped fans from this location
   }[];
 }
 ```
