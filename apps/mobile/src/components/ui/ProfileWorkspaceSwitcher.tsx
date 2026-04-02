@@ -113,7 +113,7 @@ export function ProfileWorkspaceSwitcher() {
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
         <Pressable className="flex-1 bg-black/45" onPress={() => setOpen(false)}>
-          <Pressable className="mx-4 my-8 flex-1 rounded-[32px] bg-[#f8fafc]" onPress={() => {}}>
+          <Pressable className="mx-4 my-8 flex-1 rounded-[32px] bg-[#f8fafc]" onPress={() => { }}>
             <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 28 }}>
               <SectionTitle
                 title={showCreateForm ? "Create Band Workspace" : "Workspaces"}
@@ -219,7 +219,7 @@ export function ProfileWorkspaceSwitcher() {
                     {bands.map((entry) => {
                       const active = mode === "band" && bandId === entry.band._id;
                       return (
-                          <WorkspaceCard
+                        <WorkspaceCard
                           key={entry.band._id}
                           title={entry.band.name}
                           subtitle="Open band dashboard, calendar, inbox, analytics, and profile."
@@ -234,7 +234,7 @@ export function ProfileWorkspaceSwitcher() {
 
                   <View className="mt-4">
                     <ActionButton
-                      label={bands.length === 0 ? "Create First Band" : "Create Another Band"}
+                      label={bands.length === 0 ? "Create Artist Profile" : "Create Another Artist Profile"}
                       tone="band"
                       onPress={() => {
                         setCreateError(null);

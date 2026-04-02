@@ -375,26 +375,26 @@ export function FanProfileView() {
       {/* Tab Content */}
       <main className="px-4 pt-4">
         <TabPanel isActive={activeTab === "overview"}>
-            <OverviewTab
-              publicProfile={publicProfile}
-              onOpenGigDnaModal={openGigDnaModal}
-            />
+          <OverviewTab
+            publicProfile={publicProfile}
+            onOpenGigDnaModal={openGigDnaModal}
+          />
         </TabPanel>
         <TabPanel isActive={activeTab === "saved"}>
-            <SavedTab
-              publicProfile={publicProfile}
-            />
+          <SavedTab
+            publicProfile={publicProfile}
+          />
         </TabPanel>
         <TabPanel isActive={activeTab === "activity"}>
-            <ActivityTab
-              publicProfile={publicProfile}
-            />
+          <ActivityTab
+            publicProfile={publicProfile}
+          />
         </TabPanel>
         <TabPanel isActive={activeTab === "settings"}>
-            <SettingsTab
-              onOpenWorkspaceMenu={openWorkspaceMenu}
-              pendingInvitesCount={pendingInvites.length}
-            />
+          <SettingsTab
+            onOpenWorkspaceMenu={openWorkspaceMenu}
+            pendingInvitesCount={pendingInvites.length}
+          />
         </TabPanel>
       </main>
 
@@ -482,7 +482,7 @@ export function FanProfileView() {
                         }}
                         className="w-full py-3 border border-dashed border-fan/30 text-fan text-sm font-medium rounded-xl hover:bg-fan/5 transition-colors"
                       >
-                        + Create Another Band
+                        + Create Artist Profile
                       </button>
                     </div>
                   )}
@@ -553,10 +553,10 @@ export function FanProfileView() {
         gigDna={
           publicProfile?.gigDna
             ? {
-                label: publicProfile.gigDna.label,
-                tier: publicProfile.gigDna.tier as GigDnaTier,
-                attendedShows: publicProfile.gigDna.attendedShows,
-              }
+              label: publicProfile.gigDna.label,
+              tier: publicProfile.gigDna.tier as GigDnaTier,
+              attendedShows: publicProfile.gigDna.attendedShows,
+            }
             : null
         }
       />
@@ -925,11 +925,11 @@ function SettingsTab({
     spotifyPersonalization !== undefined && spotifyPersonalization !== null;
   const spotifyLastSyncedLabel = hasSpotifyPersonalization
     ? new Date(spotifyPersonalization.lastSyncedAt).toLocaleString("en-US", {
-        month: "short",
-        day: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-      })
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    })
     : null;
   const shouldShowSpotifyRepairAction =
     spotifyErrorCode === "spotify_reconnect_required" ||
