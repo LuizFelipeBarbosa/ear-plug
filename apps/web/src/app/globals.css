@@ -236,6 +236,11 @@
 }
 
 /* Clerk auth phone input and country popover need explicit dark-surface overrides. */
+.ep-auth-clerk .cl-signIn-start.cl-card {
+  padding-left: 4px !important;
+  padding-right: 4px !important;
+}
+
 .ep-auth-clerk .cl-phoneInputBox,
 .ep-auth-clerk .cl-formInputGroup {
   gap: 0;
