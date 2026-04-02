@@ -205,8 +205,8 @@ export default function EventDetailsPage({ params }: PageProps) {
     event.genres && event.genres.length > 0
       ? event.genres
       : event.genre
-      ? [event.genre]
-      : [];
+        ? [event.genre]
+        : [];
 
   // Lineup bands (host + cohosts)
   const lineupBands = event.lineupBands || [];
@@ -216,12 +216,12 @@ export default function EventDetailsPage({ params }: PageProps) {
   const hasMoreCohosts = cohostBands.length > 2;
   const calendarLocation = event.venue
     ? [
-        event.venue.name,
-        event.isVenueAddressHidden ? undefined : event.venue.address,
-        event.venue.city,
-      ]
-        .filter(Boolean)
-        .join(" • ")
+      event.venue.name,
+      event.isVenueAddressHidden ? undefined : event.venue.address,
+      event.venue.city,
+    ]
+      .filter(Boolean)
+      .join(" • ")
     : "";
   const calendarDescription = [
     event.description,
@@ -283,7 +283,7 @@ export default function EventDetailsPage({ params }: PageProps) {
 
           <div className="flex items-center gap-2">
             <motion.button
-  
+
               onClick={handleShare}
               className="p-3 bg-background/80 backdrop-blur-xl border border-border rounded-xl text-foreground hover:bg-background transition-colors touch-target shadow-lg"
             >
@@ -291,7 +291,7 @@ export default function EventDetailsPage({ params }: PageProps) {
             </motion.button>
             {!isPast && !inBandMode && (
               <motion.button
-    
+
                 onClick={() => toggleLike()}
                 className={cn(
                   "p-3 backdrop-blur-xl border rounded-xl transition-colors touch-target shadow-lg",
@@ -333,7 +333,7 @@ export default function EventDetailsPage({ params }: PageProps) {
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground leading-tight">
             {event.title}
           </h1>
-          
+
           {/* Host Band */}
           {hostBand && (
             <Link
@@ -453,11 +453,10 @@ export default function EventDetailsPage({ params }: PageProps) {
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{
-                      width: `${
-                        shouldHideRsvpInsights
+                      width: `${shouldHideRsvpInsights
                           ? lockedPreviewFillPercentage
                           : fillPercentage
-                      }%`,
+                        }%`,
                     }}
                     transition={{ delay: 0.5, duration: 0.8, ease: "easeOut" }}
                     className={cn(
@@ -477,9 +476,6 @@ export default function EventDetailsPage({ params }: PageProps) {
                   <span className="rounded-full border border-fan/20 bg-background/90 px-3 py-1 text-[10px] font-semibold tracking-[0.18em] text-fan shadow-sm">
                     RSVP TO REVEAL
                   </span>
-                  <p className="mt-3 text-sm font-medium text-foreground">
-                    Live RSVP totals unlock after you RSVP.
-                  </p>
                 </div>
               ) : null}
             </div>
@@ -778,8 +774,8 @@ export default function EventDetailsPage({ params }: PageProps) {
                     hasRsvp
                       ? "bg-success text-white shadow-lg shadow-success/20"
                       : spotsLeft <= 0
-                      ? "bg-muted text-muted-foreground cursor-not-allowed"
-                      : "bg-fan text-white shadow-lg shadow-fan/25 hover:bg-fan/90"
+                        ? "bg-muted text-muted-foreground cursor-not-allowed"
+                        : "bg-fan text-white shadow-lg shadow-fan/25 hover:bg-fan/90"
                   )}
                 >
                   {hasRsvp ? (
