@@ -118,7 +118,14 @@ function uniqueById<T extends { _id: unknown }>(docs: T[]): T[] {
 
 function normalizeAudienceLocation(location: string | undefined | null) {
   const normalized = location?.trim().replace(/\s+/g, " ");
-  return normalized ? normalized : null;
+  if (!normalized) {
+    return null;
+  }
+
+  return {
+    key: normalized.toLocaleLowerCase(),
+    label: normalized,
+  };
 }
 
 async function listBandParticipatingEvents(
@@ -1271,15 +1278,15 @@ export const getAnalytics = query({
         continue;
       }
 
-      const location = normalizeAudienceLocation(audienceUser.location);
-      if (!location) {
+      const normalizedLocation = normalizeAudienceLocation(audienceUser.location);
+      if (!normalizedLocation) {
         fansWithoutLocationCount += 1;
         continue;
       }
 
       locatedFanCount += 1;
-      const existingEntry = audienceByLocation.get(location) ?? {
-        location,
+      const existingEntry = audienceByLocation.get(normalizedLocation.key) ?? {
+        location: normalizedLocation.label,
         fanCount: 0,
         rsvpCount: 0,
         attendedCount: 0,
@@ -1289,7 +1296,7 @@ export const getAnalytics = query({
       existingEntry.rsvpCount += audienceVisitCounts.get(audienceUser._id) ?? 0;
       existingEntry.attendedCount +=
         audienceAttendedCounts.get(audienceUser._id) ?? 0;
-      audienceByLocation.set(location, existingEntry);
+      audienceByLocation.set(normalizedLocation.key, existingEntry);
     }
 
     const locationBreakdown = [...audienceByLocation.values()]
