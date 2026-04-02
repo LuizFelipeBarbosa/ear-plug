@@ -19,7 +19,6 @@ import { EventCard } from "@/components/events/EventCard";
 import { MobileTabRail } from "@/components/ui/MobileTabRail";
 import { TabPanel } from "@/components/ui/TabPanel";
 import { motion } from "framer-motion";
-import { cn } from "@/lib/utils";
 import { panelFade } from "@/lib/motion/presets";
 import { formatEventDate, formatEventTime } from "@ear-plug/shared/constants";
 import type { Id } from "../../../../../convex/_generated/dataModel";
@@ -125,34 +124,6 @@ export function FanCalendarView() {
           <p className="text-sm text-muted-foreground mt-1">
             Track your events and discover new shows
           </p>
-        </motion.div>
-
-        {/* Stats Summary */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1, duration: 0.3 }}
-          className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3"
-        >
-          {tabs.map((tab, index) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={cn(
-                "flex flex-col items-center rounded-xl border p-3 transition-colors",
-                index === tabs.length - 1 ? "col-span-2 sm:col-span-1" : "",
-                activeTab === tab.id
-                  ? "bg-fan/10 border-fan/30 text-fan"
-                  : "bg-card border-border text-muted-foreground hover:border-fan/20"
-              )}
-            >
-              <tab.icon className="w-5 h-5 mb-1" />
-              <span className="text-lg font-bold">{tab.count}</span>
-              <span className="text-[10px]   font-medium">
-                {tab.label}
-              </span>
-            </button>
-          ))}
         </motion.div>
 
         {/* Next Event Hero Card */}
