@@ -13,6 +13,7 @@ import { BrandMark } from "@/components/branding/BrandLogo";
 import { OnboardingFlow } from "@/components/onboarding/OnboardingFlow";
 import { useCurrentUser } from "@/hooks/useUser";
 import { useStaleClerkSessionRecovery } from "@/hooks/useStaleClerkSessionRecovery";
+import { resolveAuthReturnTo } from "@/lib/auth/sso";
 
 interface AuthExperienceProps {
   redirectAuthenticatedToHome?: boolean;
@@ -54,6 +55,7 @@ export function AuthExperience({
     isSignedIn &&
     Boolean(clerkUser) &&
     (missingClerkName || missingStoredName || missingStoredLocation);
+  const returnTo = resolveAuthReturnTo(searchParams);
   const authNotice =
     searchParams.get("notice") === "session-expired"
       ? "Your previous session expired. Sign in again."
@@ -73,7 +75,7 @@ export function AuthExperience({
       return;
     }
 
-    router.replace("/home");
+    router.replace(returnTo);
   }, [
     clerkUser,
     isClerkUserLoaded,
@@ -82,6 +84,7 @@ export function AuthExperience({
     isSignedIn,
     isUserLoading,
     needsProfileCompletion,
+    returnTo,
     redirectAuthenticatedToHome,
     router,
   ]);

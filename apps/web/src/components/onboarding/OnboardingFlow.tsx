@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { CustomAuthPanel } from "@/components/auth/CustomAuthPanel";
@@ -25,7 +26,20 @@ export function OnboardingFlow({
         <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-6 py-8">
           <main className="flex flex-1 items-center justify-center py-6">
             {!isSignedIn ? (
-              <CustomAuthPanel externalNotice={authNotice} mode={mode} />
+              <div className="w-full">
+                <CustomAuthPanel externalNotice={authNotice} mode={mode} />
+                <div className="mt-5 flex flex-col items-center gap-3 text-center">
+                  <p className="text-xs font-semibold tracking-[0.22em] text-zinc-300/80">
+                    Just browsing?
+                  </p>
+                  <Link
+                    href="/home"
+                    className="inline-flex min-h-11 items-center justify-center rounded-full border border-white/20 bg-white/8 px-5 text-sm font-medium text-white transition-colors hover:bg-white/14"
+                  >
+                    Browse as Guest
+                  </Link>
+                </div>
+              </div>
             ) : null}
           </main>
           <footer className="text-center">

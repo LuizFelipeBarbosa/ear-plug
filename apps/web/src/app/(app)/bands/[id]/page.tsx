@@ -24,6 +24,7 @@ import type { Id } from "../../../../../../../convex/_generated/dataModel";
 import { BandPublicMediaSlotsSection } from "@/components/band/slots/BandPublicMediaSlotsSection";
 import { PastShowFlyerSection } from "@/components/events/PastShowFlyerSection";
 import { useProfileContext } from "@/hooks/useProfileContext";
+import { useAuthActionGuard } from "@/hooks/useAuthActionGuard";
 import { GENRE_COLORS } from "@ear-plug/shared/constants";
 import { getInitials } from "@ear-plug/shared/utils";
 import type { Genre } from "@ear-plug/shared/types";
@@ -67,6 +68,7 @@ export default function BandFeedPage({ params }: PageProps) {
   const router = useRouter();
   const bandId = params.id as Id<"bands">;
   const { mode } = useProfileContext();
+  const { isSignedIn, requireSignIn } = useAuthActionGuard();
   const [activeTab, setActiveTab] = useState<TabType>("overview");
 
   const toggleSave = useMutation(api.bands.toggleSave);
@@ -98,13 +100,13 @@ export default function BandFeedPage({ params }: PageProps) {
   }, [publicProfile?.isFollowing, publicProfile?.followerCount, isSavingFollow]);
 
   useEffect(() => {
-    if (mode !== "personal") {
+    if (mode !== "personal" || !isSignedIn) {
       trackedBandIdRef.current = null;
     }
-  }, [mode]);
+  }, [isSignedIn, mode]);
 
   useEffect(() => {
-    if (mode !== "personal" || !publicProfile?.band) {
+    if (mode !== "personal" || !isSignedIn || !publicProfile?.band) {
       return;
     }
 
@@ -116,7 +118,7 @@ export default function BandFeedPage({ params }: PageProps) {
     void trackProfileView({ bandId }).catch(() => {
       trackedBandIdRef.current = null;
     });
-  }, [bandId, mode, publicProfile?.band, trackProfileView]);
+  }, [bandId, isSignedIn, mode, publicProfile?.band, trackProfileView]);
 
   const band = publicProfile?.band;
   const isViewerMember = Boolean(publicProfile?.viewerMembershipRole);
@@ -126,6 +128,9 @@ export default function BandFeedPage({ params }: PageProps) {
 
   const handleToggleFollow = async () => {
     if (!publicProfile || !canToggleFollow || isSavingFollow) {
+      return;
+    }
+    if (!requireSignIn()) {
       return;
     }
 

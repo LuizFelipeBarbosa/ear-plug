@@ -961,7 +961,11 @@ async function resolveEventCheckinAccess(
     return null;
   }
 
-  const user = await requireAuthenticatedUser(ctx);
+  const user = await getAuthenticatedUserOrNull(ctx);
+  if (!user) {
+    return null;
+  }
+
   const participatingBandIds = await getParticipatingBandIdsForEvent(ctx, event);
   const memberships = await ctx.db
     .query("bandMemberships")
@@ -1304,7 +1308,6 @@ export const listPublicPastByBand = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    await requireAuthenticatedUser(ctx);
     const limit = Math.max(1, Math.min(args.limit ?? 6, 24));
 
     const [hostedEvents, acceptedCohostInvites] = await Promise.all([

@@ -3,6 +3,17 @@ import { Source_Serif_4 } from "next/font/google";
 import { GeistSans } from "geist/font/sans";
 import "./globals.css";
 import { Providers } from "./providers";
+
+function resolveMetadataBase() {
+  const configuredUrl =
+    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.VERCEL_PROJECT_PRODUCTION_URL ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
+    "http://localhost:3000";
+
+  return new URL(configuredUrl);
+}
+
 const sourceSerif = Source_Serif_4({
   subsets: ["latin"],
   variable: "--font-source-serif",
@@ -10,6 +21,7 @@ const sourceSerif = Source_Serif_4({
   display: "swap",
 });
 export const metadata: Metadata = {
+  metadataBase: resolveMetadataBase(),
   title: "EarPlug | Listen Local",
   description:
     "Discover local live music events in the Bay Area. Connect with bands, find shows, and never miss a gig.",

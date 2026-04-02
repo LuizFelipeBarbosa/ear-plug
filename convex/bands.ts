@@ -218,12 +218,12 @@ export const getById = query({
 
 /**
  * Returns public band header data plus viewer-specific follow/membership state.
- * Requires authentication (route is app-scoped).
+ * Guest viewers receive default follow and membership values.
  */
 export const getPublicBandProfile = query({
   args: { bandId: v.id("bands") },
   handler: async (ctx, args) => {
-    const user = await requireAuthenticatedUser(ctx);
+    const user = await getAuthenticatedUserOrNull(ctx);
 
     const band = await ctx.db.get(args.bandId);
     if (!band) {
@@ -235,18 +235,22 @@ export const getPublicBandProfile = query({
         .query("savedArtists")
         .withIndex("by_band", (q) => q.eq("bandId", args.bandId))
         .collect(),
-      ctx.db
-        .query("savedArtists")
-        .withIndex("by_user_band", (q) =>
-          q.eq("userId", user._id).eq("bandId", args.bandId)
-        )
-        .unique(),
-      ctx.db
-        .query("bandMemberships")
-        .withIndex("by_band_user", (q) =>
-          q.eq("bandId", args.bandId).eq("userId", user._id)
-        )
-        .unique(),
+      user
+        ? ctx.db
+            .query("savedArtists")
+            .withIndex("by_user_band", (q) =>
+              q.eq("userId", user._id).eq("bandId", args.bandId)
+            )
+            .unique()
+        : Promise.resolve(null),
+      user
+        ? ctx.db
+            .query("bandMemberships")
+            .withIndex("by_band_user", (q) =>
+              q.eq("bandId", args.bandId).eq("userId", user._id)
+            )
+            .unique()
+        : Promise.resolve(null),
     ]);
 
     return {
