@@ -116,6 +116,11 @@ function uniqueById<T extends { _id: unknown }>(docs: T[]): T[] {
   });
 }
 
+function normalizeAudienceLocation(location: string | undefined | null) {
+  const normalized = location?.trim().replace(/\s+/g, " ");
+  return normalized ? normalized : null;
+}
+
 async function listBandParticipatingEvents(
   ctx: QueryCtx | MutationCtx,
   bandId: Id<"bands">
@@ -1220,11 +1225,19 @@ export const getAnalytics = query({
     );
 
     const totalRsvps = events.reduce((sum, e) => sum + e.rsvpCount, 0);
-    const audienceVisitCounts = new Map<string, number>();
+    const audienceVisitCounts = new Map<Id<"users">, number>();
+    const audienceAttendedCounts = new Map<Id<"users">, number>();
     for (const eventRsvps of rsvpsByEventId.values()) {
       for (const rsvp of eventRsvps) {
         const key = rsvp.userId;
         audienceVisitCounts.set(key, (audienceVisitCounts.get(key) ?? 0) + 1);
+
+        if ((rsvp.attendanceStatus ?? "on_list") === "attended") {
+          audienceAttendedCounts.set(
+            key,
+            (audienceAttendedCounts.get(key) ?? 0) + 1
+          );
+        }
       }
     }
 
@@ -1237,6 +1250,66 @@ export const getAnalytics = query({
         newAudienceCount += 1;
       }
     }
+
+    const audienceUsers = await Promise.all(
+      [...audienceVisitCounts.keys()].map((userId) => ctx.db.get(userId))
+    );
+    const audienceByLocation = new Map<
+      string,
+      {
+        location: string;
+        fanCount: number;
+        rsvpCount: number;
+        attendedCount: number;
+      }
+    >();
+    let locatedFanCount = 0;
+    let fansWithoutLocationCount = 0;
+
+    for (const audienceUser of audienceUsers) {
+      if (!audienceUser) {
+        continue;
+      }
+
+      const location = normalizeAudienceLocation(audienceUser.location);
+      if (!location) {
+        fansWithoutLocationCount += 1;
+        continue;
+      }
+
+      locatedFanCount += 1;
+      const existingEntry = audienceByLocation.get(location) ?? {
+        location,
+        fanCount: 0,
+        rsvpCount: 0,
+        attendedCount: 0,
+      };
+
+      existingEntry.fanCount += 1;
+      existingEntry.rsvpCount += audienceVisitCounts.get(audienceUser._id) ?? 0;
+      existingEntry.attendedCount +=
+        audienceAttendedCounts.get(audienceUser._id) ?? 0;
+      audienceByLocation.set(location, existingEntry);
+    }
+
+    const locationBreakdown = [...audienceByLocation.values()]
+      .sort((left, right) => {
+        if (right.fanCount !== left.fanCount) {
+          return right.fanCount - left.fanCount;
+        }
+        if (right.rsvpCount !== left.rsvpCount) {
+          return right.rsvpCount - left.rsvpCount;
+        }
+        if (right.attendedCount !== left.attendedCount) {
+          return right.attendedCount - left.attendedCount;
+        }
+        return left.location.localeCompare(right.location);
+      })
+      .map((entry) => ({
+        ...entry,
+        share:
+          locatedFanCount > 0 ? (entry.fanCount / locatedFanCount) * 100 : 0,
+      }));
 
     const polledEvents = events
       .filter(
@@ -1305,6 +1378,13 @@ export const getAnalytics = query({
         { name: "Returning", value: returningAudienceCount },
         { name: "New", value: newAudienceCount },
       ],
+      locationSummary: {
+        trackedLocationCount: locationBreakdown.length,
+        locatedFanCount,
+        fansWithoutLocationCount,
+        topLocation: locationBreakdown[0] ?? null,
+      },
+      locationBreakdown,
       pollSummary: {
         polledGigCount: pollAnalyticsList.length,
         totalResponses: totalPollResponses,

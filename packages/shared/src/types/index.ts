@@ -849,6 +849,41 @@ export interface AnalyticsData {
     /** Absolute audience total */
     value: number;
   }[];
+  /** Rollup of audience locations pulled from fan profiles */
+  locationSummary: {
+    /** Number of unique profile locations represented in the analytics set */
+    trackedLocationCount: number;
+    /** Number of unique fans with a saved location */
+    locatedFanCount: number;
+    /** Number of unique fans missing a saved location */
+    fansWithoutLocationCount: number;
+    /** Largest audience location, or null when nothing is mapped yet */
+    topLocation: {
+      /** Audience location label */
+      location: string;
+      /** Unique fans from this location */
+      fanCount: number;
+      /** Total RSVPs contributed by those fans */
+      rsvpCount: number;
+      /** Total attended check-ins contributed by those fans */
+      attendedCount: number;
+      /** Share of mapped fans from this location */
+      share: number;
+    } | null;
+  };
+  /** Ranked audience locations derived from fan profile locations */
+  locationBreakdown: {
+    /** Audience location label */
+    location: string;
+    /** Unique fans from this location */
+    fanCount: number;
+    /** Total RSVPs contributed by those fans */
+    rsvpCount: number;
+    /** Total attended check-ins contributed by those fans */
+    attendedCount: number;
+    /** Share of mapped fans from this location */
+    share: number;
+  }[];
   /** Aggregate poll participation across polled gigs */
   pollSummary: {
     /** Number of gigs that currently have a poll configured */
