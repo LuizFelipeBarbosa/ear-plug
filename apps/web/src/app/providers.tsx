@@ -8,7 +8,7 @@ import { WEB_AUTH_CLERK_APPEARANCE } from "@/components/auth/clerkAppearance";
 import { motionConfigTransition } from "@/lib/motion/presets";
 const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL!;
 const clerkSignInUrl = process.env.NEXT_PUBLIC_CLERK_SIGN_IN_URL || "/sign-in";
-const clerkSignUpUrl = process.env.NEXT_PUBLIC_CLERK_SIGN_UP_URL || clerkSignInUrl;
+const clerkSignUpUrl = process.env.NEXT_PUBLIC_CLERK_SIGN_UP_URL || "/sign-up";
 const clerkSignInFallbackRedirectUrl =
   process.env.NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL || "/";
 const clerkSignUpFallbackRedirectUrl =
