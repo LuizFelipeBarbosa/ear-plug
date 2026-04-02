@@ -192,6 +192,8 @@ export default function EventDetailsPage({ params }: PageProps) {
   const spotsLeft = event.capacity - event.rsvpCount;
   const fillPercentage = Math.min((event.rsvpCount / event.capacity) * 100, 100);
   const isPast = event.dateTime < Date.now();
+  const shouldHideRsvpInsights = !inBandMode && !hasRsvp && !isPast;
+  const lockedPreviewFillPercentage = 92;
   const canManageEvent =
     !isPast &&
     isBandParticipant &&
@@ -376,9 +378,21 @@ export default function EventDetailsPage({ params }: PageProps) {
           <InfoCard
             icon={<Users className="w-5 h-5" />}
             label="Capacity"
-            value={`${event.rsvpCount} / ${event.capacity}`}
+            value={
+              shouldHideRsvpInsights
+                ? `${Math.max(event.capacity - 3, 0)} / ${event.capacity}`
+                : `${event.rsvpCount} / ${event.capacity}`
+            }
             color="band"
-            highlight={spotsLeft <= 10 && !isPast ? `${spotsLeft} left` : undefined}
+            highlight={
+              shouldHideRsvpInsights
+                ? undefined
+                : spotsLeft <= 10 && !isPast
+                  ? `${spotsLeft} left`
+                  : undefined
+            }
+            obscured={shouldHideRsvpInsights}
+            obscuredLabel="RSVP to reveal"
           />
           <InfoCard
             icon={<DollarSign className="w-5 h-5" />}
@@ -409,28 +423,65 @@ export default function EventDetailsPage({ params }: PageProps) {
         {/* RSVP Progress */}
         {!isPast && (
           <motion.div variants={itemVariants} className="mb-6">
-            <div className="bg-card border border-border rounded-2xl p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-foreground">
-                  {spotsLeft > 0 ? `${spotsLeft} spots remaining` : "Sold Out"}
-                </span>
-                <span className="text-sm font-bold text-fan">
-                  {Math.round(fillPercentage)}%
-                </span>
+            <div
+              className={cn(
+                "relative overflow-hidden rounded-2xl border border-border bg-card p-4",
+                shouldHideRsvpInsights && "border-dashed"
+              )}
+            >
+              <div
+                className={cn(
+                  "transition-all duration-200",
+                  shouldHideRsvpInsights && "blur-[7px] opacity-45"
+                )}
+              >
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-sm font-medium text-foreground">
+                    {shouldHideRsvpInsights
+                      ? "Crowd building fast"
+                      : spotsLeft > 0
+                        ? `${spotsLeft} spots remaining`
+                        : "Sold Out"}
+                  </span>
+                  <span className="text-sm font-bold text-fan">
+                    {shouldHideRsvpInsights
+                      ? `${lockedPreviewFillPercentage}%`
+                      : `${Math.round(fillPercentage)}%`}
+                  </span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-muted">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{
+                      width: `${
+                        shouldHideRsvpInsights
+                          ? lockedPreviewFillPercentage
+                          : fillPercentage
+                      }%`,
+                    }}
+                    transition={{ delay: 0.5, duration: 0.8, ease: "easeOut" }}
+                    className={cn(
+                      "h-full rounded-full",
+                      (shouldHideRsvpInsights
+                        ? lockedPreviewFillPercentage
+                        : fillPercentage) >= 90
+                        ? "bg-gradient-to-r from-fan to-red-500"
+                        : "bg-gradient-to-r from-fan to-band"
+                    )}
+                  />
+                </div>
               </div>
-              <div className="h-2 bg-muted rounded-full overflow-hidden">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${fillPercentage}%` }}
-                  transition={{ delay: 0.5, duration: 0.8, ease: "easeOut" }}
-                  className={cn(
-                    "h-full rounded-full",
-                    fillPercentage >= 90
-                      ? "bg-gradient-to-r from-fan to-red-500"
-                      : "bg-gradient-to-r from-fan to-band"
-                  )}
-                />
-              </div>
+
+              {shouldHideRsvpInsights ? (
+                <div className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center">
+                  <span className="rounded-full border border-fan/20 bg-background/90 px-3 py-1 text-[10px] font-semibold tracking-[0.18em] text-fan shadow-sm">
+                    RSVP TO REVEAL
+                  </span>
+                  <p className="mt-3 text-sm font-medium text-foreground">
+                    Live RSVP totals unlock after you RSVP.
+                  </p>
+                </div>
+              ) : null}
             </div>
           </motion.div>
         )}
@@ -795,29 +846,52 @@ function InfoCard({
   value,
   color,
   highlight,
+  obscured = false,
+  obscuredLabel,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string;
   color: "fan" | "band";
   highlight?: string;
+  obscured?: boolean;
+  obscuredLabel?: string;
 }) {
   return (
-    <div className="bg-card border border-border rounded-xl p-3">
-      <div className="flex items-center gap-2 mb-1">
-        <span className={color === "fan" ? "text-fan" : "text-band"}>
-          {icon}
-        </span>
-        <span className="text-xs text-muted-foreground">{label}</span>
-      </div>
-      <div className="flex items-center justify-between">
-        <p className="font-semibold text-foreground text-sm truncate">{value}</p>
-        {highlight && (
-          <span className="text-[10px] font-bold text-fan bg-fan/10 px-2 py-0.5 rounded-full">
-            {highlight}
-          </span>
+    <div
+      className={cn(
+        "relative overflow-hidden rounded-xl border border-border bg-card p-3",
+        obscured && "border-dashed"
+      )}
+    >
+      <div
+        className={cn(
+          obscured && "select-none blur-[6px] opacity-45"
         )}
+      >
+        <div className="mb-1 flex items-center gap-2">
+          <span className={color === "fan" ? "text-fan" : "text-band"}>
+            {icon}
+          </span>
+          <span className="text-xs text-muted-foreground">{label}</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <p className="truncate text-sm font-semibold text-foreground">{value}</p>
+          {highlight && (
+            <span className="rounded-full bg-fan/10 px-2 py-0.5 text-[10px] font-bold text-fan">
+              {highlight}
+            </span>
+          )}
+        </div>
       </div>
+
+      {obscured && obscuredLabel ? (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="rounded-full border border-fan/20 bg-background/90 px-2.5 py-1 text-[10px] font-semibold tracking-[0.16em] text-fan shadow-sm">
+            {obscuredLabel}
+          </span>
+        </div>
+      ) : null}
     </div>
   );
 }

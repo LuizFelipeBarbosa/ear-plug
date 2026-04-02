@@ -446,28 +446,25 @@ function OverviewTab({
 
       {/* Social Links */}
       {band.socialLinks && Object.keys(band.socialLinks).length > 0 && (
-        <motion.div variants={itemVariants}>
-          <SectionTitle icon={ExternalLink} title="Connect" />
-          <div className="flex flex-wrap gap-2">
-            {band.socialLinks.spotify && (
-              <SocialButton href={band.socialLinks.spotify} icon="spotify" label="Spotify" />
-            )}
-            {band.socialLinks.appleMusic && (
-              <SocialButton href={band.socialLinks.appleMusic} icon="apple" label="Apple Music" />
-            )}
-            {band.socialLinks.instagram && (
-              <SocialButton href={band.socialLinks.instagram} icon="instagram" label="Instagram" />
-            )}
-            {band.socialLinks.youtube && (
-              <SocialButton href={band.socialLinks.youtube} icon="youtube" label="YouTube" />
-            )}
-            {band.socialLinks.tiktok && (
-              <SocialButton href={band.socialLinks.tiktok} icon="tiktok" label="TikTok" />
-            )}
-            {band.socialLinks.website && (
-              <SocialButton href={band.socialLinks.website} icon="website" label="Website" />
-            )}
-          </div>
+        <motion.div variants={itemVariants} className="flex flex-wrap gap-2">
+          {band.socialLinks.spotify && (
+            <SocialButton href={band.socialLinks.spotify} icon="spotify" label="Spotify" />
+          )}
+          {band.socialLinks.appleMusic && (
+            <SocialButton href={band.socialLinks.appleMusic} icon="apple" label="Apple Music" />
+          )}
+          {band.socialLinks.instagram && (
+            <SocialButton href={band.socialLinks.instagram} icon="instagram" label="Instagram" />
+          )}
+          {band.socialLinks.youtube && (
+            <SocialButton href={band.socialLinks.youtube} icon="youtube" label="YouTube" />
+          )}
+          {band.socialLinks.tiktok && (
+            <SocialButton href={band.socialLinks.tiktok} icon="tiktok" label="TikTok" />
+          )}
+          {band.socialLinks.website && (
+            <SocialButton href={band.socialLinks.website} icon="website" label="Website" />
+          )}
         </motion.div>
       )}
 
