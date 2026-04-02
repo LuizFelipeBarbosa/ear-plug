@@ -92,6 +92,28 @@ export default function EventDetailsScreen() {
     }
   };
 
+  const handleRsvpPress = () => {
+    if (hasRsvp) {
+      Alert.alert(
+        "Cancel RSVP?",
+        `You’ll be removed from the guest list for ${event.title || "this gig"} and lose ticket access.`,
+        [
+          { text: "Keep RSVP", style: "cancel" },
+          {
+            text: "Cancel RSVP",
+            style: "destructive",
+            onPress: () => {
+              void rsvp();
+            },
+          },
+        ],
+      );
+      return;
+    }
+
+    void rsvp();
+  };
+
   return (
     <AppScreen
       scroll
@@ -130,7 +152,7 @@ export default function EventDetailsScreen() {
                 label={hasRsvp ? "You're Going" : spotsLeft !== null && spotsLeft === 0 ? "Sold Out" : "RSVP"}
                 tone="fan"
                 disabled={spotsLeft !== null && spotsLeft === 0 && !hasRsvp}
-                onPress={() => void rsvp()}
+                onPress={handleRsvpPress}
               />
               <View className="mt-2 flex-row gap-2">
                 <View className="flex-1">

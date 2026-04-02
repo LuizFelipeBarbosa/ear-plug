@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Heart, Check } from "lucide-react";
 import { EventImage } from "@/components/ui/OptimizedImage";
 import { EventPollPrompt } from "@/components/events/EventPollPrompt";
+import { EventUnrsvpConfirmModal } from "@/components/events/EventUnrsvpConfirmModal";
 import { formatEventDate, formatEventTime } from "@ear-plug/shared/constants";
 import type { SpotifyPersonalizationReason } from "@ear-plug/shared/types";
 import { cn } from "@/lib/utils";
@@ -58,6 +59,19 @@ export function EventCard({
     dismissPollPrompt,
   } = useEventInteraction(allowFanActions ? event._id : undefined);
   const [isPollSubmitting, setIsPollSubmitting] = useState(false);
+  const [isRsvpSubmitting, setIsRsvpSubmitting] = useState(false);
+  const [isUnrsvpConfirmOpen, setIsUnrsvpConfirmOpen] = useState(false);
+
+  const submitRsvpToggle = async () => {
+    setIsRsvpSubmitting(true);
+
+    try {
+      await rsvp();
+    } finally {
+      setIsRsvpSubmitting(false);
+    }
+  };
+
   const handleLikeClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -66,7 +80,13 @@ export function EventCard({
   const handleRsvpClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    await rsvp();
+
+    if (hasRsvp) {
+      setIsUnrsvpConfirmOpen(true);
+      return;
+    }
+
+    await submitRsvpToggle();
   };
   const isLiked = allowFanActions ? hasLiked : false;
   const displayTitle = event.title?.trim() || "Untitled Gig";
@@ -175,11 +195,13 @@ export function EventCard({
             ) : (
               <button
                 onClick={handleRsvpClick}
+                disabled={isRsvpSubmitting}
                 className={cn(
                   "touch-target flex items-center justify-center rounded-md border p-2 transition-colors",
                   hasRsvp
                     ? "border-success bg-success text-white"
                     : cn("border-border bg-transparent", accentTextClass),
+                  isRsvpSubmitting && "cursor-not-allowed opacity-60",
                 )}
                 title={hasRsvp ? "Cancel RSVP" : "RSVP to event"}
               >
@@ -224,6 +246,17 @@ export function EventCard({
           }}
         />
       ) : null}
+
+      <EventUnrsvpConfirmModal
+        isOpen={isUnrsvpConfirmOpen}
+        eventTitle={displayTitle}
+        isSubmitting={isRsvpSubmitting}
+        onClose={() => setIsUnrsvpConfirmOpen(false)}
+        onConfirm={async () => {
+          await submitRsvpToggle();
+          setIsUnrsvpConfirmOpen(false);
+        }}
+      />
     </>
   );
 }

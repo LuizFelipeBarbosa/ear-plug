@@ -5,7 +5,7 @@ import { formatEventDate, formatEventTime } from "@ear-plug/shared/constants";
 import { useRouter } from "expo-router";
 import { useMutation, useQuery } from "convex/react";
 import { Heart, Check, MapPin } from "lucide-react-native";
-import { Image, Pressable, Text, View } from "react-native";
+import { Alert, Image, Pressable, Text, View } from "react-native";
 import { cn } from "@/lib/utils";
 import { Badge, Card } from "@/components/ui/AppPrimitives";
 
@@ -57,6 +57,25 @@ export function EventListItem({
 
   const handleRsvp = (e: any) => {
     e.stopPropagation();
+
+    if (hasRsvp) {
+      Alert.alert(
+        "Cancel RSVP?",
+        `You’ll be removed from the guest list for ${displayTitle} and lose ticket access.`,
+        [
+          { text: "Keep RSVP", style: "cancel" },
+          {
+            text: "Cancel RSVP",
+            style: "destructive",
+            onPress: () => {
+              void rsvp({ eventId: event._id });
+            },
+          },
+        ],
+      );
+      return;
+    }
+
     void rsvp({ eventId: event._id });
   };
 

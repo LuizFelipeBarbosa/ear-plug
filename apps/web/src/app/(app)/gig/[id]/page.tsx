@@ -35,6 +35,7 @@ import { GuestListCard } from "@/components/band/GuestListCard";
 import { GuestControlPanelModal } from "@/components/band/GuestControlPanelModal";
 import { EventPollPrompt } from "@/components/events/EventPollPrompt";
 import { EventTicketPanel } from "@/components/events/EventTicketPanel";
+import { EventUnrsvpConfirmModal } from "@/components/events/EventUnrsvpConfirmModal";
 import { downloadCalendarInvite } from "@/lib/calendar";
 import {
   formatEventTime,
@@ -89,12 +90,33 @@ export default function EventDetailsPage({ params }: PageProps) {
   const [isGuestPanelOpen, setIsGuestPanelOpen] = useState(false);
   const [showMoreBands, setShowMoreBands] = useState(false);
   const [isPollSubmitting, setIsPollSubmitting] = useState(false);
+  const [isRsvpSubmitting, setIsRsvpSubmitting] = useState(false);
   const [isTicketQrOpen, setIsTicketQrOpen] = useState(false);
+  const [isUnrsvpConfirmOpen, setIsUnrsvpConfirmOpen] = useState(false);
   const [calendarError, setCalendarError] = useState<string | null>(null);
   const eventId = id as Id<"events">;
   const backHref = resolveAuthReturnTo(searchParams, "/home");
   const handleBack = () => {
     router.replace(backHref);
+  };
+
+  const submitRsvpToggle = async () => {
+    setIsRsvpSubmitting(true);
+
+    try {
+      await rsvp();
+    } finally {
+      setIsRsvpSubmitting(false);
+    }
+  };
+
+  const handleRsvpClick = async () => {
+    if (hasRsvp) {
+      setIsUnrsvpConfirmOpen(true);
+      return;
+    }
+
+    await submitRsvpToggle();
   };
 
   const {
@@ -773,15 +795,16 @@ export default function EventDetailsPage({ params }: PageProps) {
 
                 {/* RSVP Button */}
                 <button
-                  onClick={() => rsvp()}
-                  disabled={spotsLeft <= 0 && !hasRsvp}
+                  onClick={() => void handleRsvpClick()}
+                  disabled={(spotsLeft <= 0 && !hasRsvp) || isRsvpSubmitting}
                   className={cn(
                     "flex-1 py-3.5 font-semibold text-base rounded-xl transition-all touch-target",
                     hasRsvp
                       ? "bg-success text-white shadow-lg shadow-success/20"
                       : spotsLeft <= 0
                         ? "bg-muted text-muted-foreground cursor-not-allowed"
-                        : "bg-fan text-white shadow-lg shadow-fan/25 hover:bg-fan/90"
+                        : "bg-fan text-white shadow-lg shadow-fan/25 hover:bg-fan/90",
+                    isRsvpSubmitting && "cursor-not-allowed opacity-60",
                   )}
                 >
                   {hasRsvp ? (
@@ -791,9 +814,9 @@ export default function EventDetailsPage({ params }: PageProps) {
                     </span>
                   ) : spotsLeft <= 0 ? (
                     "Sold Out"
-                  ) : (
-                    "RSVP to Event"
-                  )}
+                    ) : (
+                      "RSVP to Event"
+                    )}
                 </button>
               </div>
             )}
@@ -817,6 +840,17 @@ export default function EventDetailsPage({ params }: PageProps) {
           eventTitle={event.title}
         />
       )}
+
+      <EventUnrsvpConfirmModal
+        isOpen={isUnrsvpConfirmOpen}
+        eventTitle={event.title?.trim() || "Untitled Gig"}
+        isSubmitting={isRsvpSubmitting}
+        onClose={() => setIsUnrsvpConfirmOpen(false)}
+        onConfirm={async () => {
+          await submitRsvpToggle();
+          setIsUnrsvpConfirmOpen(false);
+        }}
+      />
 
       {pollPrompt ? (
         <EventPollPrompt
