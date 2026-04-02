@@ -12,7 +12,6 @@ export interface PublicBandProfileSlot {
   isFilled: boolean;
   mediaType?: BandPostMediaType;
   mediaUrl?: string | null;
-  mediaStorageId?: Id<"_storage">;
   caption?: string;
   location?: string;
   durationSeconds?: number;

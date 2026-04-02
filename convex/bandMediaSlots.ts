@@ -160,7 +160,6 @@ export const listPublicSlots = query({
           isFilled: true,
           mediaType: slot.mediaType,
           mediaUrl,
-          mediaStorageId: slot.mediaStorageId,
           caption: slot.caption,
           location: slot.location,
           durationSeconds: slot.durationSeconds,

@@ -4,24 +4,35 @@ import { GeistSans } from "geist/font/sans";
 import "./globals.css";
 import { Providers } from "./providers";
 
+const DEFAULT_METADATA_BASE_URL = "http://localhost:3000";
+
 function normalizeMetadataBaseUrl(value: string | undefined) {
   if (!value) {
     return null;
   }
 
-  return /^[a-zA-Z][a-zA-Z\d+.-]*:\/\//.test(value)
-    ? value
-    : `https://${value}`;
+  const normalizedValue = value.trim();
+  if (!normalizedValue) {
+    return null;
+  }
+
+  return /^[a-zA-Z][a-zA-Z\d+.-]*:\/\//.test(normalizedValue)
+    ? normalizedValue
+    : `https://${normalizedValue}`;
 }
 
 function resolveMetadataBase() {
   const configuredUrl =
     normalizeMetadataBaseUrl(process.env.NEXT_PUBLIC_APP_URL) ||
     normalizeMetadataBaseUrl(process.env.VERCEL_PROJECT_PRODUCTION_URL) ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
-    "http://localhost:3000";
+    normalizeMetadataBaseUrl(process.env.VERCEL_URL) ||
+    DEFAULT_METADATA_BASE_URL;
 
-  return new URL(configuredUrl);
+  try {
+    return new URL(configuredUrl);
+  } catch {
+    return new URL(DEFAULT_METADATA_BASE_URL);
+  }
 }
 
 const sourceSerif = Source_Serif_4({

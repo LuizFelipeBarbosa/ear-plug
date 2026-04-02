@@ -70,6 +70,19 @@ function isAuthInterstitialPath(pathname: string): boolean {
   );
 }
 
+function getReturnToPathname(value: string): string {
+  const queryIndex = value.indexOf("?");
+  const hashIndex = value.indexOf("#");
+  const endIndex =
+    queryIndex === -1
+      ? hashIndex
+      : hashIndex === -1
+        ? queryIndex
+        : Math.min(queryIndex, hashIndex);
+
+  return endIndex === -1 ? value : value.slice(0, endIndex);
+}
+
 export function normalizeReturnTo(
   value: string | null | undefined,
   fallback = DEFAULT_AUTH_RETURN_TO,
@@ -83,7 +96,7 @@ export function normalizeReturnTo(
     return fallback;
   }
 
-  return isAuthInterstitialPath(trimmed) ? fallback : trimmed;
+  return isAuthInterstitialPath(getReturnToPathname(trimmed)) ? fallback : trimmed;
 }
 
 export function resolveAuthReturnTo(
