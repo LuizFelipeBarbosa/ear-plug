@@ -33,6 +33,10 @@ import {
   GENRE_COLORS,
 } from "@ear-plug/shared/constants";
 import { cn } from "@/lib/utils";
+import {
+  buildHrefWithReturnTo,
+  useCurrentReturnTo,
+} from "@/hooks/useReturnToHref";
 import { panelFade, presenceSyncNoInitial } from "@/lib/motion/presets";
 import type { EventStatus } from "@ear-plug/shared/types";
 
@@ -823,6 +827,7 @@ function EventItem({
   event: any;
   onOpenTentative: (event: any) => void;
 }) {
+  const currentReturnTo = useCurrentReturnTo("/calendar");
   const statusConfig = EVENT_STATUS_CONFIG[event.status as EventStatus];
   const genres = getEventGenres(event);
   const isTentative = event.status === "hold";
@@ -943,7 +948,10 @@ function EventItem({
   }
 
   return (
-    <Link href={`/gig/${event._id}`} className="block">
+    <Link
+      href={buildHrefWithReturnTo(`/gig/${event._id}`, currentReturnTo)}
+      className="block"
+    >
       <div
 
         className={cn(

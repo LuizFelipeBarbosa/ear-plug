@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
   Heart,
@@ -43,6 +43,7 @@ import {
 } from "@ear-plug/shared/constants";
 import { motion, AnimatePresence, type Variants } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { resolveAuthReturnTo } from "@/lib/auth/sso";
 import type { Id } from "../../../../../../../convex/_generated/dataModel";
 
 interface PageProps {
@@ -83,6 +84,7 @@ const fadeInVariants: Variants = {
 export default function EventDetailsPage({ params }: PageProps) {
   const { id } = params;
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isGuestPanelOpen, setIsGuestPanelOpen] = useState(false);
   const [showMoreBands, setShowMoreBands] = useState(false);
@@ -90,6 +92,10 @@ export default function EventDetailsPage({ params }: PageProps) {
   const [isTicketQrOpen, setIsTicketQrOpen] = useState(false);
   const [calendarError, setCalendarError] = useState<string | null>(null);
   const eventId = id as Id<"events">;
+  const backHref = resolveAuthReturnTo(searchParams, "/home");
+  const handleBack = () => {
+    router.replace(backHref);
+  };
 
   const {
     event,
@@ -179,7 +185,7 @@ export default function EventDetailsPage({ params }: PageProps) {
             This event may have been removed or is no longer available
           </p>
           <button
-            onClick={() => router.back()}
+            onClick={handleBack}
             className="px-5 py-2.5 bg-fan text-white font-medium text-sm rounded-xl hover:bg-fan/90 transition-colors"
           >
             Go Back
@@ -275,7 +281,7 @@ export default function EventDetailsPage({ params }: PageProps) {
         <div className="absolute top-0 left-0 right-0 p-4 flex items-center justify-between">
           <motion.button
 
-            onClick={() => router.back()}
+            onClick={handleBack}
             className="p-3 bg-background/80 backdrop-blur-xl border border-border rounded-xl text-foreground hover:bg-background transition-colors touch-target shadow-lg"
           >
             <ArrowLeft className="w-5 h-5" />

@@ -5,6 +5,10 @@ import { formatEventDate } from "@ear-plug/shared/constants";
 import { cn } from "@/lib/utils";
 import type { RoleTone } from "@/lib/ui/roleTone";
 import type { Id } from "../../../../../convex/_generated/dataModel";
+import {
+  buildHrefWithReturnTo,
+  useCurrentReturnTo,
+} from "@/hooks/useReturnToHref";
 export interface PastShowFlyerItem {
   eventId: Id<"events">;
   title: string;
@@ -32,6 +36,7 @@ export function PastShowFlyerSection({
   isLoading = false,
   tone = "band",
 }: PastShowFlyerSectionProps) {
+  const currentReturnTo = useCurrentReturnTo();
   const visibleShows = shows.slice(0, maxItems);
   const accentClass =
     tone === "fan" ? "hover:border-fan/40" : "hover:border-band/40";
@@ -67,7 +72,10 @@ export function PastShowFlyerSection({
           {visibleShows.map((show) => (
             <Link
               key={show.eventId}
-              href={`/gig/${show.eventId}`}
+              href={buildHrefWithReturnTo(
+                `/gig/${show.eventId}`,
+                currentReturnTo,
+              )}
               className={cn(
                 "group block border border-border bg-card rounded-lg overflow-hidden transition-colors",
                 accentClass,

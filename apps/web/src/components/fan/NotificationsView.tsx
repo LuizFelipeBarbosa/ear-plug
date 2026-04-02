@@ -20,6 +20,10 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { getRelativeTime } from "@ear-plug/shared/constants";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import {
+  buildHrefWithReturnTo,
+  useCurrentReturnTo,
+} from "@/hooks/useReturnToHref";
 import { panelFade, presenceSyncNoInitial } from "@/lib/motion/presets";
 import type { NotificationType } from "@ear-plug/shared/types";
 
@@ -50,6 +54,7 @@ interface Notification {
 }
 
 export function FanNotificationsView() {
+  const currentReturnTo = useCurrentReturnTo("/messages");
   const {
     notifications,
     unreadCount,
@@ -378,7 +383,10 @@ export function FanNotificationsView() {
                           {notification.eventId && notification.event ? (
                             <div className="mt-3 flex flex-wrap items-center gap-2">
                               <Link
-                                href={`/gig/${notification.eventId}`}
+                                href={buildHrefWithReturnTo(
+                                  `/gig/${notification.eventId}`,
+                                  currentReturnTo,
+                                )}
                                 onClick={() => {
                                   if (!notification.read) {
                                     markAsRead(notification._id as any);

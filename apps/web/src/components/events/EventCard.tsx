@@ -11,6 +11,10 @@ import type { RoleTone } from "@/lib/ui/roleTone";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { useEventInteraction } from "@/hooks/useEvents";
 import { useProfileContext } from "@/hooks/useProfileContext";
+import {
+  buildHrefWithReturnTo,
+  useCurrentReturnTo,
+} from "@/hooks/useReturnToHref";
 interface EventCardProps {
   event: {
     _id: Id<"events">;
@@ -81,9 +85,11 @@ export function EventCard({
       : "p-3"
     : "p-4";
   const imageSizeClass = compact ? "w-16 h-16" : "w-20 h-20";
+  const currentReturnTo = useCurrentReturnTo();
+  const eventHref = buildHrefWithReturnTo(`/gig/${event._id}`, currentReturnTo);
   return (
     <>
-      <Link href={`/gig/${event._id}`} className="block group">
+      <Link href={eventHref} className="block group">
         <div
           className={cn(
             "flex items-center gap-3 rounded-lg border bg-card transition-colors",

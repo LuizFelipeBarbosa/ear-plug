@@ -36,6 +36,10 @@ import { cn } from "@/lib/utils";
 import { useQuery } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
+import {
+  buildHrefWithReturnTo,
+  useCurrentReturnTo,
+} from "@/hooks/useReturnToHref";
 import { panelFade } from "@/lib/motion/presets";
 
 const STATUS_COLORS = {
@@ -624,12 +628,13 @@ export function BandDashboard() {
 // Sub-components
 
 function NextShowCard({ show }: { show: any }) {
+  const currentReturnTo = useCurrentReturnTo();
   const isConfirmed = show.status === "confirmed";
   const colors = isConfirmed ? STATUS_COLORS.confirmed : STATUS_COLORS.tentative;
   const displayTitle = show.title?.trim() || (isConfirmed ? "Untitled Gig" : "Untitled Tentative");
 
   return (
-    <Link href={`/gig/${show._id}`}>
+    <Link href={buildHrefWithReturnTo(`/gig/${show._id}`, currentReturnTo)}>
       <div className={cn(
         "bg-card border p-4 rounded-xl transition-colors transition-shadow hover:shadow-md",
         colors.border
@@ -709,11 +714,12 @@ function NextShowCard({ show }: { show: any }) {
 }
 
 function UpcomingShowCard({ show, status }: { show: any; status: "confirmed" | "tentative" }) {
+  const currentReturnTo = useCurrentReturnTo();
   const colors = status === "confirmed" ? STATUS_COLORS.confirmed : STATUS_COLORS.tentative;
   const displayTitle = show.title?.trim() || (status === "confirmed" ? "Untitled Gig" : "Untitled Tentative");
 
   return (
-    <Link href={`/gig/${show._id}`}>
+    <Link href={buildHrefWithReturnTo(`/gig/${show._id}`, currentReturnTo)}>
       <div className={cn(
         "bg-card border p-3 rounded-xl flex items-center gap-3 transition-colors hover:bg-muted/50",
         colors.border

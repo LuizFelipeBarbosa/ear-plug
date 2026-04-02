@@ -20,6 +20,10 @@ import { MobileTabRail } from "@/components/ui/MobileTabRail";
 import { TabPanel } from "@/components/ui/TabPanel";
 import { motion } from "framer-motion";
 import { panelFade } from "@/lib/motion/presets";
+import {
+  buildHrefWithReturnTo,
+  useCurrentReturnTo,
+} from "@/hooks/useReturnToHref";
 import { formatEventDate, formatEventTime } from "@ear-plug/shared/constants";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 
@@ -75,6 +79,7 @@ function groupEventsByMonth(
 }
 
 export function FanCalendarView() {
+  const currentReturnTo = useCurrentReturnTo("/calendar");
   const [activeTab, setActiveTab] = useState<EventTab>("upcoming");
 
   const rsvps = useQuery(api.events.getUserRsvps);
@@ -134,7 +139,9 @@ export function FanCalendarView() {
             transition={{ delay: 0.25, type: "spring", stiffness: 300 }}
             className="mt-5"
           >
-            <Link href={`/gig/${nextEvent._id}`}>
+            <Link
+              href={buildHrefWithReturnTo(`/gig/${nextEvent._id}`, currentReturnTo)}
+            >
               <div className="relative bg-gradient-to-br from-fan/20 via-fan/10 to-transparent border border-fan/20 rounded-2xl p-4 overflow-hidden group">
                 {/* Background decoration */}
                 <div className="absolute top-0 right-0 w-32 h-32 bg-fan/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
