@@ -33,13 +33,13 @@ import { useAuth, useUser } from "@clerk/clerk-expo";
 import { useAction, useMutation, useQuery } from "convex/react";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
-import { Edit3, Heart, LogOut, MapPin, Ticket, Warehouse, Music4, ArrowRight } from "lucide-react-native";
+import { Edit3, Heart, LogOut, MapPin, Ticket, Warehouse, Music4, ArrowRight, Sparkles } from "lucide-react-native";
 import { useMemo, useState } from "react";
 import { Modal, Pressable, Text, TextInput, View } from "react-native";
 
 const GENRE_OPTIONS: Genre[] = ["indie", "rock", "jazz", "electronic", "folk", "pop", "alternative"];
 
-type ProfileTab = "overview" | "saved" | "activity" | "settings";
+type ProfileTab = "overview" | "saved" | "settings";
 
 export function FanProfileScreen() {
   const router = useRouter();
@@ -153,7 +153,6 @@ export function FanProfileScreen() {
         options={[
           { value: "overview", label: "Overview" },
           { value: "saved", label: "Saved" },
-          { value: "activity", label: "Activity" },
           { value: "settings", label: "Settings" },
         ]}
       />
@@ -161,6 +160,64 @@ export function FanProfileScreen() {
       <View className="mt-5">
         {tab === "overview" ? (
           <View className="gap-4">
+            {publicProfile?.gigDna ? (
+              <SectionCard tone="fan">
+                <SectionTitle
+                  title="Your Gig DNA"
+                  subtitle="Your live music fingerprint and attendance profile now leads this overview."
+                />
+                <View className="rounded-[22px] border border-blue-200 bg-blue-50 px-4 py-4">
+                  <View className="flex-row items-start gap-3">
+                    <View className="h-12 w-12 items-center justify-center rounded-[18px] bg-blue-100">
+                      <Sparkles size={22} color="#2563eb" />
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-[11px] font-semibold uppercase tracking-[1.5px] text-slate-500">
+                        Archetype
+                      </Text>
+                      <Text className="mt-1 text-xl font-semibold text-slate-950">
+                        {publicProfile.gigDna.label}
+                      </Text>
+                      <Text className="mt-1 text-sm text-slate-500">
+                        Dominant: {publicProfile.gigDna.dominantGenre.charAt(0).toUpperCase() + publicProfile.gigDna.dominantGenre.slice(1)}
+                      </Text>
+                      <View className="mt-3 flex-row flex-wrap gap-2">
+                        <MiniBadge label={`${publicProfile.gigDna.attendedShows} shows`} tone="fan" />
+                        <MiniBadge label={`${publicProfile.gigDna.distinctVenues} venues`} tone="neutral" />
+                        <MiniBadge label={`Tier ${publicProfile.gigDna.tier}`} tone="warning" />
+                      </View>
+                    </View>
+                  </View>
+                </View>
+              </SectionCard>
+            ) : null}
+
+            <SectionCard>
+              <SectionTitle
+                title="Show History"
+                subtitle="Every attended show lives directly under your Gig DNA summary."
+              />
+              <View className="gap-3">
+                {publicProfile?.pastShows?.length ? (
+                  publicProfile.pastShows.map((show) => (
+                    <RowLink
+                      key={show.eventId}
+                      title={show.title}
+                      subtitle={`${show.venue.name} • ${show.venue.city} • ${new Date(show.dateTime).toLocaleDateString()}`}
+                      onPress={() => router.push(`/gig/${show.eventId}`)}
+                      right={<Ticket size={16} color="#64748b" />}
+                    />
+                  ))
+                ) : (
+                  <EmptyState
+                    tone="fan"
+                    title="No show history yet"
+                    message="Checked-in shows and past RSVPs will start building your history here."
+                  />
+                )}
+              </View>
+            </SectionCard>
+
             <SectionCard tone="fan">
               <SectionTitle
                 title="Workspace"
@@ -303,36 +360,6 @@ export function FanProfileScreen() {
                   ))
                 ) : (
                   <Text className="text-sm text-slate-500">No saved venues yet.</Text>
-                )}
-              </View>
-            </SectionCard>
-          </View>
-        ) : null}
-
-        {tab === "activity" ? (
-          <View className="gap-4">
-            <SectionCard>
-              <SectionTitle
-                title="Recent Activity"
-                subtitle="Past attended shows and the venues you keep showing up for."
-              />
-              <View className="gap-3">
-                {publicProfile?.pastShows?.length ? (
-                  publicProfile.pastShows.map((show) => (
-                    <RowLink
-                      key={show.eventId}
-                      title={show.title}
-                      subtitle={`${show.venue.name} • ${show.venue.city} • ${new Date(show.dateTime).toLocaleDateString()}`}
-                      onPress={() => router.push(`/gig/${show.eventId}`)}
-                      right={<Ticket size={16} color="#64748b" />}
-                    />
-                  ))
-                ) : (
-                  <EmptyState
-                    tone="fan"
-                    title="No recent activity yet"
-                    message="Checked-in shows and past RSVPs will build your activity feed."
-                  />
                 )}
               </View>
             </SectionCard>

@@ -58,9 +58,9 @@ import { uploadToConvexStorage } from "@/lib/convexUpload";
 import type { GigDnaTier } from "@/lib/gigDnaEvolution";
 
 const PANEL_TRANSITION_MS = 250;
-const FAN_PROFILE_TABS = ["overview", "saved", "activity", "settings"] as const;
+const FAN_PROFILE_TABS = ["overview", "saved", "settings"] as const;
 
-type TabType = "overview" | "saved" | "activity" | "settings";
+type TabType = "overview" | "saved" | "settings";
 
 function parseFanProfileTab(value: string | null): TabType {
   if (value && FAN_PROFILE_TABS.includes(value as TabType)) {
@@ -362,7 +362,6 @@ export function FanProfileView() {
           items={[
             { id: "overview", label: "Overview", icon: Users },
             { id: "saved", label: "Saved", icon: Heart },
-            { id: "activity", label: "Activity", icon: Zap },
             { id: "settings", label: "Settings", icon: Settings },
           ]}
           activeTab={activeTab}
@@ -382,11 +381,6 @@ export function FanProfileView() {
         </TabPanel>
         <TabPanel isActive={activeTab === "saved"}>
           <SavedTab
-            publicProfile={publicProfile}
-          />
-        </TabPanel>
-        <TabPanel isActive={activeTab === "activity"}>
-          <ActivityTab
             publicProfile={publicProfile}
           />
         </TabPanel>
@@ -632,6 +626,29 @@ function OverviewTab({
         </button>
       </div>
 
+      {/* Show History */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <FanSectionTitle icon={Ticket} title="Show History" className="mb-0" />
+          {publicProfile.pastShows.length > 0 && (
+            <FanBadge variant="highlight">{publicProfile.pastShows.length} shows</FanBadge>
+          )}
+        </div>
+        <PastShowFlyerSection
+          shows={publicProfile.pastShows.map((show: any) => ({
+            eventId: show.eventId,
+            title: show.title,
+            dateTime: show.dateTime,
+            image: show.image,
+            venueName: show.venue.name,
+            venueCity: show.venue.city,
+            bandName: show.band?.name,
+          }))}
+          emptyMessage="No shows attended yet. Start exploring events near you!"
+          tone="fan"
+        />
+      </div>
+
       {/* Top Genres */}
       {publicProfile.topGenres.length > 0 && (
         <div>
@@ -650,32 +667,6 @@ function OverviewTab({
               </div>
             ))}
           </div>
-        </div>
-      )}
-
-      {/* Recent Past Shows */}
-      {publicProfile.pastShows.length > 0 && (
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <FanSectionTitle icon={Ticket} title="Recent Shows" className="mb-0" />
-            <span className="text-xs text-muted-foreground">
-              {publicProfile.pastShows.length} total
-            </span>
-          </div>
-          <PastShowFlyerSection
-            shows={publicProfile.pastShows.slice(0, 4).map((show: any) => ({
-              eventId: show.eventId,
-              title: show.title,
-              dateTime: show.dateTime,
-              image: show.image,
-              venueName: show.venue.name,
-              venueCity: show.venue.city,
-              bandName: show.band?.name,
-            }))}
-            emptyMessage="No shows attended yet."
-            maxItems={4}
-            tone="fan"
-          />
         </div>
       )}
     </motion.div>
@@ -791,50 +782,6 @@ function SavedTab({ publicProfile }: { publicProfile: any }) {
           </div>
         </div>
       )}
-    </motion.div>
-  );
-}
-
-// Activity Tab
-function ActivityTab({ publicProfile }: { publicProfile: any }) {
-  if (!publicProfile) {
-    return (
-      <motion.div variants={panelFade} initial="hidden" animate="visible" className="space-y-4">
-        <div className="h-48 bg-muted rounded-xl animate-shimmer" />
-      </motion.div>
-    );
-  }
-
-  return (
-    <motion.div
-      variants={panelFade}
-      initial="hidden"
-      animate="visible"
-      exit="exit"
-      className="space-y-5"
-    >
-      {/* All Past Shows */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <FanSectionTitle icon={Ticket} title="Show History" className="mb-0" />
-          {publicProfile.pastShows.length > 0 && (
-            <FanBadge variant="highlight">{publicProfile.pastShows.length} shows</FanBadge>
-          )}
-        </div>
-        <PastShowFlyerSection
-          shows={publicProfile.pastShows.map((show: any) => ({
-            eventId: show.eventId,
-            title: show.title,
-            dateTime: show.dateTime,
-            image: show.image,
-            venueName: show.venue.name,
-            venueCity: show.venue.city,
-            bandName: show.band?.name,
-          }))}
-          emptyMessage="No shows attended yet. Start exploring events near you!"
-          tone="fan"
-        />
-      </div>
     </motion.div>
   );
 }
