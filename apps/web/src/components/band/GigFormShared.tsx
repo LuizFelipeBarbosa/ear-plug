@@ -324,7 +324,7 @@ export function GigModalHeader({
   const toneStyles = GIG_MODAL_TONE_STYLES[tone];
 
   return (
-    <div className="border-b border-border bg-card/95 px-4 pt-4 backdrop-blur-xl">
+    <div className="border-b border-border bg-card/95 px-4 pb-4 pt-4 backdrop-blur-xl">
       <div className="flex items-start justify-between gap-4">
         <div className="flex min-w-0 items-start gap-3">
           <div
@@ -694,34 +694,34 @@ export function GigDetailsSection({
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div>
+        <div className="min-w-0">
           <label className="block text-xs font-semibold text-muted-foreground mb-2">
             Date {!isTentative && <span className="text-band">*</span>}
           </label>
-          <div className="relative">
+          <div className="relative min-w-0 overflow-hidden">
             <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
               type="date"
               value={formData.date}
               onChange={(event) => onUpdateField("date", event.target.value)}
               className={cn(
-                "w-full pl-10 pr-3 py-3 bg-muted border rounded-xl text-foreground focus:outline-none",
+                "w-full min-w-0 max-w-full pl-10 pr-3 py-3 bg-muted border rounded-xl text-foreground focus:outline-none",
                 errors.date ? "border-red-500" : "border-border focus:border-band",
               )}
             />
           </div>
         </div>
-        <div>
+        <div className="min-w-0">
           <label className="block text-xs font-semibold text-muted-foreground mb-2">
             Start Time
           </label>
-          <div className="relative">
+          <div className="relative min-w-0 overflow-hidden">
             <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
               type="time"
               value={formData.startTime}
               onChange={(event) => onUpdateField("startTime", event.target.value)}
-              className="w-full pl-10 pr-3 py-3 bg-muted border border-border rounded-xl text-foreground focus:outline-none focus:border-band"
+              className="w-full min-w-0 max-w-full pl-10 pr-3 py-3 bg-muted border border-border rounded-xl text-foreground focus:outline-none focus:border-band"
             />
           </div>
         </div>

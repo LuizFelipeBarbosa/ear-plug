@@ -44,7 +44,7 @@ export function EventPollPrompt({
 
   const handleSubmit = async () => {
     if (!selectedOptionId) {
-      setSubmitError("Choose an option or close this prompt to answer later.");
+      setSubmitError("Choose an option before saving, or answer later.");
       return;
     }
 
@@ -142,15 +142,7 @@ export function EventPollPrompt({
       </div>
 
       <div className="safe-area-inset-bottom border-t border-border bg-card/95 px-4 pb-4 pt-3 backdrop-blur-xl">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isSubmitting}
-            className="w-full rounded-xl bg-muted py-3 font-medium text-foreground transition-colors hover:bg-muted/80 disabled:opacity-50"
-          >
-            Answer Later
-          </button>
+        <div className="flex flex-col items-center gap-2">
           <button
             type="button"
             onClick={handleSubmit}
@@ -165,6 +157,14 @@ export function EventPollPrompt({
             ) : (
               "Save Answer"
             )}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isSubmitting}
+            className="text-xs font-medium text-muted-foreground underline decoration-border underline-offset-4 transition-colors hover:text-foreground disabled:opacity-50"
+          >
+            Answer later
           </button>
         </div>
       </div>
