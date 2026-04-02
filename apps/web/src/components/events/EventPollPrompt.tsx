@@ -141,7 +141,7 @@ export function EventPollPrompt({
         </div>
       </div>
 
-      <div className="safe-area-inset-bottom border-t border-border bg-card/95 px-4 pb-4 pt-3 backdrop-blur-xl">
+      <div className="safe-area-inset-bottom border-t border-border bg-card/95 px-4 pb-6 pt-3 backdrop-blur-xl sm:pb-5">
         <div className="flex flex-col items-center gap-2">
           <button
             type="button"

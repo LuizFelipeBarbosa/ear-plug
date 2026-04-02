@@ -357,7 +357,7 @@ export function GuestControlPanelModal({
                             disabled={isBusy}
                             onClick={() => handleToggleAttendance(guest)}
                             className={cn(
-                              "touch-target rounded-lg p-2 transition-colors",
+                              "touch-target flex items-center justify-center rounded-lg p-2 transition-colors",
                               guest.rsvpType === "attended"
                                 ? "bg-muted text-muted-foreground hover:bg-muted/80"
                                 : "bg-band/10 text-band hover:bg-band/20",
@@ -376,7 +376,7 @@ export function GuestControlPanelModal({
                             disabled={isDeleting}
                             onClick={() => handleRemoveGuest(guest)}
                             className={cn(
-                              "touch-target rounded-lg bg-red-500/10 p-2 text-red-500 transition-colors hover:bg-red-500/20",
+                              "touch-target flex items-center justify-center rounded-lg bg-red-500/10 p-2 text-red-500 transition-colors hover:bg-red-500/20",
                               isDeleting && "cursor-not-allowed opacity-50"
                             )}
                             title="Remove from list"
