@@ -485,6 +485,7 @@ export const upsertUser = mutation({
     name: v.string(),
     phoneNumber: v.optional(v.string()),
     avatar: v.optional(v.string()),
+    location: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -495,6 +496,14 @@ export const upsertUser = mutation({
       throw new Error("Not authorized to modify this user");
     }
     const normalizedEmail = normalizeStoredEmail(args.email);
+    const normalizedLocation = args.location?.trim();
+
+    if (args.location !== undefined && !normalizedLocation) {
+      throw new ConvexError({
+        code: "invalid_user_location",
+        message: "Location is required.",
+      });
+    }
 
     const existingUser = await ctx.db
       .query("users")
@@ -505,12 +514,17 @@ export const upsertUser = mutation({
       const updates: {
         name: string;
         avatar?: string;
+        location?: string;
       } = {
         name: args.name,
       };
 
       if (args.avatar !== undefined && !existingUser.avatarStorageId) {
         updates.avatar = args.avatar;
+      }
+
+      if (normalizedLocation !== undefined) {
+        updates.location = normalizedLocation;
       }
 
       await ctx.db.patch(existingUser._id, {
@@ -525,6 +539,7 @@ export const upsertUser = mutation({
       email: normalizedEmail,
       name: args.name,
       avatar: args.avatar,
+      location: normalizedLocation,
       role: "fan", // Default role
       memberSince: Date.now(),
       showsAttended: 0,
@@ -602,10 +617,18 @@ export const updateProfile = mutation({
   },
   handler: async (ctx, args) => {
     const user = await requireAuthenticatedUser(ctx);
+    const normalizedLocation = args.location?.trim();
+
+    if (args.location !== undefined && !normalizedLocation) {
+      throw new ConvexError({
+        code: "invalid_user_location",
+        message: "Location is required.",
+      });
+    }
 
     const updates: Partial<typeof args> = {};
     if (args.name !== undefined) updates.name = args.name;
-    if (args.location !== undefined) updates.location = args.location;
+    if (normalizedLocation !== undefined) updates.location = normalizedLocation;
     if (args.avatar !== undefined) updates.avatar = args.avatar;
     if (args.topGenres !== undefined) updates.topGenres = args.topGenres;
 

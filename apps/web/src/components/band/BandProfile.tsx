@@ -388,7 +388,7 @@ export function BandProfileView() {
               <h1 className="text-xl sm:text-2xl font-bold text-foreground truncate">
                 {band.name}
               </h1>
-              
+
               {/* Genres */}
               {band.genres && band.genres.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mt-2">
@@ -454,25 +454,25 @@ export function BandProfileView() {
       {/* Tab Content */}
       <main className="px-4 pt-4">
         <TabPanel isActive={activeTab === "overview"}>
-            <OverviewTab
-              band={band}
-              stats={stats}
-              shows={shows}
-              isShowsLoading={isShowsLoading}
-              canManageSlots={canEditBandProfile}
-            />
+          <OverviewTab
+            band={band}
+            stats={stats}
+            shows={shows}
+            isShowsLoading={isShowsLoading}
+            canManageSlots={canEditBandProfile}
+          />
         </TabPanel>
         <TabPanel isActive={activeTab === "shows"}>
-            <ShowsTab
-              shows={shows}
-              isShowsLoading={isShowsLoading}
-            />
+          <ShowsTab
+            shows={shows}
+            isShowsLoading={isShowsLoading}
+          />
         </TabPanel>
         <TabPanel isActive={activeTab === "settings"}>
-            <SettingsTab
-              onOpenSettingsMenu={openSettingsMenu}
-              canManageMembers={canManageMembers}
-            />
+          <SettingsTab
+            onOpenSettingsMenu={openSettingsMenu}
+            canManageMembers={canManageMembers}
+          />
         </TabPanel>
       </main>
 
@@ -567,7 +567,7 @@ export function BandProfileView() {
                             {canManageMembers && entry.membership.role !== "owner" && (
                               <>
                                 <button
-                      
+
                                   onClick={() =>
                                     updateMemberRole({
                                       bandId: band._id,
@@ -581,7 +581,7 @@ export function BandProfileView() {
                                   <ArrowRightLeft className="w-3.5 h-3.5" />
                                 </button>
                                 <button
-                      
+
                                   onClick={() =>
                                     removeMember({
                                       bandId: band._id,
@@ -597,7 +597,7 @@ export function BandProfileView() {
                             )}
                             {canTransferOwnership && entry.membership.role !== "owner" && (
                               <button
-                    
+
                                 onClick={() =>
                                   transferOwnership({
                                     bandId: band._id,
@@ -669,8 +669,8 @@ export function BandProfileView() {
                                       candidate.inviteState === "already_member"
                                         ? "Member"
                                         : candidate.inviteState === "pending_invite"
-                                        ? "Pending"
-                                        : null;
+                                          ? "Pending"
+                                          : null;
                                     return (
                                       <button
                                         key={candidate.userId}
@@ -797,7 +797,7 @@ export function BandProfileView() {
                               </div>
                               {invite.status === "pending" && (
                                 <button
-                      
+
                                   onClick={() => revokeInvite({ inviteId: invite._id })}
                                   className="px-2.5 py-1 text-xs font-medium border border-red-500/30 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
                                 >
@@ -942,7 +942,6 @@ function OverviewTab({
       {/* Social Links */}
       {band.socialLinks && Object.keys(band.socialLinks).length > 0 && (
         <div>
-          <SectionTitle icon={ExternalLink} title="Social Links" />
           <div className="flex flex-wrap gap-2">
             {band.socialLinks.spotify && (
               <SocialButton href={band.socialLinks.spotify} icon="spotify" label="Spotify" />

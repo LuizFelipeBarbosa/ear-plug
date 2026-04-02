@@ -6,6 +6,7 @@ import { useAuth, useUser } from "@clerk/nextjs";
 import {
   hasRequiredFullPersonalName,
   hasRequiredPersonalName,
+  hasRequiredProfileLocation,
 } from "@ear-plug/shared/utils";
 import { NameCompletionModal } from "@/components/auth/NameCompletionModal";
 import { BrandMark } from "@/components/branding/BrandLogo";
@@ -45,10 +46,14 @@ export function AuthExperience({
   );
   const missingStoredName =
     user !== undefined && user !== null && !hasRequiredFullPersonalName(user.name);
-  const needsNameCompletion =
+  const missingStoredLocation =
+    user !== undefined &&
+    user !== null &&
+    !hasRequiredProfileLocation(user.location);
+  const needsProfileCompletion =
     isSignedIn &&
     Boolean(clerkUser) &&
-    (missingClerkName || missingStoredName);
+    (missingClerkName || missingStoredName || missingStoredLocation);
   const authNotice =
     searchParams.get("notice") === "session-expired"
       ? "Your previous session expired. Sign in again."
@@ -63,7 +68,7 @@ export function AuthExperience({
       !isSignedIn ||
       !clerkUser ||
       isUserLoading ||
-      needsNameCompletion
+      needsProfileCompletion
     ) {
       return;
     }
@@ -76,7 +81,7 @@ export function AuthExperience({
     isRecovering,
     isSignedIn,
     isUserLoading,
-    needsNameCompletion,
+    needsProfileCompletion,
     redirectAuthenticatedToHome,
     router,
   ]);
@@ -89,7 +94,7 @@ export function AuthExperience({
     <OnboardingFlow
       authNotice={authNotice}
       mode={authMode}
-      overlay={needsNameCompletion ? <NameCompletionModal isOpen /> : undefined}
+      overlay={needsProfileCompletion ? <NameCompletionModal isOpen /> : undefined}
     />
   );
 }

@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { Modal, Text, TextInput, View } from "react-native";
 import { useUser } from "@clerk/clerk-expo";
-import { useAction, useMutation } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import {
   composePersonalName,
+  getProfileLocationValidationError,
   getPersonalNameValidationError,
+  normalizeProfileLocation,
   normalizePersonalNamePart,
   splitPersonalName,
 } from "@ear-plug/shared/utils";
@@ -17,10 +19,12 @@ interface NameCompletionModalProps {
 
 export function NameCompletionModal({ visible }: NameCompletionModalProps) {
   const { user: clerkUser } = useUser();
+  const convexUser = useQuery(api.users.getCurrentUser);
   const updateClerkPersonalName = useAction(api.users.updateClerkPersonalName);
   const upsertUser = useMutation(api.users.upsertUser);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [location, setLocation] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -30,8 +34,15 @@ export function NameCompletionModal({ visible }: NameCompletionModalProps) {
     const fallbackName = splitPersonalName(clerkUser?.fullName);
     setFirstName(clerkUser?.firstName ?? fallbackName.firstName);
     setLastName(clerkUser?.lastName ?? fallbackName.lastName);
+    setLocation(convexUser?.location ?? "");
     setError(null);
-  }, [clerkUser?.firstName, clerkUser?.fullName, clerkUser?.lastName, visible]);
+  }, [
+    clerkUser?.firstName,
+    clerkUser?.fullName,
+    clerkUser?.lastName,
+    convexUser?.location,
+    visible,
+  ]);
 
   const handleSave = async () => {
     if (!clerkUser) {
@@ -45,8 +56,15 @@ export function NameCompletionModal({ visible }: NameCompletionModalProps) {
       return;
     }
 
+    const locationValidationError = getProfileLocationValidationError(location);
+    if (locationValidationError) {
+      setError(locationValidationError);
+      return;
+    }
+
     const normalizedFirstName = normalizePersonalNamePart(firstName);
     const normalizedLastName = normalizePersonalNamePart(lastName);
+    const normalizedLocation = normalizeProfileLocation(location);
 
     setIsSaving(true);
     setError(null);
@@ -63,12 +81,13 @@ export function NameCompletionModal({ visible }: NameCompletionModalProps) {
         phoneNumber: clerkUser.primaryPhoneNumber?.phoneNumber,
         name: composePersonalName(normalizedFirstName, normalizedLastName),
         avatar: clerkUser.imageUrl,
+        location: normalizedLocation,
       });
     } catch (saveError) {
       setError(
         saveError instanceof Error
           ? saveError.message
-          : "We couldn't save your name. Please try again."
+          : "We couldn't save your profile. Please try again."
       );
     } finally {
       setIsSaving(false);
@@ -89,10 +108,11 @@ export function NameCompletionModal({ visible }: NameCompletionModalProps) {
             Complete Profile
           </Text>
           <Text className="mt-3 text-2xl font-bold text-[#111827]">
-            Add your first and last name
+            Add your name and location
           </Text>
           <Text className="mt-3 text-sm leading-6 text-[#5b5f69]">
-            Ear-Plug needs your full name before you can continue into the app.
+            Ear-Plug needs your full name and home city before you can continue into
+            the app.
           </Text>
 
           <View className="mt-5 gap-3">
@@ -113,6 +133,16 @@ export function NameCompletionModal({ visible }: NameCompletionModalProps) {
               placeholderTextColor="#8f95a3"
               autoComplete="name-family"
               textContentType="familyName"
+              className="min-h-[48px] rounded-[18px] border border-slate-200 bg-white px-4 py-3 text-slate-900"
+            />
+
+            <TextInput
+              value={location}
+              onChangeText={setLocation}
+              placeholder="City, State"
+              placeholderTextColor="#8f95a3"
+              autoComplete="postal-address-locality"
+              textContentType="addressCity"
               className="min-h-[48px] rounded-[18px] border border-slate-200 bg-white px-4 py-3 text-slate-900"
             />
           </View>

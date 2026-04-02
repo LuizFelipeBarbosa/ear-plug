@@ -8,6 +8,7 @@ import {
   composePersonalName,
   hasRequiredFullPersonalName,
   hasRequiredPersonalName,
+  hasRequiredProfileLocation,
 } from "@ear-plug/shared/utils";
 import { NameCompletionModal } from "@/components/auth/NameCompletionModal";
 import { BrandMark } from "@/components/branding/BrandLogo";
@@ -31,10 +32,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   );
   const missingStoredName =
     user !== undefined && user !== null && !hasRequiredFullPersonalName(user.name);
-  const needsNameCompletion =
+  const missingStoredLocation =
+    user !== undefined &&
+    user !== null &&
+    !hasRequiredProfileLocation(user.location);
+  const needsProfileCompletion =
     isSignedIn &&
     Boolean(clerkUser) &&
-    (missingClerkName || missingStoredName);
+    (missingClerkName || missingStoredName || missingStoredLocation);
 
   useEffect(() => {
     // Redirect to onboarding if not authenticated
@@ -55,7 +60,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         isSignedIn &&
         clerkUser &&
         !isRecovering &&
-        !needsNameCompletion &&
+        !needsProfileCompletion &&
         !isLoading &&
         user === null &&
         !isCreatingUser
@@ -88,7 +93,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     isRecovering,
     isSignedIn,
     clerkUser,
-    needsNameCompletion,
+    needsProfileCompletion,
     isLoading,
     user,
     isCreatingUser,
@@ -99,7 +104,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     isRecovering ||
     !isLoaded ||
     (isSignedIn && !isClerkUserLoaded) ||
-    (!needsNameCompletion && (isLoading || isCreatingUser))
+    (!needsProfileCompletion && (isLoading || isCreatingUser))
   ) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -115,7 +120,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return null;
   }
 
-  if (needsNameCompletion) {
+  if (needsProfileCompletion) {
     return (
       <div className="min-h-screen bg-background">
         <NameCompletionModal isOpen />

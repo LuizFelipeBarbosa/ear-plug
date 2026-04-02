@@ -277,6 +277,33 @@ export function hasRequiredFullPersonalName(fullName?: string | null): boolean {
 }
 
 /**
+ * Normalizes a profile location for validation and storage.
+ */
+export function normalizeProfileLocation(location?: string | null): string {
+  return location?.trim().replace(/\s+/g, " ") ?? "";
+}
+
+/**
+ * Returns true when a profile location has a non-empty value after normalization.
+ */
+export function hasRequiredProfileLocation(location?: string | null): boolean {
+  return normalizeProfileLocation(location).length > 0;
+}
+
+/**
+ * Returns a user-facing validation error for a missing profile location.
+ */
+export function getProfileLocationValidationError(
+  location?: string | null
+): string | null {
+  if (!hasRequiredProfileLocation(location)) {
+    return "Location is required.";
+  }
+
+  return null;
+}
+
+/**
  * Returns a user-facing validation error for missing personal name fields.
  */
 export function getPersonalNameValidationError(

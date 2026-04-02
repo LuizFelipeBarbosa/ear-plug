@@ -46,8 +46,10 @@ import { useSocialOAuth } from "@/hooks/useSocialOAuth";
 import { GENRE_COLORS } from "@ear-plug/shared/constants";
 import {
   composePersonalName,
+  getProfileLocationValidationError,
   getInitials,
   getPersonalNameValidationError,
+  normalizeProfileLocation,
   normalizePersonalNamePart,
   splitPersonalName,
 } from "@ear-plug/shared/utils";
@@ -161,8 +163,16 @@ export function FanProfileView() {
         throw new Error(validationError);
       }
 
+      const locationValidationError = getProfileLocationValidationError(
+        data.location,
+      );
+      if (locationValidationError) {
+        throw new Error(locationValidationError);
+      }
+
       const normalizedFirstName = normalizePersonalNamePart(data.firstName);
       const normalizedLastName = normalizePersonalNamePart(data.lastName);
+      const normalizedLocation = normalizeProfileLocation(data.location);
       const currentFirstName = normalizePersonalNamePart(clerkUser?.firstName);
       const currentLastName = normalizePersonalNamePart(clerkUser?.lastName);
       const shouldUpdateClerkName =
@@ -191,7 +201,7 @@ export function FanProfileView() {
 
       await updateProfile({
         name: composePersonalName(normalizedFirstName, normalizedLastName),
-        location: data.location,
+        location: normalizedLocation,
         topGenres: data.topGenres,
       });
     },

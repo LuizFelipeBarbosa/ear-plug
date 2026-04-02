@@ -14,7 +14,10 @@ import {
 } from "@ear-plug/shared/constants";
 import {
   composePersonalName,
+  getProfileLocationValidationError,
   getPersonalNameValidationError,
+  hasRequiredProfileLocation,
+  normalizeProfileLocation,
 } from "@ear-plug/shared/utils";
 import type { Genre } from "@ear-plug/shared/types";
 import Image from "next/image";
@@ -115,8 +118,22 @@ export function EditProfileModal({
       formData.firstName,
       formData.lastName,
     );
+    setTouched((prev) => ({
+      ...prev,
+      firstName: true,
+      lastName: true,
+      location: true,
+    }));
     if (validationError) {
       setError(validationError);
+      return;
+    }
+
+    const locationValidationError = getProfileLocationValidationError(
+      formData.location,
+    );
+    if (locationValidationError) {
+      setError(locationValidationError);
       return;
     }
 
@@ -124,6 +141,7 @@ export function EditProfileModal({
     try {
       await onSave({
         ...formData,
+        location: normalizeProfileLocation(formData.location),
         avatarFile: avatarFile ?? undefined,
         removeAvatar: avatarFile ? false : removeAvatar,
       });
@@ -160,6 +178,9 @@ export function EditProfileModal({
   const handleFieldChange = (field: keyof ProfileFormData, value: string) => {
     setFormData({ ...formData, [field]: value });
     setTouched({ ...touched, [field]: true });
+    if (error) {
+      setError(null);
+    }
   };
 
   const handleAvatarSelect = (file: File) => {
@@ -199,6 +220,10 @@ export function EditProfileModal({
 
   const selectedGenresCount = formData.topGenres?.length || 0;
   const canSelectMoreGenres = selectedGenresCount < 5;
+  const locationError =
+    touched.location && !hasRequiredProfileLocation(formData.location)
+      ? "Location is required."
+      : undefined;
 
   return (
     <ResponsiveSheetModal
@@ -368,6 +393,8 @@ export function EditProfileModal({
                     onChange={(city) => handleFieldChange("location", city as string)}
                     placeholder="e.g., San Francisco, CA"
                     label="Location"
+                    required
+                    error={locationError}
                   />
                 </div>
               </div>

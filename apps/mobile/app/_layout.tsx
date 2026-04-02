@@ -9,6 +9,7 @@ import {
   composePersonalName,
   hasRequiredFullPersonalName,
   hasRequiredPersonalName,
+  hasRequiredProfileLocation,
 } from "@ear-plug/shared/utils";
 import * as SecureStore from "expo-secure-store";
 import { Text } from "react-native";
@@ -80,16 +81,20 @@ function UserBootstrap({ children }: { children: React.ReactNode }) {
     convexUser !== undefined &&
     convexUser !== null &&
     !hasRequiredFullPersonalName(convexUser.name);
-  const needsNameCompletion =
+  const missingStoredLocation =
+    convexUser !== undefined &&
+    convexUser !== null &&
+    !hasRequiredProfileLocation(convexUser.location);
+  const needsProfileCompletion =
     isLoaded &&
     isSignedIn &&
     Boolean(clerkUser) &&
-    (missingClerkName || missingStoredName);
+    (missingClerkName || missingStoredName || missingStoredLocation);
 
   useEffect(() => {
     if (!isLoaded || !isSignedIn || !clerkUser) return;
     if (convexUser === undefined) return;
-    if (needsNameCompletion) return;
+    if (needsProfileCompletion) return;
 
     if (convexUser === null && attemptedFor.current !== clerkUser.id) {
       attemptedFor.current = clerkUser.id;
@@ -110,7 +115,7 @@ function UserBootstrap({ children }: { children: React.ReactNode }) {
           setIsBootstrapping(false);
         });
     }
-  }, [clerkUser, convexUser, isLoaded, isSignedIn, needsNameCompletion, upsertUser]);
+  }, [clerkUser, convexUser, isLoaded, isSignedIn, needsProfileCompletion, upsertUser]);
 
   if ((isSignedIn && !isClerkUserLoaded) || isBootstrapping) {
     return (
@@ -120,7 +125,7 @@ function UserBootstrap({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (needsNameCompletion) {
+  if (needsProfileCompletion) {
     return (
       <>
         <AppScreen>

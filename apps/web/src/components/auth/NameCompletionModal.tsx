@@ -1,17 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useAction, useMutation } from "convex/react";
 import {
   composePersonalName,
+  getProfileLocationValidationError,
   getPersonalNameValidationError,
+  hasRequiredProfileLocation,
+  normalizeProfileLocation,
   normalizePersonalNamePart,
   splitPersonalName,
 } from "@ear-plug/shared/utils";
 import { api } from "../../../../../convex/_generated/api";
 import { BrandMark } from "@/components/branding/BrandLogo";
 import { ResponsiveSheetModal } from "@/components/ui/ResponsiveSheetModal";
+import { CityAutocomplete } from "@/components/ui/CityAutocomplete";
+import { useCurrentUser } from "@/hooks/useUser";
 import { cn } from "@/lib/utils";
 
 interface NameCompletionModalProps {
@@ -20,21 +25,47 @@ interface NameCompletionModalProps {
 
 export function NameCompletionModal({ isOpen }: NameCompletionModalProps) {
   const { user: clerkUser } = useUser();
+  const { user } = useCurrentUser();
   const updateClerkPersonalName = useAction(api.users.updateClerkPersonalName);
   const upsertUser = useMutation(api.users.upsertUser);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [location, setLocation] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const wasOpenRef = useRef(false);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (isOpen && !wasOpenRef.current) {
+      const fallbackName = splitPersonalName(clerkUser?.fullName);
+      setFirstName(clerkUser?.firstName ?? fallbackName.firstName);
+      setLastName(clerkUser?.lastName ?? fallbackName.lastName);
+      setLocation(user?.location ?? "");
+      setError(null);
+      setTouched({});
+    }
+    wasOpenRef.current = isOpen;
+  }, [
+    clerkUser?.firstName,
+    clerkUser?.fullName,
+    clerkUser?.lastName,
+    isOpen,
+    user?.location,
+  ]);
 
-    const fallbackName = splitPersonalName(clerkUser?.fullName);
-    setFirstName(clerkUser?.firstName ?? fallbackName.firstName);
-    setLastName(clerkUser?.lastName ?? fallbackName.lastName);
-    setError(null);
-  }, [clerkUser?.firstName, clerkUser?.fullName, clerkUser?.lastName, isOpen]);
+  const firstNameError =
+    touched.firstName && normalizePersonalNamePart(firstName).length === 0
+      ? "First name is required."
+      : null;
+  const lastNameError =
+    touched.lastName && normalizePersonalNamePart(lastName).length === 0
+      ? "Last name is required."
+      : null;
+  const locationError =
+    touched.location && !hasRequiredProfileLocation(location)
+      ? "Location is required."
+      : null;
 
   const handleSubmit = async () => {
     if (!clerkUser) {
@@ -42,14 +73,27 @@ export function NameCompletionModal({ isOpen }: NameCompletionModalProps) {
       return;
     }
 
+    setTouched({
+      firstName: true,
+      lastName: true,
+      location: true,
+    });
+
     const validationError = getPersonalNameValidationError(firstName, lastName);
     if (validationError) {
       setError(validationError);
       return;
     }
 
+    const locationValidationError = getProfileLocationValidationError(location);
+    if (locationValidationError) {
+      setError(locationValidationError);
+      return;
+    }
+
     const normalizedFirstName = normalizePersonalNamePart(firstName);
     const normalizedLastName = normalizePersonalNamePart(lastName);
+    const normalizedLocation = normalizeProfileLocation(location);
 
     setIsSaving(true);
     setError(null);
@@ -66,12 +110,13 @@ export function NameCompletionModal({ isOpen }: NameCompletionModalProps) {
         phoneNumber: clerkUser.primaryPhoneNumber?.phoneNumber,
         name: composePersonalName(normalizedFirstName, normalizedLastName),
         avatar: clerkUser.imageUrl,
+        location: normalizedLocation,
       });
     } catch (saveError) {
       setError(
         saveError instanceof Error
           ? saveError.message
-          : "We couldn't save your name. Please try again."
+          : "We couldn't save your profile details. Please try again."
       );
     } finally {
       setIsSaving(false);
@@ -84,7 +129,7 @@ export function NameCompletionModal({ isOpen }: NameCompletionModalProps) {
       onClose={() => {}}
       closeDisabled
       labelledBy="name-completion-modal-title"
-      panelClassName="sm:max-w-md"
+      panelClassName="sm:max-w-lg"
     >
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="border-b border-border bg-card/95 px-5 py-5 backdrop-blur-xl">
@@ -106,52 +151,88 @@ export function NameCompletionModal({ isOpen }: NameCompletionModalProps) {
             id="name-completion-modal-title"
             className="mt-2 text-xl font-bold text-foreground"
           >
-            Add your first and last name
+            Add your name and location
           </h2>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            EarPlug needs your real name before you can continue into the app.
+            EarPlug needs your real name and home city before you can continue into
+            the app.
           </p>
         </div>
 
         <div className="flex-1 px-5 py-5">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="block">
-              <span className="mb-2 block text-sm font-medium text-foreground">
-                First Name
-              </span>
-              <input
-                type="text"
-                value={firstName}
-                onChange={(event) => setFirstName(event.target.value)}
-                placeholder="First name"
-                autoComplete="given-name"
-                className={cn(
-                  "w-full rounded-xl border bg-muted/50 px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-fan/10",
-                  error?.includes("First name")
-                    ? "border-red-500/50 focus:border-red-500"
-                    : "border-border focus:border-fan/50"
-                )}
-              />
-            </label>
+          <div className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="block">
+                <span className="mb-2 block text-sm font-medium text-foreground">
+                  First Name
+                </span>
+                <input
+                  type="text"
+                  value={firstName}
+                  onChange={(event) => {
+                    setFirstName(event.target.value);
+                    setTouched((prev) => ({ ...prev, firstName: true }));
+                    if (error) {
+                      setError(null);
+                    }
+                  }}
+                  placeholder="First name"
+                  autoComplete="given-name"
+                  className={cn(
+                    "w-full rounded-xl border bg-muted/50 px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-fan/10",
+                    firstNameError
+                      ? "border-red-500/50 focus:border-red-500"
+                      : "border-border focus:border-fan/50"
+                  )}
+                />
+                {firstNameError ? (
+                  <p className="mt-1.5 text-xs text-red-500">{firstNameError}</p>
+                ) : null}
+              </label>
 
-            <label className="block">
-              <span className="mb-2 block text-sm font-medium text-foreground">
-                Last Name
-              </span>
-              <input
-                type="text"
-                value={lastName}
-                onChange={(event) => setLastName(event.target.value)}
-                placeholder="Last name"
-                autoComplete="family-name"
-                className={cn(
-                  "w-full rounded-xl border bg-muted/50 px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-fan/10",
-                  error?.includes("Last name")
-                    ? "border-red-500/50 focus:border-red-500"
-                    : "border-border focus:border-fan/50"
-                )}
-              />
-            </label>
+              <label className="block">
+                <span className="mb-2 block text-sm font-medium text-foreground">
+                  Last Name
+                </span>
+                <input
+                  type="text"
+                  value={lastName}
+                  onChange={(event) => {
+                    setLastName(event.target.value);
+                    setTouched((prev) => ({ ...prev, lastName: true }));
+                    if (error) {
+                      setError(null);
+                    }
+                  }}
+                  placeholder="Last name"
+                  autoComplete="family-name"
+                  className={cn(
+                    "w-full rounded-xl border bg-muted/50 px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-fan/10",
+                    lastNameError
+                      ? "border-red-500/50 focus:border-red-500"
+                      : "border-border focus:border-fan/50"
+                  )}
+                />
+                {lastNameError ? (
+                  <p className="mt-1.5 text-xs text-red-500">{lastNameError}</p>
+                ) : null}
+              </label>
+            </div>
+
+            <CityAutocomplete
+              value={location}
+              onChange={(city) => {
+                setLocation((city as string) || "");
+                setTouched((prev) => ({ ...prev, location: true }));
+                if (error) {
+                  setError(null);
+                }
+              }}
+              placeholder="e.g., San Francisco, CA"
+              label="Location"
+              required
+              error={locationError ?? undefined}
+            />
           </div>
 
           {error ? (
