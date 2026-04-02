@@ -117,7 +117,10 @@ function uniqueById<T extends { _id: unknown }>(docs: T[]): T[] {
 }
 
 function normalizeAudienceLocation(location: string | undefined | null) {
-  const normalized = location?.trim().replace(/\s+/g, " ");
+  const normalized = location
+    ?.trim()
+    .replace(/\s+/g, " ")
+    .replace(/,\s*(?:u\.?\s*s\.?\s*a?\.?|united states(?: of america)?)$/i, "");
   if (!normalized) {
     return null;
   }

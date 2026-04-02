@@ -84,6 +84,18 @@ function normalizeStoredEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
+function normalizeStoredLocation(location: string | undefined): string | undefined {
+  const normalized = location?.trim().replace(/\s+/g, " ");
+  if (!normalized) {
+    return undefined;
+  }
+
+  return normalized.replace(
+    /,\s*(?:u\.?\s*s\.?\s*a?\.?|united states(?: of america)?)$/i,
+    "",
+  );
+}
+
 async function getClerkErrorMessage(response: Response): Promise<string> {
   try {
     const payload = (await response.json()) as
@@ -496,7 +508,7 @@ export const upsertUser = mutation({
       throw new Error("Not authorized to modify this user");
     }
     const normalizedEmail = normalizeStoredEmail(args.email);
-    const normalizedLocation = args.location?.trim();
+    const normalizedLocation = normalizeStoredLocation(args.location);
 
     if (args.location !== undefined && !normalizedLocation) {
       throw new ConvexError({
@@ -617,7 +629,7 @@ export const updateProfile = mutation({
   },
   handler: async (ctx, args) => {
     const user = await requireAuthenticatedUser(ctx);
-    const normalizedLocation = args.location?.trim();
+    const normalizedLocation = normalizeStoredLocation(args.location);
 
     if (args.location !== undefined && !normalizedLocation) {
       throw new ConvexError({

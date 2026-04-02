@@ -141,32 +141,6 @@ export function GuestControlPanelModal({
           </button>
         </div>
 
-        <div className="mt-4 grid grid-cols-3 gap-2">
-          <div className="rounded-xl border border-border/80 bg-muted/40 px-2 py-3 text-center">
-            <p className="text-base font-bold text-foreground sm:text-lg">
-              {counts.total}
-            </p>
-            <p className="mt-1 text-[9px]  tracking-[0.18em] text-muted-foreground sm:text-[10px]">
-              Total
-            </p>
-          </div>
-          <div className="rounded-xl border border-band/15 bg-band/5 px-2 py-3 text-center">
-            <p className="text-base font-bold text-band sm:text-lg">
-              {counts.onList}
-            </p>
-            <p className="mt-1 text-[9px]  tracking-[0.18em] text-muted-foreground sm:text-[10px]">
-              On List
-            </p>
-          </div>
-          <div className="rounded-xl border border-success/20 bg-success/10 px-2 py-3 text-center">
-            <p className="text-base font-bold text-success sm:text-lg">
-              {counts.attended}
-            </p>
-            <p className="mt-1 text-[9px]  tracking-[0.18em] text-success sm:text-[10px]">
-              Checked In
-            </p>
-          </div>
-        </div>
       </div>
 
       <div className="space-y-3 border-b border-border p-4">

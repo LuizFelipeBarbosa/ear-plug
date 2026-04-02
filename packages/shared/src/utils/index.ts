@@ -280,7 +280,11 @@ export function hasRequiredFullPersonalName(fullName?: string | null): boolean {
  * Normalizes a profile location for validation and storage.
  */
 export function normalizeProfileLocation(location?: string | null): string {
-  return location?.trim().replace(/\s+/g, " ") ?? "";
+  const normalized = location?.trim().replace(/\s+/g, " ") ?? "";
+  return normalized.replace(
+    /,\s*(?:u\.?\s*s\.?\s*a?\.?|united states(?: of america)?)$/i,
+    "",
+  );
 }
 
 /**
