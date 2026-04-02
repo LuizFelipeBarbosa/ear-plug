@@ -412,10 +412,10 @@ export function AccountManagementPanel() {
 
   return (
     <div className="space-y-5">
-      <section className="rounded-[30px] border border-border bg-card/95 p-5 shadow-soft sm:p-6">
+      <section className="overflow-hidden rounded-[30px] border border-border bg-card/95 p-4 shadow-soft sm:p-6">
         <div className="grid items-stretch gap-5 xl:grid-cols-[1.08fr_0.92fr]">
-          <div className="flex h-full flex-col rounded-[28px] border border-border/80 bg-background/88 p-5 shadow-soft dark:border-white/10 dark:bg-white/[0.05] sm:p-6">
-            <div className="flex items-center gap-4">
+          <div className="min-w-0 flex h-full flex-col rounded-[28px] border border-border/80 bg-background/88 p-4 shadow-soft dark:border-white/10 dark:bg-white/[0.05] sm:p-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
               <div className="relative h-14 w-14 overflow-hidden rounded-[20px] border border-border bg-muted dark:border-white/10 dark:bg-white/[0.06]">
                 <Image
                   src={user.imageUrl}
@@ -429,7 +429,7 @@ export function AccountManagementPanel() {
                 <p className="text-[11px] font-semibold  tracking-[0.22em] text-muted-foreground">
                   Current identity
                 </p>
-                <h3 className="mt-1 text-[1.75rem] font-semibold leading-none text-foreground">
+                <h3 className="mt-1 break-words text-[1.45rem] font-semibold leading-tight text-foreground sm:text-[1.75rem] sm:leading-none">
                   {user.fullName ?? "Unnamed account"}
                 </h3>
                 <p className="mt-1.5 text-sm text-muted-foreground">
@@ -440,19 +440,19 @@ export function AccountManagementPanel() {
 
             <div className="mt-4 grid flex-1 auto-rows-fr gap-3">
               <div className="rounded-[22px] border border-border/70 bg-muted/40 px-4 py-3.5 dark:border-white/10 dark:bg-white/[0.04]">
-                <div className="flex h-full items-center justify-between gap-3">
-                  <div className="min-w-0">
+                <div className="flex h-full flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0 w-full">
                     <p className="text-[11px] font-semibold  tracking-[0.18em] text-muted-foreground">
                       Primary email
                     </p>
-                    <p className="mt-2 truncate text-sm font-medium text-foreground">
+                    <p className="mt-2 break-all text-sm font-medium text-foreground sm:truncate sm:break-normal">
                       {user.primaryEmailAddress?.emailAddress ?? "None"}
                     </p>
                   </div>
                   <button
                     type="button"
                     onClick={() => openIdentityEditor("email")}
-                    className="inline-flex shrink-0 items-center rounded-full border border-border bg-background px-3 py-1.5 text-[11px] font-semibold  tracking-[0.14em] text-muted-foreground transition-colors hover:border-foreground/20 hover:text-foreground"
+                    className="inline-flex w-full shrink-0 items-center justify-center rounded-full border border-border bg-background px-3 py-1.5 text-[11px] font-semibold  tracking-[0.14em] text-muted-foreground transition-colors hover:border-foreground/20 hover:text-foreground sm:w-auto"
                   >
                     Edit
                   </button>
@@ -460,19 +460,19 @@ export function AccountManagementPanel() {
               </div>
 
               <div className="rounded-[22px] border border-border/70 bg-muted/40 px-4 py-3.5 dark:border-white/10 dark:bg-white/[0.04]">
-                <div className="flex h-full items-center justify-between gap-3">
-                  <div className="min-w-0">
+                <div className="flex h-full flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0 w-full">
                     <p className="text-[11px] font-semibold  tracking-[0.18em] text-muted-foreground">
                       Primary phone
                     </p>
-                    <p className="mt-2 text-sm font-medium text-foreground">
+                    <p className="mt-2 break-words text-sm font-medium text-foreground">
                       {formatPhoneNumber(user.primaryPhoneNumber?.phoneNumber)}
                     </p>
                   </div>
                   <button
                     type="button"
                     onClick={() => openIdentityEditor("phone")}
-                    className="inline-flex shrink-0 items-center rounded-full border border-border bg-background px-3 py-1.5 text-[11px] font-semibold  tracking-[0.14em] text-muted-foreground transition-colors hover:border-foreground/20 hover:text-foreground"
+                    className="inline-flex w-full shrink-0 items-center justify-center rounded-full border border-border bg-background px-3 py-1.5 text-[11px] font-semibold  tracking-[0.14em] text-muted-foreground transition-colors hover:border-foreground/20 hover:text-foreground sm:w-auto"
                   >
                     Edit
                   </button>
@@ -495,9 +495,9 @@ export function AccountManagementPanel() {
             </div>
           </div>
 
-          <div className="flex h-full flex-col rounded-[28px] border border-border/80 bg-background/88 p-5 shadow-soft dark:border-white/10 dark:bg-white/[0.05] sm:p-6">
-            <div className="flex items-center justify-between gap-3">
-              <div>
+          <div className="min-w-0 flex h-full flex-col rounded-[28px] border border-border/80 bg-background/88 p-4 shadow-soft dark:border-white/10 dark:bg-white/[0.05] sm:p-6">
+            <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
                 <p className="text-[11px] font-semibold  tracking-[0.22em] text-muted-foreground">
                   Connected providers
                 </p>
@@ -505,7 +505,7 @@ export function AccountManagementPanel() {
                   Social accounts
                 </h3>
               </div>
-              <div className="rounded-full border border-border bg-muted px-3 py-1 text-[10px] font-semibold  tracking-[0.18em] text-muted-foreground">
+              <div className="shrink-0 rounded-full border border-border bg-muted px-3 py-1 text-[10px] font-semibold  tracking-[0.18em] text-muted-foreground">
                 {user.externalAccounts.length} linked
               </div>
             </div>
@@ -521,14 +521,14 @@ export function AccountManagementPanel() {
                     key={`summary-${provider}`}
                     className="rounded-[22px] border border-border/70 bg-muted/40 px-4 py-3.5 dark:border-white/10 dark:bg-white/[0.04]"
                   >
-                    <div className="flex h-full items-center justify-between gap-3">
-                      <div className="flex min-w-0 items-center gap-3">
+                    <div className="flex h-full flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex min-w-0 w-full items-center gap-3">
                         <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/[0.06] bg-black/35">
                           <ProviderLogo provider={provider} className="h-6 w-6" />
                         </span>
                         <div className="min-w-0">
                           <p className="text-sm font-semibold text-foreground">{title}</p>
-                          <p className="truncate text-sm text-muted-foreground">
+                          <p className="break-all text-sm text-muted-foreground sm:truncate sm:break-normal">
                             {externalAccount
                               ? externalAccount.emailAddress ||
                                 externalAccount.accountIdentifier()
@@ -538,7 +538,7 @@ export function AccountManagementPanel() {
                       </div>
 
                       {externalAccount ? (
-                        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                        <div className="flex w-full shrink-0 flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
                           <span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold  tracking-[0.18em] text-emerald-600 dark:text-emerald-300">
                             Connected
                           </span>
@@ -547,7 +547,7 @@ export function AccountManagementPanel() {
                             onClick={() => void handleUnlinkProvider(provider)}
                             disabled={activeProviderAction !== null}
                             className={cn(
-                              "inline-flex items-center rounded-full border px-3 py-1.5 text-[11px] font-semibold  tracking-[0.14em] transition-colors disabled:cursor-not-allowed disabled:opacity-70",
+                              "inline-flex min-w-[7rem] items-center justify-center rounded-full border px-3 py-1.5 text-[11px] font-semibold  tracking-[0.14em] transition-colors disabled:cursor-not-allowed disabled:opacity-70",
                               busyAction === "unlink"
                                 ? "border-red-500/30 bg-red-500/10 text-red-500"
                                 : "border-border bg-background text-muted-foreground hover:border-red-500/30 hover:text-red-500",
@@ -561,7 +561,7 @@ export function AccountManagementPanel() {
                           type="button"
                           onClick={() => void handleConnectProvider(provider)}
                           disabled={activeProviderAction !== null}
-                          className="inline-flex shrink-0 items-center rounded-full bg-foreground px-3 py-1.5 text-[11px] font-semibold  tracking-[0.14em] text-background transition-colors hover:opacity-92 disabled:cursor-not-allowed disabled:opacity-70"
+                          className="inline-flex w-full shrink-0 items-center justify-center rounded-full bg-foreground px-3 py-1.5 text-[11px] font-semibold  tracking-[0.14em] text-background transition-colors hover:opacity-92 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
                         >
                           {busyAction === "connect" ? "Redirecting" : "Connect"}
                         </button>
