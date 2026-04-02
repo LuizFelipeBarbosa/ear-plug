@@ -10,11 +10,12 @@ export interface PendingSsoIntent {
   createdAt: number;
 }
 
-type SearchParamsLike = Pick<URLSearchParams, "toString"> | null | undefined;
+type SearchParamsLike = Pick<URLSearchParams, "get" | "toString"> | null | undefined;
 
 const PENDING_SSO_INTENT_KEY = "earplug.pending_sso_intent";
 const PENDING_SSO_MAX_AGE_MS = 10 * 60 * 1000;
 const SPOTIFY_SCOPES = ["user-top-read", "user-follow-read"] as const;
+const DEFAULT_AUTH_RETURN_TO = "/home";
 
 export function getSocialProviderLabel(provider: SocialProvider): string {
   return provider === "google" ? "Google" : "Spotify";
@@ -61,23 +62,72 @@ export function getCurrentPathWithSearch(
   return query ? `${normalizedPathname}?${query}` : normalizedPathname;
 }
 
+function isAuthInterstitialPath(pathname: string): boolean {
+  return (
+    pathname === "/sso-callback" ||
+    pathname.startsWith("/sign-in") ||
+    pathname.startsWith("/sign-up")
+  );
+}
+
+function getReturnToPathname(value: string): string {
+  const queryIndex = value.indexOf("?");
+  const hashIndex = value.indexOf("#");
+  const endIndex =
+    queryIndex === -1
+      ? hashIndex
+      : hashIndex === -1
+        ? queryIndex
+        : Math.min(queryIndex, hashIndex);
+
+  return endIndex === -1 ? value : value.slice(0, endIndex);
+}
+
+export function normalizeReturnTo(
+  value: string | null | undefined,
+  fallback = DEFAULT_AUTH_RETURN_TO,
+): string {
+  if (typeof value !== "string") {
+    return fallback;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed.startsWith("/") || trimmed.startsWith("//")) {
+    return fallback;
+  }
+
+  return isAuthInterstitialPath(getReturnToPathname(trimmed)) ? fallback : trimmed;
+}
+
+export function resolveAuthReturnTo(
+  searchParams: SearchParamsLike,
+  fallback = DEFAULT_AUTH_RETURN_TO,
+): string {
+  return normalizeReturnTo(searchParams?.get("returnTo"), fallback);
+}
+
+export function buildAuthRedirectUrl(pathname: string, returnTo: string): string {
+  const params = new URLSearchParams();
+  params.set("returnTo", normalizeReturnTo(returnTo));
+  return `${pathname}?${params.toString()}`;
+}
+
 export function resolveSocialOauthReturnTo(
   pathname: string,
   searchParams: SearchParamsLike,
   isSignedIn: boolean,
 ): string {
-  const currentPath = getCurrentPathWithSearch(pathname, searchParams);
+  const currentPath = normalizeReturnTo(
+    getCurrentPathWithSearch(pathname, searchParams),
+  );
+  const authReturnTo = resolveAuthReturnTo(searchParams);
 
   if (isSignedIn) {
-    return currentPath === "/sso-callback" ? "/sign-in" : currentPath;
+    return pathname === "/sso-callback" ? authReturnTo : currentPath;
   }
 
-  if (
-    pathname === "/sign-in" ||
-    pathname === "/sign-up" ||
-    pathname === "/sso-callback"
-  ) {
-    return "/";
+  if (isAuthInterstitialPath(pathname)) {
+    return authReturnTo;
   }
 
   return currentPath;

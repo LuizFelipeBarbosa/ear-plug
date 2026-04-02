@@ -3,6 +3,38 @@ import { Source_Serif_4 } from "next/font/google";
 import { GeistSans } from "geist/font/sans";
 import "./globals.css";
 import { Providers } from "./providers";
+
+const DEFAULT_METADATA_BASE_URL = "http://localhost:3000";
+
+function normalizeMetadataBaseUrl(value: string | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  const normalizedValue = value.trim();
+  if (!normalizedValue) {
+    return null;
+  }
+
+  return /^[a-zA-Z][a-zA-Z\d+.-]*:\/\//.test(normalizedValue)
+    ? normalizedValue
+    : `https://${normalizedValue}`;
+}
+
+function resolveMetadataBase() {
+  const configuredUrl =
+    normalizeMetadataBaseUrl(process.env.NEXT_PUBLIC_APP_URL) ||
+    normalizeMetadataBaseUrl(process.env.VERCEL_PROJECT_PRODUCTION_URL) ||
+    normalizeMetadataBaseUrl(process.env.VERCEL_URL) ||
+    DEFAULT_METADATA_BASE_URL;
+
+  try {
+    return new URL(configuredUrl);
+  } catch {
+    return new URL(DEFAULT_METADATA_BASE_URL);
+  }
+}
+
 const sourceSerif = Source_Serif_4({
   subsets: ["latin"],
   variable: "--font-source-serif",
@@ -10,6 +42,7 @@ const sourceSerif = Source_Serif_4({
   display: "swap",
 });
 export const metadata: Metadata = {
+  metadataBase: resolveMetadataBase(),
   title: "EarPlug | Listen Local",
   description:
     "Discover local live music events in the Bay Area. Connect with bands, find shows, and never miss a gig.",

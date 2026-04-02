@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { SignIn, SignUp } from "@clerk/nextjs";
 import { BrandMark } from "@/components/branding/BrandLogo";
+import { buildAuthRedirectUrl, resolveAuthReturnTo } from "@/lib/auth/sso";
 
 type AuthMode = "sign-in" | "sign-up";
 
@@ -17,11 +18,15 @@ export function CustomAuthPanel({
   mode = "sign-in",
 }: CustomAuthPanelProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const isSignIn = mode === "sign-in";
   const isDedicatedAuthRoute = isSignIn
     ? pathname.startsWith("/sign-in")
     : pathname.startsWith("/sign-up");
   const authRouting = isDedicatedAuthRoute ? "path" : "hash";
+  const returnTo = resolveAuthReturnTo(searchParams);
+  const signInUrl = buildAuthRedirectUrl("/sign-in", returnTo);
+  const signUpUrl = buildAuthRedirectUrl("/sign-up", returnTo);
 
   return (
     <div className="mx-auto w-full max-w-xl animate-fade-in">
@@ -51,28 +56,28 @@ export function CustomAuthPanel({
                 <SignIn
                   routing="path"
                   path="/sign-in"
-                  signUpUrl="/sign-up"
-                  fallbackRedirectUrl="/"
+                  signUpUrl={signUpUrl}
+                  fallbackRedirectUrl={returnTo}
                 />
               ) : (
                 <SignIn
                   routing="hash"
-                  signUpUrl="/sign-up"
-                  fallbackRedirectUrl="/"
+                  signUpUrl={signUpUrl}
+                  fallbackRedirectUrl={returnTo}
                 />
               )
             ) : authRouting === "path" ? (
               <SignUp
                 routing="path"
                 path="/sign-up"
-                signInUrl="/sign-in"
-                fallbackRedirectUrl="/"
+                signInUrl={signInUrl}
+                fallbackRedirectUrl={returnTo}
               />
             ) : (
               <SignUp
                 routing="hash"
-                signInUrl="/sign-in"
-                fallbackRedirectUrl="/"
+                signInUrl={signInUrl}
+                fallbackRedirectUrl={returnTo}
               />
             )}
 
@@ -80,7 +85,7 @@ export function CustomAuthPanel({
               <p className="text-sm text-zinc-300">
                 {isSignIn ? "New to EarPlug?" : "Already have an account?"}{" "}
                 <Link
-                  href={isSignIn ? "/sign-up" : "/sign-in"}
+                  href={isSignIn ? signUpUrl : signInUrl}
                   className="font-semibold text-white transition-colors hover:text-zinc-200"
                 >
                   {isSignIn ? "Create an account" : "Sign in"}

@@ -7,7 +7,6 @@ import { v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
 import {
-  requireAuthenticatedUser,
   requireBandMember,
   requireBandRole,
 } from "./utils/permissions";
@@ -126,15 +125,13 @@ export const listProfileSlots = query({
 
 /**
  * Lists all six profile media slots for public band profile surfaces.
- * Requires authentication but does not require band membership.
+ * Does not require authentication or band membership.
  */
 export const listPublicSlots = query({
   args: {
     bandId: v.id("bands"),
   },
   handler: async (ctx, args) => {
-    await requireAuthenticatedUser(ctx);
-
     const slotDocs = await ctx.db
       .query("bandMediaSlots")
       .withIndex("by_band_slot", (q) => q.eq("bandId", args.bandId))
@@ -163,7 +160,6 @@ export const listPublicSlots = query({
           isFilled: true,
           mediaType: slot.mediaType,
           mediaUrl,
-          mediaStorageId: slot.mediaStorageId,
           caption: slot.caption,
           location: slot.location,
           durationSeconds: slot.durationSeconds,

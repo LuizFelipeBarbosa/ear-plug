@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth, useUser } from "@clerk/nextjs";
 import { useMutation } from "convex/react";
 import {
@@ -16,10 +16,13 @@ import { useStaleClerkSessionRecovery } from "@/hooks/useStaleClerkSessionRecove
 import { useCurrentUser } from "@/hooks/useUser";
 import { ProfileContextProvider } from "@/hooks/useProfileContext";
 import { BottomNav } from "@/components/navigation/BottomNav";
+import { buildAuthRedirectUrl } from "@/lib/auth/sso";
+import { isGuestAccessiblePathname } from "@/lib/auth/guestAccess";
 import { api } from "../../../../../convex/_generated/api";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { isLoaded, isSignedIn } = useAuth();
   const { isLoaded: isClerkUserLoaded, user: clerkUser } = useUser();
   const { user, isLoading } = useCurrentUser();
@@ -40,17 +43,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     isSignedIn &&
     Boolean(clerkUser) &&
     (missingClerkName || missingStoredName || missingStoredLocation);
-
-  useEffect(() => {
-    // Redirect to onboarding if not authenticated
-    if (isRecovering) {
-      return;
-    }
-
-    if (isLoaded && !isSignedIn) {
-      router.push("/");
-    }
-  }, [isLoaded, isRecovering, isSignedIn, router]);
+  const isAuthenticatedUserLoading =
+    isSignedIn && !needsProfileCompletion && (isLoading || isCreatingUser);
+  const isGuestAccessiblePath = isGuestAccessiblePathname(pathname);
+  const shouldRedirectGuest =
+    isLoaded && !isRecovering && !isSignedIn && !isGuestAccessiblePath;
 
   // Auto-create user in Convex if authenticated but user doesn't exist
   useEffect(() => {
@@ -100,11 +97,22 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     upsertUser,
   ]);
 
+  useEffect(() => {
+    if (!shouldRedirectGuest) {
+      return;
+    }
+
+    const returnTo = `${pathname}${window.location.search}`;
+    const signInUrl = buildAuthRedirectUrl("/sign-in", returnTo);
+    router.replace(signInUrl);
+  }, [pathname, router, shouldRedirectGuest]);
+
   if (
+    shouldRedirectGuest ||
     isRecovering ||
     !isLoaded ||
     (isSignedIn && !isClerkUserLoaded) ||
-    (!needsProfileCompletion && (isLoading || isCreatingUser))
+    isAuthenticatedUserLoading
   ) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -115,11 +123,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Redirect to landing if not authenticated
-  if (!isSignedIn) {
-    return null;
-  }
-
   if (needsProfileCompletion) {
     return (
       <div className="min-h-screen bg-background">
@@ -128,7 +131,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!user) {
+  if (isSignedIn && !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-pulse-fan rounded-[24px] border border-border bg-card/90 p-3 shadow-soft">
@@ -142,9 +145,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <ProfileContextProvider>
       <div className="min-h-screen bg-background">
         {children}
-        {/* Reserve vertical space for fixed bottom navigation */}
-        <div aria-hidden className="h-16 safe-area-inset-bottom" />
-        <BottomNav />
+        {isSignedIn && user ? (
+          <>
+            <div aria-hidden className="h-16 safe-area-inset-bottom" />
+            <BottomNav />
+          </>
+        ) : null}
       </div>
     </ProfileContextProvider>
   );

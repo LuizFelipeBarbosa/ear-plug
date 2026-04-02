@@ -19,6 +19,7 @@ import type {
   MyEventTicketPayload,
 } from "@ear-plug/shared/types";
 import type { Id } from "../../../../convex/_generated/dataModel";
+import { useAuthActionGuard } from "./useAuthActionGuard";
 
 interface EventPollPromptState {
   eventId: Id<"events">;
@@ -110,6 +111,7 @@ export function useEvent(eventId: Id<"events"> | undefined) {
 }
 
 export function useEventInteraction(eventId: Id<"events"> | undefined) {
+  const { requireSignIn } = useAuthActionGuard();
   const eventStatus = useQuery(
     api.events.getUserEventStatus,
     eventId ? { eventId } : "skip",
@@ -125,6 +127,7 @@ export function useEventInteraction(eventId: Id<"events"> | undefined) {
 
   const rsvp = useCallback(async () => {
     if (!eventId) return undefined;
+    if (!requireSignIn()) return undefined;
     const result = await rsvpMutation({ eventId });
 
     if (result.action === "added" && result.pollPrompt) {
@@ -139,21 +142,23 @@ export function useEventInteraction(eventId: Id<"events"> | undefined) {
     }
 
     return result;
-  }, [eventId, rsvpMutation]);
+  }, [eventId, requireSignIn, rsvpMutation]);
 
   const toggleLike = useCallback(async () => {
     if (!eventId) return undefined;
+    if (!requireSignIn()) return undefined;
     return toggleLikeMutation({ eventId });
-  }, [eventId, toggleLikeMutation]);
+  }, [eventId, requireSignIn, toggleLikeMutation]);
 
   const submitPollResponse = useCallback(
     async (optionId: string) => {
       if (!eventId) return undefined;
+      if (!requireSignIn()) return undefined;
       const result = await submitPollResponseMutation({ eventId, optionId });
       setPollPrompt(null);
       return result;
     },
-    [eventId, submitPollResponseMutation],
+    [eventId, requireSignIn, submitPollResponseMutation],
   );
 
   const dismissPollPrompt = useCallback(() => {
