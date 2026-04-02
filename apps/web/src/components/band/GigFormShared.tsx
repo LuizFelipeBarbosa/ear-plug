@@ -27,7 +27,11 @@ import {
 import { CityAutocomplete, type VenueLocationData } from "@/components/ui/CityAutocomplete";
 import { IconBadge } from "@/components/ui/IconBadge";
 import { cn } from "@/lib/utils";
-import { GENRES, GENRE_COLORS } from "@ear-plug/shared/constants";
+import {
+  GENRES,
+  GENRE_COLORS,
+  IMAGE_FILE_INPUT_ACCEPT,
+} from "@ear-plug/shared/constants";
 import type {
   EventAddressVisibility,
   EventPoll,
@@ -656,13 +660,13 @@ export function GigDetailsSection({
           >
             <ImageIcon className="w-8 h-8 text-muted-foreground mb-2" />
             <p className="text-sm text-muted-foreground">Click or drag image here</p>
-            <p className="text-xs text-muted-foreground mt-1">Max 5MB</p>
+            <p className="text-xs text-muted-foreground mt-1">JPEG, PNG, or WEBP up to 10MB</p>
           </div>
         )}
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*"
+          accept={IMAGE_FILE_INPUT_ACCEPT}
           onChange={(event) => {
             const file = event.target.files?.[0];
             if (file) {

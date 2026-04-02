@@ -428,6 +428,8 @@ export default defineSchema({
     dateTime: v.optional(v.number()),
     /** Promotional image URL */
     image: v.optional(v.string()),
+    /** Convex storage ID for event image (if uploaded via storage) */
+    imageStorageId: v.optional(v.id("_storage")),
     /** Current number of RSVPs */
     rsvpCount: v.number(),
     /** Maximum attendance (optional for tentative drafts) */

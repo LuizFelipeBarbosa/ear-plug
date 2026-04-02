@@ -38,6 +38,7 @@ export interface CreateEventInput {
   endTime?: string; // HH:MM format
   venue?: VenueLocationData;
   image?: string;
+  imageFile?: File;
   genres?: Genre[]; // Multiple genres supported
   capacity?: number;
   description?: string;
@@ -59,6 +60,8 @@ export interface UpdateEventInput {
   endTime?: string; // HH:MM format
   venue?: VenueLocationData;
   image?: string;
+  imageFile?: File;
+  removeImage?: boolean;
   genres?: Genre[];
   capacity?: number;
   description?: string;

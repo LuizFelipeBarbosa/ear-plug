@@ -93,6 +93,14 @@ const CHECKIN_STAFF_REVOKE_REASON = "event_staff_revoked";
 const RSVP_CANCEL_REVOKE_REASON = "rsvp_cancelled";
 const GUEST_REMOVED_REVOKE_REASON = "guest_removed";
 const MAX_EVENT_POLL_OPTIONS = 6;
+const IMAGE_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/jpg",
+  "image/pjpeg",
+  "image/png",
+  "image/webp",
+]);
+const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
 
 interface ViewerContext {
   userId: Id<"users"> | null;
@@ -538,6 +546,69 @@ async function requireBandManagerAccess(
     }
     throw error;
   }
+}
+
+function normalizeEventImage(image: string | undefined): string | undefined {
+  const normalized = image?.trim();
+  return normalized ? normalized : undefined;
+}
+
+async function resolveEventImageFromStorage(
+  ctx: MutationCtx,
+  storageId: Id<"_storage">,
+): Promise<{ image: string; imageStorageId: Id<"_storage"> }> {
+  const metadata = await ctx.storage.getMetadata(storageId);
+  if (!metadata) {
+    throw new ConvexError({
+      code: "event_image_not_found",
+      message: "Uploaded event image file not found.",
+    });
+  }
+
+  const mimeType = (metadata.contentType ?? "").toLowerCase();
+  if (!IMAGE_MIME_TYPES.has(mimeType)) {
+    throw new ConvexError({
+      code: "invalid_event_image",
+      message: "Unsupported image format. Use JPEG, PNG, or WEBP.",
+    });
+  }
+
+  if (metadata.size > MAX_IMAGE_SIZE_BYTES) {
+    throw new ConvexError({
+      code: "invalid_event_image",
+      message: "Image file exceeds the 10 MB size limit.",
+    });
+  }
+
+  const imageUrl = await ctx.storage.getUrl(storageId);
+  if (!imageUrl) {
+    throw new ConvexError({
+      code: "event_image_unavailable",
+      message: "Unable to resolve the uploaded event image.",
+    });
+  }
+
+  return {
+    image: imageUrl,
+    imageStorageId: storageId,
+  };
+}
+
+async function resolveEventImageInput(
+  ctx: MutationCtx,
+  args: {
+    image?: string;
+    imageStorageId?: Id<"_storage">;
+  },
+): Promise<{
+  image?: string;
+  imageStorageId?: Id<"_storage">;
+}> {
+  if (args.imageStorageId) {
+    return await resolveEventImageFromStorage(ctx, args.imageStorageId);
+  }
+
+  return { image: normalizeEventImage(args.image) };
 }
 
 function normalizeEventPollOption(option: EventPollOption): EventPollOption {
@@ -2599,6 +2670,7 @@ export const create = mutation({
     venueId: v.optional(v.id("venues")),
     dateTime: v.optional(v.number()),
     image: v.optional(v.string()),
+    imageStorageId: v.optional(v.id("_storage")),
     capacity: v.optional(v.number()),
     price: v.optional(v.number()),
     description: v.optional(v.string()),
@@ -2626,6 +2698,10 @@ export const create = mutation({
     const status = args.status ?? "confirmed";
     const genres = args.genres ?? (args.genre ? [args.genre] : undefined);
     const poll = normalizeEventPoll(args.poll);
+    const image = await resolveEventImageInput(ctx, {
+      image: args.image,
+      imageStorageId: args.imageStorageId,
+    });
     validateEventPoll(poll);
 
     if (isPublic(status)) {
@@ -2643,7 +2719,8 @@ export const create = mutation({
       bandId: args.bandId,
       venueId: args.venueId,
       dateTime: args.dateTime,
-      image: args.image,
+      image: image.image,
+      imageStorageId: image.imageStorageId,
       capacity: args.capacity,
       price: args.price,
       description: args.description,
@@ -2732,6 +2809,7 @@ export const createWithVenue = mutation({
     ),
     venuePlaceId: v.optional(v.string()),
     image: v.optional(v.string()),
+    imageStorageId: v.optional(v.id("_storage")),
     capacity: v.optional(v.number()),
     price: v.optional(v.number()),
     description: v.optional(v.string()),
@@ -2757,6 +2835,10 @@ export const createWithVenue = mutation({
     const status = args.status ?? "confirmed";
     const genres = args.genres ?? (args.genre ? [args.genre] : undefined);
     const poll = normalizeEventPoll(args.poll);
+    const image = await resolveEventImageInput(ctx, {
+      image: args.image,
+      imageStorageId: args.imageStorageId,
+    });
     validateEventPoll(poll);
     const hasVenueInput = hasCompleteVenueInput(args);
 
@@ -2790,7 +2872,8 @@ export const createWithVenue = mutation({
       bandId: args.bandId,
       venueId,
       dateTime: args.dateTime,
-      image: args.image,
+      image: image.image,
+      imageStorageId: image.imageStorageId,
       capacity: args.capacity,
       price: args.price,
       description: args.description,
@@ -2825,6 +2908,65 @@ export const createWithVenue = mutation({
   },
 });
 
+export const generateImageUploadUrl = mutation({
+  args: {
+    bandId: v.optional(v.id("bands")),
+    eventId: v.optional(v.id("events")),
+    actingBandId: v.optional(v.id("bands")),
+  },
+  handler: async (ctx, args) => {
+    const isCreateUpload =
+      args.bandId !== undefined &&
+      args.eventId === undefined &&
+      args.actingBandId === undefined;
+    const isUpdateUpload =
+      args.bandId === undefined &&
+      args.eventId !== undefined &&
+      args.actingBandId !== undefined;
+
+    if (!isCreateUpload && !isUpdateUpload) {
+      throw new ConvexError({
+        code: "invalid_event_image_upload_request",
+        message:
+          "Provide either bandId for a new gig image or eventId plus actingBandId for an existing gig image.",
+      });
+    }
+
+    if (isCreateUpload) {
+      await requireBandManagerAccess(
+        ctx,
+        args.bandId!,
+        "Only band owners and admins can create gigs.",
+      );
+    } else {
+      const event = await ctx.db.get(args.eventId!);
+      if (!event) {
+        throw new ConvexError({
+          code: "event_not_found",
+          message: "Event not found.",
+        });
+      }
+
+      await requireBandManagerAccess(
+        ctx,
+        args.actingBandId!,
+        "Only participating band owners and admins can edit this gig.",
+      );
+
+      const participatingBandIds = await getParticipatingBandIdsForEvent(ctx, event);
+      if (!participatingBandIds.includes(args.actingBandId!)) {
+        throw new ConvexError({
+          code: "event_band_access_denied",
+          message: "Only participating band owners and admins can edit this gig.",
+        });
+      }
+    }
+
+    const uploadUrl = await ctx.storage.generateUploadUrl();
+    return { uploadUrl };
+  },
+});
+
 /**
  * Updates an existing event and optionally reassigns/creates its venue.
  * Only band owners/admins can update events for their band.
@@ -2840,6 +2982,8 @@ export const updateWithVenue = mutation({
     title: v.optional(v.string()),
     dateTime: v.optional(v.number()),
     image: v.optional(v.string()),
+    imageStorageId: v.optional(v.id("_storage")),
+    clearImage: v.optional(v.boolean()),
     capacity: v.optional(v.number()),
     price: v.optional(v.number()),
     description: v.optional(v.string()),
@@ -2891,6 +3035,12 @@ export const updateWithVenue = mutation({
     const nextStatus = args.status ?? event.status;
     const normalizedPoll = normalizeEventPoll(args.poll);
     validateEventPoll(normalizedPoll);
+    if (args.clearImage && (args.image !== undefined || args.imageStorageId !== undefined)) {
+      throw new ConvexError({
+        code: "invalid_event_image",
+        message: "Event image updates must either replace the image or remove it.",
+      });
+    }
     const hasAnyVenueUpdate =
       args.venueName !== undefined ||
       args.venueAddress !== undefined ||
@@ -2941,6 +3091,10 @@ export const updateWithVenue = mutation({
     const nextCapacity = args.capacity !== undefined ? args.capacity : event.capacity;
     const currentPoll = normalizeEventPoll(event.poll);
     const nextPoll = args.poll !== undefined ? normalizedPoll : currentPoll;
+    const normalizedImage = normalizeEventImage(args.image);
+    const shouldClearImage =
+      args.clearImage === true ||
+      (args.image !== undefined && normalizedImage === undefined);
 
     if (
       args.poll !== undefined &&
@@ -2966,13 +3120,38 @@ export const updateWithVenue = mutation({
     }
 
     const updates: Partial<Doc<"events">> = {};
+    const previousImageStorageId = event.imageStorageId;
+    let nextImageStorageId = event.imageStorageId;
+    let storageIdToDelete: Id<"_storage"> | undefined;
     if (venueId !== event.venueId) {
       updates.venueId = venueId;
     }
 
     if (args.title !== undefined) updates.title = args.title;
     if (args.dateTime !== undefined) updates.dateTime = args.dateTime;
-    if (args.image !== undefined) updates.image = args.image;
+    if (args.imageStorageId !== undefined) {
+      const resolvedImage = await resolveEventImageFromStorage(ctx, args.imageStorageId);
+      updates.image = resolvedImage.image;
+      updates.imageStorageId = resolvedImage.imageStorageId;
+      nextImageStorageId = resolvedImage.imageStorageId;
+      if (previousImageStorageId && previousImageStorageId !== resolvedImage.imageStorageId) {
+        storageIdToDelete = previousImageStorageId;
+      }
+    } else if (shouldClearImage) {
+      updates.image = undefined;
+      updates.imageStorageId = undefined;
+      nextImageStorageId = undefined;
+      if (previousImageStorageId) {
+        storageIdToDelete = previousImageStorageId;
+      }
+    } else if (args.image !== undefined) {
+      updates.image = normalizedImage;
+      updates.imageStorageId = undefined;
+      nextImageStorageId = undefined;
+      if (previousImageStorageId) {
+        storageIdToDelete = previousImageStorageId;
+      }
+    }
     if (args.capacity !== undefined) updates.capacity = args.capacity;
     if (args.price !== undefined) updates.price = args.price;
     if (args.description !== undefined) updates.description = args.description;
@@ -2993,6 +3172,14 @@ export const updateWithVenue = mutation({
 
     if (Object.keys(updates).length > 0) {
       await ctx.db.patch(args.eventId, updates);
+    }
+
+    if (storageIdToDelete && storageIdToDelete !== nextImageStorageId) {
+      try {
+        await ctx.storage.delete(storageIdToDelete);
+      } catch {
+        // Storage object may already be missing.
+      }
     }
 
     if (isTentative(event.status) && isPublic(nextStatus) && venueId) {
@@ -3073,6 +3260,14 @@ export const deleteTentative = mutation({
     ]);
 
     await ctx.db.delete(args.eventId);
+
+    if (event.imageStorageId) {
+      try {
+        await ctx.storage.delete(event.imageStorageId);
+      } catch {
+        // Storage object may already be missing.
+      }
+    }
 
     return { eventId: args.eventId };
   },

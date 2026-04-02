@@ -40,7 +40,13 @@ import type {
   EventStatus,
   Genre,
 } from "@ear-plug/shared/types";
+import {
+  IMAGE_UPLOAD_MIME_TYPES,
+  MAX_IMAGE_UPLOAD_BYTES,
+} from "@ear-plug/shared/constants";
 import { getConvexErrorMessage } from "@/lib/convexErrors";
+
+const IMAGE_MIME_TYPES = new Set<string>(IMAGE_UPLOAD_MIME_TYPES);
 
 interface EditableEvent {
   _id: string;
@@ -94,6 +100,7 @@ export function EditGigModal({
 
   const [venue, setVenue] = useState<VenueLocationData | null>(null);
   const [coverImage, setCoverImage] = useState<string | null>(null);
+  const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
   const [imageWasRemoved, setImageWasRemoved] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -172,6 +179,7 @@ export function EditGigModal({
         : null
     );
     setCoverImage(event.image ?? null);
+    setCoverImageFile(null);
     setImageWasRemoved(false);
     resetForm();
   }, [event, isOpen, resetForm]);
@@ -256,17 +264,18 @@ export function EditGigModal({
   };
 
   const handleImageSelect = (file: File) => {
-    if (!file.type.startsWith("image/")) {
-      setSubmitError("Please select an image file");
+    if (!IMAGE_MIME_TYPES.has(file.type)) {
+      setSubmitError("Image format must be JPEG, PNG, or WEBP.");
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      setSubmitError("Image must be less than 5MB");
+    if (file.size > MAX_IMAGE_UPLOAD_BYTES) {
+      setSubmitError("Image size must be 10 MB or less.");
       return;
     }
     const reader = new FileReader();
     reader.onload = (e) => {
       setCoverImage(e.target?.result as string);
+      setCoverImageFile(file);
       setImageWasRemoved(false);
       setSubmitError(null);
     };
@@ -275,6 +284,7 @@ export function EditGigModal({
 
   const removeImage = () => {
     setCoverImage(null);
+    setCoverImageFile(null);
     setImageWasRemoved(true);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
@@ -315,7 +325,8 @@ export function EditGigModal({
               capacity: venue.capacity,
             }
           : undefined,
-        image: imageWasRemoved ? "" : coverImage || undefined,
+        imageFile: coverImageFile || undefined,
+        removeImage: imageWasRemoved,
         genres: formData.genres,
         capacity: parsedCapacity,
         description: formData.description.trim(),

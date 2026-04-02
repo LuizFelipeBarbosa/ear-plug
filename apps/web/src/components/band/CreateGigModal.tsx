@@ -32,7 +32,13 @@ import {
 import { GigModalShell } from "@/components/band/GigModalShell";
 import { getConvexErrorMessage } from "@/lib/convexErrors";
 import { api } from "../../../../../convex/_generated/api";
+import {
+  IMAGE_UPLOAD_MIME_TYPES,
+  MAX_IMAGE_UPLOAD_BYTES,
+} from "@ear-plug/shared/constants";
 import type { EventStatus } from "@ear-plug/shared/types";
+
+const IMAGE_MIME_TYPES = new Set<string>(IMAGE_UPLOAD_MIME_TYPES);
 
 interface CreateGigModalProps {
   isOpen: boolean;
@@ -66,6 +72,7 @@ export function CreateGigModal({
 
   const [venue, setVenue] = useState<VenueLocationData | null>(null);
   const [coverImage, setCoverImage] = useState<string | null>(null);
+  const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [cohostSearch, setCohostSearch] = useState("");
@@ -97,6 +104,7 @@ export function CreateGigModal({
     setFormData(createGigFormData(initialStatus));
     setVenue(null);
     setCoverImage(null);
+    setCoverImageFile(null);
     setIsDragging(false);
     setErrors({});
     setSubmitError(null);
@@ -136,17 +144,18 @@ export function CreateGigModal({
   };
 
   const handleImageSelect = (file: File) => {
-    if (!file.type.startsWith("image/")) {
-      setSubmitError("Please select an image file");
+    if (!IMAGE_MIME_TYPES.has(file.type)) {
+      setSubmitError("Image format must be JPEG, PNG, or WEBP.");
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      setSubmitError("Image must be less than 5MB");
+    if (file.size > MAX_IMAGE_UPLOAD_BYTES) {
+      setSubmitError("Image size must be 10 MB or less.");
       return;
     }
     const reader = new FileReader();
     reader.onload = (e) => {
       setCoverImage(e.target?.result as string);
+      setCoverImageFile(file);
       setSubmitError(null);
     };
     reader.readAsDataURL(file);
@@ -154,6 +163,7 @@ export function CreateGigModal({
 
   const removeImage = () => {
     setCoverImage(null);
+    setCoverImageFile(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -190,7 +200,7 @@ export function CreateGigModal({
               capacity: venue.capacity,
             }
           : undefined,
-        image: coverImage || undefined,
+        imageFile: coverImageFile || undefined,
         genres: formData.genres.length > 0 ? formData.genres : undefined,
         capacity: parsedCapacity,
         description: formData.description.trim(),

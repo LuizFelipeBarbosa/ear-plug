@@ -10,6 +10,7 @@ import { useCallback } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
+import { uploadToConvexStorage } from "@/lib/convexUpload";
 import type {
   VenueLocationData,
   CreateEventInput,
@@ -61,6 +62,8 @@ export function useSharedEvents() {
   const createEventWithVenue = useMutation(api.events.createWithVenue);
   /** Mutation to update an event with optional venue changes */
   const updateEventWithVenue = useMutation(api.events.updateWithVenue);
+  /** Mutation to generate upload URLs for event images */
+  const generateEventImageUploadUrl = useMutation(api.events.generateImageUploadUrl);
   /** Mutation to delete tentative gigs */
   const deleteTentativeEvent = useMutation(api.events.deleteTentative);
 
@@ -113,6 +116,15 @@ export function useSharedEvents() {
           }
         : {};
 
+      let imageStorageId: Id<"_storage"> | undefined;
+      if (input.imageFile) {
+        const { uploadUrl } = await generateEventImageUploadUrl({
+          bandId: input.bandId as Id<"bands">,
+        });
+        const uploadData = await uploadToConvexStorage(uploadUrl, input.imageFile);
+        imageStorageId = uploadData.storageId as Id<"_storage">;
+      }
+
       // Create the event with venue in one mutation
       const result = await createEventWithVenue({
         title: input.title,
@@ -121,7 +133,8 @@ export function useSharedEvents() {
         dateTime,
         genres: input.genres,
         ...venueArgs,
-        image: input.image,
+        image: imageStorageId ? undefined : input.image,
+        imageStorageId,
         capacity: input.capacity,
         price: input.price,
         description: input.description,
@@ -132,7 +145,7 @@ export function useSharedEvents() {
 
       return result;
     },
-    [createEventWithVenue],
+    [createEventWithVenue, generateEventImageUploadUrl],
   );
 
   /**
@@ -156,6 +169,8 @@ export function useSharedEvents() {
         title?: string;
         dateTime?: number;
         image?: string;
+        imageStorageId?: Id<"_storage">;
+        clearImage?: boolean;
         capacity?: number;
         price?: number;
         description?: string;
@@ -173,6 +188,17 @@ export function useSharedEvents() {
         actingBandId: input.actingBandId as Id<"bands">,
       };
 
+      if (input.imageFile) {
+        const { uploadUrl } = await generateEventImageUploadUrl({
+          eventId: input.eventId as Id<"events">,
+          actingBandId: input.actingBandId as Id<"bands">,
+        });
+        const uploadData = await uploadToConvexStorage(uploadUrl, input.imageFile);
+        mutationArgs.imageStorageId = uploadData.storageId as Id<"_storage">;
+      } else if (input.removeImage) {
+        mutationArgs.clearImage = true;
+      }
+
       if (input.date) {
         mutationArgs.dateTime = new Date(
           `${input.date}T${input.startTime || "00:00"}`,
@@ -180,7 +206,9 @@ export function useSharedEvents() {
       }
 
       if (input.title !== undefined) mutationArgs.title = input.title;
-      if (input.image !== undefined) mutationArgs.image = input.image;
+      if (input.image !== undefined && !mutationArgs.imageStorageId && !mutationArgs.clearImage) {
+        mutationArgs.image = input.image;
+      }
       if (input.capacity !== undefined) mutationArgs.capacity = input.capacity;
       if (input.price !== undefined) mutationArgs.price = input.price;
       if (input.description !== undefined)
@@ -202,7 +230,7 @@ export function useSharedEvents() {
 
       return await updateEventWithVenue(mutationArgs);
     },
-    [updateEventWithVenue],
+    [generateEventImageUploadUrl, updateEventWithVenue],
   );
 
   /**
