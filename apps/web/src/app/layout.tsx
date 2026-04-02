@@ -4,10 +4,20 @@ import { GeistSans } from "geist/font/sans";
 import "./globals.css";
 import { Providers } from "./providers";
 
+function normalizeMetadataBaseUrl(value: string | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  return /^[a-zA-Z][a-zA-Z\d+.-]*:\/\//.test(value)
+    ? value
+    : `https://${value}`;
+}
+
 function resolveMetadataBase() {
   const configuredUrl =
-    process.env.NEXT_PUBLIC_APP_URL ||
-    process.env.VERCEL_PROJECT_PRODUCTION_URL ||
+    normalizeMetadataBaseUrl(process.env.NEXT_PUBLIC_APP_URL) ||
+    normalizeMetadataBaseUrl(process.env.VERCEL_PROJECT_PRODUCTION_URL) ||
     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
     "http://localhost:3000";
 
