@@ -14,6 +14,7 @@ import {
   requireBandMember,
   requireBandRole,
 } from "./utils/permissions";
+import { normalizeUsLocation } from "./utils/location";
 
 const PROFILE_VIEW_DEDUPE_WINDOW_MS = 6 * 60 * 60 * 1000;
 const BAND_CREATION_ACCESS_CODE = "190304";
@@ -117,10 +118,7 @@ function uniqueById<T extends { _id: unknown }>(docs: T[]): T[] {
 }
 
 function normalizeAudienceLocation(location: string | undefined | null) {
-  const normalized = location
-    ?.trim()
-    .replace(/\s+/g, " ")
-    .replace(/,\s*(?:u\.?\s*s\.?\s*a?\.?|united states(?: of america)?)$/i, "");
+  const normalized = normalizeUsLocation(location);
   if (!normalized) {
     return null;
   }

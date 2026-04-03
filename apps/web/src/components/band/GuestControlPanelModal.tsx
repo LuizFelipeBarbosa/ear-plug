@@ -117,9 +117,9 @@ export function GuestControlPanelModal({
       isOpen={isOpen}
       onClose={onClose}
       labelledBy="guest-control-panel-title"
-      panelClassName="sm:max-w-2xl"
+      panelClassName="h-[82dvh] sm:h-[78vh] sm:max-w-2xl"
     >
-      <div className="border-b border-border bg-card/95 p-4 backdrop-blur-xl">
+      <div className="shrink-0 border-b border-border bg-card/95 p-4 backdrop-blur-xl">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <h2
@@ -143,7 +143,7 @@ export function GuestControlPanelModal({
 
       </div>
 
-      <div className="space-y-3 border-b border-border p-4">
+      <div className="shrink-0 space-y-3 border-b border-border p-4">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input

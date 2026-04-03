@@ -22,6 +22,7 @@ import type * as spotify from "../spotify.js";
 import type * as spotifyInternal from "../spotifyInternal.js";
 import type * as users from "../users.js";
 import type * as utils_geo from "../utils/geo.js";
+import type * as utils_location from "../utils/location.js";
 import type * as utils_permissions from "../utils/permissions.js";
 import type * as utils_phone from "../utils/phone.js";
 import type * as venues from "../venues.js";
@@ -47,6 +48,7 @@ declare const fullApi: ApiFromModules<{
   spotifyInternal: typeof spotifyInternal;
   users: typeof users;
   "utils/geo": typeof utils_geo;
+  "utils/location": typeof utils_location;
   "utils/permissions": typeof utils_permissions;
   "utils/phone": typeof utils_phone;
   venues: typeof venues;

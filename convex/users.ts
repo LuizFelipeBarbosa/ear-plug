@@ -15,6 +15,7 @@ import {
 import { api } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { normalizeInvitePhone } from "./utils/phone";
+import { normalizeUsLocation } from "./utils/location";
 import {
   getAuthenticatedUserOrNull,
   requireAuthenticatedUser,
@@ -85,15 +86,7 @@ function normalizeStoredEmail(email: string): string {
 }
 
 function normalizeStoredLocation(location: string | undefined): string | undefined {
-  const normalized = location?.trim().replace(/\s+/g, " ");
-  if (!normalized) {
-    return undefined;
-  }
-
-  return normalized.replace(
-    /,\s*(?:u\.?\s*s\.?\s*a?\.?|united states(?: of america)?)$/i,
-    "",
-  );
+  return normalizeUsLocation(location);
 }
 
 async function getClerkErrorMessage(response: Response): Promise<string> {
