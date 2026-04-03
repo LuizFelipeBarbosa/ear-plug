@@ -299,23 +299,61 @@ export function useEventGuestList(
         }
       : "skip",
   );
+  const [cachedGuestsResult, setCachedGuestsResult] = useState<{
+    scope: string;
+    result: NonNullable<typeof guestsResult>;
+  } | null>(null);
 
   const setGuestAttendanceMutation = useMutation(
     api.events.setEventGuestAttendance,
   );
   const removeGuestRsvpMutation = useMutation(api.events.removeEventGuestRsvp);
 
+  useEffect(() => {
+    const scope =
+      eventId !== undefined && bandId !== undefined
+        ? `${eventId}:${bandId}`
+        : null;
+
+    if (!scope) {
+      setCachedGuestsResult(null);
+      return;
+    }
+
+    if (guestsResult !== undefined) {
+      setCachedGuestsResult({
+        scope,
+        result: guestsResult,
+      });
+      return;
+    }
+
+    setCachedGuestsResult((current) =>
+      current?.scope === scope ? current : null,
+    );
+  }, [bandId, eventId, guestsResult]);
+
+  const scope =
+    eventId !== undefined && bandId !== undefined
+      ? `${eventId}:${bandId}`
+      : null;
+  const resolvedGuestsResult =
+    guestsResult ??
+    (scope !== null && cachedGuestsResult?.scope === scope
+      ? cachedGuestsResult.result
+      : undefined);
+
   return {
-    guests: guestsResult?.guests ?? [],
-    capReached: guestsResult?.capReached ?? false,
-    cap: guestsResult?.cap ?? 500,
-    counts: guestsResult?.counts ?? { total: 0, onList: 0, attended: 0 },
-    totalCount: guestsResult?.totalCount ?? 0,
-    canManage: guestsResult?.canManage ?? false,
+    guests: resolvedGuestsResult?.guests ?? [],
+    capReached: resolvedGuestsResult?.capReached ?? false,
+    cap: resolvedGuestsResult?.cap ?? 500,
+    counts: resolvedGuestsResult?.counts ?? { total: 0, onList: 0, attended: 0 },
+    totalCount: resolvedGuestsResult?.totalCount ?? 0,
+    canManage: resolvedGuestsResult?.canManage ?? false,
     isLoading:
       eventId !== undefined &&
       bandId !== undefined &&
-      guestsResult === undefined,
+      resolvedGuestsResult === undefined,
     setGuestAttendance: (args: {
       eventId: Id<"events">;
       bandId: Id<"bands">;
