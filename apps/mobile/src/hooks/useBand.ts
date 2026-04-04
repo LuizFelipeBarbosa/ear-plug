@@ -1,5 +1,6 @@
 import { api } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
+import { isEventPast } from "@ear-plug/shared/eventTiming";
 import { useMutation, useQuery } from "convex/react";
 import { useProfileContext } from "@/context/ProfileContext";
 
@@ -38,7 +39,7 @@ export function useBandPastShows(bandId: Id<"bands"> | undefined) {
       (event): event is typeof event & { dateTime: number } =>
         typeof event.dateTime === "number" &&
         Number.isFinite(event.dateTime) &&
-        event.dateTime < Date.now() &&
+        isEventPast(event.dateTime) &&
         event.status === "confirmed",
     )
     .sort((a, b) => b.dateTime - a.dateTime)

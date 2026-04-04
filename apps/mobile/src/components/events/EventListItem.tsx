@@ -2,6 +2,7 @@ import { useProfileContext } from "@/context/ProfileContext";
 import { api } from "../../../../../convex/_generated/api";
 import type { Id } from "../../../../../convex/_generated/dataModel";
 import { formatEventDate, formatEventTime } from "@ear-plug/shared/constants";
+import { isEventPast } from "@ear-plug/shared/eventTiming";
 import { useRouter } from "expo-router";
 import { useMutation, useQuery } from "convex/react";
 import { Heart, Check, MapPin } from "lucide-react-native";
@@ -48,7 +49,7 @@ export function EventListItem({
 
   const hasRsvp = status?.hasRsvp ?? false;
   const hasLiked = status?.hasLiked ?? false;
-  const isPast = typeof event.dateTime === "number" ? event.dateTime < Date.now() : false;
+  const isPast = typeof event.dateTime === "number" ? isEventPast(event.dateTime) : false;
   
   const displayTitle = event.title?.trim() || "Untitled Gig";
   const eventDateTime = typeof event.dateTime === "number" ? event.dateTime : null;

@@ -42,6 +42,7 @@ import {
   formatFullDate,
   formatPrice,
 } from "@ear-plug/shared/constants";
+import { isEventPast } from "@ear-plug/shared/eventTiming";
 import { motion, AnimatePresence, type Variants } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { resolveAuthReturnTo } from "@/lib/auth/sso";
@@ -219,7 +220,7 @@ export default function EventDetailsPage({ params }: PageProps) {
 
   const spotsLeft = event.capacity - event.rsvpCount;
   const fillPercentage = Math.min((event.rsvpCount / event.capacity) * 100, 100);
-  const isPast = event.dateTime < Date.now();
+  const isPast = isEventPast(event.dateTime);
   const shouldHideRsvpInsights = !inBandMode && !hasRsvp && !isPast;
   const lockedPreviewFillPercentage = 92;
   const canManageEvent =

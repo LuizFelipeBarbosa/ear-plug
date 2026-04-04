@@ -8,6 +8,10 @@
 import { ConvexError, v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { internal } from "./_generated/api";
+import {
+  EVENT_RSVP_GRACE_PERIOD_MS,
+  isEventPast,
+} from "../packages/shared/src/eventTiming";
 import { haversineDistance, coordinatesMatch } from "./utils/geo";
 import {
   getAuthenticatedUserOrNull,
@@ -237,7 +241,7 @@ async function listUpcomingPublicEvents(
   const events = await ctx.db
     .query("events")
     .withIndex("by_status_date", (q) =>
-      q.eq("status", "confirmed").gte("dateTime", now)
+      q.eq("status", "confirmed").gte("dateTime", now - EVENT_RSVP_GRACE_PERIOD_MS)
     )
     .take(scanLimit);
 
@@ -1272,7 +1276,11 @@ export const listByBand = query({
 
     let events = mergedEvents;
     if (!args.includesPast) {
-      events = mergedEvents.filter((e) => e.dateTime === undefined || e.dateTime >= now);
+      events = mergedEvents.filter(
+        (e) =>
+          e.dateTime === undefined ||
+          !isEventPast(e.dateTime, now),
+      );
     }
 
     const eventsWithDetails = await Promise.all(
@@ -1378,7 +1386,7 @@ export const listByVenue = query({
 
     const upcomingPublicEvents = events.filter(
       (event): event is PublicEvent =>
-        isPublicEvent(event) && event.dateTime >= now
+        isPublicEvent(event) && !isEventPast(event.dateTime, now)
     );
 
     const eventsWithDetails = await Promise.all(
@@ -1656,7 +1664,7 @@ async function listUserRsvpEventsWithDetails(
         return null;
       }
 
-      if (options.pastOnly ? event.dateTime >= now : event.dateTime < now) {
+      if (options.pastOnly ? !isEventPast(event.dateTime, now) : isEventPast(event.dateTime, now)) {
         return null;
       }
 

@@ -10,6 +10,7 @@ import {
 import { useProfileContext } from "@/context/ProfileContext";
 import { useEvent, useEventCheckinAccess } from "@/hooks/useEvents";
 import { formatEventDate, formatEventTime, formatPrice } from "@ear-plug/shared/constants";
+import { isEventPast } from "@ear-plug/shared/eventTiming";
 import { buildGoogleCalendarUrl } from "@ear-plug/shared/utils";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft, Calendar, Heart, MapPin, QrCode, ShieldCheck, Ticket, Users } from "lucide-react-native";
@@ -26,7 +27,7 @@ export default function EventDetailsScreen() {
   const { canScan } = useEventCheckinAccess(eventId);
   const isBandMode = mode === "band";
   const isFanMode = mode === "personal";
-  const isPast = typeof event?.dateTime === "number" ? event.dateTime < Date.now() : false;
+  const isPast = typeof event?.dateTime === "number" ? isEventPast(event.dateTime) : false;
 
   if (isLoading) {
     return (

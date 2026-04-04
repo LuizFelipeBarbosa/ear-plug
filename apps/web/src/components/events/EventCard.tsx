@@ -6,6 +6,7 @@ import { EventImage } from "@/components/ui/OptimizedImage";
 import { EventPollPrompt } from "@/components/events/EventPollPrompt";
 import { EventUnrsvpConfirmModal } from "@/components/events/EventUnrsvpConfirmModal";
 import { formatEventDate, formatEventTime } from "@ear-plug/shared/constants";
+import { isEventPast } from "@ear-plug/shared/eventTiming";
 import type { SpotifyPersonalizationReason } from "@ear-plug/shared/types";
 import { cn } from "@/lib/utils";
 import type { RoleTone } from "@/lib/ui/roleTone";
@@ -96,7 +97,7 @@ export function EventCard({
     eventDateTime !== null ? formatEventDate(eventDateTime) : "Date TBD";
   const displayTime =
     eventDateTime !== null ? formatEventTime(eventDateTime) : "Time TBD";
-  const isPast = eventDateTime !== null ? eventDateTime < Date.now() : false;
+  const isPast = eventDateTime !== null ? isEventPast(eventDateTime) : false;
   const accentTextClass = resolvedTone === "fan" ? "text-fan" : "text-band";
   const compact = variant === "compact";
   const paddingClass = compact
