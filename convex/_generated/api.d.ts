@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as bandAnalytics from "../bandAnalytics.js";
 import type * as bandMediaSlots from "../bandMediaSlots.js";
 import type * as bandMembers from "../bandMembers.js";
 import type * as bands from "../bands.js";
@@ -17,7 +18,6 @@ import type * as eventTickets from "../eventTickets.js";
 import type * as events from "../events.js";
 import type * as http from "../http.js";
 import type * as messages from "../messages.js";
-import type * as migrations from "../migrations.js";
 import type * as notifications from "../notifications.js";
 import type * as seed from "../seed.js";
 import type * as spotify from "../spotify.js";
@@ -36,6 +36,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  bandAnalytics: typeof bandAnalytics;
   bandMediaSlots: typeof bandMediaSlots;
   bandMembers: typeof bandMembers;
   bands: typeof bands;
@@ -45,7 +46,6 @@ declare const fullApi: ApiFromModules<{
   events: typeof events;
   http: typeof http;
   messages: typeof messages;
-  migrations: typeof migrations;
   notifications: typeof notifications;
   seed: typeof seed;
   spotify: typeof spotify;
