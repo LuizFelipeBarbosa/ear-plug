@@ -4,7 +4,7 @@
  * RSVP stays open for a short window after the scheduled start time so
  * late arrivals can still join the guest list.
  */
-export const EVENT_RSVP_GRACE_PERIOD_MS = 4 * 60 * 60 * 1000;
+export const EVENT_RSVP_GRACE_PERIOD_MS = 6 * 60 * 60 * 1000;
 
 export function getEventRsvpCutoff(dateTime: number): number {
   return dateTime + EVENT_RSVP_GRACE_PERIOD_MS;
