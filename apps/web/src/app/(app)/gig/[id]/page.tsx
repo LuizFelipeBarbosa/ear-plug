@@ -34,7 +34,7 @@ import { EditGigModal } from "@/components/band/EditGigModal";
 import { GuestListCard } from "@/components/band/GuestListCard";
 import { GuestControlPanelModal } from "@/components/band/GuestControlPanelModal";
 import { EventPollPrompt } from "@/components/events/EventPollPrompt";
-import { EventTicketPanel } from "@/components/events/EventTicketPanel";
+import { EventTicketModal } from "@/components/events/EventTicketModal";
 import { EventUnrsvpConfirmModal } from "@/components/events/EventUnrsvpConfirmModal";
 import { downloadCalendarInvite } from "@/lib/calendar";
 import {
@@ -92,7 +92,7 @@ export default function EventDetailsPage({ params }: PageProps) {
   const [showMoreBands, setShowMoreBands] = useState(false);
   const [isPollSubmitting, setIsPollSubmitting] = useState(false);
   const [isRsvpSubmitting, setIsRsvpSubmitting] = useState(false);
-  const [isTicketQrOpen, setIsTicketQrOpen] = useState(false);
+  const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
   const [isUnrsvpConfirmOpen, setIsUnrsvpConfirmOpen] = useState(false);
   const [calendarError, setCalendarError] = useState<string | null>(null);
   const eventId = id as Id<"events">;
@@ -637,19 +637,6 @@ export default function EventDetailsPage({ params }: PageProps) {
           </motion.div>
         )}
 
-        {/* Ticket Panel (if RSVP'd) */}
-        {!inBandMode && hasRsvp && (
-          <motion.div variants={itemVariants}>
-            <EventTicketPanel
-              eventId={eventId}
-              ticketPayload={ticket}
-              isLoading={isTicketLoading}
-              onEnsureTicket={ensureTicket}
-              onQrExpandedChange={setIsTicketQrOpen}
-            />
-          </motion.div>
-        )}
-
         {!inBandMode && hasRsvp && hasPendingPoll && event.poll ? (
           <motion.div variants={itemVariants} className="mb-6">
             <div className="rounded-2xl border border-band/20 bg-band/5 p-4">
@@ -771,7 +758,7 @@ export default function EventDetailsPage({ params }: PageProps) {
 
       {/* Sticky Bottom Action */}
       <AnimatePresence>
-        {!isPast && !isTicketQrOpen && (
+        {!isPast && (
           <motion.div
             initial={{ y: 100 }}
             animate={{ y: 0 }}
@@ -786,15 +773,26 @@ export default function EventDetailsPage({ params }: PageProps) {
               </div>
             ) : (
               <div className="flex items-center gap-3">
-                {/* Price info */}
-                <div className="flex-shrink-0 text-right pr-3 border-r border-border">
-                  <p className="text-xs text-muted-foreground">Price</p>
-                  <p className="text-lg font-bold text-foreground">
-                    {event.price ? formatPrice(event.price) : "Free"}
-                  </p>
-                </div>
+                {hasRsvp ? (
+                  <button
+                    type="button"
+                    onClick={() => setIsTicketModalOpen(true)}
+                    className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-fan/20 bg-card px-4 py-3.5 text-sm font-semibold text-foreground transition-colors hover:border-fan/40 hover:bg-fan/5"
+                  >
+                    <Ticket className="h-4 w-4 text-fan" />
+                    Ticket
+                  </button>
+                ) : (
+                  <div className="shrink-0 rounded-xl border border-border bg-card px-4 py-2.5 text-right">
+                    <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                      Price
+                    </p>
+                    <p className="text-base font-bold text-foreground">
+                      {event.price ? formatPrice(event.price) : "Free"}
+                    </p>
+                  </div>
+                )}
 
-                {/* RSVP Button */}
                 <button
                   onClick={() => void handleRsvpClick()}
                   disabled={(spotsLeft <= 0 && !hasRsvp) || isRsvpSubmitting}
@@ -815,9 +813,9 @@ export default function EventDetailsPage({ params }: PageProps) {
                     </span>
                   ) : spotsLeft <= 0 ? (
                     "Sold Out"
-                    ) : (
-                      "RSVP to Event"
-                    )}
+                  ) : (
+                    "RSVP to Event"
+                  )}
                 </button>
               </div>
             )}
@@ -851,6 +849,14 @@ export default function EventDetailsPage({ params }: PageProps) {
           await submitRsvpToggle();
           setIsUnrsvpConfirmOpen(false);
         }}
+      />
+
+      <EventTicketModal
+        isOpen={isTicketModalOpen}
+        onClose={() => setIsTicketModalOpen(false)}
+        ticketPayload={ticket}
+        isLoading={isTicketLoading}
+        onEnsureTicket={ensureTicket}
       />
 
       {pollPrompt ? (
