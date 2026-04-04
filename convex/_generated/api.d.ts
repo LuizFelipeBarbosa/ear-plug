@@ -12,6 +12,8 @@ import type * as bandMediaSlots from "../bandMediaSlots.js";
 import type * as bandMembers from "../bandMembers.js";
 import type * as bands from "../bands.js";
 import type * as eventCohosts from "../eventCohosts.js";
+import type * as eventRsvps from "../eventRsvps.js";
+import type * as eventTickets from "../eventTickets.js";
 import type * as events from "../events.js";
 import type * as http from "../http.js";
 import type * as messages from "../messages.js";
@@ -38,6 +40,8 @@ declare const fullApi: ApiFromModules<{
   bandMembers: typeof bandMembers;
   bands: typeof bands;
   eventCohosts: typeof eventCohosts;
+  eventRsvps: typeof eventRsvps;
+  eventTickets: typeof eventTickets;
   events: typeof events;
   http: typeof http;
   messages: typeof messages;

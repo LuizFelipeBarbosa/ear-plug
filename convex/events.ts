@@ -1,7 +1,10 @@
 /**
- * @fileoverview Convex queries and mutations for event management.
- * Handles event CRUD operations, user interactions (RSVP, likes),
- * search functionality, and geospatial queries.
+ * @fileoverview Convex queries and mutations for core event management.
+ * Handles event CRUD operations, listing queries, search, and geospatial queries.
+ *
+ * RSVP/like/guest/poll functions live in ./eventRsvps.ts
+ * Ticket/check-in functions live in ./eventTickets.ts
+ *
  * @module convex/events
  */
 
@@ -30,7 +33,7 @@ import type { MutationCtx, QueryCtx } from "./_generated/server";
  * Validator for music genre values.
  * Supports: indie, rock, jazz, electronic, folk, pop, alternative
  */
-const genreValidator = v.union(
+export const genreValidator = v.union(
   v.literal("indie"),
   v.literal("rock"),
   v.literal("jazz"),
@@ -40,13 +43,13 @@ const genreValidator = v.union(
   v.literal("alternative")
 );
 
-const eventStatusValidator = v.union(
+export const eventStatusValidator = v.union(
   v.literal("confirmed"),
   v.literal("hold"),
   v.literal("available")
 );
 
-const eventAddressVisibilityValidator = v.union(
+export const eventAddressVisibilityValidator = v.union(
   v.literal("public"),
   v.literal("rsvp_only")
 );
@@ -56,25 +59,25 @@ const eventPollOptionValidator = v.object({
   label: v.string(),
 });
 
-const eventPollValidator = v.object({
+export const eventPollValidator = v.object({
   question: v.string(),
   options: v.array(eventPollOptionValidator),
 });
 
 type EventAddressVisibility = "public" | "rsvp_only";
-type GuestRsvpType = "on_list" | "attended";
-type EventTicketStatus = "active" | "used" | "revoked";
-type EventCheckinRole = "manager" | "staff";
-type EventTicketScanStatus = "checked_in" | "already_used" | "revoked" | "invalid";
-type EventPollOption = {
+export type GuestRsvpType = "on_list" | "attended";
+export type EventTicketStatus = "active" | "used" | "revoked";
+export type EventCheckinRole = "manager" | "staff";
+export type EventTicketScanStatus = "checked_in" | "already_used" | "revoked" | "invalid";
+export type EventPollOption = {
   id: string;
   label: string;
 };
-type EventPoll = {
+export type EventPoll = {
   question: string;
   options: EventPollOption[];
 };
-type GenreValue =
+export type GenreValue =
   | "indie"
   | "rock"
   | "jazz"
@@ -83,30 +86,30 @@ type GenreValue =
   | "pop"
   | "alternative";
 
-const guestFilterTypeValidator = v.union(
+export const guestFilterTypeValidator = v.union(
   v.literal("all"),
   v.literal("on_list"),
   v.literal("attended")
 );
 
-const MASKED_VENUE_ADDRESS = "Address revealed after RSVP";
-const GUEST_LIST_PREVIEW_LIMIT = 6;
-const GUEST_LIST_CAP = 500;
-const TICKET_QR_PREFIX = "EPT1";
-const CHECKIN_STAFF_REVOKE_REASON = "event_staff_revoked";
-const RSVP_CANCEL_REVOKE_REASON = "rsvp_cancelled";
-const GUEST_REMOVED_REVOKE_REASON = "guest_removed";
-const MAX_EVENT_POLL_OPTIONS = 6;
-const IMAGE_MIME_TYPES = new Set([
+export const MASKED_VENUE_ADDRESS = "Address revealed after RSVP";
+export const GUEST_LIST_PREVIEW_LIMIT = 6;
+export const GUEST_LIST_CAP = 500;
+export const TICKET_QR_PREFIX = "EPT1";
+export const CHECKIN_STAFF_REVOKE_REASON = "event_staff_revoked";
+export const RSVP_CANCEL_REVOKE_REASON = "rsvp_cancelled";
+export const GUEST_REMOVED_REVOKE_REASON = "guest_removed";
+export const MAX_EVENT_POLL_OPTIONS = 6;
+export const IMAGE_MIME_TYPES = new Set([
   "image/jpeg",
   "image/jpg",
   "image/pjpeg",
   "image/png",
   "image/webp",
 ]);
-const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
+export const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
 
-interface ViewerContext {
+export interface ViewerContext {
   userId: Id<"users"> | null;
   memberBandIds: Set<Id<"bands">>;
   rsvpEventIds: Set<Id<"events">>;
@@ -116,7 +119,7 @@ interface ViewerContext {
   matchedBandIds: Set<Id<"bands">>;
 }
 
-interface EventBandAccess {
+export interface EventBandAccess {
   event: Doc<"events">;
   membership: Doc<"bandMemberships">;
   canViewGuestList: boolean;
@@ -161,7 +164,7 @@ interface ConfirmedEventValidationInput extends EventVenueInput {
   venueId?: Id<"venues">;
 }
 
-type PublicEvent = Doc<"events"> & {
+export type PublicEvent = Doc<"events"> & {
   status: "confirmed";
   title: string;
   venueId: Id<"venues">;
@@ -180,7 +183,7 @@ interface EventHydrationCache {
   venues: Map<Id<"venues">, Doc<"venues"> | null>;
 }
 
-function createEventHydrationCache(): EventHydrationCache {
+export function createEventHydrationCache(): EventHydrationCache {
   return {
     bands: new Map(),
     venues: new Map(),
@@ -211,7 +214,7 @@ async function getVenueFromCache(
   return cache.venues.get(venueId) ?? null;
 }
 
-async function hydratePublicEvent(
+export async function hydratePublicEvent(
   ctx: EventHydrationCtx,
   event: PublicEvent,
   cache: EventHydrationCache
@@ -316,155 +319,6 @@ function getEventPersonalizationMetadata(
   }
 
   return { score, personalizationReason };
-}
-
-function sortEventsByDate<T extends { dateTime: number }>(
-  events: T[],
-  direction: "asc" | "desc"
-) {
-  return events.sort((a, b) =>
-    direction === "asc" ? a.dateTime - b.dateTime : b.dateTime - a.dateTime
-  );
-}
-
-function buildTicketQrValue(token: string): string {
-  return `${TICKET_QR_PREFIX}:${token}`;
-}
-
-function parseTicketQrValue(value: string): string | null {
-  const trimmed = value.trim();
-  const prefix = `${TICKET_QR_PREFIX}:`;
-  if (!trimmed.startsWith(prefix)) {
-    return null;
-  }
-
-  const token = trimmed.slice(prefix.length).trim();
-  if (!token || token.length < 16) {
-    return null;
-  }
-
-  return token;
-}
-
-function formatTicketCode(token: string): string {
-  return token.slice(0, 8).toUpperCase();
-}
-
-function generateTicketTokenCandidate(): string {
-  if (typeof crypto !== "undefined" && "getRandomValues" in crypto) {
-    const bytes = new Uint8Array(24);
-    crypto.getRandomValues(bytes);
-    return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
-  }
-
-  return `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}${Math.random()
-    .toString(36)
-    .slice(2)}`;
-}
-
-async function generateUniqueTicketToken(ctx: MutationCtx): Promise<string> {
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    const token = generateTicketTokenCandidate();
-    const existing = await ctx.db
-      .query("eventTickets")
-      .withIndex("by_token", (q) => q.eq("token", token))
-      .unique();
-
-    if (!existing) {
-      return token;
-    }
-  }
-
-  throw new Error("Unable to generate ticket token");
-}
-
-async function findTicketByRsvpId(
-  ctx: QueryCtx | MutationCtx,
-  rsvpId: Id<"rsvps">
-) {
-  return await ctx.db
-    .query("eventTickets")
-    .withIndex("by_rsvp", (q) => q.eq("rsvpId", rsvpId))
-    .unique();
-}
-
-async function createTicketForRsvp(
-  ctx: MutationCtx,
-  rsvp: Pick<Doc<"rsvps">, "_id" | "eventId" | "userId">,
-  status: EventTicketStatus = "active",
-  issuedAt: number = Date.now(),
-  usedByUserId?: Id<"users">
-): Promise<Id<"eventTickets">> {
-  const token = await generateUniqueTicketToken(ctx);
-  return await ctx.db.insert("eventTickets", {
-    eventId: rsvp.eventId,
-    rsvpId: rsvp._id,
-    userId: rsvp.userId,
-    token,
-    status,
-    issuedAt,
-    usedAt: status === "used" ? issuedAt : undefined,
-    usedByUserId: status === "used" ? usedByUserId : undefined,
-  });
-}
-
-async function ensureTicketForRsvp(
-  ctx: MutationCtx,
-  rsvp: Pick<Doc<"rsvps">, "_id" | "eventId" | "userId">
-) {
-  const existingTicket = await findTicketByRsvpId(ctx, rsvp._id);
-  if (existingTicket) {
-    return existingTicket;
-  }
-
-  const ticketId = await createTicketForRsvp(ctx, rsvp);
-  const ticket = await ctx.db.get(ticketId);
-  if (!ticket) {
-    throw new Error("Ticket not found after creation");
-  }
-  return ticket;
-}
-
-async function revokeActiveTicketForRsvp(
-  ctx: MutationCtx,
-  rsvpId: Id<"rsvps">,
-  reason: string
-): Promise<void> {
-  const ticket = await findTicketByRsvpId(ctx, rsvpId);
-  if (!ticket || ticket.status !== "active") {
-    return;
-  }
-
-  await ctx.db.patch(ticket._id, {
-    status: "revoked",
-    revokedAt: Date.now(),
-    revokedReason: reason,
-  });
-}
-
-async function markTicketUsedForRsvp(
-  ctx: MutationCtx,
-  rsvp: Pick<Doc<"rsvps">, "_id" | "eventId" | "userId">,
-  usedByUserId: Id<"users">
-): Promise<EventTicketStatus> {
-  const ticket = await findTicketByRsvpId(ctx, rsvp._id);
-  const usedAt = Date.now();
-
-  if (!ticket) {
-    await createTicketForRsvp(ctx, rsvp, "used", usedAt, usedByUserId);
-    return "used";
-  }
-
-  if (ticket.status === "active") {
-    await ctx.db.patch(ticket._id, {
-      status: "used",
-      usedAt,
-      usedByUserId,
-    });
-    return "used";
-  }
-
-  return ticket.status;
 }
 
 function isTentative(status: Doc<"events">["status"] | undefined): boolean {
@@ -703,7 +557,7 @@ function validateEventPoll(poll: EventPoll | undefined): void {
   }
 }
 
-function areEventPollsEqual(
+export function areEventPollsEqual(
   left: EventPoll | undefined,
   right: EventPoll | undefined
 ): boolean {
@@ -725,7 +579,7 @@ function areEventPollsEqual(
   });
 }
 
-async function getEventPollResponses(
+export async function getEventPollResponses(
   ctx: QueryCtx | MutationCtx,
   eventId: Id<"events">
 ) {
@@ -743,7 +597,7 @@ async function getEventPollResponses(
   };
 }
 
-function buildPollPromptPayload(
+export function buildPollPromptPayload(
   event: Pick<Doc<"events">, "_id" | "title" | "poll" | "dateTime">
 ) {
   if (!event.poll || !canAnswerEventPoll(event)) {
@@ -758,7 +612,7 @@ function buildPollPromptPayload(
   };
 }
 
-function canAnswerEventPoll(event: Pick<Doc<"events">, "dateTime" | "poll">): boolean {
+export function canAnswerEventPoll(event: Pick<Doc<"events">, "dateTime" | "poll">): boolean {
   return (
     !!event.poll &&
     typeof event.dateTime === "number" &&
@@ -781,17 +635,17 @@ function hasPublicCoreFields(
   );
 }
 
-function isPublicEvent(event: Doc<"events">): event is PublicEvent {
+export function isPublicEvent(event: Doc<"events">): event is PublicEvent {
   return isPublic(event.status) && hasPublicCoreFields(event);
 }
 
-function getAttendanceStatus(
+export function getAttendanceStatus(
   rsvp: Pick<Doc<"rsvps">, "attendanceStatus">
 ): GuestRsvpType {
   return rsvp.attendanceStatus ?? "on_list";
 }
 
-async function decrementShowsAttended(
+export async function decrementShowsAttended(
   ctx: MutationCtx,
   userId: Id<"users">
 ) {
@@ -804,7 +658,7 @@ async function decrementShowsAttended(
   });
 }
 
-async function incrementShowsAttended(
+export async function incrementShowsAttended(
   ctx: MutationCtx,
   userId: Id<"users">
 ) {
@@ -817,7 +671,7 @@ async function incrementShowsAttended(
   });
 }
 
-async function buildViewerContext(ctx: QueryCtx): Promise<ViewerContext> {
+export async function buildViewerContext(ctx: QueryCtx): Promise<ViewerContext> {
   const user = await getAuthenticatedUserOrNull(ctx);
   if (!user) {
     return {
@@ -895,7 +749,7 @@ function canViewAddress(
   return viewerContext.rsvpEventIds.has(event._id);
 }
 
-function applyAddressMask<
+export function applyAddressMask<
   T extends {
     _id: Id<"events">;
     bandId: Id<"bands">;
@@ -920,7 +774,7 @@ function applyAddressMask<
   };
 }
 
-async function resolveEventBandAccess(
+export async function resolveEventBandAccess(
   ctx: QueryCtx | MutationCtx,
   eventId: Id<"events">,
   bandId: Id<"bands">
@@ -956,7 +810,7 @@ async function resolveEventBandAccess(
   };
 }
 
-async function resolveEventCheckinAccess(
+export async function resolveEventCheckinAccess(
   ctx: QueryCtx | MutationCtx,
   eventId: Id<"events">
 ): Promise<EventCheckinAccess | null> {
@@ -1447,1108 +1301,8 @@ export const search = query({
   },
 });
 
-/**
- * Toggles RSVP status for the current user on an event.
- * If already RSVP'd, removes the RSVP. Otherwise, adds one.
- * Updates the event's rsvpCount accordingly.
- *
- * @param args.eventId - The Convex ID of the event to RSVP to
- * @returns Object with action: "added" or "removed"
- * @throws Error if not authenticated or user not found
- *
- * @example
- * const result = await ctx.runMutation(api.events.rsvp, {
- *   eventId: event._id
- * });
- * if (result.action === "added") {
- *   toast.success("RSVP confirmed!");
- * }
- */
-export const rsvp = mutation({
-  args: { eventId: v.id("events") },
-  handler: async (ctx, args) => {
-    const user = await requireAuthenticatedUser(ctx);
-
-    const event = await ctx.db.get(args.eventId);
-    if (!event || !isPublicEvent(event)) {
-      throw new Error("This gig is not available for RSVP.");
-    }
-
-    // Check if already RSVP'd
-    const existingRsvp = await ctx.db
-      .query("rsvps")
-      .withIndex("by_user_event", (q) =>
-        q.eq("userId", user._id).eq("eventId", args.eventId)
-      )
-      .unique();
-
-    if (existingRsvp) {
-      if (getAttendanceStatus(existingRsvp) === "attended") {
-        await decrementShowsAttended(ctx, user._id);
-      }
-
-      await revokeActiveTicketForRsvp(ctx, existingRsvp._id, RSVP_CANCEL_REVOKE_REASON);
-
-      // Remove RSVP
-      await ctx.db.delete(existingRsvp._id);
-
-      // Decrement RSVP count
-      await ctx.db.patch(args.eventId, {
-        rsvpCount: Math.max(0, event.rsvpCount - 1),
-      });
-
-      return { action: "removed", pollPrompt: null };
-    }
-
-    // Check capacity before adding RSVP
-    if (event.capacity && event.rsvpCount >= event.capacity) {
-      throw new Error("This event is at capacity.");
-    }
-
-    // Add RSVP
-    const rsvpId = await ctx.db.insert("rsvps", {
-      userId: user._id,
-      eventId: args.eventId,
-      createdAt: Date.now(),
-      attendanceStatus: "on_list",
-    });
-
-    await createTicketForRsvp(ctx, {
-      _id: rsvpId,
-      eventId: args.eventId,
-      userId: user._id,
-    });
-
-    // Increment RSVP count
-    await ctx.db.patch(args.eventId, {
-      rsvpCount: event.rsvpCount + 1,
-    });
-
-    return {
-      action: "added",
-      pollPrompt: buildPollPromptPayload(event),
-    };
-  },
-});
-
-export const submitEventPollResponse = mutation({
-  args: {
-    eventId: v.id("events"),
-    optionId: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const user = await requireAuthenticatedUser(ctx);
-    const event = await ctx.db.get(args.eventId);
-
-    if (!event || !isPublicEvent(event)) {
-      throw new ConvexError({
-        code: "event_not_found",
-        message: "This gig is not available.",
-      });
-    }
-
-    if (!canAnswerEventPoll(event)) {
-      throw new ConvexError({
-        code: "poll_closed",
-        message: "This RSVP poll is no longer accepting answers.",
-      });
-    }
-
-    const optionId = args.optionId.trim();
-    if (optionId.length === 0) {
-      throw new ConvexError({
-        code: "invalid_poll_option",
-        message: "Choose an answer before submitting.",
-      });
-    }
-
-    const selectedOption = event.poll?.options.find((option) => option.id === optionId);
-    if (!selectedOption) {
-      throw new ConvexError({
-        code: "invalid_poll_option",
-        message: "That poll answer is no longer available.",
-      });
-    }
-
-    const rsvp = await ctx.db
-      .query("rsvps")
-      .withIndex("by_user_event", (q) =>
-        q.eq("userId", user._id).eq("eventId", args.eventId)
-      )
-      .unique();
-
-    if (!rsvp) {
-      throw new ConvexError({
-        code: "missing_rsvp",
-        message: "RSVP to this gig before answering the poll.",
-      });
-    }
-
-    const pollAnsweredAt = Date.now();
-    await ctx.db.patch(rsvp._id, {
-      pollAnswerOptionId: selectedOption.id,
-      pollAnsweredAt,
-    });
-
-    return {
-      optionId: selectedOption.id,
-      label: selectedOption.label,
-      pollAnsweredAt,
-    };
-  },
-});
-
-/**
- * Toggles like status for the current user on an event.
- * If already liked, removes the like. Otherwise, adds one.
- *
- * @param args.eventId - The Convex ID of the event to like/unlike
- * @returns Object with action: "liked" or "unliked"
- * @throws Error if not authenticated or user not found
- *
- * @example
- * const result = await ctx.runMutation(api.events.toggleLike, {
- *   eventId: event._id
- * });
- * // Update UI based on result.action
- */
-export const toggleLike = mutation({
-  args: { eventId: v.id("events") },
-  handler: async (ctx, args) => {
-    const user = await requireAuthenticatedUser(ctx);
-
-    const event = await ctx.db.get(args.eventId);
-    if (!event || !isPublicEvent(event)) {
-      throw new Error("This gig is not available to save.");
-    }
-
-    // Check if already liked
-    const existingLike = await ctx.db
-      .query("likes")
-      .withIndex("by_user_event", (q) =>
-        q.eq("userId", user._id).eq("eventId", args.eventId)
-      )
-      .unique();
-
-    if (existingLike) {
-      await ctx.db.delete(existingLike._id);
-      return { action: "unliked" };
-    }
-
-    await ctx.db.insert("likes", {
-      userId: user._id,
-      eventId: args.eventId,
-      createdAt: Date.now(),
-    });
-
-    return { action: "liked" };
-  },
-});
-
-async function listUserRsvpEventsWithDetails(
-  ctx: QueryCtx,
-  userId: Id<"users">,
-  options: { pastOnly: boolean }
-) {
-  const now = Date.now();
-  const rsvps = await ctx.db
-    .query("rsvps")
-    .withIndex("by_user", (q) => q.eq("userId", userId))
-    .collect();
-  const cache = createEventHydrationCache();
-
-  const eventsWithDetails = await Promise.all(
-    rsvps.map(async (rsvp) => {
-      const event = await ctx.db.get(rsvp.eventId);
-      if (!event || !isPublicEvent(event)) {
-        return null;
-      }
-
-      if (options.pastOnly ? !isEventPast(event.dateTime, now) : isEventPast(event.dateTime, now)) {
-        return null;
-      }
-
-      const hydrated = await hydratePublicEvent(ctx, event, cache);
-      if (options.pastOnly) {
-        return {
-          ...hydrated,
-          rsvpedAt: rsvp.createdAt,
-          attendanceStatus: getAttendanceStatus(rsvp),
-          attendedAt: rsvp.attendedAt,
-        };
-      }
-
-      return {
-        ...hydrated,
-        rsvpedAt: rsvp.createdAt,
-      };
-    })
-  );
-
-  const filtered = eventsWithDetails.filter(
-    (event): event is NonNullable<typeof event> => event !== null
-  );
-  return sortEventsByDate(filtered, options.pastOnly ? "desc" : "asc");
-}
-
-async function listUserLikedEventsWithDetails(
-  ctx: QueryCtx,
-  userId: Id<"users">,
-  viewerContext: ViewerContext
-) {
-  const likes = await ctx.db
-    .query("likes")
-    .withIndex("by_user", (q) => q.eq("userId", userId))
-    .collect();
-  const cache = createEventHydrationCache();
-
-  const eventsWithDetails = await Promise.all(
-    likes.map(async (like) => {
-      if (viewerContext.rsvpEventIds.has(like.eventId)) {
-        return null;
-      }
-
-      const event = await ctx.db.get(like.eventId);
-      if (!event || !isPublicEvent(event)) {
-        return null;
-      }
-
-      const hydrated = await hydratePublicEvent(ctx, event, cache);
-      return applyAddressMask(
-        {
-          ...hydrated,
-          likedAt: like.createdAt,
-        },
-        viewerContext
-      );
-    })
-  );
-
-  const filtered = eventsWithDetails.filter(
-    (event): event is NonNullable<typeof event> => event !== null
-  );
-  return sortEventsByDate(filtered, "asc");
-}
-
-/**
- * Gets the current user's upcoming RSVP'd events.
- * Excludes past events. Returns events sorted by date ascending.
- *
- * @returns Array of upcoming event documents with band, venue, and rsvpedAt timestamp
- *
- * @example
- * const myUpcomingEvents = await ctx.runQuery(api.events.getUserRsvps);
- * // Display in user's "My Events" section
- */
-export const getUserRsvps = query({
-  args: {},
-  handler: async (ctx) => {
-    const user = await getAuthenticatedUserOrNull(ctx);
-    if (!user) {
-      return [];
-    }
-    return await listUserRsvpEventsWithDetails(ctx, user._id, { pastOnly: false });
-  },
-});
-
-/**
- * Gets the current user's past RSVP'd events.
- * Only includes events that have already occurred.
- * Returns events sorted by date descending (most recent first).
- *
- * @returns Array of past event documents with band, venue, rsvpedAt, and attendance status
- *
- * @example
- * const pastEvents = await ctx.runQuery(api.events.getUserPastRsvps);
- * // Display in user's "Past Events" or "History" section
- */
-export const getUserPastRsvps = query({
-  args: {},
-  handler: async (ctx) => {
-    const user = await getAuthenticatedUserOrNull(ctx);
-    if (!user) {
-      return [];
-    }
-    return await listUserRsvpEventsWithDetails(ctx, user._id, { pastOnly: true });
-  },
-});
-
-/**
- * Gets the current user's liked events.
- * Excludes events that the user has also RSVP'd to.
- * Returns events sorted by date ascending.
- *
- * @returns Array of liked event documents with band, venue, and likedAt timestamp
- *
- * @example
- * const likedEvents = await ctx.runQuery(api.events.getUserLikes);
- * // Display in "Saved Events" or "Interested" section
- */
-export const getUserLikes = query({
-  args: {},
-  handler: async (ctx) => {
-    const viewerContext = await buildViewerContext(ctx);
-    const userId = viewerContext.userId;
-    if (!userId) {
-      return [];
-    }
-    return await listUserLikedEventsWithDetails(ctx, userId, viewerContext);
-  },
-});
-
-/**
- * Checks the current user's RSVP and like status for a specific event.
- * Returns false for both if not authenticated.
- *
- * @param args.eventId - The Convex ID of the event to check
- * @returns Object with hasRsvp and hasLiked boolean flags
- *
- * @example
- * const status = await ctx.runQuery(api.events.getUserEventStatus, {
- *   eventId: event._id
- * });
- * // Use to render RSVP/Like button states
- * <button>{status.hasRsvp ? "Cancel RSVP" : "RSVP"}</button>
- */
-export const getUserEventStatus = query({
-  args: { eventId: v.id("events") },
-  handler: async (ctx, args) => {
-    const event = await ctx.db.get(args.eventId);
-    if (!event || !isPublicEvent(event)) {
-      return {
-        hasRsvp: false,
-        hasLiked: false,
-        hasPendingPoll: false,
-        selectedPollOptionId: undefined,
-        canAnswerPoll: false,
-      };
-    }
-
-    const user = await getAuthenticatedUserOrNull(ctx);
-    if (!user) {
-      return {
-        hasRsvp: false,
-        hasLiked: false,
-        hasPendingPoll: false,
-        selectedPollOptionId: undefined,
-        canAnswerPoll: false,
-      };
-    }
-
-    const rsvp = await ctx.db
-      .query("rsvps")
-      .withIndex("by_user_event", (q) =>
-        q.eq("userId", user._id).eq("eventId", args.eventId)
-      )
-      .unique();
-
-    const like = await ctx.db
-      .query("likes")
-      .withIndex("by_user_event", (q) =>
-        q.eq("userId", user._id).eq("eventId", args.eventId)
-      )
-      .unique();
-
-    return {
-      hasRsvp: !!rsvp,
-      hasLiked: !!like,
-      hasPendingPoll:
-        !!rsvp && canAnswerEventPoll(event) && !rsvp.pollAnswerOptionId,
-      selectedPollOptionId: rsvp?.pollAnswerOptionId,
-      canAnswerPoll: !!rsvp && canAnswerEventPoll(event),
-    };
-  },
-});
-
-/**
- * Returns ticket payload for the current RSVP'd user.
- * Includes QR payload for active tickets and lifecycle metadata.
- */
-export const getMyEventTicket = query({
-  args: { eventId: v.id("events") },
-  handler: async (ctx, args) => {
-    const user = await getAuthenticatedUserOrNull(ctx);
-    if (!user) {
-      return null;
-    }
-
-    const event = await ctx.db.get(args.eventId);
-    if (!event || !isPublicEvent(event)) {
-      return null;
-    }
-
-    const rsvp = await ctx.db
-      .query("rsvps")
-      .withIndex("by_user_event", (q) =>
-        q.eq("userId", user._id).eq("eventId", args.eventId)
-      )
-      .unique();
-
-    if (!rsvp) {
-      return null;
-    }
-
-    const [ticket, venue] = await Promise.all([
-      findTicketByRsvpId(ctx, rsvp._id),
-      ctx.db.get(event.venueId),
-    ]);
-
-    return {
-      eventId: event._id,
-      eventTitle: event.title,
-      eventDateTime: event.dateTime,
-      attendeeName: user.name,
-      venue: venue
-        ? {
-            name: venue.name,
-            address: venue.address,
-            city: venue.city,
-          }
-        : null,
-      requiresTicketBootstrap: !ticket,
-      ticket: ticket
-        ? {
-            ticketId: ticket._id,
-            status: ticket.status,
-            issuedAt: ticket.issuedAt,
-            usedAt: ticket.usedAt,
-            revokedAt: ticket.revokedAt,
-            ticketCode: formatTicketCode(ticket.token),
-            qrValue:
-              ticket.status === "active"
-                ? buildTicketQrValue(ticket.token)
-                : undefined,
-          }
-        : null,
-    };
-  },
-});
-
-/**
- * Creates a missing ticket for legacy RSVP rows.
- * Safe to call repeatedly: creates at most one ticket per RSVP.
- */
-export const ensureMyEventTicket = mutation({
-  args: { eventId: v.id("events") },
-  handler: async (ctx, args) => {
-    const user = await requireAuthenticatedUser(ctx);
-
-    const event = await ctx.db.get(args.eventId);
-    if (!event || !isPublicEvent(event)) {
-      throw new Error("This gig is not available.");
-    }
-
-    const rsvp = await ctx.db
-      .query("rsvps")
-      .withIndex("by_user_event", (q) =>
-        q.eq("userId", user._id).eq("eventId", args.eventId)
-      )
-      .unique();
-
-    if (!rsvp) {
-      throw new Error("RSVP not found");
-    }
-
-    const ticket = await ensureTicketForRsvp(ctx, rsvp);
-    return {
-      action: ticket.status === "active" ? "ready" : "restored",
-      ticketId: ticket._id,
-      status: ticket.status,
-    };
-  },
-});
-
-/**
- * Check-in access for scanner surfaces.
- */
-export const getEventCheckinAccess = query({
-  args: { eventId: v.id("events") },
-  handler: async (ctx, args) => {
-    const access = await resolveEventCheckinAccess(ctx, args.eventId);
-    if (!access) {
-      return {
-        canScan: false,
-        canManageStaff: false,
-        role: null,
-        managerBandIds: [],
-      };
-    }
-    return {
-      canScan: access.canScan,
-      canManageStaff: access.canManageStaff,
-      role: access.role,
-      managerBandIds: access.managerBandIds,
-    };
-  },
-});
-
-/**
- * Lists active event check-in staff assignments.
- * Manager-only endpoint.
- */
-export const listEventCheckinStaff = query({
-  args: {
-    eventId: v.id("events"),
-    bandId: v.id("bands"),
-  },
-  handler: async (ctx, args) => {
-    const access = await resolveEventBandAccess(ctx, args.eventId, args.bandId);
-    if (!access.canManageGuestList) {
-      throw new Error("Not authorized for this band");
-    }
-
-    const staffRows = await ctx.db
-      .query("eventCheckinStaff")
-      .withIndex("by_event_status", (q) =>
-        q.eq("eventId", args.eventId).eq("status", "active")
-      )
-      .collect();
-
-    const staff = (
-      await Promise.all(
-        staffRows.map(async (row) => {
-          const user = await ctx.db.get(row.userId);
-          if (!user) return null;
-
-          return {
-            userId: user._id,
-            name: user.name,
-            avatar: user.avatar,
-            assignedAt: row.createdAt,
-            assignedByBandId: row.assignedByBandId,
-          };
-        })
-      )
-    )
-      .filter((row): row is NonNullable<typeof row> => row !== null)
-      .sort((a, b) => b.assignedAt - a.assignedAt);
-
-    return { staff };
-  },
-});
-
-/**
- * Searches platform users assignable as event check-in staff.
- * Manager-only endpoint.
- */
-export const searchAssignableEventCheckinUsers = query({
-  args: {
-    eventId: v.id("events"),
-    bandId: v.id("bands"),
-    query: v.string(),
-    limit: v.optional(v.number()),
-  },
-  handler: async (ctx, args) => {
-    const access = await resolveEventBandAccess(ctx, args.eventId, args.bandId);
-    if (!access.canManageGuestList) {
-      throw new Error("Not authorized for this band");
-    }
-
-    const normalizedQuery = args.query.trim().toLowerCase();
-    if (normalizedQuery.length < 2) {
-      return { users: [] };
-    }
-
-    const limit = Math.min(Math.max(Math.floor(args.limit ?? 8), 1), 20);
-    const [users, activeStaffRows] = await Promise.all([
-      ctx.db.query("users").collect(),
-      ctx.db
-        .query("eventCheckinStaff")
-        .withIndex("by_event_status", (q) =>
-          q.eq("eventId", args.eventId).eq("status", "active")
-        )
-        .collect(),
-    ]);
-
-    const activeStaffUserIds = new Set(activeStaffRows.map((row) => row.userId));
-
-    const matched = users
-      .filter((user) =>
-        user.name.trim().toLowerCase().includes(normalizedQuery)
-      )
-      .sort((a, b) => {
-        const aName = a.name.trim();
-        const bName = b.name.trim();
-        const aLower = aName.toLowerCase();
-        const bLower = bName.toLowerCase();
-        const aStarts = aLower.startsWith(normalizedQuery);
-        const bStarts = bLower.startsWith(normalizedQuery);
-
-        if (aStarts !== bStarts) {
-          return aStarts ? -1 : 1;
-        }
-
-        const byName = aName.localeCompare(bName, "en-US", {
-          sensitivity: "base",
-        });
-        if (byName !== 0) {
-          return byName;
-        }
-
-        return a.email.localeCompare(b.email, "en-US", {
-          sensitivity: "base",
-        });
-      })
-      .slice(0, limit)
-      .map((user) => ({
-        userId: user._id,
-        name: user.name,
-        avatar: user.avatar,
-        alreadyAssigned: activeStaffUserIds.has(user._id),
-      }));
-
-    return { users: matched };
-  },
-});
-
-/**
- * Assigns an existing user as event check-in staff by user ID.
- * Manager-only endpoint.
- */
-export const assignEventCheckinStaff = mutation({
-  args: {
-    eventId: v.id("events"),
-    bandId: v.id("bands"),
-    staffUserId: v.id("users"),
-  },
-  handler: async (ctx, args) => {
-    const access = await resolveEventBandAccess(ctx, args.eventId, args.bandId);
-    if (!access.canManageGuestList) {
-      throw new Error("Not authorized for this band");
-    }
-
-    const targetUser = await ctx.db.get(args.staffUserId);
-    if (!targetUser) {
-      throw new Error("User not found");
-    }
-
-    const existing = await ctx.db
-      .query("eventCheckinStaff")
-      .withIndex("by_event_user", (q) =>
-        q.eq("eventId", args.eventId).eq("userId", args.staffUserId)
-      )
-      .unique();
-
-    if (existing?.status === "active") {
-      return {
-        action: "already_active",
-        staffUserId: args.staffUserId,
-      };
-    }
-
-    if (existing) {
-      await ctx.db.patch(existing._id, {
-        status: "active",
-        assignedByUserId: access.membership.userId,
-        assignedByBandId: args.bandId,
-        revokedAt: undefined,
-      });
-      return {
-        action: "reassigned",
-        staffUserId: args.staffUserId,
-      };
-    }
-
-    await ctx.db.insert("eventCheckinStaff", {
-      eventId: args.eventId,
-      userId: args.staffUserId,
-      status: "active",
-      assignedByUserId: access.membership.userId,
-      assignedByBandId: args.bandId,
-      createdAt: Date.now(),
-    });
-
-    return {
-      action: "assigned",
-      staffUserId: args.staffUserId,
-    };
-  },
-});
-
-/**
- * Assigns an existing user as event check-in staff.
- * Manager-only endpoint.
- */
-export const assignEventCheckinStaffByEmail = mutation({
-  args: {
-    eventId: v.id("events"),
-    bandId: v.id("bands"),
-    email: v.string(),
-  },
-  handler: async () => {
-    throw new Error(
-      "Assigning check-in staff by email is disabled. Search and select a user instead."
-    );
-  },
-});
-
-/**
- * Revokes event check-in staff assignment.
- * Manager-only endpoint.
- */
-export const removeEventCheckinStaff = mutation({
-  args: {
-    eventId: v.id("events"),
-    bandId: v.id("bands"),
-    staffUserId: v.id("users"),
-  },
-  handler: async (ctx, args) => {
-    const access = await resolveEventBandAccess(ctx, args.eventId, args.bandId);
-    if (!access.canManageGuestList) {
-      throw new Error("Not authorized for this band");
-    }
-
-    const assignment = await ctx.db
-      .query("eventCheckinStaff")
-      .withIndex("by_event_user", (q) =>
-        q.eq("eventId", args.eventId).eq("userId", args.staffUserId)
-      )
-      .unique();
-
-    if (!assignment) {
-      return { action: "not_found" };
-    }
-
-    if (assignment.status === "revoked") {
-      return { action: "already_revoked" };
-    }
-
-    await ctx.db.patch(assignment._id, {
-      status: "revoked",
-      revokedAt: Date.now(),
-    });
-
-    return {
-      action: "revoked",
-      staffUserId: args.staffUserId,
-      reason: CHECKIN_STAFF_REVOKE_REASON,
-    };
-  },
-});
-
-/**
- * Scans and consumes an event ticket QR code.
- * Enforces one-time validation and attendance write-back.
- */
-export const scanEventTicket = mutation({
-  args: {
-    eventId: v.id("events"),
-    qrValue: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const access = await resolveEventCheckinAccess(ctx, args.eventId);
-    if (!access || !access.canScan) {
-      throw new Error("Not authorized to scan tickets for this event");
-    }
-
-    const token = parseTicketQrValue(args.qrValue);
-    if (!token) {
-      return {
-        status: "invalid" as EventTicketScanStatus,
-      };
-    }
-
-    const ticket = await ctx.db
-      .query("eventTickets")
-      .withIndex("by_token", (q) => q.eq("token", token))
-      .unique();
-
-    if (!ticket || ticket.eventId !== args.eventId) {
-      return {
-        status: "invalid" as EventTicketScanStatus,
-      };
-    }
-
-    const attendee = await ctx.db.get(ticket.userId);
-
-    if (ticket.status === "revoked") {
-      return {
-        status: "revoked" as EventTicketScanStatus,
-        attendeeName: attendee?.name,
-        ticketCode: formatTicketCode(ticket.token),
-      };
-    }
-
-    if (ticket.status === "used") {
-      return {
-        status: "already_used" as EventTicketScanStatus,
-        attendeeName: attendee?.name,
-        usedAt: ticket.usedAt,
-        ticketCode: formatTicketCode(ticket.token),
-      };
-    }
-
-    const rsvp = await ctx.db.get(ticket.rsvpId);
-    if (!rsvp || rsvp.eventId !== args.eventId) {
-      return {
-        status: "invalid" as EventTicketScanStatus,
-      };
-    }
-
-    const usedAt = Date.now();
-    await ctx.db.patch(ticket._id, {
-      status: "used",
-      usedAt,
-      usedByUserId: access.user._id,
-    });
-
-    if (getAttendanceStatus(rsvp) !== "attended") {
-      await ctx.db.patch(rsvp._id, {
-        attendanceStatus: "attended",
-        attendedAt: usedAt,
-      });
-      await incrementShowsAttended(ctx, rsvp.userId);
-    }
-
-    return {
-      status: "checked_in" as EventTicketScanStatus,
-      attendeeName: attendee?.name,
-      usedAt,
-      ticketCode: formatTicketCode(ticket.token),
-    };
-  },
-});
-
-/**
- * Guest list summary for band workspace event management.
- * Returns preview guests for card rendering and capability flags.
- */
-export const getEventGuestListSummary = query({
-  args: {
-    eventId: v.id("events"),
-    bandId: v.id("bands"),
-  },
-  handler: async (ctx, args) => {
-    const access = await resolveEventBandAccess(ctx, args.eventId, args.bandId);
-
-    if (!access.canViewGuestList) {
-      throw new Error("Not authorized for this band");
-    }
-
-    const previewRsvps = await ctx.db
-      .query("rsvps")
-      .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
-      .order("desc")
-      .take(GUEST_LIST_PREVIEW_LIMIT);
-
-    const previewGuests = (
-      await Promise.all(
-        previewRsvps.map(async (rsvp) => {
-          const user = await ctx.db.get(rsvp.userId);
-          if (!user) return null;
-
-          return {
-            rsvpId: rsvp._id,
-            userId: user._id,
-            name: user.name,
-            avatar: user.avatar,
-            rsvpType: getAttendanceStatus(rsvp),
-          };
-        })
-      )
-    ).filter((guest): guest is NonNullable<typeof guest> => guest !== null);
-
-    return {
-      totalCount: access.event.rsvpCount,
-      previewGuests,
-      canManage: access.canManageGuestList,
-    };
-  },
-});
-
-/**
- * Lists guests for an event guest-management panel.
- * Filters and search are applied within a capped RSVP set for safety.
- * Uses latest 501 RSVP rows to detect truncation and returns at most 500 rows.
- */
-export const listEventGuests = query({
-  args: {
-    eventId: v.id("events"),
-    bandId: v.id("bands"),
-    rsvpType: v.optional(guestFilterTypeValidator),
-    search: v.optional(v.string()),
-  },
-  handler: async (ctx, args) => {
-    const access = await resolveEventBandAccess(ctx, args.eventId, args.bandId);
-    if (!access.canViewGuestList) {
-      throw new Error("Not authorized for this band");
-    }
-
-    const filterType = args.rsvpType ?? "all";
-    const searchQuery = args.search?.trim().toLowerCase() ?? "";
-    const rsvps = await ctx.db
-      .query("rsvps")
-      .withIndex("by_event", (q) => q.eq("eventId", args.eventId))
-      .order("desc")
-      .take(GUEST_LIST_CAP + 1);
-
-    const capReached = rsvps.length > GUEST_LIST_CAP;
-    const cappedRsvps = capReached ? rsvps.slice(0, GUEST_LIST_CAP) : rsvps;
-
-    const guestsWithUsers = await Promise.all(
-      cappedRsvps.map(async (rsvp) => {
-        const user = await ctx.db.get(rsvp.userId);
-        if (!user) return null;
-
-        const rsvpType = getAttendanceStatus(rsvp);
-
-        return {
-          rsvpId: rsvp._id,
-          userId: user._id,
-          name: user.name,
-          avatar: user.avatar,
-          rsvpType,
-          rsvpedAt: rsvp.createdAt,
-          attendedAt: rsvp.attendedAt,
-        };
-      })
-    );
-
-    const allGuests = guestsWithUsers.filter(
-      (guest): guest is NonNullable<typeof guest> => guest !== null,
-    );
-
-    const counts = allGuests.reduce(
-      (totals, guest) => {
-        totals.total += 1;
-        if (guest.rsvpType === "attended") {
-          totals.attended += 1;
-        } else {
-          totals.onList += 1;
-        }
-        return totals;
-      },
-      { total: 0, onList: 0, attended: 0 },
-    );
-
-    const guests = allGuests
-      .filter((guest) => {
-        if (filterType !== "all" && guest.rsvpType !== filterType) {
-          return false;
-        }
-
-        if (!searchQuery) {
-          return true;
-        }
-
-        return guest.name.toLowerCase().includes(searchQuery);
-      })
-      .sort((a, b) => b.rsvpedAt - a.rsvpedAt);
-
-    return {
-      guests,
-      capReached,
-      cap: GUEST_LIST_CAP,
-      counts,
-      totalCount: access.event.rsvpCount,
-      canManage: access.canManageGuestList,
-    };
-  },
-});
-
-/**
- * Sets attendance status for an RSVP'd guest.
- * Only band owners/admins can modify attendance.
- */
-export const setEventGuestAttendance = mutation({
-  args: {
-    eventId: v.id("events"),
-    bandId: v.id("bands"),
-    rsvpId: v.id("rsvps"),
-    attended: v.boolean(),
-  },
-  handler: async (ctx, args) => {
-    const access = await resolveEventBandAccess(ctx, args.eventId, args.bandId);
-    if (!access.canManageGuestList) {
-      throw new Error("Not authorized for this band");
-    }
-
-    const rsvp = await ctx.db.get(args.rsvpId);
-    if (!rsvp) {
-      throw new Error("RSVP not found");
-    }
-
-    if (rsvp.eventId !== args.eventId) {
-      throw new Error("RSVP does not belong to this event");
-    }
-
-    const currentStatus = getAttendanceStatus(rsvp);
-    const nextStatus: GuestRsvpType = args.attended ? "attended" : "on_list";
-
-    if (currentStatus === nextStatus) {
-      return { changed: false, rsvpType: currentStatus };
-    }
-
-    if (nextStatus === "attended") {
-      await ctx.db.patch(args.rsvpId, {
-        attendanceStatus: "attended",
-        attendedAt: Date.now(),
-      });
-      await incrementShowsAttended(ctx, rsvp.userId);
-      await markTicketUsedForRsvp(ctx, rsvp, access.membership.userId);
-    } else {
-      await ctx.db.patch(args.rsvpId, {
-        attendanceStatus: "on_list",
-        attendedAt: undefined,
-      });
-      await decrementShowsAttended(ctx, rsvp.userId);
-    }
-
-    return {
-      changed: true,
-      rsvpType: nextStatus,
-    };
-  },
-});
-
-/**
- * Removes a guest RSVP from an event.
- * Only band owners/admins can remove guests.
- */
-export const removeEventGuestRsvp = mutation({
-  args: {
-    eventId: v.id("events"),
-    bandId: v.id("bands"),
-    rsvpId: v.id("rsvps"),
-  },
-  handler: async (ctx, args) => {
-    const access = await resolveEventBandAccess(ctx, args.eventId, args.bandId);
-    if (!access.canManageGuestList) {
-      throw new Error("Not authorized for this band");
-    }
-
-    const rsvp = await ctx.db.get(args.rsvpId);
-    if (!rsvp) {
-      throw new Error("RSVP not found");
-    }
-
-    if (rsvp.eventId !== args.eventId) {
-      throw new Error("RSVP does not belong to this event");
-    }
-
-    if (getAttendanceStatus(rsvp) === "attended") {
-      await decrementShowsAttended(ctx, rsvp.userId);
-    }
-
-    await revokeActiveTicketForRsvp(
-      ctx,
-      args.rsvpId,
-      GUEST_REMOVED_REVOKE_REASON
-    );
-
-    await ctx.db.delete(args.rsvpId);
-
-    await ctx.db.patch(access.event._id, {
-      rsvpCount: Math.max(0, access.event.rsvpCount - 1),
-    });
-
-    return {
-      action: "removed",
-      eventId: args.eventId,
-      rsvpId: args.rsvpId,
-    };
-  },
-});
+// RSVP/like/guest/poll functions moved to ./eventRsvps.ts
+// Ticket/check-in functions moved to ./eventTickets.ts
 
 /**
  * Lists nearby events within a specified radius of given coordinates.
