@@ -40,12 +40,12 @@ export function EventListItem({
   const tone = isFanMode ? "fan" : "band";
   
   const status = useQuery(
-    api.events.getUserEventStatus,
+    api.eventRsvps.getUserEventStatus,
     isFanMode ? { eventId: event._id } : "skip"
   );
-  
-  const rsvp = useMutation(api.events.rsvp);
-  const toggleLike = useMutation(api.events.toggleLike);
+
+  const rsvp = useMutation(api.eventRsvps.rsvp);
+  const toggleLike = useMutation(api.eventRsvps.toggleLike);
 
   const hasRsvp = status?.hasRsvp ?? false;
   const hasLiked = status?.hasLiked ?? false;
