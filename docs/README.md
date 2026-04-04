@@ -64,7 +64,7 @@ Ear-Plug is a "Listen Local" platform connecting Bay Area live music fans with m
 
 | Metric           | Count             |
 | ---------------- | ----------------- |
-| Database Tables  | 13                |
+| Database Tables  | 23                |
 | Convex Queries   | 28+               |
 | Convex Mutations | 23+               |
 | Custom Hooks     | 10                |

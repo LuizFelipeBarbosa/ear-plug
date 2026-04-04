@@ -76,3 +76,10 @@ web-build/
 *.pem
 *.cer
 *.crt
+
+# Error logs (committed before gitignore rule)
+convex-err.log
+pnpm-err.log
+
+# Temp
+tmp/

@@ -168,7 +168,7 @@ importers:
         version: 5.61.4(react-dom@18.3.1(react@18.2.0))(react@18.2.0)
       '@clerk/nextjs':
         specifier: ^6.39.1
-        version: 6.39.1(next@14.2.35(@babel/core@7.28.6)(react-dom@18.3.1(react@18.2.0))(react@18.2.0))(react-dom@18.3.1(react@18.2.0))(react@18.2.0)
+        version: 6.39.1(next@14.2.35(react-dom@18.3.1(react@18.2.0))(react@18.2.0))(react-dom@18.3.1(react@18.2.0))(react@18.2.0)
       '@ear-plug/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -186,7 +186,7 @@ importers:
         version: 12.34.3(react-dom@18.3.1(react@18.2.0))(react@18.2.0)
       geist:
         specifier: ^1.3.1
-        version: 1.7.0(next@14.2.35(@babel/core@7.28.6)(react-dom@18.3.1(react@18.2.0))(react@18.2.0))
+        version: 1.7.0(next@14.2.35(react-dom@18.3.1(react@18.2.0))(react@18.2.0))
       html5-qrcode:
         specifier: ^2.3.8
         version: 2.3.8
@@ -198,7 +198,7 @@ importers:
         version: 0.400.0(react@18.2.0)
       next:
         specifier: 14.2.35
-        version: 14.2.35(@babel/core@7.28.6)(react-dom@18.3.1(react@18.2.0))(react@18.2.0)
+        version: 14.2.35(react-dom@18.3.1(react@18.2.0))(react@18.2.0)
       qrcode:
         specifier: ^1.5.4
         version: 1.5.4
@@ -214,9 +214,6 @@ importers:
       tailwind-merge:
         specifier: ^2.2.0
         version: 2.6.1
-      use-places-autocomplete:
-        specifier: ^4.0.1
-        version: 4.0.1(react@18.2.0)
       zod:
         specifier: ^3.23.0
         version: 3.25.76
@@ -6445,11 +6442,6 @@ packages:
     peerDependencies:
       react: '>=16.8'
 
-  use-places-autocomplete@4.0.1:
-    resolution: {integrity: sha512-AybOR/qzXcdaMCGSFveycfL3kztwseAOdagbYoJD8c3amll+gEiPmUkSNhYNUEBqbR+JmJG6/oBTRgihNbE+1A==}
-    peerDependencies:
-      react: '>= 16.8.0'
-
   use-sync-external-store@1.6.0:
     resolution: {integrity: sha512-Pp6GSwGP/NrPIrxVFAIkOQeyw8lFenOHijQWkUTrDvrF4ALqylP2C/KCkeS9dpUM3KvYRQhna5vt7IL95+ZQ9w==}
     peerDependencies:
@@ -7830,13 +7822,13 @@ snapshots:
       - react
       - react-dom
 
-  '@clerk/nextjs@6.39.1(next@14.2.35(@babel/core@7.28.6)(react-dom@18.3.1(react@18.2.0))(react@18.2.0))(react-dom@18.3.1(react@18.2.0))(react@18.2.0)':
+  '@clerk/nextjs@6.39.1(next@14.2.35(react-dom@18.3.1(react@18.2.0))(react@18.2.0))(react-dom@18.3.1(react@18.2.0))(react@18.2.0)':
     dependencies:
       '@clerk/backend': 2.33.1(react-dom@18.3.1(react@18.2.0))(react@18.2.0)
       '@clerk/clerk-react': 5.61.4(react-dom@18.3.1(react@18.2.0))(react@18.2.0)
       '@clerk/shared': 3.47.3(react-dom@18.3.1(react@18.2.0))(react@18.2.0)
       '@clerk/types': 4.101.21(react-dom@18.3.1(react@18.2.0))(react@18.2.0)
-      next: 14.2.35(@babel/core@7.28.6)(react-dom@18.3.1(react@18.2.0))(react@18.2.0)
+      next: 14.2.35(react-dom@18.3.1(react@18.2.0))(react@18.2.0)
       react: 18.2.0
       react-dom: 18.3.1(react@18.2.0)
       server-only: 0.0.1
@@ -11490,9 +11482,9 @@ snapshots:
 
   functions-have-names@1.2.3: {}
 
-  geist@1.7.0(next@14.2.35(@babel/core@7.28.6)(react-dom@18.3.1(react@18.2.0))(react@18.2.0)):
+  geist@1.7.0(next@14.2.35(react-dom@18.3.1(react@18.2.0))(react@18.2.0)):
     dependencies:
-      next: 14.2.35(@babel/core@7.28.6)(react-dom@18.3.1(react@18.2.0))(react@18.2.0)
+      next: 14.2.35(react-dom@18.3.1(react@18.2.0))(react@18.2.0)
 
   generator-function@2.0.1: {}
 
@@ -12670,7 +12662,7 @@ snapshots:
 
   nested-error-stacks@2.0.1: {}
 
-  next@14.2.35(@babel/core@7.28.6)(react-dom@18.3.1(react@18.2.0))(react@18.2.0):
+  next@14.2.35(react-dom@18.3.1(react@18.2.0))(react@18.2.0):
     dependencies:
       '@next/env': 14.2.35
       '@swc/helpers': 0.5.5
@@ -12680,7 +12672,7 @@ snapshots:
       postcss: 8.4.31
       react: 18.2.0
       react-dom: 18.3.1(react@18.2.0)
-      styled-jsx: 5.1.1(@babel/core@7.28.6)(react@18.2.0)
+      styled-jsx: 5.1.1(react@18.2.0)
     optionalDependencies:
       '@next/swc-darwin-arm64': 14.2.33
       '@next/swc-darwin-x64': 14.2.33
@@ -13919,12 +13911,10 @@ snapshots:
 
   structured-headers@0.4.1: {}
 
-  styled-jsx@5.1.1(@babel/core@7.28.6)(react@18.2.0):
+  styled-jsx@5.1.1(react@18.2.0):
     dependencies:
       client-only: 0.0.1
       react: 18.2.0
-    optionalDependencies:
-      '@babel/core': 7.28.6
 
   stylis@4.2.0: {}
 
@@ -14312,10 +14302,6 @@ snapshots:
   url-join@4.0.0: {}
 
   use-latest-callback@0.2.6(react@18.2.0):
-    dependencies:
-      react: 18.2.0
-
-  use-places-autocomplete@4.0.1(react@18.2.0):
     dependencies:
       react: 18.2.0
 
