@@ -99,7 +99,7 @@ export function useCurrentBand() {
 export function useBandAnalytics(bandId: Id<"bands"> | undefined) {
   /** Analytics data including event comparison and traffic breakdown */
   const analytics = useQuery(
-    api.bands.getAnalytics,
+    api.bandAnalytics.getAnalytics,
     bandId ? { bandId } : "skip",
   );
 

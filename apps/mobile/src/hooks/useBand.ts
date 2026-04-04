@@ -23,7 +23,7 @@ export function useCurrentBand() {
 }
 
 export function useBandAnalytics(bandId: Id<"bands"> | undefined) {
-  const analytics = useQuery(api.bands.getAnalytics, bandId ? { bandId } : "skip");
+  const analytics = useQuery(api.bandAnalytics.getAnalytics, bandId ? { bandId } : "skip");
 
   return {
     analytics,
