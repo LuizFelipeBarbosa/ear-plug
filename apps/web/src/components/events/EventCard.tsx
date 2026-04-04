@@ -36,6 +36,7 @@ interface EventCardProps {
   density?: "comfortable" | "dense";
   tone?: RoleTone;
   showLikeButton?: boolean;
+  showRsvpButton?: boolean;
   showAttendanceStatus?: boolean;
 }
 export function EventCard({
@@ -44,6 +45,7 @@ export function EventCard({
   density = "comfortable",
   tone,
   showLikeButton = true,
+  showRsvpButton = true,
   showAttendanceStatus = false,
 }: EventCardProps) {
   const { mode } = useProfileContext();
@@ -100,6 +102,11 @@ export function EventCard({
   const isPast = eventDateTime !== null ? isEventPast(eventDateTime) : false;
   const accentTextClass = resolvedTone === "fan" ? "text-fan" : "text-band";
   const compact = variant === "compact";
+  const shouldShowStatusBadge = isPast || !allowFanActions;
+  const shouldShowRsvpAction = !shouldShowStatusBadge && showRsvpButton;
+  const shouldShowLikeAction = showLikeButton && !isPast && allowFanActions;
+  const shouldShowActions =
+    shouldShowStatusBadge || shouldShowRsvpAction || shouldShowLikeAction;
   const paddingClass = compact
     ? density === "dense"
       ? "p-2.5"
@@ -188,43 +195,46 @@ export function EventCard({
               </span>
             )}
           </div>
-          <div className="flex items-center gap-1">
-            {isPast || !allowFanActions ? (
-              <span className="rounded-md border border-border bg-muted px-2.5 py-1 text-[10px] font-medium text-muted-foreground">
-                {isPast ? "Completed" : "View only"}
-              </span>
-            ) : (
-              <button
-                onClick={handleRsvpClick}
-                disabled={isRsvpSubmitting}
-                className={cn(
-                  "touch-target flex items-center justify-center rounded-md border p-2 transition-colors",
-                  hasRsvp
-                    ? "border-success bg-success text-white"
-                    : cn("border-border bg-transparent", accentTextClass),
-                  isRsvpSubmitting && "cursor-not-allowed opacity-60",
-                )}
-                title={hasRsvp ? "Cancel RSVP" : "RSVP to event"}
-              >
-                <Check className={cn("h-4 w-4", hasRsvp && "stroke-[3]")} />
-              </button>
-            )}
-            {showLikeButton && !isPast && allowFanActions && (
-              <button
-                onClick={handleLikeClick}
-                className="touch-target flex items-center justify-center rounded-md border border-border p-2 transition-colors hover:border-like/50"
-              >
-                <Heart
+          {shouldShowActions ? (
+            <div className="flex items-center gap-1">
+              {shouldShowStatusBadge ? (
+                <span className="rounded-md border border-border bg-muted px-2.5 py-1 text-[10px] font-medium text-muted-foreground">
+                  {isPast ? "Completed" : "View only"}
+                </span>
+              ) : null}
+              {shouldShowRsvpAction ? (
+                <button
+                  onClick={handleRsvpClick}
+                  disabled={isRsvpSubmitting}
                   className={cn(
-                    "h-4 w-4 transition-colors",
-                    isLiked
-                      ? "fill-like text-like"
-                      : "text-muted-foreground hover:text-like",
+                    "touch-target flex items-center justify-center rounded-md border p-2 transition-colors",
+                    hasRsvp
+                      ? "border-success bg-success text-white"
+                      : cn("border-border bg-transparent", accentTextClass),
+                    isRsvpSubmitting && "cursor-not-allowed opacity-60",
                   )}
-                />
-              </button>
-            )}
-          </div>
+                  title={hasRsvp ? "Cancel RSVP" : "RSVP to event"}
+                >
+                  <Check className={cn("h-4 w-4", hasRsvp && "stroke-[3]")} />
+                </button>
+              ) : null}
+              {shouldShowLikeAction ? (
+                <button
+                  onClick={handleLikeClick}
+                  className="touch-target flex items-center justify-center rounded-md border border-border p-2 transition-colors hover:border-like/50"
+                >
+                  <Heart
+                    className={cn(
+                      "h-4 w-4 transition-colors",
+                      isLiked
+                        ? "fill-like text-like"
+                        : "text-muted-foreground hover:text-like",
+                    )}
+                  />
+                </button>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       </Link>
 

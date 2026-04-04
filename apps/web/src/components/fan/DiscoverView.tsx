@@ -377,7 +377,12 @@ export function FanDiscoverView() {
                       onClose={() => setSelectedEventId(null)}
                     >
                       <div className="w-[min(280px,calc(100vw-2rem))]">
-                        <EventCard event={selectedEvent} variant="compact" showLikeButton={false} />
+                        <EventCard
+                          event={selectedEvent}
+                          variant="compact"
+                          showLikeButton={false}
+                          showRsvpButton={false}
+                        />
                       </div>
                     </MapInfoWindow>
                   )}
@@ -443,7 +448,12 @@ export function FanDiscoverView() {
                   ) : displayEvents && displayEvents.length > 0 ? (
                     displayEvents.slice(0, 10).map((event) => (
                       <div key={event._id} className="relative">
-                        <EventCard event={event} variant="compact" density="dense" />
+                        <EventCard
+                          event={event}
+                          variant="compact"
+                          density="dense"
+                          showRsvpButton={false}
+                        />
                         {event.distance !== undefined && (
                           <span className="absolute top-2 right-2 text-[10px] bg-fan/10 text-fan px-1.5 py-0.5 font-medium rounded">
                             {event.distance} mi
@@ -495,7 +505,12 @@ export function FanDiscoverView() {
             ) : displayEvents && displayEvents.length > 0 ? (
               displayEvents.map((event) => (
                 <div key={event._id}>
-                  <EventCard event={event} variant="default" showLikeButton />
+                  <EventCard
+                    event={event}
+                    variant="default"
+                    showLikeButton
+                    showRsvpButton={false}
+                  />
                   {event.distance !== undefined && (
                     <div className="mt-1.5 flex items-center gap-1.5 text-[10px] text-muted-foreground px-1">
                       <Navigation className="w-3 h-3" />
