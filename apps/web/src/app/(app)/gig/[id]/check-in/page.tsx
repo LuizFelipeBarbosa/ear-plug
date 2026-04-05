@@ -112,7 +112,7 @@ export default function EventCheckinPage({ params }: CheckInPageProps) {
     canManageInActiveBand ? (bandId as Id<"bands">) : undefined
   );
 
-  const scanMutation = useMutation(api.events.scanEventTicket);
+  const scanMutation = useMutation(api.eventTickets.scanEventTicket);
 
   const [scannerError, setScannerError] = useState<string | null>(null);
   const [manualQrValue, setManualQrValue] = useState("");

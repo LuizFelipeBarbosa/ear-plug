@@ -113,13 +113,13 @@ export function useEvent(eventId: Id<"events"> | undefined) {
 export function useEventInteraction(eventId: Id<"events"> | undefined) {
   const { requireSignIn } = useAuthActionGuard();
   const eventStatus = useQuery(
-    api.events.getUserEventStatus,
+    api.eventRsvps.getUserEventStatus,
     eventId ? { eventId } : "skip",
   );
-  const rsvpMutation = useMutation(api.events.rsvp);
-  const toggleLikeMutation = useMutation(api.events.toggleLike);
+  const rsvpMutation = useMutation(api.eventRsvps.rsvp);
+  const toggleLikeMutation = useMutation(api.eventRsvps.toggleLike);
   const submitPollResponseMutation = useMutation(
-    api.events.submitEventPollResponse,
+    api.eventRsvps.submitEventPollResponse,
   );
   const [pollPrompt, setPollPrompt] = useState<EventPollPromptState | null>(
     null,
@@ -240,13 +240,13 @@ export function useEventInteraction(eventId: Id<"events"> | undefined) {
  */
 export function useUserEvents() {
   /** Upcoming events the user has RSVP'd to */
-  const rsvps = useQuery(api.events.getUserRsvps);
+  const rsvps = useQuery(api.eventRsvps.getUserRsvps);
 
   /** Events the user has liked (not RSVP'd) */
-  const likes = useQuery(api.events.getUserLikes);
+  const likes = useQuery(api.eventRsvps.getUserLikes);
 
   /** Past events the user attended */
-  const pastRsvps = useQuery(api.events.getUserPastRsvps);
+  const pastRsvps = useQuery(api.eventRsvps.getUserPastRsvps);
 
   return {
     /** Array of upcoming RSVP'd events */
@@ -269,7 +269,7 @@ export function useEventGuestListSummary(
   bandId: Id<"bands"> | undefined,
 ) {
   const summary = useQuery(
-    api.events.getEventGuestListSummary,
+    api.eventRsvps.getEventGuestListSummary,
     eventId && bandId ? { eventId, bandId } : "skip",
   );
 
@@ -289,7 +289,7 @@ export function useEventGuestList(
   options?: { rsvpType?: GuestFilterType; search?: string },
 ) {
   const guestsResult = useQuery(
-    api.events.listEventGuests,
+    api.eventRsvps.listEventGuests,
     eventId && bandId
       ? {
           eventId,
@@ -305,9 +305,9 @@ export function useEventGuestList(
   } | null>(null);
 
   const setGuestAttendanceMutation = useMutation(
-    api.events.setEventGuestAttendance,
+    api.eventRsvps.setEventGuestAttendance,
   );
-  const removeGuestRsvpMutation = useMutation(api.events.removeEventGuestRsvp);
+  const removeGuestRsvpMutation = useMutation(api.eventRsvps.removeEventGuestRsvp);
 
   useEffect(() => {
     const scope =
@@ -492,10 +492,10 @@ export function useNearbyEvents(options: {
  */
 export function useMyEventTicket(eventId: Id<"events"> | undefined) {
   const ticketPayload = useQuery(
-    api.events.getMyEventTicket,
+    api.eventTickets.getMyEventTicket,
     eventId ? { eventId } : "skip",
   );
-  const ensureTicket = useMutation(api.events.ensureMyEventTicket);
+  const ensureTicket = useMutation(api.eventTickets.ensureMyEventTicket);
 
   useEffect(() => {
     if (!eventId || !ticketPayload?.requiresTicketBootstrap) {
@@ -520,7 +520,7 @@ export function useMyEventTicket(eventId: Id<"events"> | undefined) {
  */
 export function useEventCheckinAccess(eventId: Id<"events"> | undefined) {
   const access = useQuery(
-    api.events.getEventCheckinAccess,
+    api.eventTickets.getEventCheckinAccess,
     eventId ? { eventId } : "skip",
   );
 
@@ -543,11 +543,11 @@ export function useEventCheckinStaff(
 ) {
   const convex = useConvex();
   const staffResult = useQuery(
-    api.events.listEventCheckinStaff,
+    api.eventTickets.listEventCheckinStaff,
     eventId && bandId ? { eventId, bandId } : "skip",
   );
-  const assignByIdMutation = useMutation(api.events.assignEventCheckinStaff);
-  const removeMutation = useMutation(api.events.removeEventCheckinStaff);
+  const assignByIdMutation = useMutation(api.eventTickets.assignEventCheckinStaff);
+  const removeMutation = useMutation(api.eventTickets.removeEventCheckinStaff);
   const searchAssignableUsers = useCallback(
     async (query: string, limit = 8) => {
       if (!eventId || !bandId) {
@@ -555,7 +555,7 @@ export function useEventCheckinStaff(
       }
 
       const result = await convex.query(
-        api.events.searchAssignableEventCheckinUsers,
+        api.eventTickets.searchAssignableEventCheckinUsers,
         {
           eventId,
           bandId,
@@ -605,7 +605,7 @@ export function useEventCheckinStaff(
  * Hook for submitting scanned ticket payloads.
  */
 export function useEventTicketScanner(eventId: Id<"events"> | undefined) {
-  const scanMutation = useMutation(api.events.scanEventTicket);
+  const scanMutation = useMutation(api.eventTickets.scanEventTicket);
 
   return {
     scanTicket: async (qrValue: string) => {

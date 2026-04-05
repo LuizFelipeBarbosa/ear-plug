@@ -166,7 +166,7 @@ export default function EventDetailsPage({ params }: PageProps) {
           url: window.location.href,
         });
       } catch (err) {
-        console.log("Share cancelled");
+        // Share cancelled or failed
       }
     } else {
       await navigator.clipboard.writeText(window.location.href);

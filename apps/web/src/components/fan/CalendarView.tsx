@@ -82,9 +82,9 @@ export function FanCalendarView() {
   const currentReturnTo = useCurrentReturnTo("/calendar");
   const [activeTab, setActiveTab] = useState<EventTab>("upcoming");
 
-  const rsvps = useQuery(api.events.getUserRsvps);
-  const likedEvents = useQuery(api.events.getUserLikes);
-  const pastRsvps = useQuery(api.events.getUserPastRsvps);
+  const rsvps = useQuery(api.eventRsvps.getUserRsvps);
+  const likedEvents = useQuery(api.eventRsvps.getUserLikes);
+  const pastRsvps = useQuery(api.eventRsvps.getUserPastRsvps);
 
   const isLoading =
     rsvps === undefined || likedEvents === undefined || pastRsvps === undefined;

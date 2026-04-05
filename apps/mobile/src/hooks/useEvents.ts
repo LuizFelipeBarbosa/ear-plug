@@ -27,9 +27,9 @@ export function useEvents(options?: { genre?: Genre; limit?: number }) {
 
 export function useEvent(eventId: Id<"events"> | undefined) {
   const event = useQuery(api.events.getById, eventId ? { eventId } : "skip");
-  const eventStatus = useQuery(api.events.getUserEventStatus, eventId ? { eventId } : "skip");
-  const rsvp = useMutation(api.events.rsvp);
-  const toggleLike = useMutation(api.events.toggleLike);
+  const eventStatus = useQuery(api.eventRsvps.getUserEventStatus, eventId ? { eventId } : "skip");
+  const rsvp = useMutation(api.eventRsvps.rsvp);
+  const toggleLike = useMutation(api.eventRsvps.toggleLike);
 
   return {
     event,
@@ -42,9 +42,9 @@ export function useEvent(eventId: Id<"events"> | undefined) {
 }
 
 export function useUserEvents() {
-  const rsvps = useQuery(api.events.getUserRsvps);
-  const likes = useQuery(api.events.getUserLikes);
-  const pastRsvps = useQuery(api.events.getUserPastRsvps);
+  const rsvps = useQuery(api.eventRsvps.getUserRsvps);
+  const likes = useQuery(api.eventRsvps.getUserLikes);
+  const pastRsvps = useQuery(api.eventRsvps.getUserPastRsvps);
 
   return {
     rsvps: rsvps ?? [],
@@ -95,8 +95,8 @@ export function useNearbyEvents(options: {
 }
 
 export function useMyEventTicket(eventId: Id<"events"> | undefined) {
-  const ticketPayload = useQuery(api.events.getMyEventTicket, eventId ? { eventId } : "skip");
-  const ensureTicket = useMutation(api.events.ensureMyEventTicket);
+  const ticketPayload = useQuery(api.eventTickets.getMyEventTicket, eventId ? { eventId } : "skip");
+  const ensureTicket = useMutation(api.eventTickets.ensureMyEventTicket);
 
   useEffect(() => {
     if (!eventId || !ticketPayload?.requiresTicketBootstrap) {
@@ -116,7 +116,7 @@ export function useMyEventTicket(eventId: Id<"events"> | undefined) {
 }
 
 export function useEventCheckinAccess(eventId: Id<"events"> | undefined) {
-  const access = useQuery(api.events.getEventCheckinAccess, eventId ? { eventId } : "skip");
+  const access = useQuery(api.eventTickets.getEventCheckinAccess, eventId ? { eventId } : "skip");
 
   return {
     access,
@@ -131,12 +131,12 @@ export function useEventCheckinAccess(eventId: Id<"events"> | undefined) {
 export function useEventCheckinStaff(eventId: Id<"events"> | undefined, bandId: Id<"bands"> | undefined) {
   const convex = useConvex();
   const staffResult = useQuery(
-    api.events.listEventCheckinStaff,
+    api.eventTickets.listEventCheckinStaff,
     eventId && bandId ? { eventId, bandId } : "skip",
   );
 
-  const assignByIdMutation = useMutation(api.events.assignEventCheckinStaff);
-  const removeMutation = useMutation(api.events.removeEventCheckinStaff);
+  const assignByIdMutation = useMutation(api.eventTickets.assignEventCheckinStaff);
+  const removeMutation = useMutation(api.eventTickets.removeEventCheckinStaff);
 
   const searchAssignableUsers = useCallback(
     async (query: string, limit = 8) => {
@@ -144,7 +144,7 @@ export function useEventCheckinStaff(eventId: Id<"events"> | undefined, bandId: 
         throw new Error("Event and band context are required");
       }
 
-      const result = await convex.query(api.events.searchAssignableEventCheckinUsers, {
+      const result = await convex.query(api.eventTickets.searchAssignableEventCheckinUsers, {
         eventId,
         bandId,
         query,
@@ -188,7 +188,7 @@ export function useEventCheckinStaff(eventId: Id<"events"> | undefined, bandId: 
 }
 
 export function useEventTicketScanner(eventId: Id<"events"> | undefined) {
-  const scanMutation = useMutation(api.events.scanEventTicket);
+  const scanMutation = useMutation(api.eventTickets.scanEventTicket);
 
   return {
     scanTicket: async (qrValue: string) => {
@@ -203,7 +203,7 @@ export function useEventTicketScanner(eventId: Id<"events"> | undefined) {
 
 export function useEventGuestListSummary(eventId: Id<"events"> | undefined, bandId: Id<"bands"> | undefined) {
   const summary = useQuery(
-    api.events.getEventGuestListSummary,
+    api.eventRsvps.getEventGuestListSummary,
     eventId && bandId ? { eventId, bandId } : "skip",
   );
 
@@ -219,7 +219,7 @@ export function useEventGuestList(
   options?: { rsvpType?: GuestFilterType; search?: string },
 ) {
   const guestsResult = useQuery(
-    api.events.listEventGuests,
+    api.eventRsvps.listEventGuests,
     eventId && bandId
       ? {
           eventId,
@@ -230,8 +230,8 @@ export function useEventGuestList(
       : "skip",
   );
 
-  const setGuestAttendanceMutation = useMutation(api.events.setEventGuestAttendance);
-  const removeGuestRsvpMutation = useMutation(api.events.removeEventGuestRsvp);
+  const setGuestAttendanceMutation = useMutation(api.eventRsvps.setEventGuestAttendance);
+  const removeGuestRsvpMutation = useMutation(api.eventRsvps.removeEventGuestRsvp);
 
   return {
     guests: guestsResult?.guests ?? [],
