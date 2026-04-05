@@ -6,7 +6,7 @@
 
 import { ConvexError, v } from "convex/values";
 import { query, mutation } from "./_generated/server";
-import type { Doc, Id } from "./_generated/dataModel";
+import type { Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import {
   isPublicEvent,
@@ -26,7 +26,7 @@ import {
   RSVP_CANCEL_REVOKE_REASON,
   GUEST_REMOVED_REVOKE_REASON,
 } from "./events";
-import type { ViewerContext, GuestRsvpType, PublicEvent } from "./events";
+import type { ViewerContext, GuestRsvpType } from "./events";
 import {
   createTicketForRsvp,
   revokeActiveTicketForRsvp,
@@ -150,7 +150,7 @@ async function listUserLikedEventsWithDetails(
  * @throws Error if not authenticated or user not found
  *
  * @example
- * const result = await ctx.runMutation(api.events.rsvp, {
+ * const result = await ctx.runMutation(api.eventRsvps.rsvp, {
  *   eventId: event._id
  * });
  * if (result.action === "added") {
@@ -300,7 +300,7 @@ export const submitEventPollResponse = mutation({
  * @throws Error if not authenticated or user not found
  *
  * @example
- * const result = await ctx.runMutation(api.events.toggleLike, {
+ * const result = await ctx.runMutation(api.eventRsvps.toggleLike, {
  *   eventId: event._id
  * });
  * // Update UI based on result.action
@@ -345,7 +345,7 @@ export const toggleLike = mutation({
  * @returns Array of upcoming event documents with band, venue, and rsvpedAt timestamp
  *
  * @example
- * const myUpcomingEvents = await ctx.runQuery(api.events.getUserRsvps);
+ * const myUpcomingEvents = await ctx.runQuery(api.eventRsvps.getUserRsvps);
  * // Display in user's "My Events" section
  */
 export const getUserRsvps = query({
@@ -367,7 +367,7 @@ export const getUserRsvps = query({
  * @returns Array of past event documents with band, venue, rsvpedAt, and attendance status
  *
  * @example
- * const pastEvents = await ctx.runQuery(api.events.getUserPastRsvps);
+ * const pastEvents = await ctx.runQuery(api.eventRsvps.getUserPastRsvps);
  * // Display in user's "Past Events" or "History" section
  */
 export const getUserPastRsvps = query({
@@ -389,7 +389,7 @@ export const getUserPastRsvps = query({
  * @returns Array of liked event documents with band, venue, and likedAt timestamp
  *
  * @example
- * const likedEvents = await ctx.runQuery(api.events.getUserLikes);
+ * const likedEvents = await ctx.runQuery(api.eventRsvps.getUserLikes);
  * // Display in "Saved Events" or "Interested" section
  */
 export const getUserLikes = query({
@@ -412,7 +412,7 @@ export const getUserLikes = query({
  * @returns Object with hasRsvp and hasLiked boolean flags
  *
  * @example
- * const status = await ctx.runQuery(api.events.getUserEventStatus, {
+ * const status = await ctx.runQuery(api.eventRsvps.getUserEventStatus, {
  *   eventId: event._id
  * });
  * // Use to render RSVP/Like button states

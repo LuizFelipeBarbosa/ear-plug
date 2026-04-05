@@ -8,7 +8,6 @@
 import { v } from "convex/values";
 import { query } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
-import type { QueryCtx, MutationCtx } from "./_generated/server";
 import { requireBandMember } from "./utils/permissions";
 import { normalizeUsLocation } from "./utils/location";
 import { listBandParticipatingEvents } from "./bands";
