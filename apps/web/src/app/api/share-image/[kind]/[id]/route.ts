@@ -159,10 +159,16 @@ export async function GET(
       if (!parsedDataUrl) {
         return redirectToDefaultImage(request);
       }
+      const safeContentType = isSafeImageContentType(parsedDataUrl.contentType)
+        ? parsedDataUrl.contentType
+        : null;
+      if (!safeContentType) {
+        return redirectToDefaultImage(request);
+      }
 
       return new NextResponse(parsedDataUrl.body, {
         headers: {
-          "Content-Type": parsedDataUrl.contentType,
+          "Content-Type": safeContentType,
           "Cache-Control": "public, max-age=300",
           "X-Content-Type-Options": "nosniff",
         },
