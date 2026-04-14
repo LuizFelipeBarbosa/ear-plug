@@ -480,10 +480,23 @@ export const create = mutation({
       validateSocialLinks(socialLinks);
     }
 
-    const attemptRecord = await ctx.db
+    const attemptRecords = await ctx.db
       .query("bandCreationAttempts")
       .withIndex("by_user", (q) => q.eq("userId", user._id))
-      .unique();
+      .collect();
+    const [attemptRecord, ...duplicateAttemptRecords] = attemptRecords.sort(
+      (a, b) =>
+        (b.updatedAt ?? b.windowStartedAt ?? 0) -
+        (a.updatedAt ?? a.windowStartedAt ?? 0),
+    );
+
+    if (duplicateAttemptRecords.length > 0) {
+      await Promise.all(
+        duplicateAttemptRecords.map((duplicateAttemptRecord) =>
+          ctx.db.delete(duplicateAttemptRecord._id),
+        ),
+      );
+    }
 
     if (
       attemptRecord?.blockedUntil !== undefined &&
