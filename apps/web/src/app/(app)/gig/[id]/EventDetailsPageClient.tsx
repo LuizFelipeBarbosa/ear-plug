@@ -72,7 +72,7 @@ const itemVariants: Variants = {
   },
 };
 
-export default function EventDetailsPage() {
+export default function EventDetailsPageClient() {
   const params = useParams<{ id: string }>();
   const id = params?.id;
   const router = useRouter();

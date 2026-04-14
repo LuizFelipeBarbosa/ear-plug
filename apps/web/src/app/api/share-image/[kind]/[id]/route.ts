@@ -5,14 +5,22 @@ import type { Id } from "../../../../../../../../convex/_generated/dataModel";
 
 const DEFAULT_OG_IMAGE = "/branding/earplug-wordmark-light.png";
 const MAX_DATA_URL_BYTES = 10 * 1024 * 1024;
-const SAFE_IMAGE_CONTENT_TYPES = new Set([
+const REDIRECT_CACHE_CONTROL =
+  "public, max-age=300, s-maxage=300, stale-while-revalidate=300";
+const INLINE_IMAGE_CACHE_CONTROL =
+  "public, max-age=300, s-maxage=300, stale-while-revalidate=300";
+const SAFE_IMAGE_CONTENT_TYPES = [
   "image/apng",
   "image/avif",
   "image/gif",
   "image/jpeg",
   "image/png",
   "image/webp",
-]);
+] as const;
+type SafeImageContentType = (typeof SAFE_IMAGE_CONTENT_TYPES)[number];
+const SAFE_IMAGE_CONTENT_TYPE_SET = new Set<SafeImageContentType>(
+  SAFE_IMAGE_CONTENT_TYPES,
+);
 
 function getServerConvexUrl() {
   return process.env.NEXT_PUBLIC_CONVEX_URL ?? process.env.CONVEX_URL ?? null;
@@ -22,12 +30,22 @@ function getDefaultImageUrl(request: Request) {
   return new URL(DEFAULT_OG_IMAGE, request.url);
 }
 
-function redirectToDefaultImage(request: Request) {
-  return NextResponse.redirect(getDefaultImageUrl(request));
+function redirectToImage(url: URL) {
+  return NextResponse.redirect(url, {
+    headers: {
+      "Cache-Control": REDIRECT_CACHE_CONTROL,
+    },
+  });
 }
 
-function isSafeImageContentType(contentType: string) {
-  return SAFE_IMAGE_CONTENT_TYPES.has(contentType);
+function redirectToDefaultImage(request: Request) {
+  return redirectToImage(getDefaultImageUrl(request));
+}
+
+function isSafeImageContentType(
+  contentType: string,
+): contentType is SafeImageContentType {
+  return SAFE_IMAGE_CONTENT_TYPE_SET.has(contentType as SafeImageContentType);
 }
 
 function getApproximateBase64Bytes(payload: string) {
@@ -48,30 +66,22 @@ function parseDataUrl(dataUrl: string) {
     return null;
   }
 
+  if (!base64Flag) {
+    return null;
+  }
+
   try {
-    if (base64Flag) {
-      if (getApproximateBase64Bytes(payload) > MAX_DATA_URL_BYTES) {
-        return null;
-      }
-
-      const body = Buffer.from(payload, "base64");
-      if (body.byteLength > MAX_DATA_URL_BYTES) {
-        return null;
-      }
-
-      return {
-        body,
-        contentType: mimeType,
-      };
+    if (getApproximateBase64Bytes(payload) > MAX_DATA_URL_BYTES) {
+      return null;
     }
 
-    const decoded = decodeURIComponent(payload);
-    if (Buffer.byteLength(decoded, "utf8") > MAX_DATA_URL_BYTES) {
+    const body = Buffer.from(payload, "base64");
+    if (body.byteLength > MAX_DATA_URL_BYTES) {
       return null;
     }
 
     return {
-      body: Buffer.from(decoded, "utf8"),
+      body,
       contentType: mimeType,
     };
   } catch {
@@ -133,13 +143,13 @@ export async function GET(
   {
     params,
   }: {
-    params: Promise<{
+    params: {
       kind: string;
       id: string;
-    }>;
+    };
   },
 ) {
-  const { kind, id } = await params;
+  const { kind, id } = params;
 
   try {
     const image =
@@ -159,17 +169,11 @@ export async function GET(
       if (!parsedDataUrl) {
         return redirectToDefaultImage(request);
       }
-      const safeContentType = isSafeImageContentType(parsedDataUrl.contentType)
-        ? parsedDataUrl.contentType
-        : null;
-      if (!safeContentType) {
-        return redirectToDefaultImage(request);
-      }
 
       return new NextResponse(parsedDataUrl.body, {
         headers: {
-          "Content-Type": safeContentType,
-          "Cache-Control": "public, max-age=300",
+          "Content-Type": parsedDataUrl.contentType,
+          "Cache-Control": INLINE_IMAGE_CACHE_CONTROL,
           "X-Content-Type-Options": "nosniff",
         },
       });
@@ -180,7 +184,7 @@ export async function GET(
       return redirectToDefaultImage(request);
     }
 
-    return NextResponse.redirect(safeImageUrl);
+    return redirectToImage(safeImageUrl);
   } catch {
     return redirectToDefaultImage(request);
   }

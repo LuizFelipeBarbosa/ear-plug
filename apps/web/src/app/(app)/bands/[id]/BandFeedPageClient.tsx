@@ -60,7 +60,7 @@ const itemVariants = {
   },
 };
 
-export default function BandFeedPage() {
+export default function BandFeedPageClient() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const bandId = typeof params?.id === "string" ? (params.id as Id<"bands">) : undefined;
