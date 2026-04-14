@@ -556,6 +556,7 @@ Set via Convex Dashboard or CLI:
 ```bash
 # Set variable
 npx convex env set MY_VAR "value"
+npx convex env set BAND_CREATION_ACCESS_CODE "your-temporary-band-code"
 
 # List variables
 npx convex env list

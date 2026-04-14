@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import {
   clearPendingSsoIntent,
+  normalizeReturnTo,
   readPendingSsoIntent,
   type PendingSsoIntent,
 } from "@/lib/auth/sso";
@@ -33,14 +34,15 @@ export default function SSOCallbackPage() {
     }
 
     didHandleCallbackRef.current = true;
+    const fallbackDestination = intent ? normalizeReturnTo(intent.returnTo) : "/";
     const callbackOptions = intent
       ? {
           signInUrl: "/sign-in",
           signUpUrl: "/sign-up",
-          signInForceRedirectUrl: intent.returnTo,
-          signUpForceRedirectUrl: intent.returnTo,
-          signInFallbackRedirectUrl: intent.returnTo,
-          signUpFallbackRedirectUrl: intent.returnTo,
+          signInForceRedirectUrl: fallbackDestination,
+          signUpForceRedirectUrl: fallbackDestination,
+          signInFallbackRedirectUrl: fallbackDestination,
+          signUpFallbackRedirectUrl: fallbackDestination,
         }
       : {
           signInUrl: "/sign-in",
@@ -56,17 +58,12 @@ export default function SSOCallbackPage() {
           }
 
           clearPendingSsoIntent();
-          const destination = to || intent?.returnTo || "/";
-
-          if (
-            destination.startsWith("http://") ||
-            destination.startsWith("https://")
-          ) {
-            window.location.assign(destination);
-            return;
-          }
-
-          router.replace(destination);
+          router.replace(
+            resolveSameOriginDestination(
+              to || fallbackDestination || "/",
+              fallbackDestination,
+            ),
+          );
         },
       )
       .catch(() => {
@@ -102,4 +99,27 @@ function CallbackLoader({ copy }: { copy: string }) {
       <div id="clerk-captcha" />
     </div>
   );
+}
+
+function resolveSameOriginDestination(
+  destination: string,
+  fallback: string,
+): string {
+  if (typeof window === "undefined") {
+    return fallback;
+  }
+
+  try {
+    const parsedDestination = new URL(destination, window.location.origin);
+    if (parsedDestination.origin !== window.location.origin) {
+      return fallback;
+    }
+
+    return normalizeReturnTo(
+      `${parsedDestination.pathname}${parsedDestination.search}${parsedDestination.hash}`,
+      fallback,
+    );
+  } catch {
+    return fallback;
+  }
 }

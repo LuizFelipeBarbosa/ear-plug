@@ -696,6 +696,27 @@ export default defineSchema({
     .index("by_user_band", ["userId", "bandId"])
     .index("by_band", ["bandId"]),
 
+  // ==================== BAND CREATION ATTEMPTS ====================
+  /**
+   * Per-user failed band creation code attempts for abuse throttling.
+   */
+  bandCreationAttempts: defineTable({
+    /** User attempting band creation */
+    userId: v.id("users"),
+    /** Failed attempts in the current rolling window */
+    failedAttempts: v.number(),
+    /** Start timestamp for the rolling failure window */
+    windowStartedAt: v.number(),
+    /** Last failed attempt timestamp */
+    lastFailedAt: v.number(),
+    /** Optional cooldown expiry timestamp */
+    blockedUntil: v.optional(v.number()),
+    /** Total failed attempts for audit visibility */
+    totalFailedAttempts: v.number(),
+    /** Last mutation timestamp for this record */
+    updatedAt: v.number(),
+  }).index("by_user", ["userId"]),
+
   // ==================== BAND MEDIA SLOTS ====================
   /**
    * Fixed profile media slots for band workspace profile.

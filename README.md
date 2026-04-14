@@ -90,6 +90,12 @@ EXPO_PUBLIC_GOOGLE_MAPS_API_KEY=your-google-maps-api-key
 EXPO_PUBLIC_WEB_APP_URL=https://your-web-app-domain.com
 ```
 
+Set required Convex runtime variables:
+
+```bash
+npx convex env set BAND_CREATION_ACCESS_CODE "your-temporary-band-code"
+```
+
 ### Start Development
 
 ```bash

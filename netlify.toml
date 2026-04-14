@@ -1,7 +1,7 @@
 [build]
   # We run pnpm install ourselves with --ignore-scripts in the build command
   # This is needed because React Native deps have postinstall scripts requiring native tools
-  command = "pnpm install --ignore-scripts && (find apps/web/.next -mindepth 1 -delete 2>/dev/null || true) && (find apps/web/.netlify/.next -mindepth 1 -delete 2>/dev/null || true) && pnpm build:web"
+  command = "pnpm install --ignore-scripts --filter @ear-plug/web... && (find apps/web/.next -mindepth 1 -delete 2>/dev/null || true) && (find apps/web/.netlify/.next -mindepth 1 -delete 2>/dev/null || true) && pnpm --dir apps/web build"
   publish = "apps/web/.next"
 
 # Environment variables to skip postinstall scripts
@@ -12,10 +12,10 @@
   npm_config_ignore_scripts = "true"
 
 [context.production]
-  command = "pnpm install --ignore-scripts && (find apps/web/.next -mindepth 1 -delete 2>/dev/null || true) && (find apps/web/.netlify/.next -mindepth 1 -delete 2>/dev/null || true) && pnpm build:web"
+  command = "pnpm install --ignore-scripts --filter @ear-plug/web... && (find apps/web/.next -mindepth 1 -delete 2>/dev/null || true) && (find apps/web/.netlify/.next -mindepth 1 -delete 2>/dev/null || true) && pnpm --dir apps/web build"
 
 [context.deploy-preview]
-  command = "pnpm install --ignore-scripts && (find apps/web/.next -mindepth 1 -delete 2>/dev/null || true) && (find apps/web/.netlify/.next -mindepth 1 -delete 2>/dev/null || true) && pnpm build:web"
+  command = "pnpm install --ignore-scripts --filter @ear-plug/web... && (find apps/web/.next -mindepth 1 -delete 2>/dev/null || true) && (find apps/web/.netlify/.next -mindepth 1 -delete 2>/dev/null || true) && pnpm --dir apps/web build"
 
 # Security response headers
 [[headers]]
