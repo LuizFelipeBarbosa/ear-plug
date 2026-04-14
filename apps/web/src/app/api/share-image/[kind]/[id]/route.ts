@@ -4,6 +4,15 @@ import { api } from "../../../../../../../../convex/_generated/api";
 import type { Id } from "../../../../../../../../convex/_generated/dataModel";
 
 const DEFAULT_OG_IMAGE = "/branding/earplug-wordmark-light.png";
+const MAX_DATA_URL_BYTES = 10 * 1024 * 1024;
+const SAFE_IMAGE_CONTENT_TYPES = new Set([
+  "image/apng",
+  "image/avif",
+  "image/gif",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
 
 function getServerConvexUrl() {
   return process.env.NEXT_PUBLIC_CONVEX_URL ?? process.env.CONVEX_URL ?? null;
@@ -13,26 +22,78 @@ function getDefaultImageUrl(request: Request) {
   return new URL(DEFAULT_OG_IMAGE, request.url);
 }
 
+function redirectToDefaultImage(request: Request) {
+  return NextResponse.redirect(getDefaultImageUrl(request));
+}
+
+function isSafeImageContentType(contentType: string) {
+  return SAFE_IMAGE_CONTENT_TYPES.has(contentType);
+}
+
+function getApproximateBase64Bytes(payload: string) {
+  const padding = payload.endsWith("==") ? 2 : payload.endsWith("=") ? 1 : 0;
+  return Math.floor((payload.length * 3) / 4) - padding;
+}
+
 function parseDataUrl(dataUrl: string) {
   const match = dataUrl.match(/^data:([^;,]+)?(?:;charset=[^;,]+)?(;base64)?,(.*)$/s);
   if (!match) {
     return null;
   }
 
-  const [, mimeType = "application/octet-stream", base64Flag, payload] = match;
+  const [, rawMimeType = "application/octet-stream", base64Flag, payload] = match;
+  const mimeType = rawMimeType.trim().toLowerCase();
+
+  if (!isSafeImageContentType(mimeType)) {
+    return null;
+  }
 
   try {
-    const body = base64Flag
-      ? Buffer.from(payload, "base64")
-      : Buffer.from(decodeURIComponent(payload), "utf8");
+    if (base64Flag) {
+      if (getApproximateBase64Bytes(payload) > MAX_DATA_URL_BYTES) {
+        return null;
+      }
+
+      const body = Buffer.from(payload, "base64");
+      if (body.byteLength > MAX_DATA_URL_BYTES) {
+        return null;
+      }
+
+      return {
+        body,
+        contentType: mimeType,
+      };
+    }
+
+    const decoded = decodeURIComponent(payload);
+    if (Buffer.byteLength(decoded, "utf8") > MAX_DATA_URL_BYTES) {
+      return null;
+    }
 
     return {
-      body,
+      body: Buffer.from(decoded, "utf8"),
       contentType: mimeType,
     };
   } catch {
     return null;
   }
+}
+
+function resolveSafeImageUrl(image: string, request: Request) {
+  try {
+    if (image.startsWith("/") && !image.startsWith("//")) {
+      return new URL(image, request.url);
+    }
+
+    const resolved = new URL(image);
+    if (resolved.protocol === "http:" || resolved.protocol === "https:") {
+      return resolved;
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
 }
 
 async function getBandImage(kindId: string) {
@@ -87,31 +148,34 @@ export async function GET(
         : kind === "event"
           ? await getEventImage(id)
           : undefined;
+    const normalizedImage = image?.trim();
 
-    if (!image) {
-      return NextResponse.redirect(getDefaultImageUrl(request));
+    if (!normalizedImage) {
+      return redirectToDefaultImage(request);
     }
 
-    if (image.startsWith("data:")) {
-      const parsedDataUrl = parseDataUrl(image);
+    if (normalizedImage.startsWith("data:")) {
+      const parsedDataUrl = parseDataUrl(normalizedImage);
       if (!parsedDataUrl) {
-        return NextResponse.redirect(getDefaultImageUrl(request));
+        return redirectToDefaultImage(request);
       }
 
       return new NextResponse(parsedDataUrl.body, {
         headers: {
           "Content-Type": parsedDataUrl.contentType,
           "Cache-Control": "public, max-age=300",
+          "X-Content-Type-Options": "nosniff",
         },
       });
     }
 
-    if (/^https?:\/\//.test(image)) {
-      return NextResponse.redirect(image);
+    const safeImageUrl = resolveSafeImageUrl(normalizedImage, request);
+    if (!safeImageUrl) {
+      return redirectToDefaultImage(request);
     }
 
-    return NextResponse.redirect(new URL(image, request.url));
+    return NextResponse.redirect(safeImageUrl);
   } catch {
-    return NextResponse.redirect(getDefaultImageUrl(request));
+    return redirectToDefaultImage(request);
   }
 }

@@ -28,7 +28,7 @@ import { useAuthActionGuard } from "@/hooks/useAuthActionGuard";
 import { GENRE_COLORS } from "@ear-plug/shared/constants";
 import { getInitials } from "@ear-plug/shared/utils";
 import type { Genre } from "@ear-plug/shared/types";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { IconBadge } from "@/components/ui/IconBadge";
 import { TabPanel } from "@/components/ui/TabPanel";

@@ -17,7 +17,6 @@ import {
   Ticket,
   QrCode,
   ChevronRight,
-  MoreHorizontal,
   Edit3,
   Sparkles,
   Info,
@@ -71,12 +70,6 @@ const itemVariants: Variants = {
       damping: 30,
     },
   },
-};
-
-const fadeInVariants: Variants = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { duration: 0.3 } },
-  exit: { opacity: 0, transition: { duration: 0.2 } },
 };
 
 export default function EventDetailsPage() {
@@ -162,7 +155,7 @@ export default function EventDetailsPage() {
           text: `Check out ${event?.title} at ${event?.venue?.name}`,
           url: window.location.href,
         });
-      } catch (err) {
+      } catch {
         // Share cancelled or failed
       }
     } else {
