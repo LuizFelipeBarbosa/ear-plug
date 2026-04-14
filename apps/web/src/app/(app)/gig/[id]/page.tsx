@@ -220,6 +220,9 @@ export default function EventDetailsPage() {
   const isPast = isEventPast(event.dateTime);
   const shouldHideRsvpInsights = !inBandMode && !hasRsvp && !isPast;
   const lockedPreviewFillPercentage = 92;
+  const priceInCents = typeof event.price === "number" ? event.price : 0;
+  const hasPaidPrice = priceInCents > 0;
+  const displayEventPrice = hasPaidPrice ? formatPrice(priceInCents) : "FREE";
   const canManageEvent =
     !isPast &&
     isBandParticipant &&
@@ -422,8 +425,8 @@ export default function EventDetailsPage() {
           />
           <InfoCard
             icon={<DollarSign className="w-5 h-5" />}
-            label={event.price ? "Price" : "Free Entry"}
-            value={event.price ? formatPrice(event.price) : "$0"}
+            label={hasPaidPrice ? "Price" : "Free Entry"}
+            value={displayEventPrice}
             color="band"
           />
         </motion.div>
@@ -780,12 +783,12 @@ export default function EventDetailsPage() {
                     Ticket
                   </button>
                 ) : (
-                  <div className="shrink-0 rounded-xl border border-border bg-card px-4 py-2.5 text-right">
+                  <div className="flex min-w-[6.75rem] shrink-0 flex-col items-center justify-center rounded-xl border border-border bg-card px-4 py-2.5 text-center">
                     <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
                       Price
                     </p>
                     <p className="text-base font-bold text-foreground">
-                      {event.price ? formatPrice(event.price) : "Free"}
+                      {displayEventPrice}
                     </p>
                   </div>
                 )}

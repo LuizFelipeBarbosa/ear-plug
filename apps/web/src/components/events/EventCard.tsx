@@ -5,7 +5,11 @@ import { Heart, Check } from "lucide-react";
 import { EventImage } from "@/components/ui/OptimizedImage";
 import { EventPollPrompt } from "@/components/events/EventPollPrompt";
 import { EventUnrsvpConfirmModal } from "@/components/events/EventUnrsvpConfirmModal";
-import { formatEventDate, formatEventTime } from "@ear-plug/shared/constants";
+import {
+  formatEventDate,
+  formatEventTime,
+  formatPrice,
+} from "@ear-plug/shared/constants";
 import { isEventPast } from "@ear-plug/shared/eventTiming";
 import type { SpotifyPersonalizationReason } from "@ear-plug/shared/types";
 import { cn } from "@/lib/utils";
@@ -25,6 +29,7 @@ interface EventCardProps {
     image?: string;
     rsvpCount: number;
     capacity?: number;
+    price?: number;
     band?: { name: string; image?: string } | null;
     venue?: { name?: string; city?: string; address?: string } | null;
     isVenueAddressHidden?: boolean;
@@ -38,6 +43,7 @@ interface EventCardProps {
   showLikeButton?: boolean;
   showRsvpButton?: boolean;
   showAttendanceStatus?: boolean;
+  showPriceBadge?: boolean;
 }
 export function EventCard({
   event,
@@ -47,6 +53,7 @@ export function EventCard({
   showLikeButton = true,
   showRsvpButton = true,
   showAttendanceStatus = false,
+  showPriceBadge = false,
 }: EventCardProps) {
   const { mode } = useProfileContext();
   const resolvedTone: RoleTone = tone ?? (mode === "personal" ? "fan" : "band");
@@ -104,15 +111,24 @@ export function EventCard({
   const compact = variant === "compact";
   const shouldShowStatusBadge = isPast || !allowFanActions;
   const shouldShowRsvpAction = !shouldShowStatusBadge && showRsvpButton;
-  const shouldShowLikeAction = showLikeButton && !isPast && allowFanActions;
+  const shouldShowPriceBadge = showPriceBadge && !shouldShowStatusBadge;
+  const shouldShowLikeAction =
+    showLikeButton && !shouldShowPriceBadge && !isPast && allowFanActions;
   const shouldShowActions =
-    shouldShowStatusBadge || shouldShowRsvpAction || shouldShowLikeAction;
+    shouldShowStatusBadge ||
+    shouldShowRsvpAction ||
+    shouldShowLikeAction ||
+    shouldShowPriceBadge;
   const paddingClass = compact
     ? density === "dense"
       ? "p-2.5"
       : "p-3"
     : "p-4";
   const imageSizeClass = compact ? "w-16 h-16" : "w-20 h-20";
+  const displayPrice =
+    typeof event.price === "number" && event.price > 0
+      ? formatPrice(event.price)
+      : "FREE";
   const currentReturnTo = useCurrentReturnTo();
   const eventHref = buildHrefWithReturnTo(`/gig/${event._id}`, currentReturnTo);
   return (
@@ -232,6 +248,16 @@ export function EventCard({
                     )}
                   />
                 </button>
+              ) : null}
+              {shouldShowPriceBadge ? (
+                <span
+                  className={cn(
+                    "inline-flex min-w-[4.75rem] items-center justify-center rounded-md border border-border bg-muted/60 px-2.5 py-2 text-center text-[11px] font-semibold text-foreground",
+                    compact && density === "dense" && "min-w-[4.25rem] px-2 py-1.5 text-[10px]",
+                  )}
+                >
+                  {displayPrice}
+                </span>
               ) : null}
             </div>
           ) : null}

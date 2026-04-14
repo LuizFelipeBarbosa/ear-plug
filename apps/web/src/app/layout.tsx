@@ -122,7 +122,7 @@ export default function RootLayout({
             __html: `(() => {
   try {
     const stored = localStorage.getItem("ear-plug-theme");
-    const theme = stored === "dark" ? "dark" : "light";
+    const theme = stored === "light" ? "light" : "dark";
     const root = document.documentElement;
     root.classList.toggle("dark", theme === "dark");
     root.style.colorScheme = theme;

@@ -6,6 +6,7 @@ import { APIProvider, Map, AdvancedMarker } from "@vis.gl/react-google-maps";
 import { Search, SlidersHorizontal, X, Map as MapIcon, List, Navigation } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapInfoWindow } from "@/components/maps/MapInfoWindow";
+import { BrandMark } from "@/components/branding/BrandLogo";
 import { useEvents, useSearchEvents, useNearbyEvents } from "@/hooks/useEvents";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { EventCard } from "@/components/events/EventCard";
@@ -57,7 +58,7 @@ export function FanDiscoverView() {
   const genreParam = searchParams.get("genre") as Genre | null;
 
   // View state
-  const [viewMode, setViewMode] = useState<ViewMode>("map");
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
 
   // Search and filter state
   const [searchQuery, setSearchQuery] = useState("");
@@ -355,13 +356,18 @@ export function FanDiscoverView() {
                       >
                         <div
                           className={cn(
-                            "w-9 h-9 rounded-full flex items-center justify-center text-foreground text-xs font-bold border-2 border-white cursor-pointer shadow-lg transition-transform transition-colors duration-150",
+                            "w-9 h-9 rounded-full flex items-center justify-center overflow-hidden border-2 border-white cursor-pointer shadow-lg transition-transform transition-colors duration-150",
                             isSelected
                               ? "bg-fan scale-110 ring-2 ring-fan ring-offset-2 ring-offset-background"
                               : "bg-fan/90 hover:bg-fan hover:scale-105"
                           )}
                         >
-                          {event.rsvpCount}
+                          <BrandMark
+                            className="w-5"
+                            theme="dark"
+                            decorative
+                            sizes="20px"
+                          />
                         </div>
                       </AdvancedMarker>
                     );
@@ -452,6 +458,8 @@ export function FanDiscoverView() {
                           event={event}
                           variant="compact"
                           density="dense"
+                          showLikeButton={false}
+                          showPriceBadge
                           showRsvpButton={false}
                         />
                         {event.distance !== undefined && (
@@ -508,7 +516,8 @@ export function FanDiscoverView() {
                   <EventCard
                     event={event}
                     variant="default"
-                    showLikeButton
+                    showLikeButton={false}
+                    showPriceBadge
                     showRsvpButton={false}
                   />
                   {event.distance !== undefined && (

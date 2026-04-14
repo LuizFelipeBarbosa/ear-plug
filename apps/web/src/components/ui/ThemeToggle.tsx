@@ -12,10 +12,10 @@ function isTheme(value: string | null): value is Theme {
 
 function getStoredTheme(): Theme {
   if (typeof window === "undefined") {
-    return "light";
+    return "dark";
   }
   const stored = localStorage.getItem(STORAGE_KEY);
-  return isTheme(stored) ? stored : "light";
+  return isTheme(stored) ? stored : "dark";
 }
 
 function applyTheme(theme: Theme) {
@@ -25,7 +25,7 @@ function applyTheme(theme: Theme) {
 }
 
 export function ThemeToggle({ className }: { className?: string }) {
-  const [theme, setTheme] = useState<Theme>("light");
+  const [theme, setTheme] = useState<Theme>("dark");
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
