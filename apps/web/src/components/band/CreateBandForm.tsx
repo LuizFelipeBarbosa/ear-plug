@@ -195,7 +195,12 @@ export function CreateBandForm() {
       setBandMode(bandId);
       router.push("/home");
     } catch (err) {
-      setError(getConvexErrorMessage(err, "Failed to create band. Please try again."));
+      setError(
+        getConvexErrorMessage(
+          err,
+          "Band creation is temporarily unavailable. Verify the access code and try again.",
+        ),
+      );
     } finally {
       setIsSubmitting(false);
     }
