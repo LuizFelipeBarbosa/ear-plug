@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { useMutation } from "convex/react";
 import {
   AlertTriangle,
@@ -33,10 +34,6 @@ import {
 import { useProfileContext } from "@/hooks/useProfileContext";
 import { AvatarImage } from "@/components/ui/OptimizedImage";
 import { cn } from "@/lib/utils";
-
-interface CheckInPageProps {
-  params: { id: string };
-}
 
 interface TicketScannerController {
   stop(): Promise<void>;
@@ -86,8 +83,12 @@ function formatTimestamp(value?: number): string {
   });
 }
 
-export default function EventCheckinPage({ params }: CheckInPageProps) {
-  const eventId = params.id as Id<"events">;
+export default function EventCheckinPage() {
+  const params = useParams<{ id: string }>();
+  const eventId = typeof params?.id === "string"
+    ? (params.id as Id<"events">)
+    : undefined;
+  const eventHref = eventId ? `/gig/${eventId}` : "/home";
   const { event } = useEvent(eventId);
   const { bandId, mode } = useProfileContext();
   const {
@@ -137,6 +138,10 @@ export default function EventCheckinPage({ params }: CheckInPageProps) {
   const submitScan = useCallback(
     async (qrValue: string) => {
       if (!qrValue.trim()) return;
+      if (!eventId) {
+        setScannerError("Invalid event URL.");
+        return;
+      }
       handlingScanRef.current = true;
       setProcessingScan(true);
       setScannerError(null);
@@ -404,7 +409,7 @@ export default function EventCheckinPage({ params }: CheckInPageProps) {
             Only event managers or assigned door staff can scan tickets
           </p>
           <Link
-            href={`/gig/${eventId}`}
+            href={eventHref}
             className="inline-flex items-center gap-2 px-5 py-2.5 bg-fan text-white text-sm font-medium rounded-xl hover:bg-fan/90 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -421,7 +426,7 @@ export default function EventCheckinPage({ params }: CheckInPageProps) {
       <header className="sticky top-0 z-20 bg-background/95 backdrop-blur-xl border-b border-border px-4 py-4">
         <div className="flex items-center gap-3">
           <Link
-            href={`/gig/${eventId}`}
+            href={eventHref}
             className="p-2 -ml-2 text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />

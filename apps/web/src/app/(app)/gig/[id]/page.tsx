@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
   Heart,
@@ -48,10 +48,6 @@ import { cn } from "@/lib/utils";
 import { resolveAuthReturnTo } from "@/lib/auth/sso";
 import type { Id } from "../../../../../../../convex/_generated/dataModel";
 
-interface PageProps {
-  params: { id: string };
-}
-
 // Animation variants
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -83,8 +79,9 @@ const fadeInVariants: Variants = {
   exit: { opacity: 0, transition: { duration: 0.2 } },
 };
 
-export default function EventDetailsPage({ params }: PageProps) {
-  const { id } = params;
+export default function EventDetailsPage() {
+  const params = useParams<{ id: string }>();
+  const id = params?.id;
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -95,7 +92,7 @@ export default function EventDetailsPage({ params }: PageProps) {
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
   const [isUnrsvpConfirmOpen, setIsUnrsvpConfirmOpen] = useState(false);
   const [calendarError, setCalendarError] = useState<string | null>(null);
-  const eventId = id as Id<"events">;
+  const eventId = typeof id === "string" ? (id as Id<"events">) : undefined;
   const backHref = resolveAuthReturnTo(searchParams, "/home");
   const handleBack = () => {
     router.replace(backHref);
@@ -174,7 +171,7 @@ export default function EventDetailsPage({ params }: PageProps) {
     }
   };
 
-  if (isLoading) {
+  if (eventId === undefined || isLoading) {
     return (
       <div className="min-h-screen bg-background">
         <div className="h-64 bg-muted animate-shimmer" />
