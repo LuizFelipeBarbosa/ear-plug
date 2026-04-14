@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import {
   ArrowLeft,
@@ -32,10 +32,6 @@ import type { Genre } from "@ear-plug/shared/types";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { TabPanel } from "@/components/ui/TabPanel";
-
-interface PageProps {
-  params: { id: string };
-}
 
 type TabType = "overview" | "saved" | "activity";
 
@@ -69,10 +65,14 @@ function capitalizeGenre(genre: Genre | null): string {
   return genre.charAt(0).toUpperCase() + genre.slice(1);
 }
 
-export default function PublicFanProfilePage({ params }: PageProps) {
+export default function PublicFanProfilePage() {
+  const params = useParams<{ id: string }>();
   const router = useRouter();
-  const fanId = params.id as Id<"users">;
-  const profile = useQuery(api.users.getPublicFanProfile, { fanId });
+  const fanId = typeof params?.id === "string" ? (params.id as Id<"users">) : undefined;
+  const profile = useQuery(
+    api.users.getPublicFanProfile,
+    fanId ? { fanId } : "skip",
+  );
   const [activeTab, setActiveTab] = useState<TabType>("overview");
 
   if (profile === undefined) {

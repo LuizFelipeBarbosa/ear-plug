@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
 import {
   ArrowLeft,
@@ -33,10 +33,6 @@ import { cn } from "@/lib/utils";
 import { IconBadge } from "@/components/ui/IconBadge";
 import { TabPanel } from "@/components/ui/TabPanel";
 
-interface PageProps {
-  params: { id: string };
-}
-
 type TabType = "overview" | "shows";
 
 // Animation variants
@@ -64,9 +60,10 @@ const itemVariants = {
   },
 };
 
-export default function BandFeedPage({ params }: PageProps) {
+export default function BandFeedPage() {
+  const params = useParams<{ id: string }>();
   const router = useRouter();
-  const bandId = params.id as Id<"bands">;
+  const bandId = typeof params?.id === "string" ? (params.id as Id<"bands">) : undefined;
   const { mode } = useProfileContext();
   const { isSignedIn, requireSignIn } = useAuthActionGuard();
   const [activeTab, setActiveTab] = useState<TabType>("overview");
@@ -74,11 +71,19 @@ export default function BandFeedPage({ params }: PageProps) {
   const toggleSave = useMutation(api.bands.toggleSave);
   const trackProfileView = useMutation(api.bands.trackProfileView);
 
-  const publicProfile = useQuery(api.bands.getPublicBandProfile, { bandId });
-  const confirmedGigs = useQuery(api.events.listPublicPastByBand, {
-    bandId,
-    limit: 20,
-  });
+  const publicProfile = useQuery(
+    api.bands.getPublicBandProfile,
+    bandId ? { bandId } : "skip",
+  );
+  const confirmedGigs = useQuery(
+    api.events.listPublicPastByBand,
+    bandId
+      ? {
+          bandId,
+          limit: 20,
+        }
+      : "skip",
+  );
   
   const trackedBandIdRef = useRef<Id<"bands"> | null>(null);
   const [isSavingFollow, setIsSavingFollow] = useState(false);
@@ -106,7 +111,7 @@ export default function BandFeedPage({ params }: PageProps) {
   }, [isSignedIn, mode]);
 
   useEffect(() => {
-    if (mode !== "personal" || !isSignedIn || !publicProfile?.band) {
+    if (!bandId || mode !== "personal" || !isSignedIn || !publicProfile?.band) {
       return;
     }
 
@@ -146,6 +151,9 @@ export default function BandFeedPage({ params }: PageProps) {
     });
 
     try {
+      if (!bandId) {
+        return;
+      }
       await toggleSave({ bandId });
     } catch (error) {
       setOptimisticFollowState(snapshot);
