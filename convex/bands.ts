@@ -16,7 +16,9 @@ import {
 } from "./utils/permissions";
 
 const PROFILE_VIEW_DEDUPE_WINDOW_MS = 6 * 60 * 60 * 1000;
-const BAND_CREATION_ACCESS_CODE = "190304";
+const BAND_CREATION_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
+const BAND_CREATION_MAX_FAILED_ATTEMPTS = 5;
+const BAND_CREATION_BLOCK_DURATION_MS = 30 * 60 * 1000;
 const IMAGE_MIME_TYPES = new Set([
   "image/jpeg",
   "image/jpg",
@@ -114,6 +116,18 @@ function uniqueById<T extends { _id: unknown }>(docs: T[]): T[] {
     seen.add(key);
     return true;
   });
+}
+
+function getBandCreationAccessCodeOrThrow(): string {
+  const code = process.env.BAND_CREATION_ACCESS_CODE?.trim();
+  if (!code) {
+    throw new ConvexError({
+      code: "band_creation_code_not_configured",
+      message: "Band creation is temporarily unavailable.",
+    });
+  }
+
+  return code;
 }
 
 export async function listBandParticipatingEvents(
@@ -438,6 +452,8 @@ export const create = mutation({
     const creationCode = args.creationCode.trim();
     const bio = args.bio?.trim();
     const socialLinks = normalizeSocialLinks(args.socialLinks);
+    const expectedCreationCode = getBandCreationAccessCodeOrThrow();
+    const now = Date.now();
 
     if (!name) {
       throw new ConvexError({
@@ -453,13 +469,6 @@ export const create = mutation({
       });
     }
 
-    if (creationCode !== BAND_CREATION_ACCESS_CODE) {
-      throw new ConvexError({
-        code: "invalid_band_creation_code",
-        message: "The band creation code is incorrect.",
-      });
-    }
-
     if (args.genres.length === 0) {
       throw new ConvexError({
         code: "invalid_band_genres",
@@ -471,7 +480,90 @@ export const create = mutation({
       validateSocialLinks(socialLinks);
     }
 
-    const now = Date.now();
+    const attemptRecords = await ctx.db
+      .query("bandCreationAttempts")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .collect();
+    const [attemptRecord, ...duplicateAttemptRecords] = attemptRecords.sort(
+      (a, b) =>
+        (b.updatedAt ?? b.windowStartedAt ?? 0) -
+        (a.updatedAt ?? a.windowStartedAt ?? 0),
+    );
+
+    if (duplicateAttemptRecords.length > 0) {
+      await Promise.all(
+        duplicateAttemptRecords.map((duplicateAttemptRecord) =>
+          ctx.db.delete(duplicateAttemptRecord._id),
+        ),
+      );
+    }
+
+    if (
+      attemptRecord?.blockedUntil !== undefined &&
+      now < attemptRecord.blockedUntil
+    ) {
+      throw new ConvexError({
+        code: "band_creation_rate_limited",
+        message: "Too many invalid band creation attempts. Try again later.",
+        retryAfterMs: attemptRecord.blockedUntil - now,
+      });
+    }
+
+    if (creationCode !== expectedCreationCode) {
+      const isWithinWindow =
+        attemptRecord &&
+        now - attemptRecord.windowStartedAt <= BAND_CREATION_RATE_LIMIT_WINDOW_MS;
+      const failedAttempts = isWithinWindow ? attemptRecord.failedAttempts + 1 : 1;
+      const windowStartedAt = isWithinWindow ? attemptRecord.windowStartedAt : now;
+      const blockedUntil =
+        failedAttempts >= BAND_CREATION_MAX_FAILED_ATTEMPTS
+          ? now + BAND_CREATION_BLOCK_DURATION_MS
+          : undefined;
+      const totalFailedAttempts = (attemptRecord?.totalFailedAttempts ?? 0) + 1;
+
+      if (attemptRecord) {
+        await ctx.db.patch(attemptRecord._id, {
+          failedAttempts,
+          windowStartedAt,
+          blockedUntil,
+          lastFailedAt: now,
+          totalFailedAttempts,
+          updatedAt: now,
+        });
+      } else {
+        await ctx.db.insert("bandCreationAttempts", {
+          userId: user._id,
+          failedAttempts,
+          windowStartedAt,
+          blockedUntil,
+          lastFailedAt: now,
+          totalFailedAttempts,
+          updatedAt: now,
+        });
+      }
+
+      if (blockedUntil !== undefined) {
+        throw new ConvexError({
+          code: "band_creation_rate_limited",
+          message: "Too many invalid band creation attempts. Try again later.",
+          retryAfterMs: blockedUntil - now,
+        });
+      }
+
+      throw new ConvexError({
+        code: "invalid_band_creation_code",
+        message: "The band creation code is incorrect.",
+      });
+    }
+
+    if (attemptRecord) {
+      await ctx.db.patch(attemptRecord._id, {
+        failedAttempts: 0,
+        windowStartedAt: now,
+        blockedUntil: undefined,
+        updatedAt: now,
+      });
+    }
 
     const bandId = await ctx.db.insert("bands", {
       userId: user._id,

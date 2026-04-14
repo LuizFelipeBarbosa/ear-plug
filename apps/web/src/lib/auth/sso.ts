@@ -142,6 +142,7 @@ export function persistPendingSsoIntent(
 
   const payload: PendingSsoIntent = {
     ...intent,
+    returnTo: normalizeReturnTo(intent.returnTo),
     createdAt: Date.now(),
   };
 
@@ -169,6 +170,19 @@ export function readPendingSsoIntent(): PendingSsoIntent | null {
     if (Date.now() - parsed.createdAt > PENDING_SSO_MAX_AGE_MS) {
       clearPendingSsoIntent();
       return null;
+    }
+
+    const normalizedReturnTo = normalizeReturnTo(parsed.returnTo);
+    if (normalizedReturnTo !== parsed.returnTo) {
+      const normalizedIntent: PendingSsoIntent = {
+        ...parsed,
+        returnTo: normalizedReturnTo,
+      };
+      window.sessionStorage.setItem(
+        PENDING_SSO_INTENT_KEY,
+        JSON.stringify(normalizedIntent),
+      );
+      return normalizedIntent;
     }
 
     return parsed;
