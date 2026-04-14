@@ -118,6 +118,31 @@ function uniqueById<T extends { _id: unknown }>(docs: T[]): T[] {
   });
 }
 
+const BAND_ROLE_PRIORITY: Record<"owner" | "admin" | "member", number> = {
+  owner: 3,
+  admin: 2,
+  member: 1,
+};
+
+function pickHighestPriorityBandRole(
+  memberships: Array<{ role: "owner" | "admin" | "member"; joinedAt: number }>
+): "owner" | "admin" | "member" | undefined {
+  if (memberships.length === 0) {
+    return undefined;
+  }
+
+  return memberships
+    .slice()
+    .sort((a, b) => {
+      const roleDelta = BAND_ROLE_PRIORITY[b.role] - BAND_ROLE_PRIORITY[a.role];
+      if (roleDelta !== 0) {
+        return roleDelta;
+      }
+
+      return b.joinedAt - a.joinedAt;
+    })[0]?.role;
+}
+
 function getBandCreationAccessCodeOrThrow(): string {
   const code = process.env.BAND_CREATION_ACCESS_CODE?.trim();
   if (!code) {
@@ -191,7 +216,7 @@ export const getPublicBandProfile = query({
       return null;
     }
 
-    const [followers, savedEntry, membership] = await Promise.all([
+    const [followers, savedEntries, memberships] = await Promise.all([
       ctx.db
         .query("savedArtists")
         .withIndex("by_band", (q) => q.eq("bandId", args.bandId))
@@ -202,23 +227,26 @@ export const getPublicBandProfile = query({
             .withIndex("by_user_band", (q) =>
               q.eq("userId", user._id).eq("bandId", args.bandId)
             )
-            .unique()
-        : Promise.resolve(null),
+            .collect()
+        : Promise.resolve([]),
       user
         ? ctx.db
             .query("bandMemberships")
             .withIndex("by_band_user", (q) =>
               q.eq("bandId", args.bandId).eq("userId", user._id)
             )
-            .unique()
-        : Promise.resolve(null),
+            .collect()
+        : Promise.resolve([]),
     ]);
+    const uniqueFollowerUserIds = new Set(
+      followers.map((follower) => String(follower.userId))
+    );
 
     return {
       band,
-      followerCount: followers.length,
-      isFollowing: Boolean(savedEntry),
-      viewerMembershipRole: membership?.role,
+      followerCount: uniqueFollowerUserIds.size,
+      isFollowing: savedEntries.length > 0,
+      viewerMembershipRole: pickHighestPriorityBandRole(memberships),
     };
   },
 });
@@ -238,12 +266,23 @@ export const trackProfileView = mutation({
     }
 
     const now = Date.now();
-    const existingEngagement = await ctx.db
+    const engagementRecords = await ctx.db
       .query("bandProfileEngagements")
       .withIndex("by_user_band", (q) =>
         q.eq("userId", user._id).eq("bandId", args.bandId)
       )
-      .unique();
+      .collect();
+    const [existingEngagement, ...duplicateEngagements] = engagementRecords.sort(
+      (a, b) => b.lastViewedAt - a.lastViewedAt
+    );
+
+    if (duplicateEngagements.length > 0) {
+      await Promise.all(
+        duplicateEngagements.map((duplicateEngagement) =>
+          ctx.db.delete(duplicateEngagement._id)
+        )
+      );
+    }
 
     if (!existingEngagement) {
       await ctx.db.insert("bandProfileEngagements", {
@@ -1063,15 +1102,15 @@ export const toggleSave = mutation({
   handler: async (ctx, args) => {
     const user = await requireAuthenticatedUser(ctx);
 
-    const existing = await ctx.db
+    const existingEntries = await ctx.db
       .query("savedArtists")
       .withIndex("by_user_band", (q) =>
         q.eq("userId", user._id).eq("bandId", args.bandId)
       )
-      .unique();
+      .collect();
 
-    if (existing) {
-      await ctx.db.delete(existing._id);
+    if (existingEntries.length > 0) {
+      await Promise.all(existingEntries.map((existing) => ctx.db.delete(existing._id)));
       return { action: "unsaved" };
     }
 
