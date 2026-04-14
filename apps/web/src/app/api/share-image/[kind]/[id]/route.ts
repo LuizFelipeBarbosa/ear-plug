@@ -143,13 +143,13 @@ export async function GET(
   {
     params,
   }: {
-    params: {
+    params: Promise<{
       kind: string;
       id: string;
-    };
+    }>;
   },
 ) {
-  const { kind, id } = params;
+  const { kind, id } = await params;
 
   try {
     const image =
