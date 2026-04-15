@@ -1,7 +1,9 @@
 import { v } from "convex/values";
-import { internalMutation, internalQuery } from "./_generated/server";
-import type { Doc } from "./_generated/dataModel";
+import { internal } from "./_generated/api";
+import { internalAction, internalMutation, internalQuery } from "./_generated/server";
+import type { Doc, Id } from "./_generated/dataModel";
 import {
+  type EventPoll,
   hasCompletedEventPollAnswers,
   normalizeEventPoll,
   normalizeRsvpPollAnswers,
@@ -15,6 +17,36 @@ type LegacyStoredPoll = {
 
 type LegacyStoredRsvp = Doc<"rsvps"> & {
   pollAnswerOptionId?: string;
+};
+
+type EventPollLookupCtx = {
+  db: {
+    get(id: Id<"events">): Promise<Doc<"events"> | null>;
+  };
+};
+
+type ValidateEventPollBackfillPageResult = {
+  nextCursor: {
+    event?: string;
+    rsvp?: string;
+  };
+  done: {
+    events: boolean;
+    rsvps: boolean;
+  };
+  totals: {
+    events: number;
+    rsvps: number;
+  };
+  issues: {
+    legacyEventPolls: number;
+    legacyRsvpAnswers: number;
+    invalidRsvpAnswers: number;
+  };
+  migrated: {
+    rsvpsWithPollAnswers: number;
+  };
+  validPage: boolean;
 };
 
 function isLegacyStoredPoll(poll: LegacyStoredPoll): boolean {
@@ -32,6 +64,25 @@ function hasLegacyStoredPollAnswer(rsvp: LegacyStoredRsvp): boolean {
     typeof rsvp.pollAnswerOptionId === "string" &&
     rsvp.pollAnswerOptionId.trim().length > 0
   );
+}
+
+async function loadNormalizedPollsByEventId(
+  ctx: EventPollLookupCtx,
+  eventIds: Id<"events">[],
+): Promise<Map<Id<"events">, EventPoll | undefined>> {
+  const uniqueEventIds = Array.from(new Set(eventIds));
+  if (uniqueEventIds.length === 0) {
+    return new Map();
+  }
+
+  const entries = await Promise.all(
+    uniqueEventIds.map(async (eventId) => {
+      const event = await ctx.db.get(eventId);
+      return [eventId, normalizeEventPoll(event?.poll as any)] as const;
+    }),
+  );
+
+  return new Map(entries);
 }
 
 export const backfillEventPollsBatch = internalMutation({
@@ -95,6 +146,10 @@ export const backfillRsvpPollAnswersBatch = internalMutation({
     let migrated = 0;
     let skipped = 0;
     let invalid = 0;
+    const pollsByEventId = await loadNormalizedPollsByEventId(
+      ctx,
+      page.page.map((rsvp) => rsvp.eventId),
+    );
 
     for (const rsvp of page.page as LegacyStoredRsvp[]) {
       if (!hasLegacyStoredPollAnswer(rsvp)) {
@@ -102,8 +157,7 @@ export const backfillRsvpPollAnswersBatch = internalMutation({
         continue;
       }
 
-      const event = await ctx.db.get(rsvp.eventId);
-      const poll = normalizeEventPoll(event?.poll as any);
+      const poll = pollsByEventId.get(rsvp.eventId);
       const normalizedAnswers = normalizeRsvpPollAnswers(rsvp, poll);
 
       if (!hasCompletedEventPollAnswers(poll, normalizedAnswers)) {
@@ -131,23 +185,57 @@ export const backfillRsvpPollAnswersBatch = internalMutation({
   },
 });
 
-export const validateEventPollBackfill = internalQuery({
-  args: {},
-  handler: async (ctx) => {
-    const [events, rsvps] = await Promise.all([
-      ctx.db.query("events").collect(),
-      ctx.db.query("rsvps").collect(),
+export const validateEventPollBackfillPage = internalQuery({
+  args: {
+    eventCursor: v.optional(v.string()),
+    rsvpCursor: v.optional(v.string()),
+    scanEvents: v.optional(v.boolean()),
+    scanRsvps: v.optional(v.boolean()),
+    eventLimit: v.optional(v.number()),
+    rsvpLimit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const eventLimit = Math.min(Math.max(args.eventLimit ?? 250, 1), 500);
+    const rsvpLimit = Math.min(Math.max(args.rsvpLimit ?? 250, 1), 500);
+    const scanEvents = args.scanEvents ?? true;
+    const scanRsvps = args.scanRsvps ?? true;
+
+    const [eventPage, rsvpPage] = await Promise.all([
+      scanEvents
+        ? ctx.db.query("events").order("asc").paginate({
+            cursor: args.eventCursor ?? null,
+            numItems: eventLimit,
+          })
+        : Promise.resolve({
+            page: [] as Doc<"events">[],
+            isDone: true,
+            continueCursor: undefined,
+          }),
+      scanRsvps
+        ? ctx.db.query("rsvps").order("asc").paginate({
+            cursor: args.rsvpCursor ?? null,
+            numItems: rsvpLimit,
+          })
+        : Promise.resolve({
+            page: [] as Doc<"rsvps">[],
+            isDone: true,
+            continueCursor: undefined,
+          }),
     ]);
 
-    const legacyEventPolls = events.filter((event) =>
+    const legacyEventPolls = eventPage.page.filter((event) =>
       isLegacyStoredPoll(event.poll as LegacyStoredPoll)
     ).length;
 
     let legacyRsvpAnswers = 0;
     let migratedRsvpAnswers = 0;
     let invalidRsvpAnswers = 0;
+    const pollsByEventId = await loadNormalizedPollsByEventId(
+      ctx,
+      rsvpPage.page.map((rsvp) => rsvp.eventId),
+    );
 
-    for (const rsvp of rsvps as LegacyStoredRsvp[]) {
+    for (const rsvp of rsvpPage.page as LegacyStoredRsvp[]) {
       if (hasLegacyStoredPollAnswer(rsvp)) {
         legacyRsvpAnswers += 1;
       }
@@ -156,8 +244,7 @@ export const validateEventPollBackfill = internalQuery({
         continue;
       }
 
-      const event = await ctx.db.get(rsvp.eventId);
-      const poll = normalizeEventPoll(event?.poll as any);
+      const poll = pollsByEventId.get(rsvp.eventId);
       const normalizedAnswers = normalizeRsvpPollAnswers(rsvp, poll);
       if (hasCompletedEventPollAnswers(poll, normalizedAnswers)) {
         migratedRsvpAnswers += 1;
@@ -167,9 +254,82 @@ export const validateEventPollBackfill = internalQuery({
     }
 
     return {
+      nextCursor: {
+        event: eventPage.continueCursor ?? undefined,
+        rsvp: rsvpPage.continueCursor ?? undefined,
+      },
+      done: {
+        events: eventPage.isDone,
+        rsvps: rsvpPage.isDone,
+      },
       totals: {
-        events: events.length,
-        rsvps: rsvps.length,
+        events: eventPage.page.length,
+        rsvps: rsvpPage.page.length,
+      },
+      issues: {
+        legacyEventPolls,
+        legacyRsvpAnswers,
+        invalidRsvpAnswers,
+      },
+      migrated: {
+        rsvpsWithPollAnswers: migratedRsvpAnswers,
+      },
+      validPage:
+        legacyEventPolls === 0 &&
+        legacyRsvpAnswers === 0 &&
+        invalidRsvpAnswers === 0,
+    };
+  },
+});
+
+export const validateEventPollBackfill = internalAction({
+  args: {
+    eventLimit: v.optional(v.number()),
+    rsvpLimit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    let eventCursor: string | undefined;
+    let rsvpCursor: string | undefined;
+    let eventsDone = false;
+    let rsvpsDone = false;
+
+    let totalEvents = 0;
+    let totalRsvps = 0;
+    let legacyEventPolls = 0;
+    let legacyRsvpAnswers = 0;
+    let invalidRsvpAnswers = 0;
+    let migratedRsvpAnswers = 0;
+
+    while (!eventsDone || !rsvpsDone) {
+      const page: ValidateEventPollBackfillPageResult = await ctx.runQuery(
+        internal.migrations.validateEventPollBackfillPage,
+        {
+          eventCursor,
+          rsvpCursor,
+          scanEvents: !eventsDone,
+          scanRsvps: !rsvpsDone,
+          eventLimit: args.eventLimit,
+          rsvpLimit: args.rsvpLimit,
+        },
+      );
+
+      totalEvents += page.totals.events;
+      totalRsvps += page.totals.rsvps;
+      legacyEventPolls += page.issues.legacyEventPolls;
+      legacyRsvpAnswers += page.issues.legacyRsvpAnswers;
+      invalidRsvpAnswers += page.issues.invalidRsvpAnswers;
+      migratedRsvpAnswers += page.migrated.rsvpsWithPollAnswers;
+
+      eventCursor = page.nextCursor.event;
+      rsvpCursor = page.nextCursor.rsvp;
+      eventsDone = page.done.events;
+      rsvpsDone = page.done.rsvps;
+    }
+
+    return {
+      totals: {
+        events: totalEvents,
+        rsvps: totalRsvps,
       },
       issues: {
         legacyEventPolls,

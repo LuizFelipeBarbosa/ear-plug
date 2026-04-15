@@ -770,15 +770,20 @@ export function hasCompletedEventPollAnswers(
 
 export async function getEventPollResponses(
   ctx: QueryCtx | MutationCtx,
-  eventId: Id<"events">
+  eventId: Id<"events">,
+  options?: {
+    poll?: EventPoll | LegacyEventPoll;
+  }
 ) {
   const rsvps = await ctx.db
     .query("rsvps")
     .withIndex("by_event", (q) => q.eq("eventId", eventId))
     .collect();
 
-  const event = await ctx.db.get(eventId);
-  const poll = normalizeEventPoll(event?.poll as LegacyEventPoll);
+  const poll =
+    options !== undefined
+      ? normalizeEventPoll(options.poll as LegacyEventPoll)
+      : normalizeEventPoll((await ctx.db.get(eventId))?.poll as LegacyEventPoll);
   const answered = rsvps.filter((rsvp) =>
     hasCompletedEventPollAnswers(
       poll,
@@ -1254,7 +1259,7 @@ export const getById = query({
     const [band, acceptedCohostBandIds, pollResponses] = await Promise.all([
       ctx.db.get(event.bandId),
       getAcceptedCohostBandIds(ctx, event._id),
-      getEventPollResponses(ctx, event._id),
+      getEventPollResponses(ctx, event._id, { poll: event.poll as LegacyEventPoll }),
     ]);
     const cohostBands = (
       await Promise.all(acceptedCohostBandIds.map((bandId) => ctx.db.get(bandId)))
@@ -2070,7 +2075,9 @@ export const updateWithVenue = mutation({
       args.poll !== undefined &&
       !areEventPollsEqual(currentPoll, nextPoll)
     ) {
-      const pollResponses = await getEventPollResponses(ctx, args.eventId);
+      const pollResponses = await getEventPollResponses(ctx, args.eventId, {
+        poll: currentPoll,
+      });
       if (pollResponses.hasResponses) {
         throw new ConvexError({
           code: "event_poll_locked",

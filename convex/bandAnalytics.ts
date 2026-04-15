@@ -50,14 +50,23 @@ function buildPollAnalyticsForEvent(
   const responseRate =
     eligibleRsvpCount > 0 ? (responseCount / eligibleRsvpCount) * 100 : 0;
 
+  const answerCountsByQuestion = new Map<string, Map<string, number>>();
+  for (const answers of answeredRsvps) {
+    for (const answer of answers) {
+      const optionCounts =
+        answerCountsByQuestion.get(answer.questionId) ?? new Map<string, number>();
+      optionCounts.set(
+        answer.optionId,
+        (optionCounts.get(answer.optionId) ?? 0) + 1
+      );
+      answerCountsByQuestion.set(answer.questionId, optionCounts);
+    }
+  }
+
   const questions = poll.questions.map((question) => {
+    const optionCounts = answerCountsByQuestion.get(question.id);
     const options = question.options.map((option) => {
-      const count = answeredRsvps.filter((answers) =>
-        answers.some(
-          (answer) =>
-            answer.questionId === question.id && answer.optionId === option.id
-        )
-      ).length;
+      const count = optionCounts?.get(option.id) ?? 0;
       return {
         id: option.id,
         label: option.label,
