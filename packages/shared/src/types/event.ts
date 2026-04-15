@@ -54,13 +54,33 @@ export interface EventPollOption {
 }
 
 /**
+ * One question within a gig RSVP poll.
+ */
+export interface EventPollQuestion {
+  /** Stable question identifier stored on RSVP rows */
+  id: string;
+  /** Question shown after RSVP */
+  question: string;
+  /** Single-choice answer options for this question */
+  options: EventPollOption[];
+}
+
+/**
+ * One selected answer tied to a poll question.
+ */
+export interface EventPollAnswer {
+  /** The question being answered */
+  questionId: string;
+  /** The selected option for that question */
+  optionId: string;
+}
+
+/**
  * Optional poll attached to a gig RSVP flow.
  */
 export interface EventPoll {
-  /** Poll question shown after RSVP */
-  question: string;
-  /** Single-choice answer options */
-  options: EventPollOption[];
+  /** Between 1 and 3 single-choice questions */
+  questions: EventPollQuestion[];
 }
 
 /**
@@ -142,8 +162,8 @@ export interface RSVP extends BaseEntity {
   attendanceStatus?: GuestRsvpType;
   /** Unix timestamp (ms) when RSVP was marked attended */
   attendedAt?: number;
-  /** Selected poll option id for the related event poll */
-  pollAnswerOptionId?: string;
+  /** Selected poll answers for the related event poll */
+  pollAnswers?: EventPollAnswer[];
   /** Unix timestamp (ms) when the RSVP poll was answered */
   pollAnsweredAt?: number;
 }

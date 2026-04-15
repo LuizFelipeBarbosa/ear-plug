@@ -83,11 +83,27 @@ const eventPollOptionValidator = v.object({
 });
 
 /**
+ * Validator for a single event RSVP poll question.
+ */
+const eventPollQuestionValidator = v.object({
+  id: v.string(),
+  question: v.string(),
+  options: v.array(eventPollOptionValidator),
+});
+
+/**
  * Validator for an optional event RSVP poll.
  */
 const eventPollValidator = v.object({
-  question: v.string(),
-  options: v.array(eventPollOptionValidator),
+  questions: v.array(eventPollQuestionValidator),
+});
+
+/**
+ * Validator for a single RSVP poll answer.
+ */
+const eventPollAnswerValidator = v.object({
+  questionId: v.string(),
+  optionId: v.string(),
 });
 
 /**
@@ -521,8 +537,8 @@ export default defineSchema({
     attendanceStatus: v.optional(v.union(v.literal("on_list"), v.literal("attended"))),
     /** Unix timestamp when the RSVP was marked attended */
     attendedAt: v.optional(v.number()),
-    /** Selected poll option id for the related event poll */
-    pollAnswerOptionId: v.optional(v.string()),
+    /** Selected poll answers for the related event poll */
+    pollAnswers: v.optional(v.array(eventPollAnswerValidator)),
     /** Unix timestamp when the RSVP poll was answered */
     pollAnsweredAt: v.optional(v.number()),
   })

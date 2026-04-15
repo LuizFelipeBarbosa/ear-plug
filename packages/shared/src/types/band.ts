@@ -314,25 +314,41 @@ export interface AnalyticsData {
     eventTitle: string;
     /** Event date timestamp (ms) */
     dateTime: number;
-    /** Poll question */
-    question: string;
     /** Number of RSVP poll responses */
     responseCount: number;
     /** Number of RSVPs eligible to answer */
     eligibleRsvpCount: number;
     /** Poll response rate as a percentage */
     responseRate: number;
-    /** Top answer option, or null when there are no answers yet */
-    topOption: {
-      /** Option id */
+    /** Per-question answer distributions for the highlighted poll */
+    questions: {
+      /** Question id */
       id: string;
-      /** Option label */
-      label: string;
-      /** Number of responses choosing this option */
-      count: number;
-      /** Share of responses choosing this option */
-      percentage: number;
-    } | null;
+      /** Poll question */
+      question: string;
+      /** Top answer option, or null when there are no answers yet */
+      topOption: {
+        /** Option id */
+        id: string;
+        /** Option label */
+        label: string;
+        /** Number of responses choosing this option */
+        count: number;
+        /** Share of responses choosing this option */
+        percentage: number;
+      } | null;
+      /** Option-level counts and percentages */
+      options: {
+        /** Option id */
+        id: string;
+        /** Option label */
+        label: string;
+        /** Number of responses */
+        count: number;
+        /** Share of responses for this option */
+        percentage: number;
+      }[];
+    }[];
   } | null;
   /** Recent polled gigs with option-level answer distributions */
   pollBreakdown: {
@@ -342,24 +358,29 @@ export interface AnalyticsData {
     eventTitle: string;
     /** Event date timestamp (ms) */
     dateTime: number;
-    /** Poll question */
-    question: string;
     /** Number of RSVP poll responses */
     responseCount: number;
     /** Number of RSVPs eligible to answer */
     eligibleRsvpCount: number;
     /** Poll response rate as a percentage */
     responseRate: number;
-    /** Option-level counts and percentages */
-    options: {
-      /** Option id */
+    /** Per-question answer distributions */
+    questions: {
+      /** Question id */
       id: string;
-      /** Option label */
-      label: string;
-      /** Number of responses */
-      count: number;
-      /** Share of responses for this option */
-      percentage: number;
+      /** Poll question */
+      question: string;
+      /** Option-level counts and percentages */
+      options: {
+        /** Option id */
+        id: string;
+        /** Option label */
+        label: string;
+        /** Number of responses */
+        count: number;
+        /** Share of responses for this option */
+        percentage: number;
+      }[];
     }[];
   }[];
 }

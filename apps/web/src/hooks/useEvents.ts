@@ -12,6 +12,7 @@ import { api } from "../../../../convex/_generated/api";
 import type {
   EventCheckinAssignableUser,
   EventCheckinStaff,
+  EventPollAnswer,
   EventPoll,
   EventTicketScanResult,
   Genre,
@@ -24,8 +25,7 @@ import { useAuthActionGuard } from "./useAuthActionGuard";
 interface EventPollPromptState {
   eventId: Id<"events">;
   eventTitle: string;
-  question: string;
-  options: EventPoll["options"];
+  questions: EventPoll["questions"];
 }
 
 /**
@@ -118,8 +118,8 @@ export function useEventInteraction(eventId: Id<"events"> | undefined) {
   );
   const rsvpMutation = useMutation(api.eventRsvps.rsvp);
   const toggleLikeMutation = useMutation(api.eventRsvps.toggleLike);
-  const submitPollResponseMutation = useMutation(
-    api.eventRsvps.submitEventPollResponse,
+  const submitPollResponsesMutation = useMutation(
+    api.eventRsvps.submitEventPollResponses,
   );
   const [pollPrompt, setPollPrompt] = useState<EventPollPromptState | null>(
     null,
@@ -134,8 +134,7 @@ export function useEventInteraction(eventId: Id<"events"> | undefined) {
       setPollPrompt({
         eventId,
         eventTitle: result.pollPrompt.eventTitle,
-        question: result.pollPrompt.question,
-        options: result.pollPrompt.options,
+        questions: result.pollPrompt.questions,
       });
     } else if (result.action === "removed") {
       setPollPrompt(null);
@@ -150,15 +149,15 @@ export function useEventInteraction(eventId: Id<"events"> | undefined) {
     return toggleLikeMutation({ eventId });
   }, [eventId, requireSignIn, toggleLikeMutation]);
 
-  const submitPollResponse = useCallback(
-    async (optionId: string) => {
+  const submitPollResponses = useCallback(
+    async (answers: EventPollAnswer[]) => {
       if (!eventId) return undefined;
       if (!requireSignIn()) return undefined;
-      const result = await submitPollResponseMutation({ eventId, optionId });
+      const result = await submitPollResponsesMutation({ eventId, answers });
       setPollPrompt(null);
       return result;
     },
-    [eventId, requireSignIn, submitPollResponseMutation],
+    [eventId, requireSignIn, submitPollResponsesMutation],
   );
 
   const dismissPollPrompt = useCallback(() => {
@@ -187,8 +186,7 @@ export function useEventInteraction(eventId: Id<"events"> | undefined) {
       setPollPrompt({
         eventId,
         eventTitle: event.title?.trim() || "Untitled Gig",
-        question: event.poll.question,
-        options: event.poll.options,
+        questions: event.poll.questions,
       });
     },
     [eventId, eventStatus?.canAnswerPoll, eventStatus?.hasPendingPoll],
@@ -199,12 +197,12 @@ export function useEventInteraction(eventId: Id<"events"> | undefined) {
     hasRsvp: eventStatus?.hasRsvp ?? false,
     hasLiked: eventStatus?.hasLiked ?? false,
     hasPendingPoll: eventStatus?.hasPendingPoll ?? false,
-    selectedPollOptionId: eventStatus?.selectedPollOptionId,
+    selectedPollAnswers: eventStatus?.selectedPollAnswers,
     canAnswerPoll: eventStatus?.canAnswerPoll ?? false,
     pollPrompt,
     rsvp,
     toggleLike,
-    submitPollResponse,
+    submitPollResponses,
     dismissPollPrompt,
     openPendingPollPrompt,
   };

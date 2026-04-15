@@ -42,10 +42,17 @@ import type {
 export const MAX_EVENT_GENRES = 3;
 export const MIN_EVENT_POLL_OPTIONS = 2;
 export const MAX_EVENT_POLL_OPTIONS = 6;
+export const MAX_EVENT_POLL_QUESTIONS = 3;
 
 export interface GigPollFormOption {
   id: string;
   label: string;
+}
+
+export interface GigPollFormQuestion {
+  id: string;
+  question: string;
+  options: GigPollFormOption[];
 }
 
 function createGigPollOptionId(): string {
@@ -60,6 +67,22 @@ export function createEmptyGigPollOption(): GigPollFormOption {
   return {
     id: createGigPollOptionId(),
     label: "",
+  };
+}
+
+function createGigPollQuestionId(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+
+  return `poll-question-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+export function createEmptyGigPollQuestion(): GigPollFormQuestion {
+  return {
+    id: createGigPollQuestionId(),
+    question: "",
+    options: [createEmptyGigPollOption(), createEmptyGigPollOption()],
   };
 }
 
@@ -115,8 +138,7 @@ export interface GigFormData {
   status: EventStatus;
   addressVisibility: EventAddressVisibility;
   pollEnabled: boolean;
-  pollQuestion: string;
-  pollOptions: GigPollFormOption[];
+  pollQuestions: GigPollFormQuestion[];
 }
 
 export function createGigFormData(initialStatus: EventStatus): GigFormData {
@@ -131,9 +153,16 @@ export function createGigFormData(initialStatus: EventStatus): GigFormData {
     status: initialStatus,
     addressVisibility: "public",
     pollEnabled: false,
-    pollQuestion: "",
-    pollOptions: [createEmptyGigPollOption(), createEmptyGigPollOption()],
+    pollQuestions: [createEmptyGigPollQuestion()],
   };
+}
+
+function pollQuestionErrorKey(questionId: string): string {
+  return `pollQuestion-${questionId}`;
+}
+
+function pollOptionsErrorKey(questionId: string): string {
+  return `pollOptions-${questionId}`;
 }
 
 function hasCompleteVenueSelection(
@@ -193,30 +222,50 @@ export function validateGigForm(
   }
 
   if (formData.pollEnabled) {
-    const pollQuestion = formData.pollQuestion.trim();
-    if (!pollQuestion) {
-      nextErrors.pollQuestion = "Poll question is required";
-    }
-
-    if (pollQuestion.length > 200) {
-      nextErrors.pollQuestion = "Poll question must be 200 characters or fewer";
-    }
-
     if (
-      formData.pollOptions.length < MIN_EVENT_POLL_OPTIONS ||
-      formData.pollOptions.length > MAX_EVENT_POLL_OPTIONS
+      formData.pollQuestions.length === 0 ||
+      formData.pollQuestions.length > MAX_EVENT_POLL_QUESTIONS
     ) {
-      nextErrors.pollOptions = `Add between ${MIN_EVENT_POLL_OPTIONS} and ${MAX_EVENT_POLL_OPTIONS} poll options`;
-    } else {
-      const trimmedOptions = formData.pollOptions.map((option) => option.label.trim());
-      if (trimmedOptions.some((option) => option.length === 0)) {
-        nextErrors.pollOptions = "Poll options cannot be empty";
+      nextErrors.pollQuestions = `Add between 1 and ${MAX_EVENT_POLL_QUESTIONS} poll questions`;
+    }
+
+    const seenQuestionIds = new Set<string>();
+    for (const pollQuestion of formData.pollQuestions) {
+      const normalizedQuestionId = pollQuestion.id.trim();
+      if (!normalizedQuestionId || seenQuestionIds.has(normalizedQuestionId)) {
+        nextErrors.pollQuestions = "Each poll question needs a stable unique id";
+        break;
+      }
+      seenQuestionIds.add(normalizedQuestionId);
+
+      const questionText = pollQuestion.question.trim();
+      if (!questionText) {
+        nextErrors[pollQuestionErrorKey(pollQuestion.id)] = "Poll question is required";
+      } else if (questionText.length > 200) {
+        nextErrors[pollQuestionErrorKey(pollQuestion.id)] =
+          "Poll question must be 200 characters or fewer";
+      }
+
+      if (
+        pollQuestion.options.length < MIN_EVENT_POLL_OPTIONS ||
+        pollQuestion.options.length > MAX_EVENT_POLL_OPTIONS
+      ) {
+        nextErrors[pollOptionsErrorKey(pollQuestion.id)] =
+          `Add between ${MIN_EVENT_POLL_OPTIONS} and ${MAX_EVENT_POLL_OPTIONS} poll options`;
       } else {
+        const trimmedOptions = pollQuestion.options.map((option) => option.label.trim());
         const seen = new Set<string>();
         for (const option of trimmedOptions) {
+          if (option.length === 0) {
+            nextErrors[pollOptionsErrorKey(pollQuestion.id)] =
+              "Poll options cannot be empty";
+            break;
+          }
+
           const normalized = option.toLowerCase();
           if (seen.has(normalized)) {
-            nextErrors.pollOptions = "Poll options must be unique";
+            nextErrors[pollOptionsErrorKey(pollQuestion.id)] =
+              "Poll options must be unique";
             break;
           }
           seen.add(normalized);
@@ -243,17 +292,20 @@ export function parseGigFormNumbers(formData: GigFormData): {
 }
 
 export function buildEventPollFromForm(
-  formData: Pick<GigFormData, "pollEnabled" | "pollQuestion" | "pollOptions">
+  formData: Pick<GigFormData, "pollEnabled" | "pollQuestions">
 ): EventPoll | undefined {
   if (!formData.pollEnabled) {
     return undefined;
   }
 
   return {
-    question: formData.pollQuestion.trim(),
-    options: formData.pollOptions.map((option) => ({
-      id: option.id,
-      label: option.label.trim(),
+    questions: formData.pollQuestions.map((question) => ({
+      id: question.id,
+      question: question.question.trim(),
+      options: question.options.map((option) => ({
+        id: option.id,
+        label: option.label.trim(),
+      })),
     })),
   };
 }
@@ -865,17 +917,18 @@ interface GigSettingsSectionProps {
     | "status"
     | "addressVisibility"
     | "pollEnabled"
-    | "pollQuestion"
-    | "pollOptions"
+    | "pollQuestions"
   >;
   errors?: Record<string, string>;
   onStatusChange: (status: EventStatus) => void;
   onAddressVisibilityChange: (visibility: EventAddressVisibility) => void;
   onPollEnabledChange: (enabled: boolean) => void;
-  onPollQuestionChange: (value: string) => void;
-  onPollOptionChange: (optionId: string, value: string) => void;
-  onAddPollOption: () => void;
-  onRemovePollOption: (optionId: string) => void;
+  onPollQuestionChange: (questionId: string, value: string) => void;
+  onPollOptionChange: (questionId: string, optionId: string, value: string) => void;
+  onAddPollQuestion: () => void;
+  onRemovePollQuestion: (questionId: string) => void;
+  onAddPollOption: (questionId: string) => void;
+  onRemovePollOption: (questionId: string, optionId: string) => void;
   clearError?: (field: string) => void;
   pollLocked?: boolean;
   pollResponseCount?: number;
@@ -889,6 +942,8 @@ export function GigSettingsSection({
   onAddressVisibilityChange,
   onPollEnabledChange,
   onPollQuestionChange,
+  onAddPollQuestion,
+  onRemovePollQuestion,
   onPollOptionChange,
   onAddPollOption,
   onRemovePollOption,
@@ -897,6 +952,12 @@ export function GigSettingsSection({
   pollResponseCount = 0,
   dangerSlot,
 }: GigSettingsSectionProps) {
+  const clearQuestionErrors = (questionId: string) => {
+    clearError?.("pollQuestions");
+    clearError?.(pollQuestionErrorKey(questionId));
+    clearError?.(pollOptionsErrorKey(questionId));
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, x: 20 }}
@@ -977,7 +1038,7 @@ export function GigSettingsSection({
 
       <GigSectionCard
         title="RSVP Poll"
-        description="Ask one optional question after fans RSVP. Fans can skip it and answer later from the gig page."
+        description="Ask up to three optional questions after fans RSVP. Fans answer them together and can come back later from the gig page."
       >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-3">
@@ -998,7 +1059,7 @@ export function GigSettingsSection({
               <p className="mt-1 text-xs text-muted-foreground">
                 {pollLocked
                   ? `Locked after ${pollResponseCount} response${pollResponseCount === 1 ? "" : "s"}.`
-                  : "Single question, single-choice answers."}
+                  : "Up to three single-choice questions, answered in one go."}
               </p>
             </div>
           </div>
@@ -1013,8 +1074,11 @@ export function GigSettingsSection({
               type="button"
               onClick={() => {
                 onPollEnabledChange(!formData.pollEnabled);
-                clearError?.("pollQuestion");
-                clearError?.("pollOptions");
+                clearError?.("pollQuestions");
+                formData.pollQuestions.forEach((question) => {
+                  clearError?.(pollQuestionErrorKey(question.id));
+                  clearError?.(pollOptionsErrorKey(question.id));
+                });
               }}
               className={cn(
                 "rounded-xl px-4 py-2 text-sm font-medium transition-colors",
@@ -1030,93 +1094,163 @@ export function GigSettingsSection({
 
         {formData.pollEnabled ? (
           <div className="space-y-3">
-            <div>
-              <label className="mb-2 block text-xs font-semibold text-muted-foreground">
-                Poll Question
-              </label>
-              <textarea
-                value={formData.pollQuestion}
-                onChange={(event) => {
-                  onPollQuestionChange(event.target.value);
-                  clearError?.("pollQuestion");
-                }}
-                disabled={pollLocked}
-                rows={3}
-                placeholder="What do you want fans to answer after they RSVP?"
-                className={cn(
-                  "w-full resize-none rounded-xl border bg-muted px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none",
-                  errors.pollQuestion
-                    ? "border-red-500"
-                    : "border-border focus:border-band",
-                  pollLocked && "cursor-not-allowed opacity-70",
-                )}
-              />
-              {errors.pollQuestion ? (
-                <p className="mt-1 text-xs text-red-500">{errors.pollQuestion}</p>
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground">
+                  Questions ({formData.pollQuestions.length}/{MAX_EVENT_POLL_QUESTIONS})
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Fans will answer every question before saving.
+                </p>
+              </div>
+              {!pollLocked ? (
+                <button
+                  type="button"
+                  onClick={onAddPollQuestion}
+                  disabled={formData.pollQuestions.length >= MAX_EVENT_POLL_QUESTIONS}
+                  className="inline-flex items-center gap-1 rounded-xl border border-band/20 bg-band/10 px-3 py-2 text-xs font-medium text-band transition-colors hover:bg-band/15 disabled:cursor-not-allowed disabled:border-border disabled:bg-muted disabled:text-muted-foreground"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Add question
+                </button>
               ) : null}
             </div>
 
-            <div>
-              <div className="mb-2 flex items-center justify-between gap-3">
-                <label className="block text-xs font-semibold text-muted-foreground">
-                  Answer Options ({formData.pollOptions.length}/{MAX_EVENT_POLL_OPTIONS})
-                </label>
-                {!pollLocked ? (
-                  <button
-                    type="button"
-                    onClick={onAddPollOption}
-                    disabled={formData.pollOptions.length >= MAX_EVENT_POLL_OPTIONS}
-                    className="inline-flex items-center gap-1 text-xs font-medium text-band transition-colors hover:text-band/80 disabled:cursor-not-allowed disabled:text-muted-foreground"
+            {errors.pollQuestions ? (
+              <p className="text-xs text-red-500">{errors.pollQuestions}</p>
+            ) : null}
+
+            <div className="space-y-4">
+              {formData.pollQuestions.map((pollQuestion, questionIndex) => {
+                const questionError = errors[pollQuestionErrorKey(pollQuestion.id)];
+                const optionError = errors[pollOptionsErrorKey(pollQuestion.id)];
+
+                return (
+                  <div
+                    key={pollQuestion.id}
+                    className="rounded-2xl border border-border bg-muted/20 p-4"
                   >
-                    <Plus className="h-3.5 w-3.5" />
-                    Add option
-                  </button>
-                ) : null}
-              </div>
-
-              <div className="space-y-2">
-                {formData.pollOptions.map((option, index) => (
-                  <div key={option.id} className="flex items-center gap-2">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-muted text-xs font-semibold text-muted-foreground">
-                      {index + 1}
+                    <div className="mb-3 flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-semibold text-muted-foreground">
+                          Question {questionIndex + 1}
+                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Single-choice answers only.
+                        </p>
+                      </div>
+                      {!pollLocked &&
+                      formData.pollQuestions.length > 1 ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onRemovePollQuestion(pollQuestion.id);
+                            clearQuestionErrors(pollQuestion.id);
+                          }}
+                          className="inline-flex items-center gap-1 rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs font-medium text-red-500 transition-colors hover:bg-red-500/20"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Remove question
+                        </button>
+                      ) : null}
                     </div>
-                    <input
-                      type="text"
-                      value={option.label}
-                      onChange={(event) => {
-                        onPollOptionChange(option.id, event.target.value);
-                        clearError?.("pollOptions");
-                      }}
-                      disabled={pollLocked}
-                      placeholder={`Option ${index + 1}`}
-                      className={cn(
-                        "min-w-0 flex-1 rounded-xl border bg-muted px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none",
-                        errors.pollOptions
-                          ? "border-red-500"
-                          : "border-border focus:border-band",
-                        pollLocked && "cursor-not-allowed opacity-70",
-                      )}
-                    />
-                    {!pollLocked && formData.pollOptions.length > MIN_EVENT_POLL_OPTIONS ? (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onRemovePollOption(option.id);
-                          clearError?.("pollOptions");
-                        }}
-                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-red-500/20 bg-red-500/10 text-red-500 transition-colors hover:bg-red-500/20"
-                        aria-label={`Remove option ${index + 1}`}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    ) : null}
-                  </div>
-                ))}
-              </div>
 
-              {errors.pollOptions ? (
-                <p className="mt-1 text-xs text-red-500">{errors.pollOptions}</p>
-              ) : null}
+                    <div>
+                      <label className="mb-2 block text-xs font-semibold text-muted-foreground">
+                        Poll Question
+                      </label>
+                      <textarea
+                        value={pollQuestion.question}
+                        onChange={(event) => {
+                          onPollQuestionChange(pollQuestion.id, event.target.value);
+                          clearError?.(pollQuestionErrorKey(pollQuestion.id));
+                        }}
+                        disabled={pollLocked}
+                        rows={3}
+                        placeholder="What do you want fans to answer after they RSVP?"
+                        className={cn(
+                          "w-full resize-none rounded-xl border bg-muted px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none",
+                          questionError
+                            ? "border-red-500"
+                            : "border-border focus:border-band",
+                          pollLocked && "cursor-not-allowed opacity-70",
+                        )}
+                      />
+                      {questionError ? (
+                        <p className="mt-1 text-xs text-red-500">{questionError}</p>
+                      ) : null}
+                    </div>
+
+                    <div className="mt-4">
+                      <div className="mb-2 flex items-center justify-between gap-3">
+                        <label className="block text-xs font-semibold text-muted-foreground">
+                          Answer Options ({pollQuestion.options.length}/{MAX_EVENT_POLL_OPTIONS})
+                        </label>
+                        {!pollLocked ? (
+                          <button
+                            type="button"
+                            onClick={() => onAddPollOption(pollQuestion.id)}
+                            disabled={pollQuestion.options.length >= MAX_EVENT_POLL_OPTIONS}
+                            className="inline-flex items-center gap-1 text-xs font-medium text-band transition-colors hover:text-band/80 disabled:cursor-not-allowed disabled:text-muted-foreground"
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                            Add option
+                          </button>
+                        ) : null}
+                      </div>
+
+                      <div className="space-y-2">
+                        {pollQuestion.options.map((option, optionIndex) => (
+                          <div key={option.id} className="flex items-center gap-2">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-muted text-xs font-semibold text-muted-foreground">
+                              {optionIndex + 1}
+                            </div>
+                            <input
+                              type="text"
+                              value={option.label}
+                              onChange={(event) => {
+                                onPollOptionChange(
+                                  pollQuestion.id,
+                                  option.id,
+                                  event.target.value,
+                                );
+                                clearError?.(pollOptionsErrorKey(pollQuestion.id));
+                              }}
+                              disabled={pollLocked}
+                              placeholder={`Option ${optionIndex + 1}`}
+                              className={cn(
+                                "min-w-0 flex-1 rounded-xl border bg-muted px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none",
+                                optionError
+                                  ? "border-red-500"
+                                  : "border-border focus:border-band",
+                                pollLocked && "cursor-not-allowed opacity-70",
+                              )}
+                            />
+                            {!pollLocked &&
+                            pollQuestion.options.length > MIN_EVENT_POLL_OPTIONS ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  onRemovePollOption(pollQuestion.id, option.id);
+                                  clearError?.(pollOptionsErrorKey(pollQuestion.id));
+                                }}
+                                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-red-500/20 bg-red-500/10 text-red-500 transition-colors hover:bg-red-500/20"
+                                aria-label={`Remove option ${optionIndex + 1} from question ${questionIndex + 1}`}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            ) : null}
+                          </div>
+                        ))}
+                      </div>
+
+                      {optionError ? (
+                        <p className="mt-1 text-xs text-red-500">{optionError}</p>
+                      ) : null}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         ) : (

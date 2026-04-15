@@ -4,31 +4,49 @@ import { useEffect, useState } from "react";
 import { CheckCircle2, Loader2, MessageSquareText, X } from "lucide-react";
 import { ResponsiveSheetModal } from "@/components/ui/ResponsiveSheetModal";
 import { cn } from "@/lib/utils";
-import type { EventPoll } from "@ear-plug/shared/types";
+import type {
+  EventPoll,
+  EventPollAnswer,
+  EventPollQuestion,
+} from "@ear-plug/shared/types";
 
 interface EventPollPromptProps {
   isOpen: boolean;
   eventTitle: string;
-  question: string;
-  options: EventPoll["options"];
-  initialSelectedOptionId?: string;
+  questions: EventPoll["questions"];
+  initialSelectedAnswers?: EventPollAnswer[];
   isSubmitting?: boolean;
   onClose: () => void;
-  onSubmit: (optionId: string) => Promise<unknown> | unknown;
+  onSubmit: (answers: EventPollAnswer[]) => Promise<unknown> | unknown;
+}
+
+function buildInitialAnswerState(
+  questions: EventPollQuestion[],
+  initialSelectedAnswers?: EventPollAnswer[],
+): Record<string, string> {
+  const answerByQuestionId = new Map<string, string>();
+  initialSelectedAnswers?.forEach((answer) => {
+    if (answer.questionId && answer.optionId) {
+      answerByQuestionId.set(answer.questionId, answer.optionId);
+    }
+  });
+
+  return Object.fromEntries(
+    questions.map((question) => [question.id, answerByQuestionId.get(question.id) ?? ""]),
+  );
 }
 
 export function EventPollPrompt({
   isOpen,
   eventTitle,
-  question,
-  options,
-  initialSelectedOptionId,
+  questions,
+  initialSelectedAnswers,
   isSubmitting = false,
   onClose,
   onSubmit,
 }: EventPollPromptProps) {
-  const [selectedOptionId, setSelectedOptionId] = useState(
-    initialSelectedOptionId ?? "",
+  const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>(
+    () => buildInitialAnswerState(questions, initialSelectedAnswers),
   );
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -38,22 +56,30 @@ export function EventPollPrompt({
       return;
     }
 
-    setSelectedOptionId(initialSelectedOptionId ?? "");
+    setSelectedAnswers(buildInitialAnswerState(questions, initialSelectedAnswers));
     setSubmitError(null);
-  }, [initialSelectedOptionId, isOpen]);
+  }, [initialSelectedAnswers, isOpen, questions]);
 
   const handleSubmit = async () => {
-    if (!selectedOptionId) {
-      setSubmitError("Choose an option before saving, or answer later.");
+    const hasMissingAnswer = questions.some(
+      (question) => !selectedAnswers[question.id],
+    );
+    if (hasMissingAnswer) {
+      setSubmitError("Answer every question before saving, or come back later.");
       return;
     }
 
     setSubmitError(null);
     try {
-      await onSubmit(selectedOptionId);
+      await onSubmit(
+        questions.map((question) => ({
+          questionId: question.id,
+          optionId: selectedAnswers[question.id],
+        })),
+      );
     } catch (error) {
       setSubmitError(
-        error instanceof Error ? error.message : "Failed to save poll answer",
+        error instanceof Error ? error.message : "Failed to save poll answers",
       );
     }
   };
@@ -64,7 +90,7 @@ export function EventPollPrompt({
       onClose={onClose}
       closeDisabled={isSubmitting}
       labelledBy="event-poll-title"
-      panelClassName="sm:max-w-md"
+      panelClassName="sm:max-w-lg"
     >
       <div className="border-b border-border bg-card/95 px-4 pb-4 pt-4 backdrop-blur-xl">
         <div className="flex items-start justify-between gap-4">
@@ -83,7 +109,7 @@ export function EventPollPrompt({
                 {eventTitle}
               </h2>
               <p className="mt-1 text-xs text-muted-foreground">
-                Optional follow-up after RSVP. You can answer now or later.
+                Share your thoughts to help us create better events!
               </p>
             </div>
           </div>
@@ -99,44 +125,63 @@ export function EventPollPrompt({
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 pb-24 pt-4 sm:pb-6">
-        <div className="rounded-2xl border border-border bg-card/70 p-4 shadow-sm">
-          <p className="text-sm font-semibold text-foreground">{question}</p>
-          <div className="mt-4 space-y-2">
-            {options.map((option) => {
-              const isSelected = selectedOptionId === option.id;
-              return (
-                <button
-                  key={option.id}
-                  type="button"
-                  onClick={() => {
-                    setSelectedOptionId(option.id);
-                    setSubmitError(null);
-                  }}
-                  className={cn(
-                    "flex w-full items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition-colors",
-                    isSelected
-                      ? "border-band bg-band/10 text-foreground"
-                      : "border-border bg-muted/50 text-muted-foreground hover:border-band/30 hover:text-foreground",
-                  )}
-                >
-                  <span className="text-sm font-medium">{option.label}</span>
-                  <span
-                    className={cn(
-                      "flex h-5 w-5 items-center justify-center rounded-full border",
-                      isSelected
-                        ? "border-band bg-band text-white"
-                        : "border-border bg-card",
-                    )}
-                  >
-                    {isSelected ? <CheckCircle2 className="h-3.5 w-3.5" /> : null}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+        <div className="space-y-4">
+          {questions.map((question, questionIndex) => (
+            <div
+              key={question.id}
+              className="rounded-2xl border border-border bg-card/70 p-4 shadow-sm"
+            >
+              <div className="mb-4">
+                <p className="text-[11px] font-semibold tracking-[0.18em] text-muted-foreground">
+                  Question {questionIndex + 1}
+                </p>
+                <p className="mt-2 text-sm font-semibold text-foreground">
+                  {question.question}
+                </p>
+              </div>
+              <div className="space-y-2">
+                {question.options.map((option) => {
+                  const isSelected = selectedAnswers[question.id] === option.id;
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedAnswers((prev) => ({
+                          ...prev,
+                          [question.id]: option.id,
+                        }));
+                        setSubmitError(null);
+                      }}
+                      className={cn(
+                        "flex w-full items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition-colors",
+                        isSelected
+                          ? "border-band bg-band/10 text-foreground"
+                          : "border-border bg-muted/50 text-muted-foreground hover:border-band/30 hover:text-foreground",
+                      )}
+                    >
+                      <span className="text-sm font-medium">{option.label}</span>
+                      <span
+                        className={cn(
+                          "flex h-5 w-5 items-center justify-center rounded-full border",
+                          isSelected
+                            ? "border-band bg-band text-white"
+                            : "border-border bg-card",
+                        )}
+                      >
+                        {isSelected ? (
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                        ) : null}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
 
           {submitError ? (
-            <p className="mt-3 text-xs text-red-500">{submitError}</p>
+            <p className="text-xs text-red-500">{submitError}</p>
           ) : null}
         </div>
       </div>
@@ -155,7 +200,7 @@ export function EventPollPrompt({
                 Saving...
               </>
             ) : (
-              "Save Answer"
+              "Save Answers"
             )}
           </button>
           <button

@@ -18,6 +18,7 @@ import type * as eventTickets from "../eventTickets.js";
 import type * as events from "../events.js";
 import type * as http from "../http.js";
 import type * as messages from "../messages.js";
+import type * as migrations from "../migrations.js";
 import type * as notifications from "../notifications.js";
 import type * as seed from "../seed.js";
 import type * as spotify from "../spotify.js";
@@ -46,6 +47,7 @@ declare const fullApi: ApiFromModules<{
   events: typeof events;
   http: typeof http;
   messages: typeof messages;
+  migrations: typeof migrations;
   notifications: typeof notifications;
   seed: typeof seed;
   spotify: typeof spotify;

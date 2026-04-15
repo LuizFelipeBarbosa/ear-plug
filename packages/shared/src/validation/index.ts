@@ -84,19 +84,32 @@ export const eventPollOptionSchema = z.object({
 });
 
 /**
- * Schema for an optional RSVP poll attached to a gig.
+ * Schema for a single RSVP poll question attached to a gig.
  */
-export const eventPollSchema = z.object({
+export const eventPollQuestionSchema = z.object({
+  id: z.string().trim().min(1).max(100),
   question: z.string().trim().min(1).max(200),
   options: z
     .array(eventPollOptionSchema)
     .min(2)
     .max(6)
     .superRefine((options, ctx) => {
-      const seen = new Set<string>();
+      const seenIds = new Set<string>();
+      const seenLabels = new Set<string>();
       options.forEach((option, index) => {
-        const normalized = option.label.trim().toLowerCase();
-        if (seen.has(normalized)) {
+        const normalizedId = option.id.trim();
+        if (seenIds.has(normalizedId)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Poll options must have unique ids",
+            path: [index, "id"],
+          });
+          return;
+        }
+        seenIds.add(normalizedId);
+
+        const normalizedLabel = option.label.trim().toLowerCase();
+        if (seenLabels.has(normalizedLabel)) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
             message: "Poll options must be unique",
@@ -104,7 +117,32 @@ export const eventPollSchema = z.object({
           });
           return;
         }
-        seen.add(normalized);
+        seenLabels.add(normalizedLabel);
+      });
+    }),
+});
+
+/**
+ * Schema for an optional RSVP poll attached to a gig.
+ */
+export const eventPollSchema = z.object({
+  questions: z
+    .array(eventPollQuestionSchema)
+    .min(1)
+    .max(3)
+    .superRefine((questions, ctx) => {
+      const seenIds = new Set<string>();
+      questions.forEach((question, index) => {
+        const normalizedId = question.id.trim();
+        if (seenIds.has(normalizedId)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Poll questions must have unique ids",
+            path: [index, "id"],
+          });
+          return;
+        }
+        seenIds.add(normalizedId);
       });
     }),
 });

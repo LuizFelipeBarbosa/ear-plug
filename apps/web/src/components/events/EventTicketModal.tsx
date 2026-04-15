@@ -78,7 +78,7 @@ function TicketMeta({
 }) {
   return (
     <div className="rounded-2xl border border-border bg-card px-4 py-3">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+      <p className="text-[11px] font-semibold tracking-[0.16em] text-muted-foreground">
         {label}
       </p>
       <p
@@ -245,7 +245,7 @@ export function EventTicketModal({
                 <section className="rounded-[2rem] border border-fan/20 bg-gradient-to-br from-fan/8 via-card to-band/8 p-5">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-fan">
+                      <p className="text-[11px] font-semibold tracking-[0.18em] text-fan">
                         Admit One
                       </p>
                       <h3 className="mt-2 text-xl font-bold leading-tight text-foreground">

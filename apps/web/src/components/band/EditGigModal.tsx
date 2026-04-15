@@ -17,6 +17,7 @@ import { GigModalShell } from "@/components/band/GigModalShell";
 import {
   createGigFormData,
   createEmptyGigPollOption,
+  createEmptyGigPollQuestion,
   buildEventPollFromForm,
   GigBandSearchInput,
   GigDetailsSection,
@@ -158,14 +159,17 @@ export function EditGigModal({
       status: event.status === "hold" ? "hold" : "confirmed",
       addressVisibility: event.addressVisibility ?? "public",
       pollEnabled: !!event.poll,
-      pollQuestion: event.poll?.question ?? "",
-      pollOptions:
-        event.poll?.options && event.poll.options.length >= 2
-          ? event.poll.options.map((option) => ({
-              id: option.id,
-              label: option.label,
+      pollQuestions:
+        event.poll?.questions && event.poll.questions.length >= 1
+          ? event.poll.questions.map((question) => ({
+              id: question.id,
+              question: question.question,
+              options: question.options.map((option) => ({
+                id: option.id,
+                label: option.label,
+              })),
             }))
-          : [createEmptyGigPollOption(), createEmptyGigPollOption()],
+          : [createEmptyGigPollQuestion()],
     });
     setVenue(
       event.venue
@@ -525,36 +529,82 @@ export function EditGigModal({
                   setFormData((prev) => ({
                     ...prev,
                     pollEnabled,
-                    pollQuestion: pollEnabled ? prev.pollQuestion : "",
-                    pollOptions: pollEnabled
-                      ? prev.pollOptions.length >= 2
-                        ? prev.pollOptions
-                        : [createEmptyGigPollOption(), createEmptyGigPollOption()]
-                      : [createEmptyGigPollOption(), createEmptyGigPollOption()],
+                    pollQuestions: pollEnabled
+                      ? prev.pollQuestions.length >= 1
+                        ? prev.pollQuestions
+                        : [createEmptyGigPollQuestion()]
+                      : [createEmptyGigPollQuestion()],
                   }))
                 }
-                onPollQuestionChange={(pollQuestion) =>
-                  setFormData((prev) => ({ ...prev, pollQuestion }))
-                }
-                onPollOptionChange={(optionId, value) =>
+                onPollQuestionChange={(questionId, question) =>
                   setFormData((prev) => ({
                     ...prev,
-                    pollOptions: prev.pollOptions.map((option) =>
-                      option.id === optionId ? { ...option, label: value } : option,
+                    pollQuestions: prev.pollQuestions.map((pollQuestion) =>
+                      pollQuestion.id === questionId
+                        ? { ...pollQuestion, question }
+                        : pollQuestion,
                     ),
                   }))
                 }
-                onAddPollOption={() =>
+                onAddPollQuestion={() =>
                   setFormData((prev) => ({
                     ...prev,
-                    pollOptions: [...prev.pollOptions, createEmptyGigPollOption()],
+                    pollQuestions: [...prev.pollQuestions, createEmptyGigPollQuestion()],
                   }))
                 }
-                onRemovePollOption={(optionId) =>
+                onRemovePollQuestion={(questionId) =>
                   setFormData((prev) => ({
                     ...prev,
-                    pollOptions: prev.pollOptions.filter(
-                      (option) => option.id !== optionId,
+                    pollQuestions: prev.pollQuestions.filter(
+                      (pollQuestion) => pollQuestion.id !== questionId,
+                    ),
+                  }))
+                }
+                onPollOptionChange={(questionId, optionId, value) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    pollQuestions: prev.pollQuestions.map((pollQuestion) =>
+                      pollQuestion.id === questionId
+                        ? {
+                            ...pollQuestion,
+                            options: pollQuestion.options.map((option) =>
+                              option.id === optionId
+                                ? { ...option, label: value }
+                                : option,
+                            ),
+                          }
+                        : pollQuestion,
+                    ),
+                  }))
+                }
+                onAddPollOption={(questionId) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    pollQuestions: prev.pollQuestions.map((pollQuestion) =>
+                      pollQuestion.id === questionId
+                        ? {
+                            ...pollQuestion,
+                            options: [
+                              ...pollQuestion.options,
+                              createEmptyGigPollOption(),
+                            ],
+                          }
+                        : pollQuestion,
+                    ),
+                  }))
+                }
+                onRemovePollOption={(questionId, optionId) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    pollQuestions: prev.pollQuestions.map((pollQuestion) =>
+                      pollQuestion.id === questionId
+                        ? {
+                            ...pollQuestion,
+                            options: pollQuestion.options.filter(
+                              (option) => option.id !== optionId,
+                            ),
+                          }
+                        : pollQuestion,
                     ),
                   }))
                 }
@@ -583,10 +633,10 @@ export function EditGigModal({
 
         <GigModalFooter
           onCancel={onClose}
-          cancelDisabled={isBusy}
+          cancelDisabled={isSubmitting || isDeleting}
           primaryLabel="Save Changes"
           primaryBusyLabel="Saving..."
-          primaryDisabled={isBusy}
+          primaryDisabled={isSubmitting || isDeleting}
           isBusy={isSubmitting}
         />
       </form>
