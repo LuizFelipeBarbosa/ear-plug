@@ -168,6 +168,11 @@ export const backfillRsvpPollAnswersBatch = internalMutation({
       await ctx.db.patch(rsvp._id, {
         pollAnswers: normalizedAnswers,
         pollAnsweredAt: rsvp.pollAnsweredAt,
+        // Explicitly clear the legacy single-answer field so the document no
+        // longer carries an attribute that is absent from the new schema.
+        // `ctx.db.patch` is a shallow merge, so without this the field would
+        // persist and cause strict schema validation to reject the deploy.
+        ...({ pollAnswerOptionId: undefined } as Record<string, unknown>),
       });
       migrated += 1;
     }

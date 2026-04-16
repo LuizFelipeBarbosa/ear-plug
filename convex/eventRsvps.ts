@@ -293,6 +293,10 @@ export const submitEventPollResponses = mutation({
     await ctx.db.patch(rsvp._id, {
       pollAnswers: validatedAnswers,
       pollAnsweredAt,
+      // Clear the legacy single-answer field if it's still present on this
+      // row. `ctx.db.patch` is a shallow merge, so without this the stale
+      // attribute would keep violating the new schema.
+      ...({ pollAnswerOptionId: undefined } as Record<string, unknown>),
     });
 
     return {
