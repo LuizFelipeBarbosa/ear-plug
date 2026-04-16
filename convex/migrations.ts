@@ -25,30 +25,6 @@ type EventPollLookupCtx = {
   };
 };
 
-type ValidateEventPollBackfillPageResult = {
-  nextCursor: {
-    event?: string;
-    rsvp?: string;
-  };
-  done: {
-    events: boolean;
-    rsvps: boolean;
-  };
-  totals: {
-    events: number;
-    rsvps: number;
-  };
-  issues: {
-    legacyEventPolls: number;
-    legacyRsvpAnswers: number;
-    invalidRsvpAnswers: number;
-  };
-  migrated: {
-    rsvpsWithPollAnswers: number;
-  };
-  validPage: boolean;
-};
-
 function isLegacyStoredPoll(poll: LegacyStoredPoll): boolean {
   return (
     !!poll &&
@@ -190,47 +166,45 @@ export const backfillRsvpPollAnswersBatch = internalMutation({
   },
 });
 
-export const validateEventPollBackfillPage = internalQuery({
+// Convex only permits a single paginated query per function, so events and
+// rsvps are scanned via two separate internal queries and the action
+// interleaves them.
+export const validateEventPollBackfillEventsPage = internalQuery({
   args: {
-    eventCursor: v.optional(v.string()),
-    rsvpCursor: v.optional(v.string()),
-    scanEvents: v.optional(v.boolean()),
-    scanRsvps: v.optional(v.boolean()),
-    eventLimit: v.optional(v.number()),
-    rsvpLimit: v.optional(v.number()),
+    cursor: v.optional(v.string()),
+    limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const eventLimit = Math.min(Math.max(args.eventLimit ?? 250, 1), 500);
-    const rsvpLimit = Math.min(Math.max(args.rsvpLimit ?? 250, 1), 500);
-    const scanEvents = args.scanEvents ?? true;
-    const scanRsvps = args.scanRsvps ?? true;
-
-    const [eventPage, rsvpPage] = await Promise.all([
-      scanEvents
-        ? ctx.db.query("events").order("asc").paginate({
-            cursor: args.eventCursor ?? null,
-            numItems: eventLimit,
-          })
-        : Promise.resolve({
-            page: [] as Doc<"events">[],
-            isDone: true,
-            continueCursor: undefined,
-          }),
-      scanRsvps
-        ? ctx.db.query("rsvps").order("asc").paginate({
-            cursor: args.rsvpCursor ?? null,
-            numItems: rsvpLimit,
-          })
-        : Promise.resolve({
-            page: [] as Doc<"rsvps">[],
-            isDone: true,
-            continueCursor: undefined,
-          }),
-    ]);
+    const limit = Math.min(Math.max(args.limit ?? 250, 1), 500);
+    const eventPage = await ctx.db.query("events").order("asc").paginate({
+      cursor: args.cursor ?? null,
+      numItems: limit,
+    });
 
     const legacyEventPolls = eventPage.page.filter((event) =>
       isLegacyStoredPoll(event.poll as LegacyStoredPoll)
     ).length;
+
+    return {
+      nextCursor: eventPage.continueCursor ?? undefined,
+      done: eventPage.isDone,
+      total: eventPage.page.length,
+      legacyEventPolls,
+    };
+  },
+});
+
+export const validateEventPollBackfillRsvpsPage = internalQuery({
+  args: {
+    cursor: v.optional(v.string()),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const limit = Math.min(Math.max(args.limit ?? 250, 1), 500);
+    const rsvpPage = await ctx.db.query("rsvps").order("asc").paginate({
+      cursor: args.cursor ?? null,
+      numItems: limit,
+    });
 
     let legacyRsvpAnswers = 0;
     let migratedRsvpAnswers = 0;
@@ -259,30 +233,12 @@ export const validateEventPollBackfillPage = internalQuery({
     }
 
     return {
-      nextCursor: {
-        event: eventPage.continueCursor ?? undefined,
-        rsvp: rsvpPage.continueCursor ?? undefined,
-      },
-      done: {
-        events: eventPage.isDone,
-        rsvps: rsvpPage.isDone,
-      },
-      totals: {
-        events: eventPage.page.length,
-        rsvps: rsvpPage.page.length,
-      },
-      issues: {
-        legacyEventPolls,
-        legacyRsvpAnswers,
-        invalidRsvpAnswers,
-      },
-      migrated: {
-        rsvpsWithPollAnswers: migratedRsvpAnswers,
-      },
-      validPage:
-        legacyEventPolls === 0 &&
-        legacyRsvpAnswers === 0 &&
-        invalidRsvpAnswers === 0,
+      nextCursor: rsvpPage.continueCursor ?? undefined,
+      done: rsvpPage.isDone,
+      total: rsvpPage.page.length,
+      legacyRsvpAnswers,
+      migratedRsvpAnswers,
+      invalidRsvpAnswers,
     };
   },
 });
@@ -305,30 +261,28 @@ export const validateEventPollBackfill = internalAction({
     let invalidRsvpAnswers = 0;
     let migratedRsvpAnswers = 0;
 
-    while (!eventsDone || !rsvpsDone) {
-      const page: ValidateEventPollBackfillPageResult = await ctx.runQuery(
-        internal.migrations.validateEventPollBackfillPage,
-        {
-          eventCursor,
-          rsvpCursor,
-          scanEvents: !eventsDone,
-          scanRsvps: !rsvpsDone,
-          eventLimit: args.eventLimit,
-          rsvpLimit: args.rsvpLimit,
-        },
+    while (!eventsDone) {
+      const page = await ctx.runQuery(
+        internal.migrations.validateEventPollBackfillEventsPage,
+        { cursor: eventCursor, limit: args.eventLimit },
       );
+      totalEvents += page.total;
+      legacyEventPolls += page.legacyEventPolls;
+      eventCursor = page.nextCursor;
+      eventsDone = page.done;
+    }
 
-      totalEvents += page.totals.events;
-      totalRsvps += page.totals.rsvps;
-      legacyEventPolls += page.issues.legacyEventPolls;
-      legacyRsvpAnswers += page.issues.legacyRsvpAnswers;
-      invalidRsvpAnswers += page.issues.invalidRsvpAnswers;
-      migratedRsvpAnswers += page.migrated.rsvpsWithPollAnswers;
-
-      eventCursor = page.nextCursor.event;
-      rsvpCursor = page.nextCursor.rsvp;
-      eventsDone = page.done.events;
-      rsvpsDone = page.done.rsvps;
+    while (!rsvpsDone) {
+      const page = await ctx.runQuery(
+        internal.migrations.validateEventPollBackfillRsvpsPage,
+        { cursor: rsvpCursor, limit: args.rsvpLimit },
+      );
+      totalRsvps += page.total;
+      legacyRsvpAnswers += page.legacyRsvpAnswers;
+      invalidRsvpAnswers += page.invalidRsvpAnswers;
+      migratedRsvpAnswers += page.migratedRsvpAnswers;
+      rsvpCursor = page.nextCursor;
+      rsvpsDone = page.done;
     }
 
     return {
