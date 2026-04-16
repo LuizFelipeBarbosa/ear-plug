@@ -387,7 +387,8 @@ export function BandAnalyticsView() {
                           {formatFullDate(poll.dateTime)}
                         </p>
                         <p className="mt-2 text-sm text-foreground">
-                          {poll.question}
+                          {poll.questions.length} question
+                          {poll.questions.length === 1 ? "" : "s"} in this poll
                         </p>
                       </div>
                       <div className="shrink-0 rounded-xl border border-border bg-muted/50 px-3 py-2 text-right">
@@ -401,35 +402,49 @@ export function BandAnalyticsView() {
                     </div>
 
                     <div className="mt-4 space-y-3">
-                      {poll.options.map((option, optionIndex) => (
-                        <div key={option.id}>
-                          <div className="mb-1 flex items-center justify-between gap-3 text-sm">
-                            <span className="truncate text-foreground">
-                              {option.label}
-                            </span>
-                            <span className="shrink-0 text-xs text-muted-foreground">
-                              {option.count} • {Math.round(option.percentage)}%
-                            </span>
-                          </div>
-                          <div className="h-2 rounded-full bg-muted">
-                            <div
-                              className="h-full rounded-full"
-                              style={{
-                                width: `${Math.max(
-                                  option.count > 0
-                                    ? 8
-                                    : 0,
-                                  Math.round(option.percentage),
-                                )}%`,
-                                backgroundColor:
-                                  [
-                                    CHART_COLORS.primary,
-                                    CHART_COLORS.secondary,
-                                    CHART_COLORS.accent,
-                                    CHART_COLORS.primaryLight,
-                                  ][(pollIndex + optionIndex) % 4],
-                              }}
-                            />
+                      {poll.questions.map((question, questionIndex) => (
+                        <div
+                          key={question.id}
+                          className="rounded-2xl border border-border/60 bg-muted/20 p-3"
+                        >
+                          <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground">
+                            Question {questionIndex + 1}
+                          </p>
+                          <p className="mt-2 text-sm text-foreground">
+                            {question.question}
+                          </p>
+
+                          <div className="mt-3 space-y-3">
+                            {question.options.map((option, optionIndex) => (
+                              <div key={option.id}>
+                                <div className="mb-1 flex items-center justify-between gap-3 text-sm">
+                                  <span className="truncate text-foreground">
+                                    {option.label}
+                                  </span>
+                                  <span className="shrink-0 text-xs text-muted-foreground">
+                                    {option.count} • {Math.round(option.percentage)}%
+                                  </span>
+                                </div>
+                                <div className="h-2 rounded-full bg-muted">
+                                  <div
+                                    className="h-full rounded-full"
+                                    style={{
+                                      width: `${Math.max(
+                                        option.count > 0 ? 8 : 0,
+                                        Math.round(option.percentage),
+                                      )}%`,
+                                      backgroundColor:
+                                        [
+                                          CHART_COLORS.primary,
+                                          CHART_COLORS.secondary,
+                                          CHART_COLORS.accent,
+                                          CHART_COLORS.primaryLight,
+                                        ][(pollIndex + questionIndex + optionIndex) % 4],
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         </div>
                       ))}
@@ -575,7 +590,7 @@ export function BandAnalyticsView() {
                   </div>
 
                   <div className="rounded-2xl border border-band/15 bg-gradient-to-br from-band/10 via-background to-blue-500/5 p-4">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-band/80">
+                    <p className="text-[11px] font-semibold tracking-[0.22em] text-band/80">
                       Top Market
                     </p>
                     <p className="mt-3 text-2xl font-bold text-foreground">
@@ -747,7 +762,7 @@ function AudienceLocationRow({
           <p className="text-lg font-bold leading-none text-foreground">
             {Math.round(share)}%
           </p>
-          <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+          <p className="mt-1 text-[10px] tracking-[0.2em] text-muted-foreground">
             of mapped fans
           </p>
         </div>

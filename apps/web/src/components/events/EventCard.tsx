@@ -62,10 +62,10 @@ export function EventCard({
     hasLiked,
     hasRsvp,
     pollPrompt,
-    selectedPollOptionId,
+    selectedPollAnswers,
     rsvp,
     toggleLike,
-    submitPollResponse,
+    submitPollResponses,
     dismissPollPrompt,
   } = useEventInteraction(allowFanActions ? event._id : undefined);
   const [isPollSubmitting, setIsPollSubmitting] = useState(false);
@@ -268,15 +268,14 @@ export function EventCard({
         <EventPollPrompt
           isOpen
           eventTitle={pollPrompt.eventTitle}
-          question={pollPrompt.question}
-          options={pollPrompt.options}
-          initialSelectedOptionId={selectedPollOptionId}
+          questions={pollPrompt.questions}
+          initialSelectedAnswers={selectedPollAnswers}
           isSubmitting={isPollSubmitting}
           onClose={dismissPollPrompt}
-          onSubmit={async (optionId) => {
+          onSubmit={async (answers) => {
             setIsPollSubmitting(true);
             try {
-              await submitPollResponse(optionId);
+              await submitPollResponses(answers);
             } finally {
               setIsPollSubmitting(false);
             }

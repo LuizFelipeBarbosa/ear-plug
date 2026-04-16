@@ -154,6 +154,7 @@ export function BandDashboard() {
 
   const hasNotifications = unreadCount > 0 || pendingCohostInvites.length > 0;
   const totalNotifications = unreadCount + pendingCohostInvites.length;
+  const pollSnapshotLeadQuestion = analytics?.pollSnapshot?.questions[0] ?? null;
 
   return (
     <div className="min-h-screen pb-24 bg-background">
@@ -368,7 +369,11 @@ export function BandDashboard() {
                     </div>
                   </div>
                   <p className="mt-3 text-sm font-medium text-foreground">
-                    {analytics.pollSnapshot.question}
+                    {pollSnapshotLeadQuestion?.question ?? "Recent RSVP poll"}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {analytics.pollSnapshot.questions.length} question
+                    {analytics.pollSnapshot.questions.length === 1 ? "" : "s"} in this poll
                   </p>
                 </div>
                 <Link
@@ -395,22 +400,22 @@ export function BandDashboard() {
                 </div>
                 <div className="rounded-xl border border-border/60 bg-card/80 px-3 py-3">
                   <p className="text-sm font-semibold text-foreground">
-                    {analytics.pollSnapshot.topOption?.label ?? "No answers yet"}
+                    {pollSnapshotLeadQuestion?.topOption?.label ?? "No answers yet"}
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {analytics.pollSnapshot.topOption
-                      ? `${analytics.pollSnapshot.topOption.count} picks`
+                    {pollSnapshotLeadQuestion?.topOption
+                      ? `${pollSnapshotLeadQuestion.topOption.count} picks`
                       : `${analytics.pollSnapshot.eligibleRsvpCount} RSVP${analytics.pollSnapshot.eligibleRsvpCount === 1 ? "" : "s"} eligible`}
                   </p>
                 </div>
               </div>
 
-              {analytics.pollSnapshot.topOption ? (
+              {pollSnapshotLeadQuestion?.topOption ? (
                 <div className="mt-3">
                   <div className="mb-1 flex items-center justify-between gap-3 text-xs text-muted-foreground">
-                    <span>Leading answer</span>
+                    <span>Leading answer for question 1</span>
                     <span>
-                      {Math.round(analytics.pollSnapshot.topOption.percentage)}%
+                      {Math.round(pollSnapshotLeadQuestion.topOption.percentage)}%
                     </span>
                   </div>
                   <div className="h-2 rounded-full bg-muted">
@@ -419,7 +424,7 @@ export function BandDashboard() {
                       style={{
                         width: `${Math.max(
                           8,
-                          Math.round(analytics.pollSnapshot.topOption.percentage),
+                          Math.round(pollSnapshotLeadQuestion.topOption.percentage),
                         )}%`,
                       }}
                     />

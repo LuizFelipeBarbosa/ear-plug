@@ -19,10 +19,15 @@ import {
   buildPollPromptPayload,
   canAnswerEventPoll,
   createEventHydrationCache,
+  eventPollAnswerValidator,
+  getValidatedEventPollAnswers,
   hydratePublicEvent,
   guestFilterTypeValidator,
   GUEST_LIST_PREVIEW_LIMIT,
   GUEST_LIST_CAP,
+  hasCompletedEventPollAnswers,
+  normalizeEventPoll,
+  normalizeRsvpPollAnswers,
   RSVP_CANCEL_REVOKE_REASON,
   GUEST_REMOVED_REVOKE_REASON,
 } from "./events";
@@ -224,10 +229,10 @@ export const rsvp = mutation({
   },
 });
 
-export const submitEventPollResponse = mutation({
+export const submitEventPollResponses = mutation({
   args: {
     eventId: v.id("events"),
-    optionId: v.string(),
+    answers: v.array(eventPollAnswerValidator),
   },
   handler: async (ctx, args) => {
     const user = await requireAuthenticatedUser(ctx);
@@ -240,6 +245,14 @@ export const submitEventPollResponse = mutation({
       });
     }
 
+    const poll = normalizeEventPoll(event.poll);
+    if (!poll) {
+      throw new ConvexError({
+        code: "poll_closed",
+        message: "This RSVP poll is no longer available.",
+      });
+    }
+
     if (!canAnswerEventPoll(event)) {
       throw new ConvexError({
         code: "poll_closed",
@@ -247,19 +260,18 @@ export const submitEventPollResponse = mutation({
       });
     }
 
-    const optionId = args.optionId.trim();
-    if (optionId.length === 0) {
+    if (args.answers.length !== poll.questions.length) {
       throw new ConvexError({
-        code: "invalid_poll_option",
-        message: "Choose an answer before submitting.",
+        code: "invalid_poll_answers",
+        message: "Answer every poll question before saving.",
       });
     }
 
-    const selectedOption = event.poll?.options.find((option) => option.id === optionId);
-    if (!selectedOption) {
+    const validatedAnswers = getValidatedEventPollAnswers(poll, args.answers);
+    if (!validatedAnswers) {
       throw new ConvexError({
-        code: "invalid_poll_option",
-        message: "That poll answer is no longer available.",
+        code: "invalid_poll_answers",
+        message: "One or more poll answers are no longer available.",
       });
     }
 
@@ -279,13 +291,16 @@ export const submitEventPollResponse = mutation({
 
     const pollAnsweredAt = Date.now();
     await ctx.db.patch(rsvp._id, {
-      pollAnswerOptionId: selectedOption.id,
+      pollAnswers: validatedAnswers,
       pollAnsweredAt,
+      // Clear the legacy single-answer field if it's still present on this
+      // row. `ctx.db.patch` is a shallow merge, so without this the stale
+      // attribute would keep violating the new schema.
+      ...({ pollAnswerOptionId: undefined } as Record<string, unknown>),
     });
 
     return {
-      optionId: selectedOption.id,
-      label: selectedOption.label,
+      answers: validatedAnswers,
       pollAnsweredAt,
     };
   },
@@ -427,7 +442,7 @@ export const getUserEventStatus = query({
         hasRsvp: false,
         hasLiked: false,
         hasPendingPoll: false,
-        selectedPollOptionId: undefined,
+        selectedPollAnswers: undefined,
         canAnswerPoll: false,
       };
     }
@@ -438,7 +453,7 @@ export const getUserEventStatus = query({
         hasRsvp: false,
         hasLiked: false,
         hasPendingPoll: false,
-        selectedPollOptionId: undefined,
+        selectedPollAnswers: undefined,
         canAnswerPoll: false,
       };
     }
@@ -457,12 +472,21 @@ export const getUserEventStatus = query({
       )
       .unique();
 
+    const poll = normalizeEventPoll(event.poll);
+    const normalizedAnswers = rsvp
+      ? normalizeRsvpPollAnswers(rsvp, poll)
+      : [];
+    const hasCompletedPollAnswers = hasCompletedEventPollAnswers(
+      poll,
+      normalizedAnswers
+    );
+
     return {
       hasRsvp: !!rsvp,
       hasLiked: !!like,
-      hasPendingPoll:
-        !!rsvp && canAnswerEventPoll(event) && !rsvp.pollAnswerOptionId,
-      selectedPollOptionId: rsvp?.pollAnswerOptionId,
+      hasPendingPoll: !!rsvp && canAnswerEventPoll(event) && !hasCompletedPollAnswers,
+      selectedPollAnswers:
+        normalizedAnswers.length > 0 ? normalizedAnswers : undefined,
       canAnswerPoll: !!rsvp && canAnswerEventPoll(event),
     };
   },

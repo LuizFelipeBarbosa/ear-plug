@@ -59,9 +59,19 @@ const eventPollOptionValidator = v.object({
   label: v.string(),
 });
 
-export const eventPollValidator = v.object({
+const eventPollQuestionValidator = v.object({
+  id: v.string(),
   question: v.string(),
   options: v.array(eventPollOptionValidator),
+});
+
+export const eventPollAnswerValidator = v.object({
+  questionId: v.string(),
+  optionId: v.string(),
+});
+
+export const eventPollValidator = v.object({
+  questions: v.array(eventPollQuestionValidator),
 });
 
 type EventAddressVisibility = "public" | "rsvp_only";
@@ -73,9 +83,17 @@ export type EventPollOption = {
   id: string;
   label: string;
 };
-export type EventPoll = {
+export type EventPollQuestion = {
+  id: string;
   question: string;
   options: EventPollOption[];
+};
+export type EventPollAnswer = {
+  questionId: string;
+  optionId: string;
+};
+export type EventPoll = {
+  questions: EventPollQuestion[];
 };
 export type GenreValue =
   | "indie"
@@ -100,6 +118,8 @@ export const CHECKIN_STAFF_REVOKE_REASON = "event_staff_revoked";
 export const RSVP_CANCEL_REVOKE_REASON = "rsvp_cancelled";
 export const GUEST_REMOVED_REVOKE_REASON = "guest_removed";
 export const MAX_EVENT_POLL_OPTIONS = 6;
+export const MAX_EVENT_POLL_QUESTIONS = 3;
+export const LEGACY_EVENT_POLL_QUESTION_ID = "poll-question-1";
 export const IMAGE_MIME_TYPES = new Set([
   "image/jpeg",
   "image/jpg",
@@ -224,11 +244,11 @@ export async function hydratePublicEvent(
     getVenueFromCache(ctx, cache, event.venueId),
   ]);
 
-  return {
+  return withNormalizedEventPoll({
     ...event,
     band,
     venue,
-  };
+  });
 }
 
 async function listUpcomingPublicEvents(
@@ -469,6 +489,20 @@ async function resolveEventImageInput(
   return { image: normalizeEventImage(args.image) };
 }
 
+type LegacyEventPoll =
+  | {
+      question?: string;
+      options?: EventPollOption[];
+      questions?: EventPollQuestion[];
+    }
+  | null
+  | undefined;
+
+type LegacyRsvpPollAnswerShape = {
+  pollAnswers?: EventPollAnswer[];
+  pollAnswerOptionId?: string;
+};
+
 function normalizeEventPollOption(option: EventPollOption): EventPollOption {
   return {
     id: option.id.trim(),
@@ -476,14 +510,43 @@ function normalizeEventPollOption(option: EventPollOption): EventPollOption {
   };
 }
 
-function normalizeEventPoll(poll: EventPoll | null | undefined): EventPoll | undefined {
+function normalizeEventPollQuestion(question: EventPollQuestion): EventPollQuestion {
+  return {
+    id: question.id.trim(),
+    question: question.question.trim(),
+    options: question.options.map(normalizeEventPollOption),
+  };
+}
+
+export function normalizeEventPoll(
+  poll: EventPoll | LegacyEventPoll
+): EventPoll | undefined {
   if (!poll) {
     return undefined;
   }
 
+  if (Array.isArray((poll as EventPoll).questions)) {
+    return {
+      questions: (poll as EventPoll).questions.map(normalizeEventPollQuestion),
+    };
+  }
+
+  const legacyPoll = poll as LegacyEventPoll;
+  if (
+    typeof legacyPoll?.question !== "string" ||
+    !Array.isArray(legacyPoll.options)
+  ) {
+    return undefined;
+  }
+
   return {
-    question: poll.question.trim(),
-    options: poll.options.map(normalizeEventPollOption),
+    questions: [
+      {
+        id: LEGACY_EVENT_POLL_QUESTION_ID,
+        question: legacyPoll.question.trim(),
+        options: legacyPoll.options.map(normalizeEventPollOption),
+      },
+    ],
   };
 }
 
@@ -492,68 +555,100 @@ function validateEventPoll(poll: EventPoll | undefined): void {
     return;
   }
 
-  if (poll.question.length === 0) {
+  if (
+    poll.questions.length === 0 ||
+    poll.questions.length > MAX_EVENT_POLL_QUESTIONS
+  ) {
     throw new ConvexError({
       code: "invalid_event_poll",
-      message: "Poll question is required.",
+      message: `Polls must have between 1 and ${MAX_EVENT_POLL_QUESTIONS} questions.`,
     });
   }
 
-  if (poll.question.length > 200) {
-    throw new ConvexError({
-      code: "invalid_event_poll",
-      message: "Poll question must be 200 characters or fewer.",
-    });
-  }
+  const seenQuestionIds = new Set<string>();
 
-  if (poll.options.length < 2 || poll.options.length > MAX_EVENT_POLL_OPTIONS) {
-    throw new ConvexError({
-      code: "invalid_event_poll",
-      message: `Polls must have between 2 and ${MAX_EVENT_POLL_OPTIONS} options.`,
-    });
-  }
-
-  const seenIds = new Set<string>();
-  const seenLabels = new Set<string>();
-
-  for (const option of poll.options) {
-    if (option.id.length === 0) {
+  for (const question of poll.questions) {
+    if (question.id.length === 0) {
       throw new ConvexError({
         code: "invalid_event_poll",
-        message: "Each poll option needs a stable id.",
+        message: "Each poll question needs a stable id.",
       });
     }
 
-    if (seenIds.has(option.id)) {
+    if (seenQuestionIds.has(question.id)) {
       throw new ConvexError({
         code: "invalid_event_poll",
-        message: "Poll options must have unique ids.",
+        message: "Poll questions must have unique ids.",
       });
     }
-    seenIds.add(option.id);
+    seenQuestionIds.add(question.id);
 
-    if (option.label.length === 0) {
+    if (question.question.length === 0) {
       throw new ConvexError({
         code: "invalid_event_poll",
-        message: "Poll options cannot be empty.",
-      });
-    }
-
-    if (option.label.length > 120) {
-      throw new ConvexError({
-        code: "invalid_event_poll",
-        message: "Poll options must be 120 characters or fewer.",
+        message: "Poll question is required.",
       });
     }
 
-    const normalizedLabel = option.label.toLowerCase();
-    if (seenLabels.has(normalizedLabel)) {
+    if (question.question.length > 200) {
       throw new ConvexError({
         code: "invalid_event_poll",
-        message: "Poll options must be unique.",
+        message: "Poll question must be 200 characters or fewer.",
       });
     }
-    seenLabels.add(normalizedLabel);
+
+    if (
+      question.options.length < 2 ||
+      question.options.length > MAX_EVENT_POLL_OPTIONS
+    ) {
+      throw new ConvexError({
+        code: "invalid_event_poll",
+        message: `Each poll question must have between 2 and ${MAX_EVENT_POLL_OPTIONS} options.`,
+      });
+    }
+
+    const seenOptionIds = new Set<string>();
+    const seenOptionLabels = new Set<string>();
+
+    for (const option of question.options) {
+      if (option.id.length === 0) {
+        throw new ConvexError({
+          code: "invalid_event_poll",
+          message: "Each poll option needs a stable id.",
+        });
+      }
+
+      if (seenOptionIds.has(option.id)) {
+        throw new ConvexError({
+          code: "invalid_event_poll",
+          message: "Poll options must have unique ids within a question.",
+        });
+      }
+      seenOptionIds.add(option.id);
+
+      if (option.label.length === 0) {
+        throw new ConvexError({
+          code: "invalid_event_poll",
+          message: "Poll options cannot be empty.",
+        });
+      }
+
+      if (option.label.length > 120) {
+        throw new ConvexError({
+          code: "invalid_event_poll",
+          message: "Poll options must be 120 characters or fewer.",
+        });
+      }
+
+      const normalizedLabel = option.label.toLowerCase();
+      if (seenOptionLabels.has(normalizedLabel)) {
+        throw new ConvexError({
+          code: "invalid_event_poll",
+          message: "Poll options must be unique.",
+        });
+      }
+      seenOptionLabels.add(normalizedLabel);
+    }
   }
 }
 
@@ -569,26 +664,132 @@ export function areEventPollsEqual(
     return false;
   }
 
-  if (left.question !== right.question || left.options.length !== right.options.length) {
+  if (left.questions.length !== right.questions.length) {
     return false;
   }
 
-  return left.options.every((option, index) => {
-    const nextOption = right.options[index];
-    return option.id === nextOption.id && option.label === nextOption.label;
+  return left.questions.every((question, questionIndex) => {
+    const nextQuestion = right.questions[questionIndex];
+    if (
+      question.id !== nextQuestion.id ||
+      question.question !== nextQuestion.question ||
+      question.options.length !== nextQuestion.options.length
+    ) {
+      return false;
+    }
+
+    return question.options.every((option, optionIndex) => {
+      const nextOption = nextQuestion.options[optionIndex];
+      return option.id === nextOption.id && option.label === nextOption.label;
+    });
   });
+}
+
+export function normalizeRsvpPollAnswers(
+  rsvp: LegacyRsvpPollAnswerShape,
+  poll: EventPoll | undefined
+): EventPollAnswer[] {
+  if (Array.isArray(rsvp.pollAnswers)) {
+    return rsvp.pollAnswers
+      .map((answer) => ({
+        questionId: answer.questionId.trim(),
+        optionId: answer.optionId.trim(),
+      }))
+      .filter(
+        (answer) => answer.questionId.length > 0 && answer.optionId.length > 0
+      );
+  }
+
+  const legacyOptionId = rsvp.pollAnswerOptionId?.trim();
+  if (
+    !poll ||
+    poll.questions.length !== 1 ||
+    !legacyOptionId ||
+    legacyOptionId.length === 0
+  ) {
+    return [];
+  }
+
+  return [
+    {
+      questionId: poll.questions[0].id,
+      optionId: legacyOptionId,
+    },
+  ];
+}
+
+export function getValidatedEventPollAnswers(
+  poll: EventPoll | undefined,
+  answers: EventPollAnswer[]
+): EventPollAnswer[] | null {
+  if (!poll) {
+    return null;
+  }
+
+  if (answers.length !== poll.questions.length) {
+    return null;
+  }
+
+  const questionById = new Map(
+    poll.questions.map((question) => [question.id, question])
+  );
+  const answerByQuestionId = new Map<string, string>();
+
+  for (const answer of answers) {
+    const questionId = answer.questionId.trim();
+    const optionId = answer.optionId.trim();
+    const question = questionById.get(questionId);
+    if (!question || optionId.length === 0 || answerByQuestionId.has(questionId)) {
+      return null;
+    }
+
+    const optionExists = question.options.some((option) => option.id === optionId);
+    if (!optionExists) {
+      return null;
+    }
+
+    answerByQuestionId.set(questionId, optionId);
+  }
+
+  if (answerByQuestionId.size !== poll.questions.length) {
+    return null;
+  }
+
+  return poll.questions.map((question) => ({
+    questionId: question.id,
+    optionId: answerByQuestionId.get(question.id)!,
+  }));
+}
+
+export function hasCompletedEventPollAnswers(
+  poll: EventPoll | undefined,
+  answers: EventPollAnswer[]
+): boolean {
+  return getValidatedEventPollAnswers(poll, answers) !== null;
 }
 
 export async function getEventPollResponses(
   ctx: QueryCtx | MutationCtx,
-  eventId: Id<"events">
+  eventId: Id<"events">,
+  options?: {
+    poll?: EventPoll | LegacyEventPoll;
+  }
 ) {
   const rsvps = await ctx.db
     .query("rsvps")
     .withIndex("by_event", (q) => q.eq("eventId", eventId))
     .collect();
 
-  const answered = rsvps.filter((rsvp) => typeof rsvp.pollAnswerOptionId === "string");
+  const poll =
+    options !== undefined
+      ? normalizeEventPoll(options.poll as LegacyEventPoll)
+      : normalizeEventPoll((await ctx.db.get(eventId))?.poll as LegacyEventPoll);
+  const answered = rsvps.filter((rsvp) =>
+    hasCompletedEventPollAnswers(
+      poll,
+      normalizeRsvpPollAnswers(rsvp as Doc<"rsvps"> & LegacyRsvpPollAnswerShape, poll)
+    )
+  );
 
   return {
     rsvps,
@@ -600,25 +801,34 @@ export async function getEventPollResponses(
 export function buildPollPromptPayload(
   event: Pick<Doc<"events">, "_id" | "title" | "poll" | "dateTime">
 ) {
-  if (!event.poll || !canAnswerEventPoll(event)) {
+  const poll = normalizeEventPoll(event.poll as LegacyEventPoll);
+  if (!poll || !canAnswerEventPoll(event)) {
     return null;
   }
 
   return {
     eventId: event._id,
     eventTitle: event.title?.trim() || "Untitled Gig",
-    question: event.poll.question,
-    options: event.poll.options,
+    questions: poll.questions,
   };
 }
 
 export function canAnswerEventPoll(event: Pick<Doc<"events">, "dateTime" | "poll">): boolean {
   return (
-    !!event.poll &&
+    !!normalizeEventPoll(event.poll as LegacyEventPoll) &&
     typeof event.dateTime === "number" &&
     Number.isFinite(event.dateTime) &&
     event.dateTime > Date.now()
   );
+}
+
+export function withNormalizedEventPoll<T extends { poll?: unknown }>(
+  value: T
+): Omit<T, "poll"> & { poll?: EventPoll } {
+  return {
+    ...value,
+    poll: normalizeEventPoll(value.poll as LegacyEventPoll),
+  };
 }
 
 function hasPublicCoreFields(
@@ -1049,7 +1259,7 @@ export const getById = query({
     const [band, acceptedCohostBandIds, pollResponses] = await Promise.all([
       ctx.db.get(event.bandId),
       getAcceptedCohostBandIds(ctx, event._id),
-      getEventPollResponses(ctx, event._id),
+      getEventPollResponses(ctx, event._id, { poll: event.poll as LegacyEventPoll }),
     ]);
     const cohostBands = (
       await Promise.all(acceptedCohostBandIds.map((bandId) => ctx.db.get(bandId)))
@@ -1058,7 +1268,7 @@ export const getById = query({
     const venue = await ctx.db.get(event.venueId);
 
     return applyAddressMask(
-      {
+      withNormalizedEventPoll({
         ...event,
         band,
         cohostBands,
@@ -1066,7 +1276,7 @@ export const getById = query({
         venue,
         pollHasResponses: pollResponses.hasResponses,
         pollResponseCount: pollResponses.answerCount,
-      },
+      }),
       viewerContext
     );
   },
@@ -1140,11 +1350,11 @@ export const listByBand = query({
     const eventsWithDetails = await Promise.all(
       events.map(async (event) => {
         const venue = event.venueId ? await ctx.db.get(event.venueId) : null;
-        return {
+        return withNormalizedEventPoll({
           ...event,
           venue,
           participationRole: event.bandId === args.bandId ? "host" : "cohost",
-        };
+        });
       })
     );
 
@@ -1204,13 +1414,13 @@ export const listPublicPastByBand = query({
     return Promise.all(
       confirmedEvents.map(async (event) => {
         const venue = await ctx.db.get(event.venueId);
-        return {
+        return withNormalizedEventPoll({
           ...event,
           venue: {
             name: venue?.name ?? "Unknown Venue",
             city: venue?.city ?? "Unknown City",
           },
-        };
+        });
       })
     );
   },
@@ -1246,7 +1456,7 @@ export const listByVenue = query({
     const eventsWithDetails = await Promise.all(
       upcomingPublicEvents.map(async (event) => {
         const band = await ctx.db.get(event.bandId);
-        return { ...event, band };
+        return withNormalizedEventPoll({ ...event, band });
       })
     );
 
@@ -1865,7 +2075,9 @@ export const updateWithVenue = mutation({
       args.poll !== undefined &&
       !areEventPollsEqual(currentPoll, nextPoll)
     ) {
-      const pollResponses = await getEventPollResponses(ctx, args.eventId);
+      const pollResponses = await getEventPollResponses(ctx, args.eventId, {
+        poll: currentPoll,
+      });
       if (pollResponses.hasResponses) {
         throw new ConvexError({
           code: "event_poll_locked",

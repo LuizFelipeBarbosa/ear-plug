@@ -115,12 +115,12 @@ export default function EventDetailsPageClient() {
     hasRsvp,
     hasLiked,
     hasPendingPoll,
-    selectedPollOptionId,
+    selectedPollAnswers,
     isLoading,
     pollPrompt,
     rsvp,
     toggleLike,
-    submitPollResponse,
+    submitPollResponses,
     dismissPollPrompt,
     openPendingPollPrompt,
   } = useEvent(eventId);
@@ -476,8 +476,8 @@ export default function EventDetailsPageClient() {
                     initial={{ width: 0 }}
                     animate={{
                       width: `${shouldHideRsvpInsights
-                          ? lockedPreviewFillPercentage
-                          : fillPercentage
+                        ? lockedPreviewFillPercentage
+                        : fillPercentage
                         }%`,
                     }}
                     transition={{ delay: 0.5, duration: 0.8, ease: "easeOut" }}
@@ -639,10 +639,11 @@ export default function EventDetailsPageClient() {
                     RSVP Poll Pending
                   </p>
                   <p className="mt-1 text-sm font-medium text-foreground">
-                    {event.poll.question}
+                    {event.poll.questions.length} question
+                    {event.poll.questions.length === 1 ? "" : "s"} ready
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Optional. Answer now or come back before the show starts.
+                    Share your thoughts to help us create better events!
                   </p>
                 </div>
                 <button
@@ -777,7 +778,7 @@ export default function EventDetailsPageClient() {
                   </button>
                 ) : (
                   <div className="flex min-w-[6.75rem] shrink-0 flex-col items-center justify-center rounded-xl border border-border bg-card px-4 py-2.5 text-center">
-                    <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                    <p className="text-[11px] font-medium tracking-[0.16em] text-muted-foreground">
                       Price
                     </p>
                     <p className="text-base font-bold text-foreground">
@@ -856,15 +857,14 @@ export default function EventDetailsPageClient() {
         <EventPollPrompt
           isOpen
           eventTitle={pollPrompt.eventTitle}
-          question={pollPrompt.question}
-          options={pollPrompt.options}
-          initialSelectedOptionId={selectedPollOptionId}
+          questions={pollPrompt.questions}
+          initialSelectedAnswers={selectedPollAnswers}
           isSubmitting={isPollSubmitting}
           onClose={dismissPollPrompt}
-          onSubmit={async (optionId) => {
+          onSubmit={async (answers) => {
             setIsPollSubmitting(true);
             try {
-              await submitPollResponse(optionId);
+              await submitPollResponses(answers);
             } finally {
               setIsPollSubmitting(false);
             }

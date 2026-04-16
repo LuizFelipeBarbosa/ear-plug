@@ -11,6 +11,11 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { requireBandMember } from "./utils/permissions";
 import { normalizeUsLocation } from "./utils/location";
 import { listBandParticipatingEvents } from "./bands";
+import {
+  hasCompletedEventPollAnswers,
+  normalizeEventPoll,
+  normalizeRsvpPollAnswers,
+} from "./events";
 
 function normalizeAudienceLocation(location: string | undefined | null) {
   const normalized = normalizeUsLocation(location);
@@ -28,52 +33,80 @@ function buildPollAnalyticsForEvent(
   event: Pick<Doc<"events">, "_id" | "title" | "dateTime" | "poll">,
   rsvps: Doc<"rsvps">[]
 ) {
-  if (!event.poll || typeof event.dateTime !== "number" || !Number.isFinite(event.dateTime)) {
+  const poll = normalizeEventPoll(event.poll);
+  if (!poll || typeof event.dateTime !== "number" || !Number.isFinite(event.dateTime)) {
     return null;
   }
 
-  const responseCount = rsvps.filter(
-    (rsvp) => typeof rsvp.pollAnswerOptionId === "string" && rsvp.pollAnswerOptionId.length > 0
-  ).length;
+  const answeredRsvps = rsvps
+    .map((rsvp) => {
+      const answers = normalizeRsvpPollAnswers(rsvp, poll);
+      return hasCompletedEventPollAnswers(poll, answers) ? answers : null;
+    })
+    .filter((answers): answers is NonNullable<typeof answers> => answers !== null);
+
+  const responseCount = answeredRsvps.length;
   const eligibleRsvpCount = rsvps.length;
   const responseRate =
     eligibleRsvpCount > 0 ? (responseCount / eligibleRsvpCount) * 100 : 0;
 
-  const options = event.poll.options.map((option) => {
-    const count = rsvps.filter((rsvp) => rsvp.pollAnswerOptionId === option.id).length;
+  const answerCountsByQuestion = new Map<string, Map<string, number>>();
+  for (const answers of answeredRsvps) {
+    for (const answer of answers) {
+      const optionCounts =
+        answerCountsByQuestion.get(answer.questionId) ?? new Map<string, number>();
+      optionCounts.set(
+        answer.optionId,
+        (optionCounts.get(answer.optionId) ?? 0) + 1
+      );
+      answerCountsByQuestion.set(answer.questionId, optionCounts);
+    }
+  }
+
+  const questions = poll.questions.map((question) => {
+    const optionCounts = answerCountsByQuestion.get(question.id);
+    const options = question.options.map((option) => {
+      const count = optionCounts?.get(option.id) ?? 0;
+      return {
+        id: option.id,
+        label: option.label,
+        count,
+        percentage: responseCount > 0 ? (count / responseCount) * 100 : 0,
+      };
+    });
+
+    const topOption =
+      [...options].sort((left, right) => {
+        if (right.count !== left.count) {
+          return right.count - left.count;
+        }
+        return left.label.localeCompare(right.label);
+      })[0] ?? null;
+
     return {
-      id: option.id,
-      label: option.label,
-      count,
-      percentage: responseCount > 0 ? (count / responseCount) * 100 : 0,
+      id: question.id,
+      question: question.question,
+      topOption:
+        topOption && topOption.count > 0
+          ? {
+              id: topOption.id,
+              label: topOption.label,
+              count: topOption.count,
+              percentage: topOption.percentage,
+            }
+          : null,
+      options,
     };
   });
-
-  const topOption = [...options].sort((left, right) => {
-    if (right.count !== left.count) {
-      return right.count - left.count;
-    }
-    return left.label.localeCompare(right.label);
-  })[0] ?? null;
 
   return {
     eventId: event._id,
     eventTitle: event.title?.trim() || "Untitled Gig",
     dateTime: event.dateTime,
-    question: event.poll.question,
     responseCount,
     eligibleRsvpCount,
     responseRate,
-    topOption:
-      topOption && topOption.count > 0
-        ? {
-            id: topOption.id,
-            label: topOption.label,
-            count: topOption.count,
-            percentage: topOption.percentage,
-          }
-        : null,
-    options,
+    questions,
   };
 }
 
@@ -313,8 +346,7 @@ export const getAnalytics = query({
         } =>
           typeof event.dateTime === "number" &&
           Number.isFinite(event.dateTime) &&
-          !!event.poll &&
-          event.poll.options.length > 0
+          !!normalizeEventPoll(event.poll)
       )
       .sort((left, right) => {
         const leftUpcoming = left.dateTime >= now;
@@ -387,11 +419,14 @@ export const getAnalytics = query({
         eventId: event.eventId,
         eventTitle: event.eventTitle,
         dateTime: event.dateTime,
-        question: event.question,
         responseCount: event.responseCount,
         eligibleRsvpCount: event.eligibleRsvpCount,
         responseRate: event.responseRate,
-        options: event.options,
+        questions: event.questions.map((question) => ({
+          id: question.id,
+          question: question.question,
+          options: question.options,
+        })),
       })),
     };
   },

@@ -15,6 +15,7 @@ import {
   buildEventPollFromForm,
   createGigFormData,
   createEmptyGigPollOption,
+  createEmptyGigPollQuestion,
   GigBandSearchInput,
   GigDetailsSection,
   GigLineupItem,
@@ -364,36 +365,82 @@ export function CreateGigModal({
                   setFormData((prev) => ({
                     ...prev,
                     pollEnabled,
-                    pollQuestion: pollEnabled ? prev.pollQuestion : "",
-                    pollOptions: pollEnabled
-                      ? prev.pollOptions.length >= 2
-                        ? prev.pollOptions
-                        : [createEmptyGigPollOption(), createEmptyGigPollOption()]
-                      : [createEmptyGigPollOption(), createEmptyGigPollOption()],
+                    pollQuestions: pollEnabled
+                      ? prev.pollQuestions.length >= 1
+                        ? prev.pollQuestions
+                        : [createEmptyGigPollQuestion()]
+                      : [createEmptyGigPollQuestion()],
                   }))
                 }
-                onPollQuestionChange={(pollQuestion) =>
-                  setFormData((prev) => ({ ...prev, pollQuestion }))
-                }
-                onPollOptionChange={(optionId, value) =>
+                onPollQuestionChange={(questionId, question) =>
                   setFormData((prev) => ({
                     ...prev,
-                    pollOptions: prev.pollOptions.map((option) =>
-                      option.id === optionId ? { ...option, label: value } : option,
+                    pollQuestions: prev.pollQuestions.map((pollQuestion) =>
+                      pollQuestion.id === questionId
+                        ? { ...pollQuestion, question }
+                        : pollQuestion,
                     ),
                   }))
                 }
-                onAddPollOption={() =>
+                onAddPollQuestion={() =>
                   setFormData((prev) => ({
                     ...prev,
-                    pollOptions: [...prev.pollOptions, createEmptyGigPollOption()],
+                    pollQuestions: [...prev.pollQuestions, createEmptyGigPollQuestion()],
                   }))
                 }
-                onRemovePollOption={(optionId) =>
+                onRemovePollQuestion={(questionId) =>
                   setFormData((prev) => ({
                     ...prev,
-                    pollOptions: prev.pollOptions.filter(
-                      (option) => option.id !== optionId,
+                    pollQuestions: prev.pollQuestions.filter(
+                      (pollQuestion) => pollQuestion.id !== questionId,
+                    ),
+                  }))
+                }
+                onPollOptionChange={(questionId, optionId, value) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    pollQuestions: prev.pollQuestions.map((pollQuestion) =>
+                      pollQuestion.id === questionId
+                        ? {
+                            ...pollQuestion,
+                            options: pollQuestion.options.map((option) =>
+                              option.id === optionId
+                                ? { ...option, label: value }
+                                : option,
+                            ),
+                          }
+                        : pollQuestion,
+                    ),
+                  }))
+                }
+                onAddPollOption={(questionId) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    pollQuestions: prev.pollQuestions.map((pollQuestion) =>
+                      pollQuestion.id === questionId
+                        ? {
+                            ...pollQuestion,
+                            options: [
+                              ...pollQuestion.options,
+                              createEmptyGigPollOption(),
+                            ],
+                          }
+                        : pollQuestion,
+                    ),
+                  }))
+                }
+                onRemovePollOption={(questionId, optionId) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    pollQuestions: prev.pollQuestions.map((pollQuestion) =>
+                      pollQuestion.id === questionId
+                        ? {
+                            ...pollQuestion,
+                            options: pollQuestion.options.filter(
+                              (option) => option.id !== optionId,
+                            ),
+                          }
+                        : pollQuestion,
                     ),
                   }))
                 }
