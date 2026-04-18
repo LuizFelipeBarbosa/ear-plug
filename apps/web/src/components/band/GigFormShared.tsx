@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode, RefObject } from "react";
+import { useEffect, useState, type ReactNode, type RefObject } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import {
@@ -15,6 +15,7 @@ import {
   EyeOff,
   FileText,
   ImageIcon,
+  MapPin,
   MessageSquareText,
   Music,
   Plus,
@@ -43,6 +44,127 @@ export const MAX_EVENT_GENRES = 3;
 export const MIN_EVENT_POLL_OPTIONS = 2;
 export const MAX_EVENT_POLL_OPTIONS = 6;
 export const MAX_EVENT_POLL_QUESTIONS = 3;
+
+const COORDINATE_NUMBER_PATTERN = "[-+]?\\d+(?:\\.\\d+)?";
+const LATITUDE_MIN = -90;
+const LATITUDE_MAX = 90;
+const LONGITUDE_MIN = -180;
+const LONGITUDE_MAX = 180;
+
+interface Coordinates {
+  lat: number;
+  lng: number;
+}
+
+interface ManualVenueFormState {
+  name: string;
+  address: string;
+  city: string;
+  coordinateInput: string;
+  latitude: string;
+  longitude: string;
+}
+
+function isValidCoordinateRange(coordinates: Coordinates | null | undefined): boolean {
+  return (
+    coordinates !== null &&
+    coordinates !== undefined &&
+    Number.isFinite(coordinates.lat) &&
+    coordinates.lat >= LATITUDE_MIN &&
+    coordinates.lat <= LATITUDE_MAX &&
+    Number.isFinite(coordinates.lng) &&
+    coordinates.lng >= LONGITUDE_MIN &&
+    coordinates.lng <= LONGITUDE_MAX
+  );
+}
+
+function formatCoordinateInput(value: number | undefined): string {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return "";
+  }
+
+  return Number(value.toFixed(6)).toString();
+}
+
+function parseCoordinatePair(latValue: string, lngValue: string): Coordinates | null {
+  const lat = Number(latValue.trim());
+  const lng = Number(lngValue.trim());
+  const coordinates = { lat, lng };
+
+  return isValidCoordinateRange(coordinates) ? coordinates : null;
+}
+
+function decodeCoordinateText(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
+function parseCoordinateText(value: string): Coordinates | null {
+  const normalized = decodeCoordinateText(value.trim())
+    .replace(/[，]/g, ",")
+    .replace(/\+/g, " ");
+
+  if (!normalized) {
+    return null;
+  }
+
+  const latMatch = normalized.match(
+    new RegExp(`\\b(?:lat|latitude)\\s*[:=]\\s*(${COORDINATE_NUMBER_PATTERN})`, "i"),
+  );
+  const lngMatch = normalized.match(
+    new RegExp(
+      `\\b(?:lng|lon|long|longitude)\\s*[:=]\\s*(${COORDINATE_NUMBER_PATTERN})`,
+      "i",
+    ),
+  );
+
+  if (latMatch?.[1] && lngMatch?.[1]) {
+    return parseCoordinatePair(latMatch[1], lngMatch[1]);
+  }
+
+  const mapMatch = normalized.match(
+    new RegExp(
+      `(?:@|(?:^|[?&\\s])(?:q|ll)=)\\s*(${COORDINATE_NUMBER_PATTERN})\\s*,\\s*(${COORDINATE_NUMBER_PATTERN})`,
+      "i",
+    ),
+  );
+
+  if (mapMatch?.[1] && mapMatch?.[2]) {
+    return parseCoordinatePair(mapMatch[1], mapMatch[2]);
+  }
+
+  const pairMatch = normalized.match(
+    new RegExp(
+      `(${COORDINATE_NUMBER_PATTERN})\\s*,\\s*(${COORDINATE_NUMBER_PATTERN})`,
+      "i",
+    ),
+  );
+
+  if (pairMatch?.[1] && pairMatch?.[2]) {
+    return parseCoordinatePair(pairMatch[1], pairMatch[2]);
+  }
+
+  return null;
+}
+
+function createManualVenueFormState(
+  venue: VenueLocationData | null,
+): ManualVenueFormState {
+  const latitude = formatCoordinateInput(venue?.coordinates?.lat);
+  const longitude = formatCoordinateInput(venue?.coordinates?.lng);
+
+  return {
+    name: venue?.name ?? "",
+    address: venue?.address ?? "",
+    city: venue?.city ?? "",
+    coordinateInput: latitude && longitude ? `${latitude}, ${longitude}` : "",
+    latitude,
+    longitude,
+  };
+}
 
 export interface GigPollFormOption {
   id: string;
@@ -173,8 +295,7 @@ function hasCompleteVenueSelection(
       venue.name.trim() &&
       venue.address.trim() &&
       venue.city.trim() &&
-      Number.isFinite(venue.coordinates?.lat) &&
-      Number.isFinite(venue.coordinates?.lng),
+      isValidCoordinateRange(venue.coordinates),
   );
 }
 
@@ -196,7 +317,7 @@ export function validateGigForm(
     nextErrors.venue = "Venue location is required";
   } else if (!isTentative && !hasCompleteVenueSelection(venue)) {
     nextErrors.venue =
-      "Select a venue from the suggestions so the address and city are complete.";
+      "Select a venue or add manual coordinates with name, address, city, latitude, and longitude.";
   }
   if (!isTentative && formData.genres.length === 0) {
     nextErrors.genres = "At least one genre is required";
@@ -613,6 +734,275 @@ export function GigBandSearchInput({
   );
 }
 
+interface ManualCoordinateVenueFormProps {
+  venue: VenueLocationData | null;
+  onVenueChange: (venue: VenueLocationData) => void;
+  clearError: (field: string) => void;
+}
+
+function ManualCoordinateVenueForm({
+  venue,
+  onVenueChange,
+  clearError,
+}: ManualCoordinateVenueFormProps) {
+  const [formState, setFormState] = useState<ManualVenueFormState>(() =>
+    createManualVenueFormState(venue),
+  );
+  const [manualErrors, setManualErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    setFormState(createManualVenueFormState(venue));
+    setManualErrors({});
+  }, [venue]);
+
+  const clearManualError = (field: string) => {
+    if (!manualErrors[field]) {
+      return;
+    }
+
+    setManualErrors((prev) => {
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
+
+  const updateManualField = (field: keyof ManualVenueFormState, value: string) => {
+    setFormState((prev) => ({ ...prev, [field]: value }));
+    clearManualError(field);
+  };
+
+  const updateCoordinateInput = (value: string) => {
+    const parsed = parseCoordinateText(value);
+    setFormState((prev) => ({
+      ...prev,
+      coordinateInput: value,
+      ...(parsed
+        ? {
+            latitude: formatCoordinateInput(parsed.lat),
+            longitude: formatCoordinateInput(parsed.lng),
+          }
+        : {
+            latitude: "",
+            longitude: "",
+          }),
+    }));
+    clearManualError("coordinateInput");
+    if (parsed) {
+      clearManualError("latitude");
+      clearManualError("longitude");
+    }
+  };
+
+  const validateManualVenue = (): {
+    venue: VenueLocationData | null;
+    errors: Record<string, string>;
+  } => {
+    const errors: Record<string, string> = {};
+    const name = formState.name.trim();
+    const address = formState.address.trim();
+    const city = formState.city.trim();
+    const latitude = formState.latitude.trim();
+    const longitude = formState.longitude.trim();
+
+    if (!name) errors.name = "Venue name is required";
+    if (!address) errors.address = "Address is required";
+    if (!city) errors.city = "City is required";
+    if (!latitude) {
+      errors.latitude = "Latitude is required";
+    }
+    if (!longitude) {
+      errors.longitude = "Longitude is required";
+    }
+
+    const parsedLatitude = Number(latitude);
+    const parsedLongitude = Number(longitude);
+
+    if (
+      latitude &&
+      (!Number.isFinite(parsedLatitude) ||
+        parsedLatitude < LATITUDE_MIN ||
+        parsedLatitude > LATITUDE_MAX)
+    ) {
+      errors.latitude = "Latitude must be between -90 and 90";
+    }
+    if (
+      longitude &&
+      (!Number.isFinite(parsedLongitude) ||
+        parsedLongitude < LONGITUDE_MIN ||
+        parsedLongitude > LONGITUDE_MAX)
+    ) {
+      errors.longitude = "Longitude must be between -180 and 180";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      return { venue: null, errors };
+    }
+
+    return {
+      venue: {
+        name,
+        address,
+        city,
+        coordinates: {
+          lat: parsedLatitude,
+          lng: parsedLongitude,
+        },
+      },
+      errors: {},
+    };
+  };
+
+  const applyManualVenue = () => {
+    const result = validateManualVenue();
+    if (!result.venue) {
+      setManualErrors(result.errors);
+      return;
+    }
+
+    setManualErrors({});
+    onVenueChange(result.venue);
+    clearError("venue");
+  };
+
+  const manualInputClass = (field: string) =>
+    cn(
+      "w-full rounded-xl border bg-muted px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground transition-colors focus:outline-none",
+      manualErrors[field]
+        ? "border-red-500 focus:border-red-500"
+        : "border-border focus:border-band",
+    );
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-band/20 bg-band/10 text-band">
+            <MapPin className="h-4 w-4" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-foreground">
+              Manual Coordinates
+            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Complete venue details before applying.
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={applyManualVenue}
+          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-band px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-band/90"
+        >
+          <Check className="h-4 w-4" />
+          Apply Location
+        </button>
+      </div>
+
+      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="sm:col-span-2">
+          <label className="mb-1.5 block text-xs font-semibold text-muted-foreground">
+            Coordinates or Link
+          </label>
+          <input
+            type="text"
+            value={formState.coordinateInput}
+            onChange={(event) => updateCoordinateInput(event.target.value)}
+            placeholder="37.7749, -122.4194"
+            className={manualInputClass("coordinateInput")}
+          />
+          {manualErrors.coordinateInput ? (
+            <p className="mt-1 text-xs text-red-500">
+              {manualErrors.coordinateInput}
+            </p>
+          ) : null}
+        </div>
+
+        <div>
+          <label className="mb-1.5 block text-xs font-semibold text-muted-foreground">
+            Venue Name
+          </label>
+          <input
+            type="text"
+            value={formState.name}
+            onChange={(event) => updateManualField("name", event.target.value)}
+            className={manualInputClass("name")}
+          />
+          {manualErrors.name ? (
+            <p className="mt-1 text-xs text-red-500">{manualErrors.name}</p>
+          ) : null}
+        </div>
+
+        <div>
+          <label className="mb-1.5 block text-xs font-semibold text-muted-foreground">
+            City
+          </label>
+          <input
+            type="text"
+            value={formState.city}
+            onChange={(event) => updateManualField("city", event.target.value)}
+            className={manualInputClass("city")}
+          />
+          {manualErrors.city ? (
+            <p className="mt-1 text-xs text-red-500">{manualErrors.city}</p>
+          ) : null}
+        </div>
+
+        <div className="sm:col-span-2">
+          <label className="mb-1.5 block text-xs font-semibold text-muted-foreground">
+            Address
+          </label>
+          <input
+            type="text"
+            value={formState.address}
+            onChange={(event) => updateManualField("address", event.target.value)}
+            className={manualInputClass("address")}
+          />
+          {manualErrors.address ? (
+            <p className="mt-1 text-xs text-red-500">{manualErrors.address}</p>
+          ) : null}
+        </div>
+
+        <div>
+          <label className="mb-1.5 block text-xs font-semibold text-muted-foreground">
+            Latitude
+          </label>
+          <input
+            type="text"
+            inputMode="decimal"
+            value={formState.latitude}
+            onChange={(event) =>
+              updateManualField("latitude", event.target.value)
+            }
+            className={manualInputClass("latitude")}
+          />
+          {manualErrors.latitude ? (
+            <p className="mt-1 text-xs text-red-500">{manualErrors.latitude}</p>
+          ) : null}
+        </div>
+
+        <div>
+          <label className="mb-1.5 block text-xs font-semibold text-muted-foreground">
+            Longitude
+          </label>
+          <input
+            type="text"
+            inputMode="decimal"
+            value={formState.longitude}
+            onChange={(event) =>
+              updateManualField("longitude", event.target.value)
+            }
+            className={manualInputClass("longitude")}
+          />
+          {manualErrors.longitude ? (
+            <p className="mt-1 text-xs text-red-500">{manualErrors.longitude}</p>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface GigDetailsSectionProps {
   formData: GigFormData;
   errors: Record<string, string>;
@@ -793,6 +1183,17 @@ export function GigDetailsSection({
         placeholder="Search for a venue..."
         required={!isTentative}
         error={errors.venue}
+      />
+
+      <ManualCoordinateVenueForm
+        venue={venue}
+        onVenueChange={(manualVenue) => {
+          onVenueChange(manualVenue);
+          if (errors.venue) {
+            clearError("venue");
+          }
+        }}
+        clearError={clearError}
       />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

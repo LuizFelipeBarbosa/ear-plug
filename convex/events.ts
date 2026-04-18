@@ -349,6 +349,20 @@ function isPublic(status: Doc<"events">["status"] | undefined): boolean {
   return status === "confirmed";
 }
 
+function hasValidCoordinateRange(
+  coordinates: EventVenueInput["venueCoordinates"]
+): coordinates is NonNullable<EventVenueInput["venueCoordinates"]> {
+  return (
+    coordinates !== undefined &&
+    Number.isFinite(coordinates.lat) &&
+    coordinates.lat >= -90 &&
+    coordinates.lat <= 90 &&
+    Number.isFinite(coordinates.lng) &&
+    coordinates.lng >= -180 &&
+    coordinates.lng <= 180
+  );
+}
+
 function hasCompleteVenueInput(input: EventVenueInput): input is Required<EventVenueInput> {
   return (
     typeof input.venueName === "string" &&
@@ -356,8 +370,20 @@ function hasCompleteVenueInput(input: EventVenueInput): input is Required<EventV
     typeof input.venueAddress === "string" &&
     input.venueAddress.trim().length > 0 &&
     typeof input.venueCity === "string" &&
-    input.venueCoordinates !== undefined
+    hasValidCoordinateRange(input.venueCoordinates)
   );
+}
+
+function validateVenueCoordinatesInput(input: EventVenueInput): void {
+  if (
+    input.venueCoordinates !== undefined &&
+    !hasValidCoordinateRange(input.venueCoordinates)
+  ) {
+    throw new ConvexError({
+      code: "invalid_venue_coordinates",
+      message: "Venue coordinates must include valid latitude and longitude.",
+    });
+  }
 }
 
 function validateConfirmedEventPayload(
@@ -1815,6 +1841,7 @@ export const createWithVenue = mutation({
       imageStorageId: args.imageStorageId,
     });
     validateEventPoll(poll);
+    validateVenueCoordinatesInput(args);
     const hasVenueInput = hasCompleteVenueInput(args);
 
     if (isPublic(status)) {
@@ -2010,6 +2037,7 @@ export const updateWithVenue = mutation({
     const nextStatus = args.status ?? event.status;
     const normalizedPoll = normalizeEventPoll(args.poll);
     validateEventPoll(normalizedPoll);
+    validateVenueCoordinatesInput(args);
     if (args.clearImage && (args.image !== undefined || args.imageStorageId !== undefined)) {
       throw new ConvexError({
         code: "invalid_event_image",
