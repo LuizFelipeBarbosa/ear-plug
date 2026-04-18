@@ -774,20 +774,47 @@ function ManualCoordinateVenueForm({
 
   const updateCoordinateInput = (value: string) => {
     const parsed = parseCoordinateText(value);
-    setFormState((prev) => ({
-      ...prev,
-      coordinateInput: value,
-      ...(parsed
-        ? {
-            latitude: formatCoordinateInput(parsed.lat),
-            longitude: formatCoordinateInput(parsed.lng),
-          }
-        : {
-            latitude: "",
-            longitude: "",
-          }),
-    }));
-    clearManualError("coordinateInput");
+    const trimmed = value.trim();
+
+    setFormState((prev) => {
+      if (parsed) {
+        return {
+          ...prev,
+          coordinateInput: value,
+          latitude: formatCoordinateInput(parsed.lat),
+          longitude: formatCoordinateInput(parsed.lng),
+        };
+      }
+
+      // Only wipe lat/lng when the field is fully cleared — otherwise keep
+      // whatever the user typed in those fields (or a prior successful paste)
+      // so one bad keystroke in the combined input doesn't blow their work
+      // away.
+      if (trimmed === "") {
+        return {
+          ...prev,
+          coordinateInput: value,
+          latitude: "",
+          longitude: "",
+        };
+      }
+
+      return {
+        ...prev,
+        coordinateInput: value,
+      };
+    });
+
+    if (parsed || trimmed === "") {
+      clearManualError("coordinateInput");
+    } else {
+      setManualErrors((prev) => ({
+        ...prev,
+        coordinateInput:
+          "Paste a Google Maps link or enter coordinates like 37.7749, -122.4194",
+      }));
+    }
+
     if (parsed) {
       clearManualError("latitude");
       clearManualError("longitude");
